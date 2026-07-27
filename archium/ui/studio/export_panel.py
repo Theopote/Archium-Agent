@@ -26,9 +26,9 @@ from archium.ui.background_workflow_runner import (
     warn_background_workflows_required,
 )
 from archium.ui.error_handlers import format_user_error
+from archium.ui.label_map import LAYOUT_GENERATION_ACTION
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.studio.slide_actions import run_studio_replan, show_studio_validation_feedback
-from archium.ui.label_map import LAYOUT_GENERATION_ACTION
 from archium.ui.studio_service import (
     StudioPresentationContext,
     export_presentation_from_studio,

@@ -7,9 +7,9 @@ from uuid import uuid4
 
 import pytest
 from archium.application.exploration_service import ExplorationService
-from archium.config.settings import Settings
 from archium.application.mission_parser import parse_mission_draft
 from archium.application.project_mission_service import ProjectMissionService
+from archium.config.settings import Settings
 from archium.domain.enums import (
     ConceptDirectionStatus,
     ExplorationSessionStatus,

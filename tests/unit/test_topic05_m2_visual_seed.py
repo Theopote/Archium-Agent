@@ -10,6 +10,7 @@ from archium.application.visual_idea_seed import (
 )
 from archium.domain.architectural_asset import ArchitecturalAssetRole
 from archium.domain.asset import Asset
+from archium.domain.document import SourceDocument
 from archium.domain.enums import (
     AssetType,
     ConceptDirectionStatus,
@@ -29,7 +30,6 @@ from archium.infrastructure.database.repositories import (
     ExplorationSessionRepository,
     ProjectRepository,
 )
-from archium.domain.document import SourceDocument
 from archium.ui.upload_file_types import PROJECT_MATERIAL_UPLOAD_TYPES
 from sqlalchemy.orm import Session
 

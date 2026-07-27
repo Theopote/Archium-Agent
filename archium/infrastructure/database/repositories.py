@@ -17,7 +17,12 @@ from archium.domain.concept_direction import ConceptDirection
 from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.delivery_record import DeliveryRecord
 from archium.domain.document import DocumentChunk, SourceDocument
-from archium.domain.enums import ArchitectureCaseStatus, ProjectStatus, ReviewStatus, RevisionEntityType
+from archium.domain.enums import (
+    ArchitectureCaseStatus,
+    ProjectStatus,
+    ReviewStatus,
+    RevisionEntityType,
+)
 from archium.domain.exploration_session import ExplorationSession
 from archium.domain.fact import ProjectFact
 from archium.domain.knowledge_graph import (
@@ -26,7 +31,6 @@ from archium.domain.knowledge_graph import (
     KnowledgeRelationKind,
 )
 from archium.domain.outline import OutlinePlan
-from archium.domain.organization import Organization
 from archium.domain.outline_approval_record import OutlineApprovalRecord
 from archium.domain.planning_session import PlanningSession
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
@@ -57,7 +61,6 @@ from archium.infrastructure.database.models import (
     ExplorationSessionORM,
     KnowledgeGraphEdgeORM,
     LLMTraceORM,
-    OrganizationORM,
     OutlineApprovalRecordORM,
     OutlinePlanORM,
     PlanningSessionORM,

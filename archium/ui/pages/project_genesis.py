@@ -405,7 +405,6 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
                         settings=settings,
                     )
                     from archium.application.genesis_starter_service import (
-                        GenesisStarterResult,
                         ensure_genesis_starter_draft,
                     )
                     from archium.infrastructure.database.repositories import ProjectRepository

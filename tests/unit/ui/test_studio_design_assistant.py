@@ -12,8 +12,8 @@ from archium.domain.visual.validation import LayoutValidationReport
 from archium.ui.label_map import slide_role_label
 from archium.ui.studio.deck_overview_panel import role_color
 from archium.ui.studio.design_assistant_panel import (
-    collect_assistant_findings,
     DEFAULT_QUICK_ACTIONS,
+    collect_assistant_findings,
 )
 from archium.ui.studio.page_intelligence_strip import build_page_intelligence
 from archium.ui.visual_service import SlideVisualSnapshot

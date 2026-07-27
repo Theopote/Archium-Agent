@@ -39,6 +39,14 @@ _VISUAL_STRONG_FAMILIES = frozenset(
     }
 )
 _DRAWING_FAMILIES = frozenset({LayoutFamily.DRAWING_FOCUS, LayoutFamily.ANALYTICAL_DIAGRAM})
+_SEMANTIC_SPECIALIST_FAMILIES = frozenset(
+    {
+        LayoutFamily.PROCESS_NARRATIVE,
+        LayoutFamily.METRIC_DASHBOARD,
+        LayoutFamily.COMPARATIVE_MATRIX,
+        LayoutFamily.ANALYTICAL_DIAGRAM,
+    }
+)
 _DEFAULT_VARIETY_RULES = (
     "连续三页不得使用相同 LayoutFamily",
     "连续两页不得使用完全相同 Variant",
@@ -457,12 +465,22 @@ class DeckCompositionPlanningService:
                 PacingRole.PAUSE,
             }:
                 directive.target_density = preset.density
-            if preset.preferred_layout_families and directive.pacing_role not in {
+            primary_family = (
+                directive.preferred_layout_families[0]
+                if directive.preferred_layout_families
+                else None
+            )
+            if (
+                preset.preferred_layout_families
+                and primary_family not in _SEMANTIC_SPECIALIST_FAMILIES
+                and directive.pacing_role
+                not in {
                 PacingRole.OPENING,
                 PacingRole.TRANSITION,
                 PacingRole.CLOSING,
                 PacingRole.CLIMAX,
-            }:
+                }
+            ):
                 preferred = list(preset.preferred_layout_families)
                 merged = _implemented_families([*preferred, *directive.preferred_layout_families])
                 directive.preferred_layout_families = merged or directive.preferred_layout_families

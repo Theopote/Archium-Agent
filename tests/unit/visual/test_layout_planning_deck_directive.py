@@ -65,6 +65,16 @@ class TestLayoutPlanningDeckDirective:
         selected = service.select_best_for_deck(candidates, deck_directive=directive)
         assert selected.layout_family == LayoutFamily.EVIDENCE_BOARD
 
+    def test_select_best_protects_semantic_specialist_family(self) -> None:
+        service = LayoutPlanningService.__new__(LayoutPlanningService)
+        directive = _directive(preferred=[LayoutFamily.PROCESS_NARRATIVE])
+        candidates = [
+            (_plan(LayoutFamily.STRATEGY_CARDS), _report(score=0.99)),
+            (_plan(LayoutFamily.PROCESS_NARRATIVE), _report(score=0.84)),
+        ]
+        selected = service.select_best_for_deck(candidates, deck_directive=directive)
+        assert selected.layout_family == LayoutFamily.PROCESS_NARRATIVE
+
     def test_select_best_avoids_forbidden_family(self) -> None:
         service = LayoutPlanningService.__new__(LayoutPlanningService)
         directive = _directive(
@@ -142,6 +152,29 @@ class TestLayoutPlanningDeckDirective:
             deck_directive=directive,
         )
         assert all(item.layout_family != LayoutFamily.EVIDENCE_BOARD.value for item in decisions)
+
+    def test_rule_decisions_allows_deck_semantics_to_refine_generic_text(self) -> None:
+        service = LayoutPlanningService.__new__(LayoutPlanningService)
+        service._registry = __import__(
+            "archium.infrastructure.layout.layout_family_registry",
+            fromlist=["get_layout_family_registry"],
+        ).get_layout_family_registry()
+        intent = VisualIntent(
+            slide_id=uuid4(),
+            communication_goal="show the implementation sequence",
+            audience_takeaway="three ordered actions",
+            visual_priority="title",
+            dominant_content_type=VisualContentType.TEXT_ARGUMENT,
+            preferred_layout_families=[LayoutFamily.STRATEGY_CARDS],
+        )
+        directive = _directive(preferred=[LayoutFamily.PROCESS_NARRATIVE])
+        decisions = service._rule_decisions(
+            intent,
+            asset_count=0,
+            candidate_count=3,
+            deck_directive=directive,
+        )
+        assert decisions[0].layout_family == LayoutFamily.PROCESS_NARRATIVE.value
 
     def test_transition_with_asset_always_gets_hero_candidate(self) -> None:
         service = LayoutPlanningService.__new__(LayoutPlanningService)

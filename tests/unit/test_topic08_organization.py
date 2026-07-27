@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from archium.application.organization_service import OrganizationService
 from archium.application.project_management_service import ProjectManagementService
 from archium.domain.project import Project

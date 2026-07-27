@@ -1076,7 +1076,6 @@ def start_presentation_from_planning(
     settings: Settings | None = None,
 ) -> WorkflowRunResult:
     """Approve plan gate if needed, then launch the existing presentation pipeline."""
-    from archium.domain.enums import ApprovalStatus
 
     runtime = _resolve_runtime_settings(settings)
     planning = _create_planning_service(session, runtime)

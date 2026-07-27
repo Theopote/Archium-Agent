@@ -154,9 +154,9 @@ def test_visual_evidence_pack_and_context_sources(
     assert "site_photo:1" in lines
     assert "drawing:1" in lines
 
-    from archium.application.context_evidence import gather_project_evidence
     from archium.application.context.project_context_composer import compose_project_context
     from archium.application.context.types import ContextAssessment
+    from archium.application.context_evidence import gather_project_evidence
     from archium.domain.intent.knowledge_state import KnowledgeState
 
     evidence = gather_project_evidence(db_session, project.id)

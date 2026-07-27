@@ -53,12 +53,6 @@ from archium.ui.background_workflow_runner import (
     submit_resume_workflow,
     warn_background_workflows_required,
 )
-from archium.ui.workflow_resume_ux import (
-    RESUME_EXPORT_BUTTON_LABEL,
-    RESUME_EXPORT_HELP,
-    RESUME_EXPORT_STARTED,
-    render_resume_failure,
-)
 from archium.ui.error_handlers import format_user_error
 from archium.ui.label_map import (
     entity_label,
@@ -71,6 +65,12 @@ from archium.ui.page_status_board_panel import render_page_status_board
 from archium.ui.review_analytics_panel import REPAIR_STRATEGY_LABELS, render_rule_code_stats
 from archium.ui.slide_history_panel import render_slide_history_panel
 from archium.ui.workflow_progress_panel import render_workflow_progress_panel, set_active_job_id
+from archium.ui.workflow_resume_ux import (
+    RESUME_EXPORT_BUTTON_LABEL,
+    RESUME_EXPORT_HELP,
+    RESUME_EXPORT_STARTED,
+    render_resume_failure,
+)
 from archium.ui.workspace_service import (
     regenerate_brief,
     regenerate_outline_plan,

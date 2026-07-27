@@ -23,7 +23,6 @@ from archium.application.workflow_checkpoint import commit_workflow_checkpoint, 
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.config.settings import Settings
 from archium.domain.enums import (
-    ApprovalStatus,
     PlanningWorkflowStep,
     PresentationWorkflowStep,
     ProjectOriginMode,

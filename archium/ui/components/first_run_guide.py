@@ -9,7 +9,6 @@ import streamlit as st
 from archium.ui.app_navigation import get_app_page
 from archium.ui.product_flow import product_flow_chain
 
-
 FIRST_RUN_STEPS: tuple[tuple[str, str], ...] = (
     ("1", "描述项目"),
     ("2", "确认方向与大纲"),

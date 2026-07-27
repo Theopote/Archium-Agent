@@ -220,7 +220,10 @@ def seed_starter_citations_from_documents(session: Session, project_id: UUID) ->
     """Attach the latest imported document as a placeholder citation on starter analysis pages."""
     from archium.domain.citation import Citation
     from archium.domain.enums import ProcessingStatus
-    from archium.infrastructure.database.repositories import DocumentRepository, PresentationRepository
+    from archium.infrastructure.database.repositories import (
+        DocumentRepository,
+        PresentationRepository,
+    )
 
     documents = [
         doc

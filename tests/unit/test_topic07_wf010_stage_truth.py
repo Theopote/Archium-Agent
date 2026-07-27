@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from archium.application.product_stage_truth import (
     product_stage_id_for_orchestration,
     resolve_product_stage_truth,
 )
-from archium.domain.enums import WorkflowStatus
+from archium.domain.enums import EvidenceAvailability, WorkflowStatus
 from archium.domain.orchestration import (
     OrchestrationPlan,
     OrchestrationStage,
@@ -22,8 +23,6 @@ from archium.infrastructure.database.repositories import (
     WorkflowRunRepository,
 )
 from archium.ui.project_progress_card import ProjectProgressSnapshot
-from datetime import UTC, datetime
-from archium.domain.enums import EvidenceAvailability
 
 
 def test_orchestration_maps_onto_five_stages() -> None:

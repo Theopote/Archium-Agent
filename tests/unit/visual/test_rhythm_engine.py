@@ -10,7 +10,6 @@ from archium.domain.visual.deck_composition import (
     PacingRole,
     SlideCompositionDirective,
     VisualIntensity,
-    is_climax_peak,
 )
 from archium.domain.visual.enums import DensityLevel, LayoutFamily
 from archium.domain.visual.rhythm_engine import (
@@ -20,7 +19,6 @@ from archium.domain.visual.rhythm_engine import (
     RHYTHM_NO_BREATH_AFTER_PEAK,
     RHYTHM_OPENING_NOT_SPACIOUS,
     BeatKind,
-    RhythmReport,
     analyse_rhythm,
     suggest_rhythm_edits,
 )

@@ -167,7 +167,7 @@ def architectural_asset_from_parts(
 
 
 def architectural_asset_from_document(
-    document: "SourceDocument",
+    document: SourceDocument,
     *,
     document_purpose: DocumentPurpose | None = None,
 ) -> ArchitecturalAsset | None:

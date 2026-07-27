@@ -364,7 +364,7 @@ _KEYWORD_AVOIDS: dict[str, list[ArtDirectionAvoid]] = {
 }
 
 
-def _collect_tokens(art_direction: "ArtDirection") -> list[str]:
+def _collect_tokens(art_direction: ArtDirection) -> list[str]:
     """Extract normalised keyword tokens from all prose fields."""
     parts: list[str] = []
     parts.extend(art_direction.visual_tone)
@@ -381,7 +381,7 @@ def _collect_tokens(art_direction: "ArtDirection") -> list[str]:
 
 def enhance_from_art_direction(
     base: ArtDirectionProfile,
-    art_direction: "ArtDirection",
+    art_direction: ArtDirection,
 ) -> ArtDirectionProfile:
     """Overlay prose-parsed traits/avoid from a persisted ArtDirection onto base.
 
@@ -389,7 +389,6 @@ def enhance_from_art_direction(
     strategy prose fields; matches inspiration office names and keyword tokens;
     merges unique traits/avoids into the base profile.
     """
-    from archium.domain.visual.art_direction import ArtDirection  # avoid circular at module level
 
     tokens = _collect_tokens(art_direction)
     blob = tokens[0]
@@ -427,7 +426,7 @@ def enhance_from_art_direction(
 
 
 def profile_from_art_direction(
-    art_direction: "ArtDirection",
+    art_direction: ArtDirection,
     *,
     fallback_preset_id: str | None = None,
 ) -> ArtDirectionProfile:
@@ -439,7 +438,6 @@ def profile_from_art_direction(
     3. Enhances it with keyword-parsed traits from ArtDirection prose.
     """
     from archium.domain.visual.style.registry import (
-        DEFAULT_STYLE_PRESET_ID,
         get_style_preset,
         resolve_style_preset_id,
     )

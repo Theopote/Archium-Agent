@@ -243,8 +243,8 @@ class MultimodalRetrievalService:
                         source_kind=KnowledgeSourceKind.MULTIMODAL_ASSET,
                         source_id=f"advisory:{modality.value}:ready",
                         content=(
-                            f"项目已登记 CAD/BIM 文本语义（IFC 实体计数/空间名称）；"
-                            f"完整几何/拓扑仍未接入。请结合 constraints / floors 事实与 cad_bim 证据通道。"
+                            "项目已登记 CAD/BIM 文本语义（IFC 实体计数/空间名称）；"
+                            "完整几何/拓扑仍未接入。请结合 constraints / floors 事实与 cad_bim 证据通道。"
                         ),
                         title=f"{modality.value.upper()} 文本语义已就绪",
                         similarity=0.55,

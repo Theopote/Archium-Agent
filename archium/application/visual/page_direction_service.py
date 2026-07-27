@@ -333,7 +333,7 @@ class PageDirectionService:
         direction: PageDirection,
         *,
         style_preset: StylePreset | None = None,
-        art_direction: "ArtDirection | None" = None,
+        art_direction: ArtDirection | None = None,
     ) -> PageDirection:
         from archium.application.visual.visual_concept_service import VisualConceptService
         from archium.application.visual.visual_language_service import VisualLanguageService

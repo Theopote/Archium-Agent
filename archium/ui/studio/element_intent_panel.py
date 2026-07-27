@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from uuid import UUID
 
 import streamlit as st
 
@@ -93,7 +92,7 @@ def build_element_intent_actions(
             actions.append(
                 ElementIntentAction(
                     label="提高可读性",
-                    prompt=f"放大选中的图纸元素，确保标注与线型可读",
+                    prompt="放大选中的图纸元素，确保标注与线型可读",
                     reason="图纸区域偏小，可能影响汇报可读性",
                 )
             )

@@ -8,8 +8,6 @@ from archium.application.knowledge_gap_detection import (
     detect_knowledge_gaps,
     resolve_required_fact_keys,
 )
-from archium.domain.enums import VerificationStatus
-from archium.domain.fact import ProjectFact
 
 
 def test_resolve_required_fact_keys_excludes_bed_count_for_temple() -> None:

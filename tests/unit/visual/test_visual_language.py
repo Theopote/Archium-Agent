@@ -7,7 +7,6 @@ from uuid import uuid4
 from archium.application.visual.page_direction_service import PageDirectionService
 from archium.application.visual.showcase_case_001 import build_case_001_render_bundle
 from archium.application.visual.visual_language_apply import apply_visual_language_to_plan
-from archium.application.visual.visual_language_service import VisualLanguageService
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
 from archium.domain.visual.visual_concept import VisualMetaphor
@@ -89,8 +88,8 @@ def test_apply_injects_decoration_elements_on_plan() -> None:
     direction = PageDirectionService().direct(slide)
     language = direction.visual_language
     assert language is not None
-    from archium.domain.visual.layout import LayoutElement, LayoutPlan
     from archium.domain.visual.enums import LayoutFamily
+    from archium.domain.visual.layout import LayoutElement, LayoutPlan
 
     plan = LayoutPlan(
         slide_id=slide.id,

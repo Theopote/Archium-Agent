@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
-
 import pytest
-
 from archium.application.project_access_service import ProjectAccessService
 from archium.application.project_permission_gate import require_project_permission
 from archium.domain.access import LOCAL_ACTOR_ID, ProjectPermission, ProjectRole

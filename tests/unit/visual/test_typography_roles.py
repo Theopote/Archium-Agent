@@ -22,7 +22,6 @@ from archium.domain.visual.visual_language import (
     TypographyRoleSpec,
     VisualLanguageSpec,
     primary_role_for_recipe,
-    role_spec,
 )
 
 

@@ -6,7 +6,6 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
-
 from archium.exceptions import WorkflowError
 from archium.workflow.resume_policy import (
     ensure_resumable_checkpoint,

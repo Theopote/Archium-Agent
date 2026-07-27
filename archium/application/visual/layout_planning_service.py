@@ -35,6 +35,7 @@ from archium.domain.visual.deck_composition import SlideCompositionDirective
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import (
     DensityLevel,
+    LayoutElementRole,
     LayoutFamily,
     LayoutValidationStatus,
     OverflowPolicy,
@@ -74,6 +75,14 @@ from archium.prompts.layout_plan import (
 logger = get_logger(__name__, operation="layout_planning")
 
 LAYOUT_DECISION_LLM_FALLBACK = "VISUAL.LAYOUT_DECISION_LLM_FALLBACK"
+_SEMANTIC_SPECIALIST_FAMILIES = frozenset(
+    {
+        LayoutFamily.PROCESS_NARRATIVE,
+        LayoutFamily.METRIC_DASHBOARD,
+        LayoutFamily.COMPARATIVE_MATRIX,
+        LayoutFamily.ANALYTICAL_DIAGRAM,
+    }
+)
 
 
 class LayoutPlanningService:
@@ -454,7 +463,9 @@ class LayoutPlanningService:
                 composition_penalty += 1.0
             preferred = deck_directive.preferred_layout_families
             if preferred and plan.layout_family == preferred[0]:
-                composition_bonus += 0.08
+                composition_bonus += (
+                    0.28 if plan.layout_family in _SEMANTIC_SPECIALIST_FAMILIES else 0.08
+                )
             elif preferred and plan.layout_family in preferred[1:]:
                 composition_bonus += 0.03
 
@@ -729,6 +740,24 @@ class LayoutPlanningService:
             asset_count=max(asset_count, 0),
             preferred=preferred,
         )
+        # Deck composition sees narrative context (titles, pacing, neighboring
+        # slides) that a per-slide intent may miss. When it explicitly selects
+        # a semantic specialist, let that family enter the candidate pool even
+        # if the earlier intent classifier only emitted generic text_argument.
+        if deck_directive and deck_directive.preferred_layout_families:
+            primary = deck_directive.preferred_layout_families[0]
+            if primary in _SEMANTIC_SPECIALIST_FAMILIES:
+                specialist = self._registry.get(primary)
+                asset_compatible = specialist.min_assets <= asset_count <= specialist.max_assets
+                requires_missing_hero = (
+                    asset_count == 0
+                    and LayoutElementRole.HERO_VISUAL in specialist.required_roles
+                )
+                if specialist.implemented and asset_compatible and not requires_missing_hero:
+                    definitions = [
+                        specialist,
+                        *(item for item in definitions if item.family != primary),
+                    ]
         grammar_forbidden = forbidden_families_for_intent(intent)
         decisions: list[LayoutDecisionDraft] = []
         if (

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from uuid import uuid4
 
 from archium.application.background_job_service import BackgroundJobService
 from archium.application.background_job_worker import BackgroundJobWorker

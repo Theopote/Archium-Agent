@@ -31,20 +31,6 @@ from archium.domain.visual.critic import (
     VisualCriticFinding,
     VisualCriticReport,
 )
-from archium.domain.visual.presentation_intelligence import (
-    PRESENTATION_INTELLIGENCE_SCHEMA,
-    PresentationIntelligenceBrief,
-)
-from archium.domain.visual.showcase_score import (
-    SHOWCASE_GATE_AESTHETIC_MIN,
-    SHOWCASE_GATE_PROFESSIONALISM_MIN,
-    SHOWCASE_GATE_TOTAL_MIN,
-    SHOWCASE_SCORE_SCHEMA,
-    SHOWCASE_TOTAL_MAX,
-    ShowcaseGateResult,
-    ShowcaseInvestorDimensions,
-    ShowcaseInvestorScore,
-)
 from archium.domain.visual.deck_composition import (
     DeckCompositionPlan,
     PacingRole,
@@ -129,6 +115,20 @@ from archium.domain.visual.page_quality import (
     derive_page_quality_status,
 )
 from archium.domain.visual.preferences import VisualPreferences
+from archium.domain.visual.presentation_intelligence import (
+    PRESENTATION_INTELLIGENCE_SCHEMA,
+    PresentationIntelligenceBrief,
+)
+from archium.domain.visual.showcase_score import (
+    SHOWCASE_GATE_AESTHETIC_MIN,
+    SHOWCASE_GATE_PROFESSIONALISM_MIN,
+    SHOWCASE_GATE_TOTAL_MIN,
+    SHOWCASE_SCORE_SCHEMA,
+    SHOWCASE_TOTAL_MAX,
+    ShowcaseGateResult,
+    ShowcaseInvestorDimensions,
+    ShowcaseInvestorScore,
+)
 from archium.domain.visual.validation import (
     LAYOUT_DRAWING_CROPPED,
     LAYOUT_ELEMENT_OUTSIDE_PAGE,

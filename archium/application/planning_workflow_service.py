@@ -26,7 +26,6 @@ from archium.application.project_mission_service import is_mission_approval_curr
 from archium.config.settings import Settings, get_settings
 from archium.domain.deliverable import DeliverablePlan
 from archium.domain.enums import (
-    ApprovalStatus,
     PlanningSessionStatus,
     PresentationWorkflowStep,
     ProjectOriginMode,

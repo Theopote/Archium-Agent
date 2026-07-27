@@ -6,7 +6,6 @@ from uuid import uuid4
 
 import pytest
 from archium.application.deliverable_planning_service import (
-    DeliverablePlanningService,
     deliverable_plan_approval_hash,
     ensure_deliverable_plan_approval_current,
     is_deliverable_plan_approval_current,

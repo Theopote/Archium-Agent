@@ -12,10 +12,10 @@ from unittest.mock import MagicMock
 import pytest
 from archium.application.context_intelligence_service import ContextIntelligenceService
 from archium.application.exploration_service import ExplorationService
-from archium.config.settings import Settings
 from archium.application.ingestion_service import IngestionService
 from archium.application.project_context_builder import build_project_context
 from archium.application.workspace_mode_service import WorkspaceModeService
+from archium.config.settings import Settings
 from archium.domain.context.lifecycle_stage import ProjectLifecycleStage
 from archium.domain.context.recommended_workflow import RecommendedWorkflow
 from archium.domain.document import DocumentChunk, SourceDocument

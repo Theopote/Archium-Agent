@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from archium.application.formal_pptx_export_service import FormalPptxExportService
 from archium.application.ingestion_service import IngestionService
 from archium.application.presentation_models import PresentationRequest

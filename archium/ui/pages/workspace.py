@@ -21,12 +21,6 @@ from archium.ui.background_workflow_runner import (
     submit_visual_job,
     warn_background_workflows_required,
 )
-from archium.ui.workflow_resume_ux import (
-    RESUME_EXPORT_BUTTON_LABEL,
-    RESUME_EXPORT_HELP,
-    RESUME_EXPORT_STARTED,
-    render_resume_failure,
-)
 from archium.ui.chunk_panel import render_chunk_panel
 from archium.ui.components import render_file_downloads
 from archium.ui.cultural_narrative_panel import render_cultural_narrative_panel
@@ -51,6 +45,12 @@ from archium.ui.visual_service import (
 from archium.ui.workflow_progress_panel import (
     render_workflow_progress_panel,
     set_active_job_id,
+)
+from archium.ui.workflow_resume_ux import (
+    RESUME_EXPORT_BUTTON_LABEL,
+    RESUME_EXPORT_HELP,
+    RESUME_EXPORT_STARTED,
+    render_resume_failure,
 )
 from archium.ui.workspace_service import (
     UploadKnowledgeTip,
@@ -433,7 +433,9 @@ def _render_generation_form(project_id: UUID) -> None:
         st.error("未配置 LLM API Key。请前往 **设置 → AI 服务** 配置，或在 `.env` 中设置 `GEMINI_API_KEY`。")
         return
 
-    from archium.ui.workspace_service import resolve_generation_form_defaults as _resolve_form_defaults
+    from archium.ui.workspace_service import (
+        resolve_generation_form_defaults as _resolve_form_defaults,
+    )
 
     with get_session() as session:
         defaults = _resolve_form_defaults(session, project_id)

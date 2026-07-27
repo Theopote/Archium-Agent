@@ -14,7 +14,6 @@ from archium.ui.studio.deck_content_placeholder import content_placeholder_html
 from archium.ui.studio.slide_navigator import _set_selected_slide, _status_by_slide
 from archium.ui.studio_service import StudioPresentationContext
 
-
 _ROLE_COLORS: dict[SlideRole, str] = {
     SlideRole.OPENING: "#b8860b",
     SlideRole.BACKGROUND: "#667085",

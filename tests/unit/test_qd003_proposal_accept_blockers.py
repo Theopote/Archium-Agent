@@ -20,7 +20,12 @@ from archium.domain.visual.page_quality import (
     QualityIssue,
     QualityIssueSource,
 )
-from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, TextNode, compute_scene_hash
+from archium.domain.visual.render_scene import (
+    BackgroundStyle,
+    RenderScene,
+    TextNode,
+    compute_scene_hash,
+)
 from archium.domain.visual.scene_change_proposal import SceneChangeProposal
 from archium.domain.visual.studio_command import RewriteTextCommand
 from archium.exceptions import WorkflowError

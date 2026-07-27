@@ -9,7 +9,6 @@ import streamlit as st
 from archium.ui.app_navigation import get_app_page
 from archium.ui.error_handlers import format_user_error
 
-
 RESUME_EXPORT_BUTTON_LABEL = "从审核门继续导出"
 RESUME_EXPORT_HELP = (
     "仅在仍有待确认审核门时可继续。"

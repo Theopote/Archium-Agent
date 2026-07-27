@@ -9,6 +9,7 @@ from archium.domain.visual.page_visual_grammar import (
     select_page_formula,
 )
 from archium.domain.visual.primitives import resolve_primitives
+from archium.domain.visual.style.presets import StylePreset
 from archium.domain.visual.visual_budget import (
     BUDGET_CALM,
     BUDGET_CLIMAX,
@@ -17,7 +18,6 @@ from archium.domain.visual.visual_budget import (
     BUDGET_STRATEGY,
     VisualBudget,
 )
-from archium.domain.visual.style.presets import StylePreset
 from archium.domain.visual.visual_concept import VisualConcept, VisualMetaphor
 from archium.domain.visual.visual_language import (
     ArchitecturalSymbolId,
@@ -75,7 +75,7 @@ class VisualLanguageService:
         *,
         concept: VisualConcept | None = None,
         style_preset: StylePreset | None = None,
-        art_direction: "ArtDirection | None" = None,
+        art_direction: ArtDirection | None = None,
     ) -> VisualLanguageSpec:
         concept = concept if concept is not None else direction.visual_concept
         formula = self._formula_for(slide, direction, concept)

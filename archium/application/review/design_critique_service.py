@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session
 
+from archium.application.reasoning_artifact import ensure_direction_reasoning
 from archium.config.settings import Settings, get_settings
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.design_critique import (
@@ -20,7 +21,6 @@ from archium.domain.design_critique import (
 from archium.domain.intent.design_intent import DesignIntent
 from archium.domain.intent.knowledge_state import KnowledgeState
 from archium.exceptions import WorkflowError
-from archium.application.reasoning_artifact import ensure_direction_reasoning
 from archium.infrastructure.llm.base import LLMProvider, LLMRequest
 from archium.infrastructure.llm.call import generate_structured as llm_generate_structured
 from archium.infrastructure.llm.capabilities import LLMCapability

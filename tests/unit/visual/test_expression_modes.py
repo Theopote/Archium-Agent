@@ -9,6 +9,7 @@ from archium.application.visual.page_direction_service import PageDirectionServi
 from archium.application.visual.visual_grammar_intent import preferred_variant_for_intent
 from archium.domain.enums import VisualType
 from archium.domain.slide import SlideSpec, SlideVisualRequirement
+from archium.domain.visual.defaults import default_presentation_design_system
 from archium.domain.visual.enums import LayoutFamily, VisualContentType
 from archium.domain.visual.expression_mode import (
     ExpressionModeId,
@@ -24,8 +25,6 @@ from archium.infrastructure.layout.generators.base import (
 )
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.layout.layout_solver import LayoutSolver
-from archium.domain.visual.defaults import default_presentation_design_system
-
 
 # Fixture copy for each mode — titles/messages tuned for recognition.
 _MODE_FIXTURES: dict[ExpressionModeId, dict[str, object]] = {

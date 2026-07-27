@@ -19,10 +19,8 @@ from archium.domain.visual.deck_composition import (
     DeckCompositionPlan,
     PacingRole,
     SlideCompositionDirective,
-    VisualIntensity,
     density_to_score,
     intensity_to_score,
-    is_climax_peak,
 )
 from archium.domain.visual.enums import DensityLevel
 

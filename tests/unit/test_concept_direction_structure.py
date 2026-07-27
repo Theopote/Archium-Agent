@@ -46,8 +46,8 @@ def test_concept_direction_from_draft_maps_structured_fields() -> None:
 
 
 def test_enrich_direction_case_refs_when_empty() -> None:
-    from archium.application.concept_direction_case_refs import enrich_direction_case_refs
     from archium.application.architecture_case_library import ArchitectureCaseLibraryService
+    from archium.application.concept_direction_case_refs import enrich_direction_case_refs
 
     direction = concept_direction_from_draft(
         ConceptDirectionDraft(

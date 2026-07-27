@@ -5,10 +5,6 @@ from __future__ import annotations
 from archium.application.visual.showcase_case_001 import build_case_001_render_bundle
 from archium.domain.visual.architectural_assets import (
     NORTH_ARROW,
-    PEDESTRIAN_FLOW,
-    SCALE_BAR,
-    SUN_PATH,
-    ArchitecturalAsset,
     AssetTier,
     assets_for_formula,
     assets_for_slide_context,

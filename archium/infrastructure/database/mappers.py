@@ -16,10 +16,6 @@ from archium.domain.cultural_narrative import (
     CulturalNarrativePlan,
 )
 from archium.domain.delivery_record import DeliveryRecord
-from archium.domain.reasoning_artifact import (
-    dump_reasoning_storage,
-    parse_reasoning_storage,
-)
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import (
     ApprovalStatus,
@@ -66,6 +62,7 @@ from archium.domain.knowledge_graph import (
 )
 from archium.domain.memory import UserPreference
 from archium.domain.narrative_arc import NarrativeArc
+from archium.domain.organization import Organization
 from archium.domain.outline import OUTLINE_LOGICAL_KEY, OutlinePlan, OutlineSection
 from archium.domain.outline_approval_record import OutlineApprovalRecord
 from archium.domain.planning_session import PlanningSession
@@ -80,9 +77,12 @@ from archium.domain.presentation import (
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.project import Project
 from archium.domain.project_architecture_case import ProjectArchitectureCase
-from archium.domain.organization import Organization
 from archium.domain.project_event import ProjectEvent
 from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
+from archium.domain.reasoning_artifact import (
+    dump_reasoning_storage,
+    parse_reasoning_storage,
+)
 from archium.domain.reference_style import (
     REFERENCE_STYLE_PROFILE_LOGICAL_KEY,
     ReferenceStyleProfile,

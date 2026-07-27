@@ -7,9 +7,10 @@ from uuid import uuid4
 import pytest
 from archium.application.visual.layout_style_preference import derive_layout_style_preference
 from archium.application.visual.style_overlay import apply_style_overlays
+from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.defaults import default_presentation_design_system
-from archium.domain.visual.enums import DensityLevel, LayoutFamily
+from archium.domain.visual.enums import DensityLevel, LayoutFamily, VisualContentType
 from archium.domain.visual.style import (
     DEFAULT_STYLE_PRESET_ID,
     StylePresetId,
@@ -19,14 +20,12 @@ from archium.domain.visual.style import (
     list_style_presets,
     resolve_style_preset_id,
 )
+from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.layout.generators.base import (
     LayoutContentBundle,
     LayoutGeneratorContext,
 )
 from archium.infrastructure.layout.generators.hero import HeroLayoutGenerator
-from archium.domain.slide import SlideSpec
-from archium.domain.visual.visual_intent import VisualIntent
-from archium.domain.visual.enums import VisualContentType
 
 
 def _minimal_art(**kwargs: object) -> ArtDirection:
@@ -159,13 +158,13 @@ def test_hero_safe_area_differs_by_preset() -> None:
 
 
 def test_all_presets_have_personality_and_content_policy() -> None:
+    from archium.domain.visual.page_direction import CopyBudget
     from archium.domain.visual.style import (
         EmotionLevel,
         ImageRole,
         NarrativeLogic,
         merge_copy_budget_stricter,
     )
-    from archium.domain.visual.page_direction import CopyBudget
 
     for preset in list_style_presets():
         personality = preset.presentation_personality
@@ -200,10 +199,11 @@ def test_all_presets_have_personality_and_content_policy() -> None:
 
 
 def test_director_merges_preset_content_policy_stricter() -> None:
-    from archium.application.visual.page_direction_service import PageDirectionService
-    from archium.domain.slide import SlideSpec
-    from archium.domain.enums import SlideType
     from uuid import uuid4
+
+    from archium.application.visual.page_direction_service import PageDirectionService
+    from archium.domain.enums import SlideType
+    from archium.domain.slide import SlideSpec
 
     slide = SlideSpec(
         presentation_id=uuid4(),

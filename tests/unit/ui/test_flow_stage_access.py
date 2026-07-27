@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from archium.domain.enums import EvidenceAvailability, ProjectOriginMode
+from archium.domain.enums import EvidenceAvailability
 from archium.ui.pages.flow import evaluate_stage_access
 from archium.ui.project_progress_card import ProjectProgressSnapshot
 from archium.ui.workspace_mode_chrome import flow_stage_caption

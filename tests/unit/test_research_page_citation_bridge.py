@@ -5,8 +5,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
-from archium.application.citation_resolution import enrich_slide_citations
 from archium.application.chunk_models import ProjectContextBundle
+from archium.application.citation_resolution import enrich_slide_citations
 from archium.application.evidence_readiness_service import citation_lines_for_slide
 from archium.application.research_page_citation_bridge import (
     attach_research_citations_to_slide,
