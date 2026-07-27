@@ -174,6 +174,27 @@ class TestGenerators:
         bodies = plan.elements_by_role(LayoutElementRole.BODY_TEXT)
         assert len(bodies) == 3
 
+    def test_process_narrative_accepts_single_step(self) -> None:
+        slide = _slide(
+            title="下一步",
+            message="先完成关键决策。",
+            key_points=["确认总平面方案"],
+            visual_requirements=[
+                VisualRequirement(type=VisualType.TIMELINE, description="决策")
+            ],
+        )
+        plan = LayoutSolver().generate(
+            LayoutFamily.PROCESS_NARRATIVE,
+            _context(
+                LayoutFamily.PROCESS_NARRATIVE,
+                content_type=VisualContentType.PROCESS,
+                variant="steps_horizontal",
+                slide=slide,
+            ),
+        )
+        bodies = plan.elements_by_role(LayoutElementRole.BODY_TEXT)
+        assert [item.text_content for item in bodies] == ["1. 确认总平面方案"]
+
     def test_metric_dashboard_cards(self) -> None:
         slide = _slide(
             title="核心指标",

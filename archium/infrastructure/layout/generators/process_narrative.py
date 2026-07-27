@@ -34,7 +34,9 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
             "步骤二",
             "步骤三",
         ]
-        step_count = max(2, min(len(steps), 5))
+        # A valid narrative can contain a single decisive action. Do not invent
+        # a second step or create more grid cells than there is content for.
+        step_count = min(len(steps), 5)
         steps = steps[:step_count]
         stage_assets = list(context.content.supporting_asset_refs[:step_count])
 
