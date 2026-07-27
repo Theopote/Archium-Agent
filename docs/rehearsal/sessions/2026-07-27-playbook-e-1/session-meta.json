@@ -1,0 +1,48 @@
+{
+  "session_id": "2026-07-27-playbook-e-1",
+  "date": "2026-07-27",
+  "playbook": "E",
+  "status": "scheduled",
+  "facilitator": "",
+  "operator": "",
+  "operator_is_non_developer": true,
+  "llm_configured": null,
+  "pptx_export_ready": null,
+  "project_id": "",
+  "project_name": "",
+  "automated_gate": {
+    "command": "python scripts/run_playbook_e_gate.py -q",
+    "passed": false,
+    "run_date": "",
+    "commit": ""
+  },
+  "steps": {
+    "E1": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    },
+    "E2": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    },
+    "E3": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    },
+    "E4": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    },
+    "E5": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    }
+  },
+  "overall_pass": false,
+  "blockers": []
+}

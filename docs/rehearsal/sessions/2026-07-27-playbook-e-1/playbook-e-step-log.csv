@@ -1,0 +1,6 @@
+step_id,step_name,project_id,pass,notes,evidence_path,blocker_level
+E1,选中单个元素,,,,
+E2,移动或缩放,,,,
+E3,换图或改文字,,,,
+E4,Undo,,,,
+E5,导出 PPTX,,,,

@@ -21,6 +21,27 @@ Facilitator guide: [v0.2-beta-rehearsal-facilitator-checklist.md](../v0.2-beta-r
 
 **B10 cannot be closed by engineering alone** — a real non-developer must complete playbook A and fill the CSVs. Do not invent participant rows.
 
+## Playbook E (Studio HITL — select → edit → undo → export)
+
+Required files:
+
+- `session-meta.json` — E1–E5 step pass flags + `overall_pass`
+- `playbook-e-step-log.csv`
+- `playbook-e-issues.csv` (if any)
+- `evidence/` — local screenshots only; **do not commit** client-sensitive images
+
+Scaffold:
+
+```bash
+python scripts/run_playbook_e_gate.py -q
+python scripts/new_playbook_e_session.py 2026-07-27-playbook-e-1
+```
+
+Facilitator guide: [playbook-e-checklist.md](../playbook-e-checklist.md)  
+Participant guide: [playbook-e-participant-guide.md](../playbook-e-participant-guide.md)
+
+On pass: close audit **UI-006** / **ST-007** with a link to the session folder.
+
 ## Playbook F (Partial Knowledge / Context Intelligence)
 
 Required files:
@@ -38,7 +59,7 @@ python scripts/new_playbook_f_session.py 2026-07-25-playbook-f-1
 python scripts/run_playbook_f_rehearsal.py 2026-07-25-playbook-f-1   # optional engineer dry-run
 ```
 
-Facilitator guide: [playbook-f-checklist.md](../rehearsal/playbook-f-checklist.md)  
-Participant guide (share with operator): [playbook-f-participant-guide.md](../rehearsal/playbook-f-participant-guide.md)
+Facilitator guide: [playbook-f-checklist.md](../playbook-f-checklist.md)  
+Participant guide (share with operator): [playbook-f-participant-guide.md](../playbook-f-participant-guide.md)
 
 Update [`v0.2-beta-release-decision.md`](../../v0.2-beta-release-decision.md) when B10 is satisfied.

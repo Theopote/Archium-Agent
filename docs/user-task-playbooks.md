@@ -91,7 +91,8 @@ python scripts/run_playbook_a_gate.py --with-real-projects
 
 ## 剧本 E — Studio 修改闭环
 
-**目标：** 选中 → 变换 → 换图/改字 → Undo → 导出。
+**目标：** 选中 → 变换 → 换图/改字 → Undo → 导出。  
+**产品化优先级：** 关闭 **UI-006** / **ST-007** 的必经之路；自动化绿 **不能** 代替真人点选。
 
 | 步骤 | 操作 | 通过标准 |
 |------|------|----------|
@@ -101,8 +102,26 @@ python scripts/run_playbook_a_gate.py --with-real-projects
 | E4 | Undo | 回到上一修订；无脏数据 |
 | E5 | 导出 PPTX | 与画布一致的可打开文件 |
 
-**自动化映射：** Studio unit/integration、scene proposal、undo tests、PPTX smoke  
-**真实验收：** ⚠️（需浏览器真人点选）→ 当前 Experimental / Preview 边界见矩阵
+**自动化映射：**
+
+```bash
+python scripts/run_playbook_e_gate.py -q
+```
+
+- 选区：`tests/unit/ui/test_ui_selection_contracts.py`
+- Undo：`tests/unit/ui/test_undo_stack.py`、`tests/application/test_scene_undo_service.py`
+- 几何命令：`tests/unit/visual/test_studio_geometry_commands.py`
+- Studio 链：`tests/integration/studio/test_studio_e2e_smoke.py`
+
+**人工走查：** [playbook-e-checklist.md](rehearsal/playbook-e-checklist.md)  
+**参与者说明：** [playbook-e-participant-guide.md](rehearsal/playbook-e-participant-guide.md)
+
+```powershell
+python scripts/run_playbook_e_gate.py -q
+python scripts/new_playbook_e_session.py YYYY-MM-DD-playbook-e-1
+```
+
+**真实验收：** ❌（需浏览器真人点选并留 session）→ 关闭前 Studio 保持 Experimental / Preview 边界见矩阵
 
 ## 剧本 F — 部分资料项目（Partial Knowledge）
 

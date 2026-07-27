@@ -160,7 +160,7 @@
 | MS-002 | P1 | ~~Presentation 无 mission_id~~ **done (L3)** |
 | DOM-024 | P1 | ~~Direction↔Intent 双份漂移~~ **done（source_direction_id + diff）** |
 | APP-004 | P1 | ~~QA 多栈；交付门禁需统一 verdict~~ **done**（`export_gate` + `evidence_stacks`） |
-| UI-006 | P1 | （已有）剧本 E 真人闭环验收未完成 |
+| UI-006 | P1 | （已有）剧本 E 真人闭环验收未完成 — 脚手架见 `docs/rehearsal/playbook-e-checklist.md` |
 
 ---
 

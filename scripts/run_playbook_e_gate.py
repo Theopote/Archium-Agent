@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Run automated gate for user-task Playbook F (partial knowledge projects).
+"""Run automated gate for user-task Playbook E (Studio HITL).
 
-Mapped in ``docs/user-task-playbooks.md``. Does not replace human F1–F7 rehearsal.
+Mapped in ``docs/user-task-playbooks.md``. Does not replace human E1–E5 rehearsal.
 """
 
 from __future__ import annotations
@@ -13,12 +13,14 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[1]
 
+# Service/command coverage for select → geometry → undo → studio chain.
+# Human browser clicks (UI-006) are still required to close the playbook.
 _DEFAULT_TARGETS = [
-    "tests/integration/test_partial_knowledge_project_flow.py",
-    "tests/unit/test_project_context.py",
-    "tests/unit/test_project_context_routing.py",
-    "tests/unit/test_knowledge_state_routing.py",
-    "tests/unit/test_workspace_mode_service.py",
+    "tests/unit/ui/test_ui_selection_contracts.py",
+    "tests/unit/ui/test_undo_stack.py",
+    "tests/application/test_scene_undo_service.py",
+    "tests/unit/visual/test_studio_geometry_commands.py",
+    "tests/integration/studio/test_studio_e2e_smoke.py",
 ]
 
 
@@ -34,7 +36,7 @@ def main(argv: list[str] | None = None) -> int:
         "pytest_args",
         nargs=argparse.REMAINDER,
         default=[],
-        help="Extra args forwarded to pytest (e.g. -- -k routing).",
+        help="Extra args forwarded to pytest (e.g. -- -k undo).",
     )
     args = parser.parse_args(argv)
 
