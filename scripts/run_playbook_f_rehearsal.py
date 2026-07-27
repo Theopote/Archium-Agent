@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -110,12 +110,9 @@ def _run_f1_f5_rehearsal() -> _RehearsalPayload:
     import archium.infrastructure.database.models  # noqa: F401
     from archium.application.context_intelligence_service import ContextIntelligenceService
     from archium.application.exploration_service import ExplorationService
-    from archium.application.ingestion_service import IngestionService
-    from archium.application.project_context_builder import build_project_context
     from archium.application.workspace_mode_service import WorkspaceModeService
     from archium.config.settings import Settings, reset_settings
     from archium.domain.context.lifecycle_stage import ProjectLifecycleStage
-    from archium.domain.context.recommended_workflow import RecommendedWorkflow
     from archium.domain.document import DocumentChunk, SourceDocument
     from archium.domain.enums import (
         ConceptDirectionStatus,
@@ -134,7 +131,10 @@ def _run_f1_f5_rehearsal() -> _RehearsalPayload:
         FactRepository,
         ProjectRepository,
     )
-    from archium.infrastructure.database.session import create_engine_from_settings, reset_engine_cache
+    from archium.infrastructure.database.session import (
+        create_engine_from_settings,
+        reset_engine_cache,
+    )
     from archium.infrastructure.llm.concept_direction_schemas import (
         ConceptDirectionBatchDraft,
         ConceptDirectionDraft,
@@ -557,7 +557,7 @@ def _write_session_meta(session_dir: Path, report: RehearsalReport) -> None:
             }
     meta["overall_pass"] = report.f1_f5_pass and report.gate_passed
     meta["overall_pass_scope"] = "F1-F5 service rehearsal only"
-    meta["completed_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    meta["completed_at"] = datetime.now(UTC).replace(microsecond=0).isoformat()
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 

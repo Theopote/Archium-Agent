@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
 """Validation script for composite operation implementation."""
 
-import os
 import re
 from pathlib import Path
 

@@ -21,9 +21,6 @@ from archium.application.outline_templates import renovation_outline_sections  #
 from archium.application.visual.induction_architectural_template_publisher import (  # noqa: E402
     InductionArchitecturalTemplatePublisher,
 )
-from archium.application.visual.outline_template_co_planning_service import (  # noqa: E402
-    OutlineTemplateCoPlanningService,
-)
 from archium.application.visual.template_induction_service import (  # noqa: E402
     TemplateInductionService,
 )

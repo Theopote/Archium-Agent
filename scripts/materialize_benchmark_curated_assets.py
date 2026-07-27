@@ -14,7 +14,6 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from archium.domain.enums import VisualType  # noqa: E402
-
 from tests.benchmark.architectural_slides.case_catalog import CASE_CATALOG  # noqa: E402
 from tests.benchmark.architectural_slides.curated_assets import (  # noqa: E402
     CURATED_MANIFEST_PATH,

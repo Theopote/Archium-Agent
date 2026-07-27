@@ -1,11 +1,11 @@
-from uuid import UUID
 import json
 import re
+from uuid import UUID
 
-from archium.infrastructure.database.session import get_session
-from archium.infrastructure.database.repositories import PresentationRepository
 from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.config.settings import get_settings
+from archium.infrastructure.database.repositories import PresentationRepository
+from archium.infrastructure.database.session import get_session
 
 deck_id = UUID("e48d0481-f625-48a7-b4b1-e1ee4163e76d")
 with get_session() as s:

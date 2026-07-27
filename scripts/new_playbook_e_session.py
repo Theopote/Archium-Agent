@@ -117,7 +117,7 @@ def main(argv: list[str] | None = None) -> int:
         "  2. Open docs/rehearsal/playbook-e-checklist.md\n"
         "     Share docs/rehearsal/playbook-e-participant-guide.md with operator\n"
         "  3. archium → Studio → walk through E1–E5\n"
-        f"  4. Mark session-meta.json overall_pass when E1–E5 are green"
+        "  4. Mark session-meta.json overall_pass when E1–E5 are green"
     )
     return 0
 

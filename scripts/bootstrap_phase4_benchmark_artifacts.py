@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
-from archium.domain.visual.benchmark import HumanVisualReview, HumanVisualReviewSource, ReviewValidity
+from archium.domain.visual.benchmark import (
+    HumanVisualReview,
+    HumanVisualReviewSource,
+    ReviewValidity,
+)
 from tests.benchmark.architectural_slides.artifacts import (
     case_dir,
     default_editability_review,

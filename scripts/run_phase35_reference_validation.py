@@ -13,7 +13,7 @@ import json
 import shutil
 import sys
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pptx import Presentation
@@ -28,7 +28,6 @@ from archium.application.visual.template_induction_service import TemplateInduct
 from archium.domain.visual.reference_slide import ReferenceElementType
 from archium.domain.visual.template_induction import FunctionalSlideType
 from archium.infrastructure.renderers.pptx_screenshot import screenshot_tools_available
-
 
 DEFAULT_SOURCE_DIR = Path(r"C:\Users\navib\Desktop\development\参考pptx")
 
@@ -85,7 +84,7 @@ def run_validation(
     source = _pick_source_pptx(source_dir, explicit_source)
     source_slides = len(Presentation(str(source)).slides)
 
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    stamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     run_dir = output_root / f"phase35_{stamp}"
     run_dir.mkdir(parents=True, exist_ok=True)
 
@@ -191,7 +190,7 @@ def run_validation(
     ) and checks["anomalous_representative_count"] == 0
 
     report = {
-        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "generated_at_utc": datetime.now(UTC).isoformat(),
         "source_file": str(source),
         "source_slide_count": source_slides,
         "validated_slide_count": used_slides,

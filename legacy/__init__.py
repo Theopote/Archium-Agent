@@ -10,7 +10,13 @@ Prefer ``archium`` or ``streamlit run app.py``. From a repo checkout::
 """
 
 from legacy.config import GEMINI_API_KEY, GEMINI_BASE_URL, GEMINI_MODEL, client, get_client
-from legacy.file_manager import FileInfo, MoveResult, classify_files_with_ai, move_files, scan_folder
+from legacy.file_manager import (
+    FileInfo,
+    MoveResult,
+    classify_files_with_ai,
+    move_files,
+    scan_folder,
+)
 from legacy.main import ExecutionReport, StepResult, execute_plan, main, run_instruction
 from legacy.ppt_generator import generate_presentation
 

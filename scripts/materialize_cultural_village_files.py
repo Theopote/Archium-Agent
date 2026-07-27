@@ -10,13 +10,12 @@ import argparse
 from pathlib import Path
 
 import fitz
+from archium.domain.enums import VisualType
+from archium.infrastructure.renderers.diagram_generator import generate_fallback_diagram
 from docx import Document
 from openpyxl import Workbook
 from PIL import Image, ImageDraw
 from pptx import Presentation
-
-from archium.domain.enums import VisualType
-from archium.infrastructure.renderers.diagram_generator import generate_fallback_diagram
 
 VILLAGE_NAME = "砚溪村（脱敏）"
 _REPO_ROOT = Path(__file__).resolve().parents[1]
