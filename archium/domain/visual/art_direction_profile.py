@@ -16,6 +16,7 @@ from enum import StrEnum
 from pydantic import Field
 
 from archium.domain._base import DomainModel
+from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.enums import DensityLevel
 from archium.domain.visual.style.presets import StylePreset, StylePresetId
 from archium.domain.visual.visual_budget import VisualBudget

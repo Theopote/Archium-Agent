@@ -62,6 +62,7 @@ __all__ = [
     "ImageMaskKind",
     "ImageMaskSpec",
     "ImageSlotRole",
+    "NAMED_SWATCHES",
     "ROLE_CATALOG",
     "SYMBOL_GLYPHS",
     "SceneLayerRole",

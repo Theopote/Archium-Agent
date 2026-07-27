@@ -92,14 +92,14 @@ def diff_direction_intent(
     expected_experience = _norm(direction.experience_focus)
     if expected_experience and expected_experience != _norm(intent.desired_experience):
         drifts.append("desired_experience")
-    if direction.design_rationale is not None:
-        if _rationale_key(direction.design_rationale) != _rationale_key(
-            intent.design_rationale
-        ):
-            drifts.append("design_rationale")
-    if direction.spatial_intent is not None:
-        if _spatial_key(direction.spatial_intent) != _spatial_key(intent.spatial_intent):
-            drifts.append("spatial_intent")
+    if direction.design_rationale is not None and _rationale_key(
+        direction.design_rationale
+    ) != _rationale_key(intent.design_rationale):
+        drifts.append("design_rationale")
+    if direction.spatial_intent is not None and _spatial_key(
+        direction.spatial_intent
+    ) != _spatial_key(intent.spatial_intent):
+        drifts.append("spatial_intent")
     if direction.design_rules and _rules_key(list(direction.design_rules)) != _rules_key(
         list(intent.design_rules)
     ):

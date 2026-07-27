@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from archium.application.knowledge_isolation import filter_generation_facts
 from archium.application.pptxgen_renderer_factory import create_pptxgen_renderer

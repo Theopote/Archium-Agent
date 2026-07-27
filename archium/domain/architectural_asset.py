@@ -7,6 +7,7 @@ without forking Project identity (life-system Topic 05 / DOM-031).
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from pydantic import Field
@@ -15,6 +16,9 @@ from archium.domain._base import DomainModel
 from archium.domain.asset import Asset
 from archium.domain.enums import AssetType, DocumentPurpose
 from archium.domain.knowledge_reference import KnowledgeUsage
+
+if TYPE_CHECKING:
+    from archium.domain.document import SourceDocument
 
 
 class ArchitecturalAssetRole(StrEnum):

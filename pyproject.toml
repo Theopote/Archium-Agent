@@ -149,6 +149,11 @@ ignore = ["B008", "E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["E402"]
+# Root shims warn then re-export legacy modules (intentional late import).
+"config.py" = ["E402"]
+"file_manager.py" = ["E402"]
+"main.py" = ["E402"]
+"ppt_generator.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.11"

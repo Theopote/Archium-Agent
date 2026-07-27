@@ -7,6 +7,10 @@ from enum import StrEnum
 from pydantic import Field
 
 from archium.domain._base import DomainModel
+from archium.domain.visual.primitives.draw_spec import (
+    PrimitiveDrawSpec,
+    draw_spec_for,
+)
 
 
 class PrimitiveKind(StrEnum):
@@ -38,11 +42,6 @@ class VisualPrimitive(DomainModel):
             "glyph": self.glyph,
         }
 
-
-from archium.domain.visual.primitives.draw_spec import (
-    PrimitiveDrawSpec,
-    draw_spec_for,
-)
 
 # --- Catalog (extend carefully; quality over quantity) ---
 

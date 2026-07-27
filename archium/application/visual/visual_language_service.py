@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from archium.domain.slide import SlideSpec
+from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.page_direction import NarrativeEmotion, PageDirection
 from archium.domain.visual.page_visual_grammar import (
     PageVisualFormula,

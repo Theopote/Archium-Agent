@@ -9,6 +9,8 @@ from archium.application.knowledge_isolation import CRITICAL_FACT_KEYS
 from archium.domain.enums import InformationOrigin, KnowledgeGapStatus, VerificationStatus
 from archium.domain.fact import ProjectFact
 from archium.domain.fact_ledger import LIGHTWEIGHT_REQUIRED_FACT_KEYS, STANDARD_FACT_KEYS
+from archium.domain.knowledge_gap import KnowledgeGap
+from archium.domain.project_knowledge import ProjectKnowledgeItem
 
 _HERITAGE_OPTIONAL_METRICS = frozenset(
     {
@@ -25,8 +27,6 @@ _HERITAGE_OPTIONAL_METRICS = frozenset(
 )
 _TEMPLE_HINTS = ("寺", "庙", "庵", "观", "宗教", "文物", "古建", "遗产", "复原", "重建")
 _HOSPITAL_HINTS = ("医院", "医疗", "床位", "hospital", "clinic")
-from archium.domain.knowledge_gap import KnowledgeGap
-from archium.domain.project_knowledge import ProjectKnowledgeItem
 
 
 @dataclass(frozen=True)

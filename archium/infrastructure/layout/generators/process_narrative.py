@@ -103,7 +103,23 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
         )
 
         if use_horizontal:
-            cells = grid_cells(board, rows=1, cols=step_count, gap_x=spacing.md, gap_y=0)
+            if step_count == 2:
+                # Editorial two-beat sequence: the first decision leads, while
+                # the second is deliberately smaller and offset. Equal halves
+                # read like generic cards and create no visual direction.
+                first_w = board.width * 0.56
+                second_x = board.x + board.width * 0.62
+                cells = [
+                    Rect(board.x, board.y, first_w, board.height),
+                    Rect(
+                        second_x,
+                        board.y + board.height * 0.14,
+                        board.right - second_x,
+                        board.height * 0.72,
+                    ),
+                ]
+            else:
+                cells = grid_cells(board, rows=1, cols=step_count, gap_x=spacing.md, gap_y=0)
             for index, (cell, step) in enumerate(zip(cells, steps, strict=True)):
                 if stage_assets and index < len(stage_assets):
                     image_area, text_area = split_vertical(cell, top_ratio=0.55, gap=spacing.xs)

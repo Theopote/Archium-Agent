@@ -45,9 +45,10 @@ def select_presentation(
         return bool(repo.list_slides(presentation.id))
 
     nonempty = [item for item in presentations if has_slides(item)]
-    if preferred is not None:
-        if keep_empty_preferred or has_slides(preferred) or not nonempty:
-            return preferred
+    if preferred is not None and (
+        keep_empty_preferred or has_slides(preferred) or not nonempty
+    ):
+        return preferred
 
     pool = nonempty or list(presentations)
     return max(pool, key=lambda item: item.updated_at)

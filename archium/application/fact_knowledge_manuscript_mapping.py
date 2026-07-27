@@ -140,9 +140,12 @@ def link_invariant_issues(
                 f"{manuscript_fact.linked_fact_id} != knowledge.linked_fact_id="
                 f"{knowledge.linked_fact_id}"
             )
-    if manuscript_fact is not None and fact is not None:
-        if manuscript_fact.linked_fact_id != fact.id:
-            issues.append(
-                f"manuscript.linked_fact_id={manuscript_fact.linked_fact_id} != fact.id={fact.id}"
-            )
+    if (
+        manuscript_fact is not None
+        and fact is not None
+        and manuscript_fact.linked_fact_id != fact.id
+    ):
+        issues.append(
+            f"manuscript.linked_fact_id={manuscript_fact.linked_fact_id} != fact.id={fact.id}"
+        )
     return issues

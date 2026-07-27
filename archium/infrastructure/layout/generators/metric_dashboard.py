@@ -24,12 +24,19 @@ class MetricDashboardLayoutGenerator(LayoutGenerator):
         spacing = context.design_system.spacing
         elements: list[LayoutElement] = []
 
-        metrics = list(context.content.metrics[:6]) or list(context.content.key_points[:6])
-        while len(metrics) < 3:
-            metrics.append(f"指标 {len(metrics) + 1}")
+        metrics = list(
+            dict.fromkeys(
+                [
+                    *context.content.metrics,
+                    *context.content.key_points,
+                ]
+            )
+        )[:6]
+        if not metrics:
+            metrics = [context.content.message or "Key metric"]
         metrics = metrics[:6]
         count = len(metrics)
-        cols = 3 if count >= 3 else count
+        cols = 3 if count >= 4 else count
         rows = (count + cols - 1) // cols
 
         title_h = self._title_band_height(context)
@@ -83,13 +90,30 @@ class MetricDashboardLayoutGenerator(LayoutGenerator):
             metrics_area = board
             chart_area = None
 
-        cells = grid_cells(
-            metrics_area,
-            rows=rows,
-            cols=cols,
-            gap_x=spacing.md,
-            gap_y=spacing.md,
-        )
+        if count in {2, 3}:
+            # Feature one decisive KPI instead of giving every card identical
+            # weight. The compact evidence rail creates an editorial hierarchy.
+            feature_w = metrics_area.width * 0.55
+            rail_x = metrics_area.x + metrics_area.width * 0.62
+            rail_w = metrics_area.right - rail_x
+            cells = [Rect(metrics_area.x, metrics_area.y, feature_w, metrics_area.height)]
+            cells.extend(
+                grid_cells(
+                    Rect(rail_x, metrics_area.y, rail_w, metrics_area.height),
+                    rows=count - 1,
+                    cols=1,
+                    gap_x=0,
+                    gap_y=spacing.md,
+                )
+            )
+        else:
+            cells = grid_cells(
+                metrics_area,
+                rows=rows,
+                cols=cols,
+                gap_x=spacing.md,
+                gap_y=spacing.md,
+            )
         metric_ids: list[str] = []
         from archium.domain.visual.icon_usage import filter_icon_refs
 

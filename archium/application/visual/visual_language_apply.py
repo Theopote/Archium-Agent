@@ -254,81 +254,87 @@ def _inject_decorations(
     lines_added = 0
 
     if (
-        DecorationId.THIN_LINE in deco.decorations or deco.divider_kind is not None
-    ) and lines_added < budget.decorative_lines:
-        if title is not None and not any(el.id == "vl_thin_line" for el in out):
-            en = next((el for el in out if el.id == "vl_title_en"), None)
-            anchor = en or title
-            out.append(
-                LayoutElement(
-                    id="vl_thin_line",
-                    role=LayoutElementRole.DECORATION,
-                    content_type=LayoutContentType.SHAPE,
-                    x=title.x,
-                    y=anchor.y + anchor.height + 0.06,
-                    width=min(2.4, title.width * 0.45),
-                    height=0.015,
-                    z_index=max(0, title.z_index - 1),
-                    fill_color=accent or ink,
-                    stroke_color=accent or ink,
-                    stroke_width=0,
-                    layer_role=SceneLayerRole.DECORATION.value,
-                )
+        (DecorationId.THIN_LINE in deco.decorations or deco.divider_kind is not None)
+        and lines_added < budget.decorative_lines
+        and title is not None
+        and not any(el.id == "vl_thin_line" for el in out)
+    ):
+        en = next((el for el in out if el.id == "vl_title_en"), None)
+        anchor = en or title
+        out.append(
+            LayoutElement(
+                id="vl_thin_line",
+                role=LayoutElementRole.DECORATION,
+                content_type=LayoutContentType.SHAPE,
+                x=title.x,
+                y=anchor.y + anchor.height + 0.06,
+                width=min(2.4, title.width * 0.45),
+                height=0.015,
+                z_index=max(0, title.z_index - 1),
+                fill_color=accent or ink,
+                stroke_color=accent or ink,
+                stroke_width=0,
+                layer_role=SceneLayerRole.DECORATION.value,
             )
-            lines_added += 1
+        )
+        lines_added += 1
 
-    if DecorationId.AXIS_LINE in deco.decorations and lines_added < budget.decorative_lines:
-        if not any(el.id == "vl_axis_line" for el in out):
-            out.append(
-                LayoutElement(
-                    id="vl_axis_line",
-                    role=LayoutElementRole.DECORATION,
-                    content_type=LayoutContentType.SHAPE,
-                    x=plan.page_width * 0.08,
-                    y=plan.page_height * 0.18,
-                    width=0.012,
-                    height=plan.page_height * 0.55,
-                    z_index=0,
-                    fill_color=ink,
-                    stroke_color=ink,
-                    stroke_width=0,
-                    opacity=0.55,
-                    layer_role=SceneLayerRole.DECORATION.value,
-                )
+    if (
+        DecorationId.AXIS_LINE in deco.decorations
+        and lines_added < budget.decorative_lines
+        and not any(el.id == "vl_axis_line" for el in out)
+    ):
+        out.append(
+            LayoutElement(
+                id="vl_axis_line",
+                role=LayoutElementRole.DECORATION,
+                content_type=LayoutContentType.SHAPE,
+                x=plan.page_width * 0.08,
+                y=plan.page_height * 0.18,
+                width=0.012,
+                height=plan.page_height * 0.55,
+                z_index=0,
+                fill_color=ink,
+                stroke_color=ink,
+                stroke_width=0,
+                opacity=0.55,
+                layer_role=SceneLayerRole.DECORATION.value,
             )
-            lines_added += 1
+        )
+        lines_added += 1
 
-    if DecorationId.SECTION_LABEL_01 in deco.decorations or deco.section_index:
-        if not any(el.id == "vl_section_index" for el in out):
-            index_role = language.typography.resolve_role(TypographyRole.INDEX)
-            index_text = deco.section_index or (
-                f"{(page_order or 0) + 1:02d}" if page_order is not None else "01"
+    if (
+        DecorationId.SECTION_LABEL_01 in deco.decorations or deco.section_index
+    ) and not any(el.id == "vl_section_index" for el in out):
+        index_role = language.typography.resolve_role(TypographyRole.INDEX)
+        index_text = deco.section_index or (
+            f"{(page_order or 0) + 1:02d}" if page_order is not None else "01"
+        )
+        label = deco.section_label or ""
+        text = f"{index_text}  ·  {label}".strip(" ·") if label else index_text
+        if index_role.case == TitleCase.UPPERCASE:
+            text = text.upper()
+        y = 0.35
+        if title is not None:
+            y = max(0.2, title.y - 0.32)
+        out.append(
+            LayoutElement(
+                id="vl_section_index",
+                role=LayoutElementRole.CAPTION,
+                content_type=LayoutContentType.TEXT,
+                text_content=text,
+                x=title.x if title else plan.page_width * 0.08,
+                y=y,
+                width=min(4.0, plan.page_width * 0.5),
+                height=0.28,
+                z_index=5,
+                style_token=index_role.style_token,
+                font_size_override=index_role.font_size_pt,
+                letter_spacing=index_role.resolved_letter_spacing(),
+                opacity=index_role.opacity,
+                layer_role=SceneLayerRole.ANNOTATION.value,
             )
-            label = deco.section_label or ""
-            text = f"{index_text}  ·  {label}".strip(" ·") if label else index_text
-            if index_role.case == TitleCase.UPPERCASE:
-                text = text.upper()
-            y = 0.35
-            if title is not None:
-                y = max(0.2, title.y - 0.32)
-            out.append(
-                LayoutElement(
-                    id="vl_section_index",
-                    role=LayoutElementRole.CAPTION,
-                    content_type=LayoutContentType.TEXT,
-                    text_content=text,
-                    x=title.x if title else plan.page_width * 0.08,
-                    y=y,
-                    width=min(4.0, plan.page_width * 0.5),
-                    height=0.28,
-                    z_index=5,
-                    style_token=index_role.style_token,
-                    font_size_override=index_role.font_size_pt,
-                    letter_spacing=index_role.resolved_letter_spacing(),
-                    opacity=index_role.opacity,
-                    layer_role=SceneLayerRole.ANNOTATION.value,
-                )
-            )
+        )
     return out
 
 
