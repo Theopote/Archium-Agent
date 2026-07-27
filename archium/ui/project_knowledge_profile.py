@@ -33,6 +33,7 @@ def _apply_fresh_gap_report(
     """Overlay deterministic gap detection on top of cached KnowledgeState display."""
     from dataclasses import replace
 
+    from archium.application.project_knowledge_display import _partner_gap_text
     from archium.application.project_knowledge_service import ProjectKnowledgeService
 
     gap_report = ProjectKnowledgeService(session).get_view(project_id).gap_report
@@ -45,13 +46,21 @@ def _apply_fresh_gap_report(
             return replace(display, blocking_unknown_count=fresh_blocking)
         return display
 
-    missing = tuple(
-        f"{'? [阻断] ' if gap.blocking else '? '}{gap.description}"
-        for gap in gap_report.gaps[:6]
-    )
+    known_blob = " ".join(display.known_highlights).lower()
+    partner_lines: list[str] = []
+    for gap in gap_report.gaps:
+        keys = set(gap.related_keys)
+        if "project_name" in keys and ("项目名称" in known_blob or "name：" in known_blob):
+            continue
+        if "location" in keys and ("项目位置" in known_blob or "location" in known_blob):
+            continue
+        partner_lines.append(_partner_gap_text(gap.description, blocking=gap.blocking))
+        if len(partner_lines) >= 6:
+            break
+
     return replace(
         display,
-        missing_highlights=missing,
+        missing_highlights=tuple(partner_lines) if partner_lines else display.missing_highlights,
         blocking_unknown_count=fresh_blocking,
     )
 

@@ -92,6 +92,24 @@ def test_narrative_summary_genesis_shortcut() -> None:
     assert "大纲" in snapshot.narrative_summary
 
 
+def test_narrative_summary_prefers_outline_over_formal_ready() -> None:
+    snapshot = _snapshot(
+        slide_count=6,
+        has_outline=True,
+        outline_approved=False,
+        pptx_ready=True,
+        pdf_ready=True,
+        document_count=2,
+        evidence_availability=EvidenceAvailability.AVAILABLE,
+        export_blocker_count=0,
+        ready_for_export=True,
+        layout_ready_count=6,
+    )
+    assert "大纲待确认" in snapshot.narrative_summary
+    assert snapshot.deliver_label == "草稿"
+    assert snapshot.formal_delivery_ready  # evidence gate unchanged
+
+
 def test_stage_order_for_redirect_hint() -> None:
     from archium.ui.pages.flow import _STAGE_ORDER
 

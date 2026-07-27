@@ -95,10 +95,21 @@ def page_for_starter_draft(
         get_genesis_starter_state,
         presentation_has_formal_visual_previews,
     )
+    from archium.domain.enums import ApprovalStatus
+    from archium.infrastructure.database.repositories import OutlinePlanRepository
 
     starter = get_genesis_starter_state(session, project_id)
     if starter is None:
         return None
+
+    outline = OutlinePlanRepository(session).get_by_presentation(starter.presentation_id)
+    outline_approved = (
+        outline is not None and outline.approval_status == ApprovalStatus.APPROVED
+    )
+    # Wireframes ready but outline not confirmed → confirm outline before studio/generate.
+    if starter.page_count > 0 and not outline_approved:
+        return "outline"
+
     if starter.slides_ready_count > 0:
         if layout_ready_count < slide_count:
             return "edit"

@@ -102,6 +102,9 @@ class ProjectProgressSnapshot:
 
     @property
     def deliver_label(self) -> str:
+        # Genesis / unconfirmed outline: don't claim formal delivery yet.
+        if self.slide_count > 0 and not self.outline_approved and self.has_outline:
+            return "草稿"
         if self.formal_delivery_ready:
             return "可交付"
         if self.draft_export_ready:
@@ -202,12 +205,13 @@ class ProjectProgressSnapshot:
     @property
     def narrative_summary(self) -> str:
         """One-line human summary for sidebar / home chrome."""
-        if self.formal_delivery_ready:
-            return "可正式交付"
+        # Outline gate first — formal_delivery_ready must not mask Genesis shortcut.
         if self.slide_count > 0 and not self.outline_approved and self.has_outline:
             return "Genesis 草稿预览 · 大纲待确认"
         if not self.outline_approved and (self.has_outline or self.has_brief):
             return f"建议先确认大纲（{self.outline_label}）"
+        if self.formal_delivery_ready:
+            return "可正式交付"
         if self.export_blocker_count > 0 and self.draft_export_ready:
             return f"交付有阻塞（{self.export_blocker_count} 项）"
         if self.draft_export_ready and self.document_count <= 0:

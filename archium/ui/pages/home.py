@@ -188,15 +188,21 @@ def _render_recent_versions(snapshot: ProjectProgressSnapshot) -> None:
         for record in export_records[:4]:
             if isinstance(record, DeliveryRecord):
                 when = record.exported_at.astimezone().strftime("%Y-%m-%d %H:%M")
-                st.caption(f"{record.format} · {when} · {Path(record.file_uri).name}")
+                st.caption(f"{record.format} · {when} · {_export_basename(record.file_uri)}")
             else:
-                path_label = Path(str(record.get("path", ""))).name or "导出文件"
-                st.caption(
-                    f"{record.get('format', '导出')} · {record.get('when', '')} · {path_label}"
-                )
+                path_label = _export_basename(str(record.get("path", "") or record.get("file_uri", "")))
+                when = str(record.get("when", "") or "")
+                st.caption(f"{record.get('format', '导出')} · {when} · {path_label}")
     if not presentations and not export_records:
         st.caption("尚无汇报版本。完成生成或导出后会显示在此。")
 
+
+def _export_basename(path_or_uri: str) -> str:
+    text = (path_or_uri or "").strip()
+    if not text:
+        return "导出文件"
+    name = Path(text.replace("\\", "/")).name
+    return name or "导出文件"
 
 def _task_statement_for(snapshot: ProjectProgressSnapshot) -> str:
     """Prefer mission/brief task text; fall back to presentation title/type."""
@@ -237,10 +243,15 @@ def _render_recent_design_changes(snapshot: ProjectProgressSnapshot) -> None:
             st.caption("尚无设计决策记录。理解项目、选定方向或反思后会出现。")
             return
         st.caption(f"共 {len(events)} 次设计演进")
-        for event in reversed(events[-5:]):
+        shown = 0
+        for event in reversed(events):
             kind = intent_evolution_kind_label(event.kind)
             when = format_intent_event_time(event.at)
-            st.markdown(f"- **{kind}** · `{when}` — {event.display_line()}")
+            line = _partner_design_event_line(event.display_line())
+            st.markdown(f"- **{kind}** · `{when}` — {line}")
+            shown += 1
+            if shown >= 5:
+                break
         with st.expander("完整设计时间线", expanded=False):
             from archium.ui.intent_evolution_panel import render_intent_evolution_timeline
 
@@ -253,6 +264,13 @@ def _render_recent_design_changes(snapshot: ProjectProgressSnapshot) -> None:
         logger.exception("Failed to render home design timeline")
         st.caption("设计演进暂不可用。")
 
+
+def _partner_design_event_line(raw: str) -> str:
+    """Collapse metric-heavy AI refresh noise for the home timeline."""
+    text = (raw or "").strip()
+    if "规则评估" in text and "%" in text:
+        return "已根据最新资料刷新理解"
+    return text
 
 def _render_partner_next_steps(snapshot: ProjectProgressSnapshot) -> None:
     st.markdown("**下一步**")
@@ -357,17 +375,6 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
     except Exception:
         logger.exception("Failed to render home understanding panel")
 
-    try:
-        from archium.ui.llm_settings import render_project_llm_tier_selector
-
-        with st.expander("模型档位", expanded=False):
-            render_project_llm_tier_selector(
-                snapshot.project_id,
-                key_prefix="home_llm_tier",
-            )
-    except Exception:
-        logger.exception("Failed to render project LLM tier selector")
-
     st.markdown(f"**汇报任务**  \n{_task_statement_for(snapshot)}")
 
     _render_home_starter_preview(snapshot)
@@ -393,6 +400,15 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
     st.divider()
     _render_partner_next_steps(snapshot)
     with st.expander("项目详情与高级信息", expanded=False):
+        try:
+            from archium.ui.llm_settings import render_project_llm_tier_selector
+
+            render_project_llm_tier_selector(
+                snapshot.project_id,
+                key_prefix="home_llm_tier",
+            )
+        except Exception:
+            logger.exception("Failed to render project LLM tier selector")
         left, mid, right = st.columns(3)
         with left:
             _render_recent_design_changes(snapshot)
@@ -426,6 +442,7 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
                     active_only=False,
                     title="任务进度",
                     allow_process_once=True,
+                    show_worker_hint=False,
                 )
             except Exception:
                 pass
@@ -454,7 +471,6 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
             _select_and_continue(snapshot)
     with cta_r:
         st.caption(snapshot.narrative_summary)
-
 
 def _render_other_projects(
     snapshots: list[ProjectProgressSnapshot],

@@ -197,17 +197,53 @@ def _focus_for_situation(
     return workflow_label
 
 
+_KNOWN_KEY_LABELS = {
+    "name": "项目名称",
+    "project_name": "项目名称",
+    "location": "项目位置",
+    "client": "甲方",
+    "main_function": "主要功能",
+    "project_stage": "项目阶段",
+    "site_area": "用地面积",
+    "building_area": "建筑面积",
+}
+
+
+def _partner_key_label(key: str) -> str:
+    text = (key or "").strip()
+    if not text:
+        return "主张"
+    from archium.domain.fact_ledger import STANDARD_FACT_KEY_MAP
+
+    if text in STANDARD_FACT_KEY_MAP:
+        return STANDARD_FACT_KEY_MAP[text].label
+    return _KNOWN_KEY_LABELS.get(text, text)
+
+
+def _partner_gap_text(description: str, *, blocking: bool = False) -> str:
+    """Rewrite internal gap jargon for partner-facing panels."""
+    text = (description or "").strip()
+    text = text.replace("缺少标准事实：", "待补充：")
+    text = text.replace("待确认关键事实：", "待确认：")
+    text = text.replace("事实冲突：", "信息冲突：")
+    text = text.replace("外部信息缺少引用：", "外部信息缺来源：")
+    if text.startswith("缺少标准事实"):
+        text = text.replace("缺少标准事实", "待补充信息", 1)
+    prefix = "需先确认：" if blocking else ""
+    return f"{prefix}{text}" if prefix else text
+
+
 def _known_highlights(state: KnowledgeState, *, limit: int = 6) -> tuple[str, ...]:
     rows: list[str] = []
     if state.claims:
         for claim in state.claims[:limit]:
-            label = claim.key.strip() or "主张"
+            label = _partner_key_label(claim.key)
             summary = (claim.summary or "").strip()
             mark = "✓" if claim.confirmed else "·"
             rows.append(f"{mark} {label}" + (f"：{summary[:40]}" if summary else ""))
         return tuple(rows)
     for key, value in list((state.known or {}).items())[:limit]:
-        rows.append(f"✓ {key}：{value}")
+        rows.append(f"✓ {_partner_key_label(str(key))}：{value}")
     return tuple(rows)
 
 
@@ -215,13 +251,12 @@ def _missing_highlights(state: KnowledgeState, *, limit: int = 6) -> tuple[str, 
     rows: list[str] = []
     if state.open_unknowns:
         for gap in state.open_unknowns[:limit]:
-            prefix = "? [阻断] " if gap.blocking else "? "
-            rows.append(f"{prefix}{gap.description}")
+            rows.append(_partner_gap_text(gap.description, blocking=gap.blocking))
         return tuple(rows)
     for item in (state.unknown or state.missing_information or [])[:limit]:
         text = str(item).strip()
         if text:
-            rows.append(f"? {text}")
+            rows.append(_partner_gap_text(text))
     return tuple(rows)
 
 
@@ -249,7 +284,7 @@ def _caption_for_situation(
         base = "资料较充实，可整理事实并推进汇报结构；正式交付仍建议核对证据。"
     missing = _missing_highlights(state, limit=3)
     missing_line = "、".join(
-        item.lstrip("? ").removeprefix("[阻断] ") for item in missing
+        item.removeprefix("需先确认：") for item in missing
     )
     if summary:
         if missing_line:
@@ -277,7 +312,7 @@ def _suggested_actions_from_context(context: ProjectContext) -> tuple[str, ...]:
     if workflow == RecommendedWorkflow.EXPLORE:
         return ("推演 2–3 个概念方向", "选定方向后生成项目任务")
     if workflow == RecommendedWorkflow.MATERIALS:
-        return ("上传或整理现有资料", "确认事实账本")
+        return ("上传或整理现有资料", "核对关键项目信息")
     if workflow == RecommendedWorkflow.MISSION:
-        return ("澄清任务与未知项", "生成或完善 Mission")
+        return ("澄清任务与未知项", "完善项目任务理解")
     return ("描述项目并刷新知识状态",)

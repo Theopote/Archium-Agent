@@ -103,6 +103,7 @@ def render_job_progress_strip(
     active_only: bool = True,
     title: str = "后台任务",
     allow_process_once: bool = False,
+    show_worker_hint: bool = True,
 ) -> None:
     """Unified WorkflowRun + ArtifactJob + BackgroundJob progress."""
     try:
@@ -126,7 +127,8 @@ def render_job_progress_strip(
         else:
             st.caption(job.display_line())
     if allow_process_once:
-        st.caption("独立 worker：`archium-worker` 或 `python -m archium.workers.background`")
+        if show_worker_hint:
+            st.caption("独立 worker：`archium-worker` 或 `python -m archium.workers.background`")
         if st.button(
             "执行下一个排队任务",
             key=f"bg_job_once_{project_id}",
