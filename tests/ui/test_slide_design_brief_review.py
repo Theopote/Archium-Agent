@@ -9,6 +9,9 @@ def test_design_brief_panel_has_approve_actions() -> None:
     source = Path("archium/ui/outline/design_brief_panel.py").read_text(encoding="utf-8")
     assert "批准本页" in source
     assert "批量批准" in source
+    assert "st.segmented_control(" in source
+    assert source.count('st.container(horizontal=True, horizontal_alignment="distribute")') == 2
+    assert "use_container_width=" not in source
     assert "重生成摘要" in source
     assert "视觉语法原型" in source
     assert "page_archetype" in source

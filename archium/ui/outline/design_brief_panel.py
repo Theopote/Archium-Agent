@@ -61,11 +61,11 @@ def render_design_brief_panel(
 
     summary = summarize_design_briefs(outline)
     ready, missing = design_briefs_ready(outline)
-    metric_cols = st.columns(4)
-    metric_cols[0].metric("总页数", summary.total)
-    metric_cols[1].metric("已批准", summary.approved)
-    metric_cols[2].metric("待确认", summary.pending)
-    metric_cols[3].metric("草稿", summary.draft)
+    with st.container(horizontal=True, horizontal_alignment="distribute"):
+        st.metric("总页数", summary.total)
+        st.metric("已批准", summary.approved)
+        st.metric("待确认", summary.pending)
+        st.metric("草稿", summary.draft)
 
     if not outline.page_design_briefs:
         st.caption("尚未生成设计摘要。可从页面意图自动生成。")
@@ -96,10 +96,11 @@ def render_design_brief_panel(
     status_label = BRIEF_STATUS_LABELS_ZH.get(brief.status, brief.status.value)
     st.caption(f"状态：**{status_label}**")
 
-    mode = st.radio(
+    mode = st.segmented_control(
         "摘要模式",
         options=["查看", "编辑"],
-        horizontal=True,
+        default="查看",
+        required=True,
         key=f"brief_mode_{outline.id}_{page_order}",
     )
 
@@ -108,9 +109,13 @@ def render_design_brief_panel(
     else:
         brief = _render_brief_editor(outline.id, brief)
 
-    action_cols = st.columns(4)
-    with action_cols[0]:
-        if st.button("批准本页", key=f"brief_approve_{page_order}", use_container_width=True):
+    with st.container(horizontal=True, horizontal_alignment="distribute"):
+        if st.button(
+            "批准本页",
+            type="primary",
+            key=f"brief_approve_{page_order}",
+            width="stretch",
+        ):
             try:
                 with get_session() as session:
                     SlideDesignBriefService(session).approve_page(
@@ -122,16 +127,18 @@ def render_design_brief_panel(
                 st.rerun()
             except WorkflowError as exc:
                 st.error(format_user_error(exc))
-    with action_cols[1]:
-        if st.button("重生成摘要", key=f"brief_regen_{page_order}", use_container_width=True):
+        if st.button(
+            "重生成摘要",
+            key=f"brief_regen_{page_order}",
+            width="stretch",
+        ):
             try:
                 with get_session() as session:
                     SlideDesignBriefService(session).regenerate_page(outline.id, page_order)
                 st.rerun()
             except WorkflowError as exc:
                 st.error(format_user_error(exc))
-    with action_cols[2]:
-        if st.button("批量批准", key="brief_approve_all", use_container_width=True):
+        if st.button("批量批准", key="brief_approve_all", width="stretch"):
             try:
                 with get_session() as session:
                     SlideDesignBriefService(session).approve_all(
@@ -142,8 +149,7 @@ def render_design_brief_panel(
                 st.rerun()
             except WorkflowError as exc:
                 st.error(format_user_error(exc))
-    with action_cols[3]:
-        if st.button("重新生成全部", key="brief_regen_all", use_container_width=True):
+        if st.button("重新生成全部", key="brief_regen_all", width="stretch"):
             try:
                 with get_session() as session:
                     SlideDesignBriefService(session).generate_all(outline.id)
@@ -161,7 +167,9 @@ def _render_brief_editor(outline_id: UUID, brief: SlideDesignBrief) -> SlideDesi
 
     visual_options = [key for key, _ in _PRIMARY_VISUAL_OPTIONS]
     visual_labels = {key: label for key, label in _PRIMARY_VISUAL_OPTIONS}
-    current_visual = brief.primary_visual_type if brief.primary_visual_type in visual_options else "content"
+    current_visual = (
+        brief.primary_visual_type if brief.primary_visual_type in visual_options else "content"
+    )
 
     with st.container(border=True):
         page_task = st.text_area(
@@ -232,16 +240,10 @@ def _render_brief_editor(outline_id: UUID, brief: SlideDesignBrief) -> SlideDesi
         )
 
     if st.button("保存设计摘要", type="primary", key=f"brief_save_{brief.page_order}"):
-        required_items = [
-            line.strip() for line in required_content.splitlines() if line.strip()
-        ]
+        required_items = [line.strip() for line in required_content.splitlines() if line.strip()]
         required_items = merge_grammar_evidence(required_items, selected_archetype)
         # Persist "auto" explicitly so service can clear archetype; None would mean keep.
-        archetype_payload = (
-            "auto"
-            if selected_archetype is None
-            else selected_archetype.value
-        )
+        archetype_payload = "auto" if selected_archetype is None else selected_archetype.value
         update = SlideDesignBriefUpdate(
             page_order=brief.page_order,
             page_task=page_task.strip(),

@@ -12,6 +12,7 @@ PRIMARY_PAGES = (
     "archium/ui/pages/flow/edit.py",
     "archium/ui/pages/flow/deliver.py",
     "archium/ui/pages/studio.py",
+    "archium/ui/outline/design_brief_panel.py",
 )
 
 
@@ -26,11 +27,7 @@ def test_primary_pages_do_not_use_deprecated_container_width() -> None:
 
 def test_home_only_keeps_internal_compatibility_argument() -> None:
     text = (ROOT / "archium/ui/pages/home.py").read_text(encoding="utf-8")
-    occurrences = [
-        line.strip()
-        for line in text.splitlines()
-        if "use_container_width=" in line
-    ]
+    occurrences = [line.strip() for line in text.splitlines() if "use_container_width=" in line]
     assert occurrences == [
         'if render_primary_action("重试", key="home_retry_load", use_container_width=False):'
     ]
