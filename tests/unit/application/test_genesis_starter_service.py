@@ -139,6 +139,33 @@ def test_page_for_starter_draft_prefers_studio_when_wireframes_complete(db_sessi
         assert page == "edit"
 
 
+def test_existing_starter_backfills_missing_brief(db_session) -> None:
+    project = ProjectRepository(db_session).create(Project(name="旧草稿补Brief"))
+    db_session.commit()
+    first = ensure_genesis_starter_draft(
+        db_session,
+        project.id,
+        prompt="旧项目草稿",
+        project_name=project.name,
+    )
+    repo = PresentationRepository(db_session)
+    presentation = repo.get_presentation(first.presentation_id)
+    assert presentation is not None
+    assert presentation.current_brief_id is not None
+    brief_id = presentation.current_brief_id
+    presentation.current_brief_id = None
+    repo.update_presentation(presentation)
+    db_session.commit()
+
+    state = get_genesis_starter_state(db_session, project.id)
+    db_session.commit()
+    assert state is not None
+    presentation = repo.get_presentation(first.presentation_id)
+    assert presentation is not None
+    assert presentation.current_brief_id is not None
+    assert repo.get_brief(presentation.current_brief_id) is not None
+
+
 def test_existing_starter_backfills_missing_placeholder_slides(db_session) -> None:
     project = ProjectRepository(db_session).create(Project(name="回填测试"))
     db_session.commit()

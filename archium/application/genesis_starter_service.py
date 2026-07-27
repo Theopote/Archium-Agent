@@ -205,6 +205,61 @@ def _ensure_starter_brief(
     return brief
 
 
+_STARTER_CITATION_ROLES = frozenset(
+    {
+        SlideRole.PROBLEM_ANALYSIS,
+        SlideRole.SITE_ANALYSIS,
+        SlideRole.STRATEGY,
+        SlideRole.SPATIAL_LOGIC,
+        SlideRole.COMPARISON,
+    }
+)
+
+
+def seed_starter_citations_from_documents(session: Session, project_id: UUID) -> int:
+    """Attach the latest imported document as a placeholder citation on starter analysis pages."""
+    from archium.domain.citation import Citation
+    from archium.domain.enums import ProcessingStatus
+    from archium.infrastructure.database.repositories import DocumentRepository, PresentationRepository
+
+    documents = [
+        doc
+        for doc in DocumentRepository(session).list_by_project(project_id)
+        if doc.processing_status == ProcessingStatus.COMPLETED
+    ]
+    if not documents:
+        return 0
+
+    presentations = PresentationRepository(session).list_by_project(project_id)
+    if not presentations:
+        return 0
+    presentation = presentations[0]
+    outlines = PresentationRepository(session).list_outlines(presentation.id)
+    if not outlines:
+        return 0
+
+    document = max(documents, key=lambda item: item.updated_at or item.created_at)
+    repo = PresentationRepository(session)
+    updated = 0
+    for slide in repo.list_slides(presentation.id):
+        role = getattr(slide, "slide_role", None)
+        if role not in _STARTER_CITATION_ROLES:
+            continue
+        if getattr(slide, "source_citations", None):
+            continue
+        slide.source_citations = [
+            Citation(
+                document_id=document.id,
+                document_name=document.filename,
+                confidence=0.7,
+                quote="项目资料（Genesis 占位引用，建议生成后复核）",
+            )
+        ]
+        repo.save_slide(slide)
+        updated += 1
+    return updated
+
+
 def _starter_summary(
     *,
     page_count: int,
@@ -334,6 +389,18 @@ def _existing_starter(session: Session, project_id: UUID) -> GenesisStarterResul
         layout_ready_count = deck.layout_ready_count
         preview_path = deck.cover_preview_path or preview_path
         has_cover = has_cover or layout_ready_count > 0
+    presentations_repo = PresentationRepository(session)
+    if presentation.current_brief_id is None:
+        _ensure_starter_brief(
+            presentations_repo,
+            project_id=project_id,
+            presentation=presentation,
+            title=presentation.title or "新汇报",
+            purpose=outline.purpose,
+            target_slide_count=outline.target_slide_count,
+            thesis=outline.thesis,
+            sections=list(outline.sections),
+        )
     summary = _starter_summary(
         page_count=page_count,
         slides_ready_count=slides_ready_count,
