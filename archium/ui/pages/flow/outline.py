@@ -769,10 +769,10 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
                     )
 
                     presentation_id: _UUID | None = None
-                    selected = st.session_state.get("selected_presentation_id")
-                    if selected:
+                    selected_presentation = st.session_state.get("selected_presentation_id")
+                    if selected_presentation:
                         try:
-                            presentation_id = _UUID(str(selected))
+                            presentation_id = _UUID(str(selected_presentation))
                         except (TypeError, ValueError):
                             presentation_id = None
                     presentations = PresentationRepository(session).list_by_project(project_id)

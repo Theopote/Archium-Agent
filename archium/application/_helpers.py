@@ -15,7 +15,6 @@ from archium.application.knowledge_isolation import (
 )
 from archium.application.presentation_models import PresentationRequest
 from archium.config.settings import Settings
-from archium.domain.citation import Citation
 from archium.domain.document import DocumentChunk
 from archium.domain.enums import VerificationStatus
 from archium.domain.fact import ProjectFact

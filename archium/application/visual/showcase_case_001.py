@@ -9,9 +9,11 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
+if TYPE_CHECKING:
+    from archium.config.settings import Settings
 from archium.application.visual.deck_composition_service import DeckCompositionPlanningService
 from archium.application.visual.visual_grammar_intent import preferred_variant_for_intent
 from archium.domain.enums import SlideType
@@ -114,9 +116,10 @@ def case_001_outputs_dir() -> Path:
     return showcase_case_001_dir() / "outputs"
 
 
-def _settings_without_dotenv() -> Any:
+def _settings_without_dotenv() -> Settings:
     """Build Settings without reading the project ``.env`` (deterministic showcase)."""
-    from typing import Callable, cast
+    from collections.abc import Callable
+    from typing import cast
 
     from archium.config.settings import Settings
 
@@ -281,7 +284,6 @@ def write_case_001_dry_run(
     output_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Write layout plans + instruction deck JSON (no Node/PPTX)."""
-    from archium.config.settings import Settings
     from archium.infrastructure.renderers.pptxgen_renderer import (
         PptxGenPresentationRenderer,
     )
@@ -487,7 +489,6 @@ def export_case_001_pptx(
     output_dir: Path | None = None,
 ) -> dict[str, Any]:
     """LayoutPlan → render-plan.mjs → presentation.pptx (requires Node)."""
-    from archium.config.settings import Settings
     from archium.infrastructure.renderers.pptxgen_renderer import (
         PptxGenPresentationRenderer,
     )

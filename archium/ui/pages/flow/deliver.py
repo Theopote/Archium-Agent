@@ -93,9 +93,11 @@ def _resolve_deliver_context() -> StudioPresentationContext | None:
         with get_session() as session:
             from archium.application.presentation_selection import select_presentation
 
-            picked = select_presentation(session, presentations)
+            auto_picked = select_presentation(session, presentations)
         selected_presentation = (
-            str(picked.id) if picked is not None else presentation_options[0]
+            str(auto_picked.id)
+            if auto_picked is not None
+            else presentation_options[0]
         )
         st.session_state.selected_presentation_id = selected_presentation
 

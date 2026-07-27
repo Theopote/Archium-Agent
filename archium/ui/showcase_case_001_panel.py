@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 import streamlit as st
 
@@ -41,6 +42,7 @@ def render_showcase_case_001_panel() -> None:
         full = c2.button("导出 PPTX", key="showcase_case_001_pptx")
 
         out = case_001_outputs_dir()
+        summary: dict[str, Any] | None = None
         if dry or full:
             with st.spinner("正在编排 Case 001…"):
                 try:
@@ -59,7 +61,10 @@ def render_showcase_case_001_panel() -> None:
                     st.error(f"Case 001 排练失败：{exc}")
                     return
 
-        summary = st.session_state.get("showcase_case_001_summary")
+        if summary is None:
+            stored_summary = st.session_state.get("showcase_case_001_summary")
+            if isinstance(stored_summary, dict):
+                summary = stored_summary
         claims_path = out / "page_claims.json"
         if claims_path.is_file():
             payload = json.loads(claims_path.read_text(encoding="utf-8"))
