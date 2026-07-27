@@ -83,6 +83,17 @@ def composition_plan_from_state(state: VisualWorkflowState) -> DeckCompositionPl
     return None
 
 
+def effective_design_from_state(state: VisualWorkflowState):
+    """Use the same style-overlaid DesignSystem as candidate generation."""
+    design = state.get("design_system")
+    art = state.get("art_direction")
+    if design is None or art is None or not art.style_preset_id:
+        return design
+    from archium.application.visual.style_overlay import apply_style_overlays
+
+    return apply_style_overlays(design, art_direction=art).design_system
+
+
 class VisualWorkflowRuntime:
     """Dependencies for visual composition workflow nodes."""
 
@@ -628,7 +639,7 @@ class VisualWorkflowNodes:
         if state.get("errors"):
             return {"current_step": step}
         try:
-            design = state.get("design_system")
+            design = effective_design_from_state(state)
             if design is None:
                 return {"errors": ["DesignSystem missing"], "current_step": step}
 
@@ -707,7 +718,7 @@ class VisualWorkflowNodes:
         if state.get("errors"):
             return {"current_step": step}
         try:
-            design = state.get("design_system")
+            design = effective_design_from_state(state)
             if design is None:
                 return {"errors": ["DesignSystem missing"], "current_step": step}
 
@@ -778,7 +789,7 @@ class VisualWorkflowNodes:
         if state.get("errors"):
             return {"current_step": step}
         try:
-            design = state.get("design_system")
+            design = effective_design_from_state(state)
             if design is None:
                 return {"errors": ["DesignSystem missing"], "current_step": step}
 
@@ -877,7 +888,7 @@ class VisualWorkflowNodes:
         if state.get("errors"):
             return {"current_step": step}
         try:
-            design = state.get("design_system")
+            design = effective_design_from_state(state)
             if design is None:
                 return {"errors": ["DesignSystem missing"], "current_step": step}
 
@@ -1021,7 +1032,7 @@ class VisualWorkflowNodes:
         if isinstance(decision, dict):
             allow_invalid = bool(decision.get("allow_invalid_layout_export", False))
 
-        design = state.get("design_system")
+        design = effective_design_from_state(state)
         if design is not None:
             # Re-validate in case the user fixed plans in the UI before continuing.
             refreshed_reports: list[dict] = []
@@ -1077,7 +1088,7 @@ class VisualWorkflowNodes:
         if state.get("errors"):
             return {"current_step": step}
         try:
-            design = state.get("design_system")
+            design = effective_design_from_state(state)
             if design is None:
                 return {"errors": ["DesignSystem missing"], "current_step": step}
 
@@ -1306,7 +1317,7 @@ class VisualWorkflowNodes:
                 "warnings": ["Scene repair skipped: scene_repair_enabled=false"],
             }
 
-        design = state.get("design_system")
+        design = effective_design_from_state(state)
         slides = list(state.get("slides") or [])
         if design is None or not slides:
             return {

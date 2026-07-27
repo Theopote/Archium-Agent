@@ -80,9 +80,7 @@ class ElementRepairDiff:
 
     @property
     def changed_fields(self) -> list[str]:
-        return sorted(
-            key for key in _SNAPSHOT_KEYS if self.before.get(key) != self.after.get(key)
-        )
+        return sorted(key for key in _SNAPSHOT_KEYS if self.before.get(key) != self.after.get(key))
 
 
 @dataclass
@@ -242,10 +240,8 @@ class LayoutRepairService:
                     self._align_group(editable_ids, by_id)
 
         if unresolved_overflow_ids:
-            # Escalate: try another family variant next cycle, and flag split.
-            layout_variant = self._next_layout_variant(
-                layout_plan.layout_family, layout_variant
-            )
+            # A variant name is a geometry contract. Do not rename the plan
+            # unless the corresponding generator has actually rebuilt it.
             overflow_policy = OverflowPolicy.SPLIT
 
         ordered = [by_id[el.id] for el in layout_plan.elements if el.id in by_id]
@@ -268,11 +264,7 @@ class LayoutRepairService:
             after = self._snapshot_element(element)
             before = before_snapshots.get(element.id, {})
             if after != before:
-                diffs.append(
-                    ElementRepairDiff(
-                        element_id=element.id, before=before, after=after
-                    )
-                )
+                diffs.append(ElementRepairDiff(element_id=element.id, before=before, after=after))
 
         return LayoutRepairResult(
             plan=repaired,
@@ -396,9 +388,7 @@ class LayoutRepairService:
             return right, left
         return left, right
 
-    def _upgrade_font_size(
-        self, element: LayoutElement, design_system: DesignSystem
-    ) -> None:
+    def _upgrade_font_size(self, element: LayoutElement, design_system: DesignSystem) -> None:
         """Raise font size using real DesignSystem sizes — never token-name guesses.
 
         1. Pick the smallest named token larger than the current effective size
@@ -407,9 +397,7 @@ class LayoutRepairService:
            (clamped by the largest available token size).
         """
         minimum = role_min_font_pt(element.role, design_system.thresholds)
-        larger = next_larger_token(
-            element, typography=design_system.typography, minimum_pt=minimum
-        )
+        larger = next_larger_token(element, typography=design_system.typography, minimum_pt=minimum)
         if larger is not None:
             element.style_token = larger
             element.font_size_override = None
@@ -498,9 +486,9 @@ class LayoutRepairService:
                         page_w=page_w,
                         page_h=page_h,
                     )
-                    if self._text_fits(element, style, thresholds=thresholds) and not self._overlaps_any(
-                        element, neighbors, gap=0.0
-                    ):
+                    if self._text_fits(
+                        element, style, thresholds=thresholds
+                    ) and not self._overlaps_any(element, neighbors, gap=0.0):
                         return True
 
         # Restore geometry — do not leave a half-applied full-safe takeover.
@@ -550,14 +538,10 @@ class LayoutRepairService:
         # 3. Fine-tune height at current width (down / up).
         need_h = self._needed_height(text, element.width, style, thresholds)
         if need_h <= element.height + room["down"] + 1e-6:
-            candidates.append(
-                (element.x, element.y, element.width, max(element.height, need_h))
-            )
+            candidates.append((element.x, element.y, element.width, max(element.height, need_h)))
         if need_h <= element.height + room["up"] + 1e-6:
             new_h = max(element.height, need_h)
-            candidates.append(
-                (element.x, element.y + element.height - new_h, element.width, new_h)
-            )
+            candidates.append((element.x, element.y + element.height - new_h, element.width, new_h))
 
         # 1. Expand into adjacent whitespace (width then height).
         max_w = element.width + room["left"] + room["right"]
@@ -602,9 +586,7 @@ class LayoutRepairService:
         for x, y, width, height in candidates:
             if width < _MIN_TEXT_W or height < _MIN_TEXT_H:
                 continue
-            probe = element.model_copy(
-                update={"x": x, "y": y, "width": width, "height": height}
-            )
+            probe = element.model_copy(update={"x": x, "y": y, "width": width, "height": height})
             if not self._text_fits(probe, style, thresholds=thresholds):
                 continue
             if self._overlaps_any(probe, neighbors, gap=gap):
@@ -636,31 +618,21 @@ class LayoutRepairService:
             vert_overlap = not (
                 element.bottom <= other.y + 1e-9 or other.bottom <= element.y + 1e-9
             )
-            horiz_overlap = not (
-                element.right <= other.x + 1e-9 or other.right <= element.x + 1e-9
-            )
+            horiz_overlap = not (element.right <= other.x + 1e-9 or other.right <= element.x + 1e-9)
             if vert_overlap:
                 if other.right <= element.x + 1e-9:
-                    room["left"] = min(
-                        room["left"], max(0.0, element.x - other.right - gap)
-                    )
+                    room["left"] = min(room["left"], max(0.0, element.x - other.right - gap))
                 elif other.x >= element.right - 1e-9:
-                    room["right"] = min(
-                        room["right"], max(0.0, other.x - element.right - gap)
-                    )
+                    room["right"] = min(room["right"], max(0.0, other.x - element.right - gap))
                 else:
                     # Already colliding in this band — no lateral expansion.
                     room["left"] = 0.0
                     room["right"] = 0.0
             if horiz_overlap:
                 if other.bottom <= element.y + 1e-9:
-                    room["up"] = min(
-                        room["up"], max(0.0, element.y - other.bottom - gap)
-                    )
+                    room["up"] = min(room["up"], max(0.0, element.y - other.bottom - gap))
                 elif other.y >= element.bottom - 1e-9:
-                    room["down"] = min(
-                        room["down"], max(0.0, other.y - element.bottom - gap)
-                    )
+                    room["down"] = min(room["down"], max(0.0, other.y - element.bottom - gap))
                 else:
                     room["up"] = 0.0
                     room["down"] = 0.0
@@ -728,13 +700,16 @@ class LayoutRepairService:
     ) -> bool:
         if not element.text_content:
             return True
-        return self._text.overflow_amount(
-            element.text_content,
-            box_width_in=element.width,
-            box_height_in=element.height,
-            style=style,
-            vertical_tolerance_in=thresholds.text_overflow_validation_tolerance_in,
-        ) <= 0
+        return (
+            self._text.overflow_amount(
+                element.text_content,
+                box_width_in=element.width,
+                box_height_in=element.height,
+                style=style,
+                vertical_tolerance_in=thresholds.text_overflow_validation_tolerance_in,
+            )
+            <= 0
+        )
 
     @staticmethod
     def _overlaps_any(
@@ -886,9 +861,7 @@ class LayoutRepairService:
                     if not self._rects_overlap(element, peer, gap=_GAP):
                         continue
                     element.y = peer.bottom + _GAP
-                    element.height = min(
-                        element.height, max(_MIN_TEXT_H, safe.bottom - element.y)
-                    )
+                    element.height = min(element.height, max(_MIN_TEXT_H, safe.bottom - element.y))
 
                 self._clamp_to_rect(
                     element,
@@ -901,9 +874,7 @@ class LayoutRepairService:
                 )
 
     @staticmethod
-    def _rects_overlap(
-        left: LayoutElement, right: LayoutElement, *, gap: float = 0.0
-    ) -> bool:
+    def _rects_overlap(left: LayoutElement, right: LayoutElement, *, gap: float = 0.0) -> bool:
         probe = Rect(left.x, left.y, left.width, left.height)
         other = Rect(
             right.x - gap,

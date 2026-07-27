@@ -105,8 +105,10 @@ class TestLayoutRepairService:
         a = repaired.element_by_id("a")
         assert a is not None and b is not None
         assert b.y >= a.bottom - 1e-6 or b.x >= a.right - 1e-6
-        assert not LayoutValidationService().validate(repaired, design).issues_for(
-            LAYOUT_ELEMENT_OVERLAP
+        assert (
+            not LayoutValidationService()
+            .validate(repaired, design)
+            .issues_for(LAYOUT_ELEMENT_OVERLAP)
         )
 
     def test_repairs_overlap_prefers_unlocked(self) -> None:
@@ -170,9 +172,11 @@ class TestLayoutRepairService:
         # not a hard-coded source→caption name hop.
         assert source.style_token == "footnote"
         assert source.font_size_override is None
-        assert not LayoutValidationService().validate(
-            repaired, design, require_source=True
-        ).issues_for(LAYOUT_FONT_TOO_SMALL)
+        assert (
+            not LayoutValidationService()
+            .validate(repaired, design, require_source=True)
+            .issues_for(LAYOUT_FONT_TOO_SMALL)
+        )
 
     def test_font_upgrade_uses_actual_sizes_not_token_names(self) -> None:
         """When source is larger than footnote, upgrade must not hop source→caption by name."""
@@ -246,9 +250,11 @@ class TestLayoutRepairService:
         body = repaired.element_by_id("body")
         assert body is not None
         assert body.font_size_override == design.thresholds.min_body_font_pt
-        assert not LayoutValidationService().validate(
-            repaired, design, require_source=False
-        ).issues_for(LAYOUT_FONT_TOO_SMALL)
+        assert (
+            not LayoutValidationService()
+            .validate(repaired, design, require_source=False)
+            .issues_for(LAYOUT_FONT_TOO_SMALL)
+        )
 
     def test_compact_tokens_never_increase_font_size(self) -> None:
         from archium.application.visual.text_style_resolve import smaller_compliant_tokens
@@ -303,9 +309,11 @@ class TestLayoutRepairService:
 
         safe = safe_rect(design)
         assert body.area < safe.area * 0.95
-        assert not LayoutValidationService().validate(
-            repaired, design, require_source=False
-        ).issues_for(LAYOUT_TEXT_OVERFLOW)
+        assert (
+            not LayoutValidationService()
+            .validate(repaired, design, require_source=False)
+            .issues_for(LAYOUT_TEXT_OVERFLOW)
+        )
 
     def test_text_overflow_does_not_cover_unlocked_neighbors(self) -> None:
         """P0: overflow repair must not paint over unlocked hero/body/metrics."""
@@ -354,7 +362,7 @@ class TestLayoutRepairService:
         )
         assert body.width < 8.0  # did not snap to full safe width
 
-    def test_text_overflow_unresolved_suggests_split_and_variant(self) -> None:
+    def test_text_overflow_unresolved_suggests_split_without_fake_variant(self) -> None:
         """When text cannot fit without covering neighbors, escalate — don't fill safe."""
         design = default_presentation_design_system()
         plan = _plan(
@@ -381,7 +389,6 @@ class TestLayoutRepairService:
             ),
             family=LayoutFamily.HERO,
         )
-        before_variant = plan.layout_variant
         report = LayoutValidationService().validate(plan, design, require_source=False)
         assert report.issues_for(LAYOUT_TEXT_OVERFLOW)
         repaired = LayoutRepairService().repair(plan, report, design).plan
@@ -392,7 +399,7 @@ class TestLayoutRepairService:
         assert caption.height <= 0.5
         assert caption.y + 1e-6 >= hero.bottom or caption.bottom <= hero.y + 1e-6
         assert repaired.overflow_policy == OverflowPolicy.SPLIT
-        assert repaired.layout_variant != before_variant
+        assert repaired.layout_variant == plan.layout_variant
 
     def test_repairs_drawing_crop_and_distortion(self) -> None:
         design = default_presentation_design_system()
@@ -456,9 +463,11 @@ class TestLayoutRepairService:
         hero = repaired.element_by_id("hero")
         assert hero is not None
         assert hero.area > before.area
-        assert not LayoutValidationService().validate(
-            repaired, design, drawing_hero=True
-        ).issues_for(LAYOUT_HERO_NOT_DOMINANT)
+        assert (
+            not LayoutValidationService()
+            .validate(repaired, design, drawing_hero=True)
+            .issues_for(LAYOUT_HERO_NOT_DOMINANT)
+        )
 
     def test_locked_hero_skips_enlarge_repair(self) -> None:
         design = default_presentation_design_system()
@@ -539,9 +548,11 @@ class TestLayoutRepairService:
         repaired = LayoutRepairService().repair(plan, report, design).plan
         widths = [el.width for el in repaired.elements_by_role(LayoutElementRole.METRIC)]
         assert max(widths) - min(widths) < 1e-6
-        assert not LayoutValidationService().validate(
-            repaired, design, require_source=False
-        ).issues_for(LAYOUT_INCONSISTENT_ALIGNMENT)
+        assert (
+            not LayoutValidationService()
+            .validate(repaired, design, require_source=False)
+            .issues_for(LAYOUT_INCONSISTENT_ALIGNMENT)
+        )
 
 
 class TestLayoutRepairContracts:
