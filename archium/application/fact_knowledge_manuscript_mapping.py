@@ -116,11 +116,10 @@ def link_invariant_issues(
 ) -> list[str]:
     """DOM-008: report broken Fact↔Knowledge↔Manuscript ID chains."""
     issues: list[str] = []
-    if knowledge is not None and fact is not None:
-        if knowledge.linked_fact_id != fact.id:
-            issues.append(
-                f"knowledge.linked_fact_id={knowledge.linked_fact_id} != fact.id={fact.id}"
-            )
+    if knowledge is not None and fact is not None and knowledge.linked_fact_id != fact.id:
+        issues.append(
+            f"knowledge.linked_fact_id={knowledge.linked_fact_id} != fact.id={fact.id}"
+        )
     if manuscript_fact is not None and knowledge is not None:
         if manuscript_fact.knowledge_item_id != knowledge.id:
             issues.append(

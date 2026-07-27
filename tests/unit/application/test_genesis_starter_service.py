@@ -145,7 +145,6 @@ def test_existing_starter_backfills_missing_brief(db_session) -> None:
     presentation = repo.get_presentation(first.presentation_id)
     assert presentation is not None
     assert presentation.current_brief_id is not None
-    brief_id = presentation.current_brief_id
     presentation.current_brief_id = None
     repo.update_presentation(presentation)
     db_session.commit()

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -166,12 +167,10 @@ def downgrade() -> None:
         columns = {col["name"] for col in inspector.get_columns("concept_directions")}
         indexes = {idx["name"] for idx in inspector.get_indexes("concept_directions")}
         with op.batch_alter_table("concept_directions") as batch:
-            try:
+            with contextlib.suppress(Exception):
                 batch.drop_constraint(
                     "fk_concept_directions_exploration_session_id", type_="foreignkey"
                 )
-            except Exception:
-                pass
             if "ix_concept_directions_exploration_session_id" in indexes:
                 batch.drop_index("ix_concept_directions_exploration_session_id")
             if "exploration_session_id" in columns:

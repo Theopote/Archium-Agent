@@ -275,7 +275,7 @@ def _check_breath_after_peak(
             continue
         window = beats[i + 1 : i + 3]
         if BeatKind.BREATH not in window and BeatKind.TRANSITION not in window:
-            end = min(i + 3, len(beats))
+            min(i + 3, len(beats))
             findings.append(
                 RhythmFinding(
                     rule_code=RHYTHM_NO_BREATH_AFTER_PEAK,

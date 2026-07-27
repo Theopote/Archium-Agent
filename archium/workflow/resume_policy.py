@@ -53,7 +53,4 @@ def snapshot_looks_resumable(snap: Any) -> bool:
     if getattr(snap, "next", None):
         return True
     tasks = getattr(snap, "tasks", ()) or ()
-    for task in tasks:
-        if getattr(task, "interrupts", None):
-            return True
-    return False
+    return any(getattr(task, "interrupts", None) for task in tasks)

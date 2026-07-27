@@ -100,11 +100,10 @@ def diff_direction_intent(
     if direction.spatial_intent is not None:
         if _spatial_key(direction.spatial_intent) != _spatial_key(intent.spatial_intent):
             drifts.append("spatial_intent")
-    if direction.design_rules:
-        if _rules_key(list(direction.design_rules)) != _rules_key(
-            list(intent.design_rules)
-        ):
-            drifts.append("design_rules")
+    if direction.design_rules and _rules_key(list(direction.design_rules)) != _rules_key(
+        list(intent.design_rules)
+    ):
+        drifts.append("design_rules")
     if intent.source_direction_id is not None and intent.source_direction_id != direction.id:
         drifts.append("source_direction_id")
     return DirectionIntentDiff(fields=tuple(drifts))

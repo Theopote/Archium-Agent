@@ -293,10 +293,7 @@ def _starter_summary(
     has_cover_layout: bool,
     created: bool,
 ) -> str:
-    if created:
-        lead = f"已生成 {page_count} 页大纲草稿"
-    else:
-        lead = f"已有 {page_count} 页大纲草稿"
+    lead = f"已生成 {page_count} 页大纲草稿" if created else f"已有 {page_count} 页大纲草稿"
     if slides_ready_count >= page_count:
         lead += f"，{slides_ready_count} 页内容占位已就绪"
     elif slides_ready_count > 0:
@@ -558,7 +555,7 @@ def ensure_genesis_starter_draft(
         or prompt.strip()[:160]
         or "汇报核心主张待补充"
     )
-    slides_added = _ensure_starter_slides(
+    _ensure_starter_slides(
         presentations,
         presentation_id=presentation.id,
         page_intents=page_intents,

@@ -78,7 +78,7 @@ def test_unknowns_prefer_structured_gaps() -> None:
 
 
 def test_merge_claim_index_drops_stale_standard_fact_llm_unknowns() -> None:
-    project_id = uuid4()
+    uuid4()
     pack = ProjectEvidencePack(
         indexed_gaps=(
             KnowledgeGapEntry(

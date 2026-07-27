@@ -163,14 +163,13 @@ def render_design_assistant_panel(
         st.markdown("**发现**")
         for index, finding in enumerate(findings):
             st.markdown(f"- {finding.message}")
-            if finding.action_label and finding.action_prompt:
-                if st.button(
-                    finding.action_label,
-                    key=f"studio_assist_action_{slide_id}_{index}",
-                    use_container_width=True,
-                ):
-                    open_modify_with_prompt(slide_id, finding.action_prompt)
-                    st.rerun()
+            if finding.action_label and finding.action_prompt and st.button(
+                finding.action_label,
+                key=f"studio_assist_action_{slide_id}_{index}",
+                use_container_width=True,
+            ):
+                open_modify_with_prompt(slide_id, finding.action_prompt)
+                st.rerun()
     else:
         st.caption("本页结构尚可 — 暂无强制建议。")
 

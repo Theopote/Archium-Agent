@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+
 import streamlit as st
 
 _PENDING_KEY = "pending_invite_code"
@@ -20,10 +22,8 @@ def consume_invite_query_param() -> str | None:
     if not code:
         return peek_pending_invite_code()
     st.session_state[_PENDING_KEY] = code[:40]
-    try:
+    with contextlib.suppress(Exception):
         del st.query_params["invite"]
-    except Exception:
-        pass
     return code[:40]
 
 

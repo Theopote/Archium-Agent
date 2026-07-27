@@ -101,9 +101,7 @@ def _looks_like_internal_assessment(text: str) -> bool:
         return True
     if "规则评估" in cleaned and "%" in cleaned:
         return True
-    if cleaned.startswith("[刷新]"):
-        return True
-    return False
+    return bool(cleaned.startswith("[刷新]"))
 
 
 def _looks_like_placeholder_audience(text: str) -> bool:

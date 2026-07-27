@@ -439,19 +439,18 @@ def _render_quick_export_popover(
                 presentation_id=context.presentation.id,
                 settings=settings,
             )
-        if export_disabled and verdict.pptx_ready:
-            if st.button(
-                "导出工作稿",
-                width="stretch",
-                key=f"{key_prefix}_export_pptx_draft",
-                help="版式已齐但正式门禁未通过时，可先导出工作稿（非正式交付）。",
-            ):
-                _export_pptx(
-                    project_id=context.project.id,
-                    presentation_id=context.presentation.id,
-                    settings=settings,
-                    require_formal_gate=False,
-                )
+        if export_disabled and verdict.pptx_ready and st.button(
+            "导出工作稿",
+            width="stretch",
+            key=f"{key_prefix}_export_pptx_draft",
+            help="版式已齐但正式门禁未通过时，可先导出工作稿（非正式交付）。",
+        ):
+            _export_pptx(
+                project_id=context.project.id,
+                presentation_id=context.presentation.id,
+                settings=settings,
+                require_formal_gate=False,
+            )
         if st.button(
             "导出 PDF",
             width="stretch",
@@ -580,19 +579,18 @@ def render_export_panel(
                 presentation_id=presentation_id,
                 settings=settings,
             )
-        if export_disabled and verdict.pptx_ready:
-            if st.button(
-                "导出工作稿（非正式）",
-                width="content",
-                key="deliver_export_pptx_draft",
-                help="版式已齐但正式门禁未通过时，可先导出工作稿。",
-            ):
-                _export_pptx(
-                    project_id=project_id,
-                    presentation_id=presentation_id,
-                    settings=settings,
-                    require_formal_gate=False,
-                )
+        if export_disabled and verdict.pptx_ready and st.button(
+            "导出工作稿（非正式）",
+            width="content",
+            key="deliver_export_pptx_draft",
+            help="版式已齐但正式门禁未通过时，可先导出工作稿。",
+        ):
+            _export_pptx(
+                project_id=project_id,
+                presentation_id=presentation_id,
+                settings=settings,
+                require_formal_gate=False,
+            )
 
     st.caption(verdict.partner_summary())
     for line in verdict.partner_lines(limit=4)[1:]:

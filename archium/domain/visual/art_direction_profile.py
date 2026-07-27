@@ -10,6 +10,7 @@ overlays additional traits/avoid onto the preset-derived base profile.
 
 from __future__ import annotations
 
+import contextlib
 from enum import StrEnum
 
 from pydantic import Field
@@ -116,10 +117,8 @@ def profile_for_style_preset(preset: StylePreset) -> ArtDirectionProfile:
     for tag in preset.forbidden_style_tags:
         mapped = _AVOID_TAG_MAP.get(tag)
         if mapped:
-            try:
+            with contextlib.suppress(ValueError):
                 avoid.append(ArtDirectionAvoid(mapped))
-            except ValueError:
-                pass
     avoid.extend(_cards_avoid_for_preset(preset))
 
     references = {

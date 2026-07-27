@@ -119,15 +119,14 @@ def build_element_intent_actions(
                 )
             )
 
-    if role == LayoutElementRole.BODY_TEXT:
-        if text_len > 180:
-            actions.append(
-                ElementIntentAction(
-                    label="减少正文",
-                    prompt="缩短选中正文，保留 2–3 个关键要点",
-                    reason="正文过多，信息层级不够清晰",
-                )
+    if role == LayoutElementRole.BODY_TEXT and text_len > 180:
+        actions.append(
+            ElementIntentAction(
+                label="减少正文",
+                prompt="缩短选中正文，保留 2–3 个关键要点",
+                reason="正文过多，信息层级不够清晰",
             )
+        )
 
     if role == LayoutElementRole.CAPTION and text_len > 80:
         actions.append(
@@ -165,7 +164,6 @@ def render_element_intent_panel(
     if element is None:
         return False
 
-    plan = slide_snapshot.layout_plan
     role_label = ROLE_LABELS.get(element.role, element.role.value)
     type_label = CONTENT_TYPE_LABELS.get(element.content_type, element.content_type.value)
     st.markdown(f"**选中：{role_label}**")
