@@ -142,3 +142,28 @@ class TestLayoutPlanningDeckDirective:
             deck_directive=directive,
         )
         assert all(item.layout_family != LayoutFamily.EVIDENCE_BOARD.value for item in decisions)
+
+    def test_transition_with_asset_always_gets_hero_candidate(self) -> None:
+        service = LayoutPlanningService.__new__(LayoutPlanningService)
+        service._registry = __import__(
+            "archium.infrastructure.layout.layout_family_registry",
+            fromlist=["get_layout_family_registry"],
+        ).get_layout_family_registry()
+        intent = VisualIntent(
+            slide_id=uuid4(),
+            communication_goal="open the section",
+            audience_takeaway="one memorable idea",
+            visual_priority="hero",
+            dominant_content_type=VisualContentType.TEXT_ARGUMENT,
+            preferred_layout_families=[LayoutFamily.STRATEGY_CARDS],
+            hero_asset_id=uuid4(),
+        )
+        directive = _directive(preferred=[LayoutFamily.HERO])
+        directive.transition_mode = "section_break"
+        decisions = service._rule_decisions(
+            intent,
+            asset_count=1,
+            candidate_count=3,
+            deck_directive=directive,
+        )
+        assert decisions[0].layout_family == LayoutFamily.HERO.value

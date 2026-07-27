@@ -117,9 +117,7 @@ class TestDeckCompositionPlanningService:
 
     def test_avoids_three_consecutive_same_family(self) -> None:
         slides = [_slide(order=i) for i in range(4)]
-        intents = [
-            _intent(slides[i], families=[LayoutFamily.EVIDENCE_BOARD]) for i in range(4)
-        ]
+        intents = [_intent(slides[i], families=[LayoutFamily.EVIDENCE_BOARD]) for i in range(4)]
         plan = DeckCompositionPlanningService().plan(
             presentation_id=PRESENTATION_ID,
             art_direction_id=ART_DIRECTION_ID,
@@ -190,6 +188,28 @@ class TestDeckCompositionPlanningService:
         assert len(plan.section_strategies) == 2
         assert sum(plan.layout_family_distribution.values()) == 3
         assert plan.directive_for_slide(slides[2].id) is not None
+        assert (
+            plan.directive_for_slide(slides[1].id).preferred_layout_families[0] == LayoutFamily.HERO
+        )
+
+    def test_first_page_of_each_chapter_becomes_visual_transition(self) -> None:
+        slides = [
+            _slide(order=0, chapter_id="context"),
+            _slide(order=1, chapter_id="context"),
+            _slide(order=2, chapter_id="concept"),
+        ]
+        intents = [_intent(slide) for slide in slides]
+        plan = DeckCompositionPlanningService().plan(
+            presentation_id=PRESENTATION_ID,
+            art_direction_id=ART_DIRECTION_ID,
+            slides=slides,
+            visual_intents=intents,
+        )
+        directive = plan.slide_directives[2]
+        assert directive.pacing_role == PacingRole.TRANSITION
+        assert directive.target_density == DensityLevel.SPACIOUS
+        assert directive.should_contrast_previous is True
+        assert directive.preferred_layout_families[0] == LayoutFamily.HERO
 
     def test_intensity_curve_reflects_content(self) -> None:
         slides = [_slide(order=0), _slide(order=1), _slide(order=2)]
@@ -238,9 +258,7 @@ class TestDeckCompositionPlanningService:
 
     def test_breaks_three_consecutive_text_pages(self) -> None:
         slides = [_slide(order=i) for i in range(3)]
-        intents = [
-            _intent(slides[i], families=[LayoutFamily.TEXTUAL_ARGUMENT]) for i in range(3)
-        ]
+        intents = [_intent(slides[i], families=[LayoutFamily.TEXTUAL_ARGUMENT]) for i in range(3)]
         plan = DeckCompositionPlanningService().plan(
             presentation_id=PRESENTATION_ID,
             art_direction_id=ART_DIRECTION_ID,

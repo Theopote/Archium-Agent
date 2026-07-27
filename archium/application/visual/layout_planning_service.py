@@ -731,6 +731,24 @@ class LayoutPlanningService:
         )
         grammar_forbidden = forbidden_families_for_intent(intent)
         decisions: list[LayoutDecisionDraft] = []
+        if (
+            deck_directive is not None
+            and deck_directive.transition_mode
+            and asset_count > 0
+            and LayoutFamily.HERO not in deck_directive.forbidden_layout_families
+        ):
+            decisions.append(
+                LayoutDecisionDraft(
+                    layout_family=LayoutFamily.HERO.value,
+                    layout_variant="split",
+                    hero_content_ref=(str(intent.hero_asset_id) if intent.hero_asset_id else None),
+                    supporting_content_refs=[
+                        str(asset_id) for asset_id in intent.supporting_asset_ids
+                    ],
+                    reading_order=list(intent.reading_order),
+                    density_adjustment=DensityLevel.SPACIOUS.value,
+                )
+            )
         pool_limit = max(candidate_count * 3, candidate_count, 6)
         for definition in definitions:
             if (

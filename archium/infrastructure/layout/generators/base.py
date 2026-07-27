@@ -70,9 +70,7 @@ class LayoutGenerator(ABC):
         grid_rows: int | None = None,
     ) -> LayoutPlan:
         page = context.design_system.page
-        occupied = occupied_area(
-            [Rect(el.x, el.y, el.width, el.height) for el in elements]
-        )
+        occupied = occupied_area([Rect(el.x, el.y, el.width, el.height) for el in elements])
         return LayoutPlan(
             slide_id=context.slide.id,
             layout_family=self.family,
@@ -129,7 +127,10 @@ class LayoutGenerator(ABC):
             context,
             title or context.content.title or " ",
             "title",
-            min_height=0.5,
+            # The validator and renderer use slightly different line-height
+            # rounding. Reserve a stable title rail up front so validation does
+            # not expand the title later and collide with the body below.
+            min_height=0.68,
         )
 
 
@@ -148,11 +149,7 @@ def content_from_slide(
     """Build a content bundle from SlideSpec + VisualIntent asset refs."""
     from archium.domain.visual.visual_grammar_assets import resolve_grammar_hero_asset_id
 
-    hero = (
-        str(visual_intent.hero_asset_id)
-        if visual_intent.hero_asset_id is not None
-        else None
-    )
+    hero = str(visual_intent.hero_asset_id) if visual_intent.hero_asset_id is not None else None
     supporting = [str(asset_id) for asset_id in visual_intent.supporting_asset_ids]
     grammar_hero = resolve_grammar_hero_asset_id(slide)
     if grammar_hero is not None:

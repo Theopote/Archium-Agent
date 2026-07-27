@@ -82,6 +82,7 @@ class DeckCompositionPlanningService:
             for index, slide in enumerate(ordered)
         ]
         variety_notes: list[str] = []
+        self._apply_section_opening_rhythm(ordered, directives, variety_notes)
         self._apply_density_waveform(directives, variety_notes)
         self._apply_family_variety(directives, variety_notes)
         self._apply_density_pacing(directives, variety_notes)
@@ -92,9 +93,7 @@ class DeckCompositionPlanningService:
             self._apply_style_preset_bias(directives, art_direction, variety_notes)
 
         section_strategies = self._build_section_strategies(ordered, directives)
-        hero_ids, transition_ids, climax_ids = self._identify_anchor_slides(
-            ordered, directives
-        )
+        hero_ids, transition_ids, climax_ids = self._identify_anchor_slides(ordered, directives)
         distribution = Counter(
             directive.preferred_layout_families[0].value for directive in directives
         )
@@ -211,10 +210,16 @@ class DeckCompositionPlanningService:
         }:
             transition_mode = "section_break"
             should_contrast = True
+            preferred = list(
+                dict.fromkeys([LayoutFamily.HERO, LayoutFamily.HYBRID_CANVAS, *preferred])
+            )
         elif previous is not None and previous.density_level == DensityLevel.COMPACT:
             should_contrast = True
         elif pacing_role == PacingRole.CLOSING:
             should_match = True
+            preferred = list(
+                dict.fromkeys([LayoutFamily.HERO, LayoutFamily.TEXTUAL_ARGUMENT, *preferred])
+            )
 
         return SlideCompositionDirective(
             slide_id=slide.id,
@@ -232,6 +237,33 @@ class DeckCompositionPlanningService:
             should_contrast_previous=should_contrast,
             should_match_previous=should_match,
         )
+
+    @staticmethod
+    def _apply_section_opening_rhythm(
+        slides: list[SlideSpec],
+        directives: list[SlideCompositionDirective],
+        notes: list[str],
+    ) -> None:
+        """Turn the first page of each content chapter into a visible beat."""
+        seen: set[str] = set()
+        for index, (slide, directive) in enumerate(zip(slides, directives, strict=True)):
+            if slide.chapter_id in seen:
+                continue
+            seen.add(slide.chapter_id)
+            if index == 0 or directive.pacing_role != PacingRole.SETUP:
+                continue
+            directive.pacing_role = PacingRole.TRANSITION
+            directive.visual_intensity = VisualIntensity.HIGH
+            directive.target_density = DensityLevel.SPACIOUS
+            directive.transition_mode = "chapter_opening"
+            directive.should_contrast_previous = True
+            visual_openers = [
+                LayoutFamily.HERO,
+                LayoutFamily.HYBRID_CANVAS,
+                *directive.preferred_layout_families,
+            ]
+            directive.preferred_layout_families = list(dict.fromkeys(visual_openers))
+            notes.append(f"slide_index={index}: chapter_opening:{slide.chapter_id}")
 
     @staticmethod
     def _apply_density_waveform(
@@ -274,17 +306,11 @@ class DeckCompositionPlanningService:
                 if current.pacing_role == PacingRole.CLIMAX:
                     current.pacing_role = PacingRole.ANALYSIS
                 current.should_contrast_previous = True
-                notes.append(
-                    f"slide_index={index}: 相邻 hero 强度降级为 high（高潮预算）"
-                )
+                notes.append(f"slide_index={index}: 相邻 hero 强度降级为 high（高潮预算）")
 
-        peak_indices = [
-            index for index, item in enumerate(directives) if is_climax_peak(item)
-        ]
+        peak_indices = [index for index, item in enumerate(directives) if is_climax_peak(item)]
         if len(peak_indices) <= budget:
-            notes.append(
-                f"climax_budget:peaks={len(peak_indices)}/{budget} (within budget)"
-            )
+            notes.append(f"climax_budget:peaks={len(peak_indices)}/{budget} (within budget)")
             return
 
         def _keep_score(index: int) -> tuple[float, int]:
@@ -328,7 +354,10 @@ class DeckCompositionPlanningService:
             if candidate == prev == prev2:
                 alternate = _pick_alternate_family(current.preferred_layout_families, prev)
                 if alternate is not None:
-                    current.preferred_layout_families = [alternate, *current.preferred_layout_families]
+                    current.preferred_layout_families = [
+                        alternate,
+                        *current.preferred_layout_families,
+                    ]
                     current.forbidden_layout_families = list(
                         dict.fromkeys([*current.forbidden_layout_families, prev])
                     )
@@ -373,9 +402,7 @@ class DeckCompositionPlanningService:
                     ]
                     directive.forbidden_layout_families.append(LayoutFamily.TEXTUAL_ARGUMENT)
                     directive.should_contrast_previous = True
-                    notes.append(
-                        f"slide_index={index}: 打断连续纯文字页，改推 {alternate.value}"
-                    )
+                    notes.append(f"slide_index={index}: 打断连续纯文字页，改推 {alternate.value}")
                 streak = 0
 
     @staticmethod
@@ -430,11 +457,14 @@ class DeckCompositionPlanningService:
                 PacingRole.PAUSE,
             }:
                 directive.target_density = preset.density
-            if preset.preferred_layout_families:
+            if preset.preferred_layout_families and directive.pacing_role not in {
+                PacingRole.OPENING,
+                PacingRole.TRANSITION,
+                PacingRole.CLOSING,
+                PacingRole.CLIMAX,
+            }:
                 preferred = list(preset.preferred_layout_families)
-                merged = _implemented_families(
-                    [*preferred, *directive.preferred_layout_families]
-                )
+                merged = _implemented_families([*preferred, *directive.preferred_layout_families])
                 directive.preferred_layout_families = merged or directive.preferred_layout_families
             if preset.forbidden_layout_families:
                 forbidden = list(
@@ -523,7 +553,10 @@ class DeckCompositionPlanningService:
 def _pacing_role_for(slide: SlideSpec, intent: VisualIntent) -> PacingRole:
     if slide.slide_type == SlideType.TITLE or intent.continuity_role == ContinuityRole.OPENING:
         return PacingRole.OPENING
-    if slide.slide_type == SlideType.SECTION or intent.continuity_role == ContinuityRole.SECTION_OPENING:
+    if (
+        slide.slide_type == SlideType.SECTION
+        or intent.continuity_role == ContinuityRole.SECTION_OPENING
+    ):
         return PacingRole.TRANSITION
     if slide.slide_type in {SlideType.SUMMARY, SlideType.CLOSING} or intent.continuity_role in {
         ContinuityRole.SUMMARY,
@@ -549,7 +582,9 @@ def _visual_intensity_for(
     pacing_role: PacingRole,
 ) -> VisualIntensity:
     if pacing_role in {PacingRole.OPENING, PacingRole.CLOSING}:
-        return VisualIntensity.HERO if slide.slide_type == SlideType.TITLE else VisualIntensity.MEDIUM
+        return (
+            VisualIntensity.HERO if slide.slide_type == SlideType.TITLE else VisualIntensity.MEDIUM
+        )
     if intent.dominant_content_type in {
         VisualContentType.SITE_PLAN,
         VisualContentType.FLOOR_PLAN,
@@ -596,10 +631,7 @@ def _narrative_role(
     intent: VisualIntent,
     pacing_role: PacingRole,
 ) -> str:
-    return (
-        f"{pacing_role.value}: {slide.title} — "
-        f"{intent.communication_goal[:48]}"
-    ).strip()
+    return (f"{pacing_role.value}: {slide.title} — {intent.communication_goal[:48]}").strip()
 
 
 def _implemented_families(families: list[LayoutFamily]) -> list[LayoutFamily]:
