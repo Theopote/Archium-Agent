@@ -69,9 +69,10 @@ PRIMARY_STAGES: tuple[ProductStage, ...] = (
     ),
 )
 
-# Deep-link / developer-only pages (not in primary sidebar).
+# Contextual and developer-only pages (not in primary sidebar).
 # ``studio`` redirects to ``edit`` (bookmark compatibility only).
 # ``workspace`` is a developer deep tool (also linked from 设置 → 开发者与验收).
+# Concept exploration and mission stay reachable from the current-project UI.
 HIDDEN_PAGE_KEYS: tuple[str, ...] = (
     "workspace",
     LEGACY_STUDIO_PAGE_KEY,

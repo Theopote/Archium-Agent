@@ -243,15 +243,11 @@ def _render_recent_design_changes(snapshot: ProjectProgressSnapshot) -> None:
             st.caption("尚无设计决策记录。理解项目、选定方向或反思后会出现。")
             return
         st.caption(f"共 {len(events)} 次设计演进")
-        shown = 0
-        for event in reversed(events):
+        for event in reversed(events[-5:]):
             kind = intent_evolution_kind_label(event.kind)
             when = format_intent_event_time(event.at)
             line = _partner_design_event_line(event.display_line())
             st.markdown(f"- **{kind}** · `{when}` — {line}")
-            shown += 1
-            if shown >= 5:
-                break
         with st.expander("完整设计时间线", expanded=False):
             from archium.ui.intent_evolution_panel import render_intent_evolution_timeline
 
