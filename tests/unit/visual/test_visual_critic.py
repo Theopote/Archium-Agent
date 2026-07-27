@@ -7,9 +7,12 @@ from uuid import uuid4
 import pytest
 from archium.application.visual.visual_critic_service import VisualCriticService
 from archium.domain.visual import (
+    CRITIC_ALIGNMENT_DRIFT,
     CRITIC_HERO_WEAK,
     CRITIC_PAGE_REPETITION,
     CRITIC_READING_ORDER_AWKWARD,
+    CRITIC_VISUAL_NOISE_HIGH,
+    CRITIC_WHITESPACE_WEAK,
     LayoutContentType,
     LayoutElement,
     LayoutElementRole,
@@ -65,6 +68,10 @@ class TestVisualCriticService:
         assert report.total_score is not None
         assert report.dimensions.hero_prominence is not None
         assert report.dimensions.hero_prominence >= 0.5
+        assert report.dimensions.balance is not None
+        assert report.dimensions.whitespace is not None
+        assert report.dimensions.alignment is not None
+        assert report.dimensions.visual_noise is not None
 
     def test_weak_hero_emits_finding(self) -> None:
         plan = _plan(
@@ -186,3 +193,77 @@ class TestVisualCriticService:
         assert report.source_image is not None
         assert report.dimensions.color_chaos is not None
         assert report.dimensions.color_chaos < 0.7
+
+    def test_alignment_drift_and_visual_noise_findings(self) -> None:
+        plan = _plan(
+            LayoutElement(
+                id="title",
+                role=LayoutElementRole.TITLE,
+                content_type=LayoutContentType.TEXT,
+                text_content="漂移页",
+                x=0.4,
+                y=0.25,
+                width=2.3,
+                height=0.28,
+            ),
+            LayoutElement(
+                id="note_a",
+                role=LayoutElementRole.ANNOTATION,
+                content_type=LayoutContentType.TEXT,
+                text_content="a",
+                x=1.3,
+                y=1.1,
+                width=0.5,
+                height=0.18,
+            ),
+            LayoutElement(
+                id="note_b",
+                role=LayoutElementRole.ANNOTATION,
+                content_type=LayoutContentType.TEXT,
+                text_content="b",
+                x=3.1,
+                y=1.45,
+                width=0.45,
+                height=0.18,
+            ),
+            LayoutElement(
+                id="note_c",
+                role=LayoutElementRole.CAPTION,
+                content_type=LayoutContentType.TEXT,
+                text_content="c",
+                x=6.2,
+                y=2.05,
+                width=0.42,
+                height=0.17,
+            ),
+            LayoutElement(
+                id="note_d",
+                role=LayoutElementRole.ANNOTATION,
+                content_type=LayoutContentType.TEXT,
+                text_content="d",
+                x=8.0,
+                y=2.8,
+                width=0.4,
+                height=0.16,
+            ),
+        )
+        report = VisualCriticService().evaluate_plan(plan)
+        codes = {item.rule_code for item in report.findings}
+        assert CRITIC_ALIGNMENT_DRIFT in codes
+        assert CRITIC_VISUAL_NOISE_HIGH in codes
+
+    def test_whitespace_weak_finding_when_page_too_empty_or_dense(self) -> None:
+        plan = _plan(
+            LayoutElement(
+                id="title",
+                role=LayoutElementRole.TITLE,
+                content_type=LayoutContentType.TEXT,
+                text_content="太空",
+                x=0.8,
+                y=0.4,
+                width=2.0,
+                height=0.25,
+            ),
+        ).model_copy(update={"whitespace_ratio": 0.52})
+        report = VisualCriticService().evaluate_plan(plan)
+        assert any(item.rule_code == CRITIC_WHITESPACE_WEAK for item in report.findings)

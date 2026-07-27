@@ -204,6 +204,11 @@ PrimitiveDrawSpec { geometry, style, meaning }
 
 延后：外部院优秀页截图入库、真 Bezier/Freeform 路径、LLM 选型。
 
+### 3.8 Aesthetic Critic（审美闭环）
+
+`VisualCriticService` 不只看「对不对」，还给出审美向维度：`balance` / `whitespace` / `tension` / `alignment` / `visual_noise`。  
+输出仍是只读 `VisualCriticFinding`，进入 Studio Inbox / Proposal，不静默改稿。
+
 Case 001 dry-run：`visual_language.json`；页主张卡含 budget / narrative / grammar / mask / atmosphere / image_composition。
 
 ---

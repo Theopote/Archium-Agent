@@ -16,6 +16,8 @@ from archium.application.visual.template_usage_brief_context import (
     TemplateUsageConstraints,
 )
 from archium.domain.visual.critic import (
+    CRITIC_ALIGNMENT_DRIFT,
+    CRITIC_BALANCE_OFF,
     CRITIC_COLOR_CHAOS,
     CRITIC_COPY_DENSITY_HIGH,
     CRITIC_FOCUS_UNCLEAR,
@@ -24,7 +26,10 @@ from archium.domain.visual.critic import (
     CRITIC_PAGE_REPETITION,
     CRITIC_READING_ORDER_AWKWARD,
     CRITIC_TEMPLATE_BRIEF_VIOLATION,
+    CRITIC_TENSION_FLAT,
     CRITIC_TITLE_WEAK,
+    CRITIC_VISUAL_NOISE_HIGH,
+    CRITIC_WHITESPACE_WEAK,
     VisualCriticDimensions,
     VisualCriticFinding,
     VisualCriticReport,
@@ -124,6 +129,11 @@ class VisualCriticService:
         reading = self._score_reading_order(plan)
         hero = self._score_hero(plan, area)
         mechanical = self._score_mechanical(plan)
+        balance = self._score_balance(plan, area)
+        whitespace = self._score_whitespace(plan)
+        alignment = self._score_alignment(plan)
+        tension = self._score_tension(plan, area)
+        visual_noise = self._score_visual_noise(plan)
         color = None
         repetition = self._score_repetition(plan, peer_plans or [])
         method = _METHOD
@@ -198,6 +208,59 @@ class VisualCriticService:
                     message="Page geometry closely repeats another slide in the deck.",
                     suggestion="Vary family/variant or supporting content across similar pages.",
                     evidence={"multi_page_repetition": repetition},
+                )
+            )
+        if whitespace < 0.5:
+            findings.append(
+                VisualCriticFinding(
+                    rule_code=CRITIC_WHITESPACE_WEAK,
+                    severity=LayoutIssueSeverity.INFO,
+                    message="Whitespace control is weak; page reads either cramped or overly empty.",
+                    suggestion=(
+                        "Adjust copy/hero balance to recover breathing room "
+                        "(target whitespace shift ~10-15%)."
+                    ),
+                    evidence={"whitespace": whitespace},
+                )
+            )
+        if alignment < 0.55:
+            findings.append(
+                VisualCriticFinding(
+                    rule_code=CRITIC_ALIGNMENT_DRIFT,
+                    severity=LayoutIssueSeverity.INFO,
+                    message="Element edges drift without a clear alignment discipline.",
+                    suggestion="Snap major boxes to 1-2 shared vertical edges; reduce small offsets.",
+                    evidence={"alignment": alignment},
+                )
+            )
+        if balance < 0.52:
+            findings.append(
+                VisualCriticFinding(
+                    rule_code=CRITIC_BALANCE_OFF,
+                    severity=LayoutIssueSeverity.INFO,
+                    message="Visual mass feels lopsided across the page.",
+                    suggestion="Redistribute hero/text weight or counter-balance the heavy side by ~15%.",
+                    evidence={"balance": balance},
+                )
+            )
+        if visual_noise < 0.5:
+            findings.append(
+                VisualCriticFinding(
+                    rule_code=CRITIC_VISUAL_NOISE_HIGH,
+                    severity=LayoutIssueSeverity.INFO,
+                    message="Page carries too many small competing visual signals.",
+                    suggestion="Remove low-value accents/icons and merge minor annotations (~20% fewer signals).",
+                    evidence={"visual_noise": visual_noise},
+                )
+            )
+        if tension < 0.45:
+            findings.append(
+                VisualCriticFinding(
+                    rule_code=CRITIC_TENSION_FLAT,
+                    severity=LayoutIssueSeverity.INFO,
+                    message="Scale contrast is too flat to create a strong editorial rhythm.",
+                    suggestion="Increase contrast between primary and secondary elements (~20% scale gap).",
+                    evidence={"tension": tension},
                 )
             )
 
@@ -277,6 +340,11 @@ class VisualCriticService:
             multi_page_repetition=(
                 None if repetition is None else round(repetition, 3)
             ),
+            balance=round(balance, 3),
+            whitespace=round(whitespace, 3),
+            tension=round(tension, 3),
+            alignment=round(alignment, 3),
+            visual_noise=round(visual_noise, 3),
         )
         return VisualCriticReport(
             score_kind="visual_quality",
@@ -542,6 +610,11 @@ class VisualCriticService:
                 dimensions.color_chaos,
                 dimensions.mechanical_feel,
                 dimensions.multi_page_repetition,
+                dimensions.balance,
+                dimensions.whitespace,
+                dimensions.tension,
+                dimensions.alignment,
+                dimensions.visual_noise,
             )
             if value is not None
         ]
@@ -607,6 +680,62 @@ class VisualCriticService:
         top_mode = Counter(tops).most_common(1)[0][1] / len(tops)
         regularity = (width_mode + height_mode + top_mode) / 3.0
         return max(0.0, min(1.0, 1.0 - regularity))
+
+    def _score_balance(self, plan: LayoutPlan, page_area: float) -> float:
+        if not plan.elements:
+            return 0.2
+        center_x = plan.page_width / 2.0
+        left = 0.0
+        right = 0.0
+        for el in plan.elements:
+            mass = el.area / max(page_area, 1e-6)
+            if el.x + el.width / 2.0 <= center_x:
+                left += mass
+            else:
+                right += mass
+        total = max(left + right, 1e-6)
+        delta = abs(left - right) / total
+        return max(0.0, min(1.0, 1.0 - delta * 1.35))
+
+    def _score_whitespace(self, plan: LayoutPlan) -> float:
+        ratio = float(getattr(plan, "whitespace_ratio", 0.0) or 0.0)
+        if ratio <= 0.0:
+            return 0.45
+        target = 0.22
+        delta = abs(ratio - target)
+        return max(0.0, min(1.0, 1.0 - delta / 0.22))
+
+    def _score_alignment(self, plan: LayoutPlan) -> float:
+        boxes = [el for el in plan.elements if el.role != LayoutElementRole.DECORATION]
+        if len(boxes) < 2:
+            return 0.9
+        lefts = [round(el.x, 1) for el in boxes]
+        rights = [round(el.x + el.width, 1) for el in boxes]
+        tops = [round(el.y, 1) for el in boxes]
+        left_mode = Counter(lefts).most_common(1)[0][1] / len(lefts)
+        right_mode = Counter(rights).most_common(1)[0][1] / len(rights)
+        top_mode = Counter(tops).most_common(1)[0][1] / len(tops)
+        return max(0.0, min(1.0, (left_mode + right_mode + top_mode) / 3.0))
+
+    def _score_tension(self, plan: LayoutPlan, page_area: float) -> float:
+        areas = sorted((el.area / max(page_area, 1e-6) for el in plan.elements), reverse=True)
+        if len(areas) < 2:
+            return 0.4
+        gap = areas[0] - areas[1]
+        return max(0.0, min(1.0, gap / 0.22))
+
+    def _score_visual_noise(self, plan: LayoutPlan) -> float:
+        content = [el for el in plan.elements if el.role != LayoutElementRole.DECORATION]
+        if not content:
+            return 0.2
+        tiny = sum(1 for el in content if el.area < 0.35)
+        annotations = sum(
+            1
+            for el in content
+            if el.role in {LayoutElementRole.CAPTION, LayoutElementRole.ANNOTATION}
+        )
+        noise = (tiny + annotations) / max(len(content), 1)
+        return max(0.0, min(1.0, 1.0 - noise * 0.75))
 
     def _score_repetition(
         self, plan: LayoutPlan, peers: list[LayoutPlan]

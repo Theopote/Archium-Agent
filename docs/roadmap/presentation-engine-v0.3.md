@@ -329,6 +329,7 @@ Vision Critic 输出示例（契约）：
 
 - `heuristic_v0`：离线几何快路径（保留）。  
 - `screenshot_v1`：计划几何结构审查（`CRITIC.TITLE_WEAK` / `CRITIC.COPY_DENSITY_HIGH`）+ 可选截图色板；建议带可执行百分比（减字 ~30%、主图 ~20%）。  
+- 审美维度：`balance` / `whitespace` / `tension` / `alignment` / `visual_noise`，命中 `CRITIC.WHITESPACE_WEAK` / `CRITIC.ALIGNMENT_DRIFT` / `CRITIC.BALANCE_OFF` / `CRITIC.VISUAL_NOISE_HIGH` / `CRITIC.TENSION_FLAT`。  
 - `vision_v1`：可选 LLM 多模态（`VISUAL_CRITIC_LLM_ENABLED`），软失败，只读。  
 - 对抗样本：`tests/unit/visual/test_visual_critic_screenshot_v03.py`。
 

@@ -6,9 +6,12 @@ from uuid import uuid4
 
 from archium.application.visual.visual_critic_service import VisualCriticService
 from archium.domain.visual import (
+    CRITIC_ALIGNMENT_DRIFT,
     CRITIC_COPY_DENSITY_HIGH,
     CRITIC_HERO_WEAK,
     CRITIC_TITLE_WEAK,
+    CRITIC_VISUAL_NOISE_HIGH,
+    CRITIC_WHITESPACE_WEAK,
     LayoutContentType,
     LayoutElement,
     LayoutElementRole,
@@ -264,6 +267,9 @@ class TestVisualCriticScreenshotV03:
         assert CRITIC_TITLE_WEAK not in codes
         assert CRITIC_COPY_DENSITY_HIGH not in codes
         assert CRITIC_HERO_WEAK not in codes
+        assert CRITIC_WHITESPACE_WEAK not in codes
+        assert CRITIC_ALIGNMENT_DRIFT not in codes
+        assert CRITIC_VISUAL_NOISE_HIGH not in codes
         # Budget: at most one incidental non-structure warning on a good page.
         structure_codes = {CRITIC_TITLE_WEAK, CRITIC_COPY_DENSITY_HIGH}
         incidental = [

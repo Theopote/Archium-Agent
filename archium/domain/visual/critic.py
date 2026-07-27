@@ -21,6 +21,11 @@ CRITIC_TEMPLATE_BRIEF_VIOLATION = "CRITIC.TEMPLATE_BRIEF_VIOLATION"
 # v0.3 screenshot / structure critic
 CRITIC_TITLE_WEAK = "CRITIC.TITLE_WEAK"
 CRITIC_COPY_DENSITY_HIGH = "CRITIC.COPY_DENSITY_HIGH"
+CRITIC_WHITESPACE_WEAK = "CRITIC.WHITESPACE_WEAK"
+CRITIC_ALIGNMENT_DRIFT = "CRITIC.ALIGNMENT_DRIFT"
+CRITIC_BALANCE_OFF = "CRITIC.BALANCE_OFF"
+CRITIC_VISUAL_NOISE_HIGH = "CRITIC.VISUAL_NOISE_HIGH"
+CRITIC_TENSION_FLAT = "CRITIC.TENSION_FLAT"
 
 
 class VisualCriticFinding(DomainModel):
@@ -56,6 +61,36 @@ class VisualCriticDimensions(DomainModel):
         ge=0.0,
         le=1.0,
         description="1.0 = varied; 0.0 = near-duplicate pages.",
+    )
+    balance: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="1.0 = stable visual mass distribution; 0.0 = lopsided.",
+    )
+    whitespace: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="1.0 = controlled breathing room; 0.0 = too dense or too empty.",
+    )
+    tension: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="1.0 = intentional contrast; 0.0 = flat visual energy.",
+    )
+    alignment: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="1.0 = disciplined shared edges; 0.0 = drifting alignment.",
+    )
+    visual_noise: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="1.0 = calm and restrained; 0.0 = noisy / cluttered.",
     )
 
 

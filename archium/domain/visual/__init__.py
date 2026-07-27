@@ -14,6 +14,8 @@ from archium.domain.visual.benchmark import (
     HumanVisualReviewSource,
 )
 from archium.domain.visual.critic import (
+    CRITIC_ALIGNMENT_DRIFT,
+    CRITIC_BALANCE_OFF,
     CRITIC_COLOR_CHAOS,
     CRITIC_COPY_DENSITY_HIGH,
     CRITIC_FOCUS_UNCLEAR,
@@ -21,7 +23,10 @@ from archium.domain.visual.critic import (
     CRITIC_MECHANICAL,
     CRITIC_PAGE_REPETITION,
     CRITIC_READING_ORDER_AWKWARD,
+    CRITIC_TENSION_FLAT,
     CRITIC_TITLE_WEAK,
+    CRITIC_VISUAL_NOISE_HIGH,
+    CRITIC_WHITESPACE_WEAK,
     VisualCriticDimensions,
     VisualCriticFinding,
     VisualCriticReport,
@@ -152,6 +157,8 @@ from archium.domain.visual.validation import (
 from archium.domain.visual.visual_intent import VisualIntent
 
 __all__ = [
+    "CRITIC_ALIGNMENT_DRIFT",
+    "CRITIC_BALANCE_OFF",
     "CRITIC_COLOR_CHAOS",
     "CRITIC_COPY_DENSITY_HIGH",
     "CRITIC_FOCUS_UNCLEAR",
@@ -159,7 +166,10 @@ __all__ = [
     "CRITIC_MECHANICAL",
     "CRITIC_PAGE_REPETITION",
     "CRITIC_READING_ORDER_AWKWARD",
+    "CRITIC_TENSION_FLAT",
     "CRITIC_TITLE_WEAK",
+    "CRITIC_VISUAL_NOISE_HIGH",
+    "CRITIC_WHITESPACE_WEAK",
     "PRESENTATION_INTELLIGENCE_SCHEMA",
     "PresentationIntelligenceBrief",
     "SHOWCASE_GATE_AESTHETIC_MIN",
