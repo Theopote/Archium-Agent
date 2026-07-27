@@ -36,7 +36,9 @@ from archium.domain.visual.visual_language import (
     Tracking,
     TypographyRecipe,
     TypographyRecipeId,
+    TypographyRole,
     VisualLanguageSpec,
+    primary_role_for_recipe,
 )
 from archium.domain.visual.visual_language.atmosphere import atmosphere_for_context
 from archium.domain.visual.visual_language.image_composition import (
@@ -280,6 +282,7 @@ class VisualLanguageService:
         if title == "封面":
             return TypographyRecipe(
                 recipe=TypographyRecipeId.GIANT_BILINGUAL,
+                primary_role=TypographyRole.HERO_TITLE,
                 scale=TitleScale.GIANT,
                 tracking=Tracking.WIDE,
                 case=TitleCase.AS_IS,
@@ -298,6 +301,7 @@ class VisualLanguageService:
         ):
             return TypographyRecipe(
                 recipe=TypographyRecipeId.ARCHITECTURAL_TITLE,
+                primary_role=TypographyRole.SECTION_TITLE,
                 scale=TitleScale.LARGE,
                 tracking=Tracking.WIDE,
                 case=TitleCase.AS_IS,
@@ -313,6 +317,7 @@ class VisualLanguageService:
         if title in {"流线冲突", "交通冲突", "人车混行"}:
             return TypographyRecipe(
                 recipe=TypographyRecipeId.ARCHITECTURAL_TITLE,
+                primary_role=TypographyRole.SECTION_TITLE,
                 scale=TitleScale.LARGE,
                 tracking=Tracking.NORMAL,
                 case=TitleCase.AS_IS,
@@ -325,7 +330,10 @@ class VisualLanguageService:
                 opacity=1.0,
             )
 
-        return TypographyRecipe(recipe=TypographyRecipeId.DEFAULT)
+        return TypographyRecipe(
+            recipe=TypographyRecipeId.DEFAULT,
+            primary_role=primary_role_for_recipe(TypographyRecipeId.DEFAULT),
+        )
 
     def _color_story_for(
         self,

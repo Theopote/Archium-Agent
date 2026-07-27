@@ -31,12 +31,18 @@ from archium.domain.visual.visual_language.symbols import (
     ArchitecturalSymbolId,
 )
 from archium.domain.visual.visual_language.typography import (
+    ROLE_CATALOG,
     TitleCase,
     TitleDecoration,
     TitleScale,
     Tracking,
+    TypographyPosition,
     TypographyRecipe,
     TypographyRecipeId,
+    TypographyRole,
+    TypographyRoleSpec,
+    primary_role_for_recipe,
+    role_spec,
 )
 
 __all__ = [
@@ -56,14 +62,19 @@ __all__ = [
     "ImageMaskKind",
     "ImageMaskSpec",
     "ImageSlotRole",
-    "NAMED_SWATCHES",
+    "ROLE_CATALOG",
     "SYMBOL_GLYPHS",
     "SceneLayerRole",
     "TitleCase",
     "TitleDecoration",
     "TitleScale",
     "Tracking",
+    "TypographyPosition",
     "TypographyRecipe",
     "TypographyRecipeId",
+    "TypographyRole",
+    "TypographyRoleSpec",
     "VisualLanguageSpec",
+    "primary_role_for_recipe",
+    "role_spec",
 ]

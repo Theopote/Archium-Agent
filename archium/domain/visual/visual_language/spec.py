@@ -52,7 +52,7 @@ class VisualLanguageSpec(DomainModel):
 
     def summary_caption(self) -> str:
         """Short Studio caption."""
-        bits = [f"字 `{self.typography.recipe.value}`"]
+        bits = [f"字 `{self.typography.primary_role.value}`"]
         roles = self.color_story.roles
         if roles:
             bits.append("色 " + "/".join(f"{k}={v}" for k, v in list(roles.items())[:3]))

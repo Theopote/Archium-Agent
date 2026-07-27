@@ -13,6 +13,7 @@ from archium.domain.visual.visual_language import (
     SceneLayerRole,
     TitleCase,
     TypographyRecipeId,
+    TypographyRole,
     VisualLanguageSpec,
 )
 from archium.domain.visual.visual_language.color_story import ColorStory
@@ -55,21 +56,20 @@ def apply_visual_language_to_scene(
         return scene
     nodes = list(scene.nodes)
     typo = language.typography
+    primary = typo.resolve_role(typo.primary_role)
     for index, node in enumerate(nodes):
         if not isinstance(node, TextNode):
             continue
         if node.semantic_role not in {"title", "lead_statement"}:
             continue
         updates: dict[str, object] = {
-            "letter_spacing": typo.letter_spacing_em,
-            "opacity": typo.opacity,
+            "letter_spacing": primary.resolved_letter_spacing(),
+            "opacity": primary.opacity,
+            "font_size": primary.font_size_pt,
+            "font_weight": max(node.font_weight, primary.font_weight),
         }
-        if typo.title_font_size_pt is not None:
-            updates["font_size"] = typo.title_font_size_pt
-        if typo.recipe != TypographyRecipeId.DEFAULT:
-            updates["font_weight"] = max(node.font_weight, 600)
         text = node.text
-        if typo.case == TitleCase.UPPERCASE:
+        if primary.case == TitleCase.UPPERCASE:
             text = text.upper()
             updates["text"] = text
             updates["paragraphs"] = list(node.paragraphs)
@@ -95,7 +95,10 @@ def _apply_typography(
 ) -> list[LayoutElement]:
     typo = language.typography
     if typo.recipe == TypographyRecipeId.DEFAULT:
-        return elements
+        return _apply_secondary_roles(elements, language)
+
+    primary = typo.resolve_role(typo.primary_role)
+    tech = typo.resolve_role(TypographyRole.TECH_NOTE)
     out: list[LayoutElement] = []
     title_el: LayoutElement | None = None
     for element in elements:
@@ -103,15 +106,15 @@ def _apply_typography(
             out.append(element)
             continue
         text = element.text_content or ""
-        if typo.case == TitleCase.UPPERCASE:
+        if primary.case == TitleCase.UPPERCASE:
             text = text.upper()
         title_el = element.model_copy(
             update={
                 "text_content": text,
-                "font_size_override": typo.title_font_size_pt,
-                "letter_spacing": typo.letter_spacing_em,
-                "opacity": typo.opacity,
-                "style_token": "display" if typo.scale.value == "giant" else "title",
+                "font_size_override": primary.font_size_pt,
+                "letter_spacing": primary.resolved_letter_spacing(),
+                "opacity": primary.opacity,
+                "style_token": primary.style_token,
                 "layer_role": SceneLayerRole.TEXT.value,
             }
         )
@@ -133,27 +136,100 @@ def _apply_typography(
             en_id = "vl_title_en"
             if not any(el.id == en_id for el in out):
                 gap = 0.08
+                en_text = typo.english_label
+                if tech.case == TitleCase.UPPERCASE:
+                    en_text = en_text.upper()
                 out.append(
                     LayoutElement(
                         id=en_id,
                         role=LayoutElementRole.SUBTITLE,
                         content_type=LayoutContentType.TEXT,
-                        text_content=typo.english_label.upper()
-                        if typo.case != TitleCase.AS_IS
-                        else typo.english_label,
+                        text_content=en_text,
                         x=title_el.x,
                         y=title_el.y + title_el.height + gap,
                         width=title_el.width,
                         height=0.28,
                         z_index=title_el.z_index,
                         alignment=title_el.alignment,
-                        style_token="caption",
-                        font_size_override=typo.english_font_size_pt,
-                        letter_spacing=0.12,
-                        opacity=0.85,
+                        style_token=tech.style_token,
+                        font_size_override=tech.font_size_pt,
+                        letter_spacing=tech.resolved_letter_spacing(),
+                        opacity=tech.opacity,
                         layer_role=SceneLayerRole.TEXT.value,
                     )
                 )
+        else:
+            en_text = existing_sub.text_content or ""
+            if tech.case == TitleCase.UPPERCASE:
+                en_text = en_text.upper()
+            out = [
+                (
+                    el.model_copy(
+                        update={
+                            "text_content": en_text,
+                            "font_size_override": tech.font_size_pt,
+                            "letter_spacing": tech.resolved_letter_spacing(),
+                            "opacity": tech.opacity,
+                            "style_token": tech.style_token,
+                        }
+                    )
+                    if el.id == existing_sub.id
+                    else el
+                )
+                for el in out
+            ]
+
+    return _apply_secondary_roles(out, language)
+
+
+def _apply_secondary_roles(
+    elements: list[LayoutElement],
+    language: VisualLanguageSpec,
+) -> list[LayoutElement]:
+    """Stamp CAPTION / DRAWING_LABEL / ANNOTATION roles onto existing text."""
+    typo = language.typography
+    caption = typo.resolve_role(TypographyRole.CAPTION)
+    drawing = typo.resolve_role(TypographyRole.DRAWING_LABEL)
+    out: list[LayoutElement] = []
+    for element in elements:
+        if element.id.startswith("vl_"):
+            out.append(element)
+            continue
+        if element.role == LayoutElementRole.CAPTION:
+            text = element.text_content or ""
+            if caption.case == TitleCase.UPPERCASE:
+                text = text.upper()
+            out.append(
+                element.model_copy(
+                    update={
+                        "text_content": text,
+                        "font_size_override": element.font_size_override
+                        or caption.font_size_pt,
+                        "letter_spacing": caption.resolved_letter_spacing(),
+                        "opacity": element.opacity or caption.opacity,
+                        "style_token": element.style_token or caption.style_token,
+                    }
+                )
+            )
+            continue
+        if element.role == LayoutElementRole.ANNOTATION:
+            text = element.text_content or ""
+            if drawing.case == TitleCase.UPPERCASE:
+                text = text.upper()
+            out.append(
+                element.model_copy(
+                    update={
+                        "text_content": text,
+                        "font_size_override": element.font_size_override
+                        or drawing.font_size_pt,
+                        "letter_spacing": drawing.resolved_letter_spacing(),
+                        "opacity": element.opacity or drawing.opacity,
+                        "style_token": element.style_token or drawing.style_token,
+                    }
+                )
+            )
+            continue
+        out.append(element)
     return out
 
 
@@ -224,11 +300,14 @@ def _inject_decorations(
 
     if DecorationId.SECTION_LABEL_01 in deco.decorations or deco.section_index:
         if not any(el.id == "vl_section_index" for el in out):
+            index_role = language.typography.resolve_role(TypographyRole.INDEX)
             index_text = deco.section_index or (
                 f"{(page_order or 0) + 1:02d}" if page_order is not None else "01"
             )
             label = deco.section_label or ""
             text = f"{index_text}  ·  {label}".strip(" ·") if label else index_text
+            if index_role.case == TitleCase.UPPERCASE:
+                text = text.upper()
             y = 0.35
             if title is not None:
                 y = max(0.2, title.y - 0.32)
@@ -243,9 +322,10 @@ def _inject_decorations(
                     width=min(4.0, plan.page_width * 0.5),
                     height=0.28,
                     z_index=5,
-                    style_token="caption",
-                    font_size_override=11,
-                    letter_spacing=0.14,
+                    style_token=index_role.style_token,
+                    font_size_override=index_role.font_size_pt,
+                    letter_spacing=index_role.resolved_letter_spacing(),
+                    opacity=index_role.opacity,
                     layer_role=SceneLayerRole.ANNOTATION.value,
                 )
             )
