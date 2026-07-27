@@ -9,9 +9,15 @@ from sqlalchemy.orm import Session
 
 from archium.application.outline_service import infer_audience_mode
 from archium.application.outline_templates import detect_scenario_template, template_sections
-from archium.domain.enums import ApprovalStatus, OutlineAudienceMode, SlideStatus, SlideType
+from archium.domain.enums import (
+    ApprovalStatus,
+    OutlineAudienceMode,
+    PresentationType,
+    SlideStatus,
+    SlideType,
+)
 from archium.domain.outline import OutlinePlan, OutlineSection
-from archium.domain.presentation import Presentation
+from archium.domain.presentation import Presentation, PresentationBrief
 from archium.domain.slide import SlideSpec, build_slide_logical_key
 from archium.domain.slide_intent import SlideIntent
 from archium.domain.slide_role import SlideRole, visual_strategy_from_role
@@ -152,6 +158,51 @@ def _ensure_starter_slides(
         presentations.save_slide(slide)
         created += 1
     return created
+
+
+def _ensure_starter_brief(
+    presentations: PresentationRepository,
+    *,
+    project_id: UUID,
+    presentation: Presentation,
+    title: str,
+    purpose: str,
+    target_slide_count: int,
+    thesis: str,
+    sections: list[OutlineSection],
+) -> PresentationBrief:
+    """Create a minimal brief so starter drafts remain exportable."""
+    if presentation.current_brief_id is not None:
+        current = presentations.get_brief(presentation.current_brief_id)
+        if current is not None:
+            return current
+    briefs = presentations.list_briefs(presentation.id)
+    if briefs:
+        presentation.current_brief_id = briefs[0].id
+        presentations.update_presentation(presentation)
+        return briefs[0]
+
+    brief = presentations.save_brief(
+        PresentationBrief(
+            project_id=project_id,
+            presentation_id=presentation.id,
+            title=title,
+            presentation_type=PresentationType.OTHER,
+            audience="汇报对象待确认",
+            purpose=purpose[:500] if purpose else "建筑方案汇报",
+            duration_minutes=max(10, min(45, target_slide_count * 2)),
+            target_slide_count=target_slide_count,
+            core_message=(thesis.strip() or purpose.strip() or title)[:500],
+            required_sections=[section.title for section in sections if section.title.strip()],
+            tone="professional",
+            language="zh-CN",
+            approval_status=ApprovalStatus.DRAFT,
+            version=1,
+        )
+    )
+    presentation.current_brief_id = brief.id
+    presentations.update_presentation(presentation)
+    return brief
 
 
 def _starter_summary(
@@ -377,14 +428,15 @@ def ensure_genesis_starter_draft(
     sections = _starter_sections(prompt=prompt, purpose=purpose)
     page_intents = _page_intents_from_sections(sections)
     audience_mode = infer_audience_mode("", purpose)
+    thesis = _thesis_from(
+        prompt=prompt,
+        understanding=understanding_summary,
+        project_name=title,
+    )
     outline = OutlinePlan(
         presentation_id=presentation.id,
         title=title,
-        thesis=_thesis_from(
-            prompt=prompt,
-            understanding=understanding_summary,
-            project_name=title,
-        ),
+        thesis=thesis,
         audience="汇报对象待确认",
         purpose=purpose[:500] if purpose else "建筑方案汇报",
         target_slide_count=max(len(page_intents), 6),
@@ -396,6 +448,16 @@ def ensure_genesis_starter_draft(
     saved_outline = presentations.save_outline(outline)
     presentation.current_outline_id = saved_outline.id
     presentations.update_presentation(presentation)
+    _ensure_starter_brief(
+        presentations,
+        project_id=project_id,
+        presentation=presentation,
+        title=title,
+        purpose=purpose,
+        target_slide_count=outline.target_slide_count,
+        thesis=thesis,
+        sections=sections,
+    )
 
     first_intent = page_intents[0]
     cover_message = (

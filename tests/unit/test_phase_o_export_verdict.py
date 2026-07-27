@@ -115,6 +115,46 @@ def test_citation_gap_counts_as_blocker() -> None:
         assert_formal_export_allowed(report, export_format="PPTX")
 
 
+def test_concept_draft_skips_scene_semantic_blockers() -> None:
+    session = MagicMock()
+    with (
+        patch(
+            "archium.application.visual.layout_readiness.presentation_has_visual_layout",
+            return_value=True,
+        ),
+        patch(
+            "archium.application.review_service.PresentationReviewService"
+        ) as review_cls,
+        patch(
+            "archium.infrastructure.database.repositories.DocumentRepository"
+        ) as doc_cls,
+        patch(
+            "archium.infrastructure.database.repositories.PresentationRepository"
+        ) as pres_cls,
+        patch(
+            "archium.application.evidence_readiness_service._scene_export_blocker_messages",
+            return_value=["[scene] 图片节点未渲染"],
+        ),
+        patch(
+            "archium.application.evidence_readiness_service._citation_gap_messages",
+            return_value=[],
+        ),
+    ):
+        review_cls.return_value.list_review_issues.return_value = []
+        doc_cls.return_value.list_by_project.return_value = []
+        pres_cls.return_value.list_slides.return_value = []
+        from archium.application.evidence_readiness_service import resolve_delivery_readiness
+
+        report = resolve_delivery_readiness(
+            session,
+            project_id=uuid4(),
+            presentation_id=uuid4(),
+        )
+    assert "概念草稿不可正式交付：请先绑定至少一份项目资料" in report.blockers
+    assert "[scene] 图片节点未渲染" not in report.blockers
+    assert "scene_semantic" not in report.evidence_stacks
+
+
 def test_product_paths_require_art_direction_review() -> None:
     root = Path(__file__).resolve().parents[2]
     export = (root / "archium/ui/studio/export_panel.py").read_text(encoding="utf-8")

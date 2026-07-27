@@ -34,12 +34,21 @@ def test_ensure_genesis_starter_creates_outline_and_cover_slide(db_session) -> N
     assert first.layout_ready_count >= 6
     assert first.layout_ready_count == first.page_count
 
-    slides = PresentationRepository(db_session).list_slides(first.presentation_id)
+    repo = PresentationRepository(db_session)
+    slides = repo.list_slides(first.presentation_id)
+    presentation = repo.get_presentation(first.presentation_id)
     assert len(slides) == first.page_count
     assert slides[0].order == 0
     assert all(slide.message.strip() for slide in slides)
     assert all(slide.layout_plan_id is not None for slide in slides)
     assert {slide.order for slide in slides} == set(range(first.page_count))
+    assert presentation is not None
+    assert presentation.current_brief_id is not None
+    brief = repo.get_brief(presentation.current_brief_id)
+    assert brief is not None
+    assert brief.presentation_id == first.presentation_id
+    assert brief.target_slide_count == first.page_count
+    assert brief.core_message.strip()
 
     second = ensure_genesis_starter_draft(
         db_session,

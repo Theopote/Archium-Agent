@@ -187,16 +187,17 @@ def resolve_delivery_readiness(
             blockers.append("质量检查状态无法验证")
             stacks.append("automated_review")
 
-        for message in _scene_export_blocker_messages(
-            session,
-            presentation_id=presentation_id,
-            project_id=project_id,
-        ):
-            blockers.append(message)
-            review_blocker_count += 1
-            scene_hit = True
-        if scene_hit:
-            stacks.append("scene_semantic")
+        if not evidence.is_concept_draft:
+            for message in _scene_export_blocker_messages(
+                session,
+                presentation_id=presentation_id,
+                project_id=project_id,
+            ):
+                blockers.append(message)
+                review_blocker_count += 1
+                scene_hit = True
+            if scene_hit:
+                stacks.append("scene_semantic")
 
         citation_msgs = _citation_gap_messages(session, presentation_id)
         citation_gap_count = len(citation_msgs)
