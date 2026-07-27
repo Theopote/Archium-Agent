@@ -350,6 +350,70 @@ def _render_home_starter_preview(snapshot: ProjectProgressSnapshot) -> None:
         logger.exception("Failed to render home starter preview")
 
 
+def _render_project_details(snapshot: ProjectProgressSnapshot) -> None:
+    """Render expensive project diagnostics only when the user asks for them."""
+    try:
+        from archium.ui.llm_settings import render_project_llm_tier_selector
+
+        render_project_llm_tier_selector(
+            snapshot.project_id,
+            key_prefix="home_llm_tier",
+        )
+    except Exception:
+        logger.exception("Failed to render project LLM tier selector")
+
+    left, right = st.columns(2)
+    with left:
+        _render_recent_design_changes(snapshot)
+        try:
+            from archium.ui.project_event_panel import (
+                render_project_event_log,
+                render_project_usage_strip,
+            )
+
+            render_project_event_log(
+                snapshot.project_id,
+                limit=6,
+                expanded=False,
+                title="项目事件记忆",
+            )
+            render_project_usage_strip(
+                snapshot.project_id,
+                expanded=False,
+                title="本月 LLM 用量",
+            )
+        except Exception:
+            logger.exception("Failed to render project event details")
+
+    with right:
+        try:
+            from archium.ui.project_event_panel import render_job_progress_strip
+
+            render_job_progress_strip(
+                snapshot.project_id,
+                limit=4,
+                active_only=False,
+                title="任务进度",
+                allow_process_once=True,
+                show_worker_hint=False,
+            )
+        except Exception:
+            logger.exception("Failed to render project job progress")
+        try:
+            from archium.ui.project_members_panel import render_project_members_panel
+
+            render_project_members_panel(
+                snapshot.project_id,
+                key_prefix="home_members",
+                expanded=False,
+            )
+        except Exception:
+            logger.exception("Failed to render project members panel")
+
+    _render_pending_issues(snapshot)
+    _render_recent_versions(snapshot)
+
+
 def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
     header_l, header_r = st.columns([3.2, 1])
     with header_l:
@@ -405,76 +469,25 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
     ):
         st.info("Genesis 草稿已生成线框；确认大纲后可运行正式生成管线。")
 
-    meta = st.columns(3)
-    with meta[0]:
-        st.markdown(f"**当前阶段**  \n{snapshot.current_stage_label}")
-    with meta[1]:
-        st.markdown(f"**状态摘要**  \n{snapshot.narrative_summary}")
-    with meta[2]:
-        st.markdown("**总体进度**")
-        _render_progress_bar(snapshot)
+    with st.container(horizontal=True):
+        st.metric("当前阶段", snapshot.current_stage_label, border=True)
+        st.metric("待完成页面", snapshot.pending_count, border=True)
+        st.metric("交付状态", snapshot.deliver_label, border=True)
+    st.caption(snapshot.narrative_summary)
+    st.caption("总体进度")
+    _render_progress_bar(snapshot)
 
     st.space("small")
     _render_partner_next_steps(snapshot)
-    with st.expander("项目详情与高级信息", expanded=False):
-        try:
-            from archium.ui.llm_settings import render_project_llm_tier_selector
-
-            render_project_llm_tier_selector(
-                snapshot.project_id,
-                key_prefix="home_llm_tier",
-            )
-        except Exception:
-            logger.exception("Failed to render project LLM tier selector")
-        left, mid, right = st.columns(3)
-        with left:
-            _render_recent_design_changes(snapshot)
-        with mid:
-            try:
-                from archium.ui.project_event_panel import (
-                    render_project_event_log,
-                    render_project_usage_strip,
-                )
-
-                render_project_event_log(
-                    snapshot.project_id,
-                    limit=6,
-                    expanded=False,
-                    title="项目事件记忆",
-                )
-                render_project_usage_strip(
-                    snapshot.project_id,
-                    expanded=False,
-                    title="本月 LLM 用量",
-                )
-            except Exception:
-                pass
-        with right:
-            try:
-                from archium.ui.project_event_panel import render_job_progress_strip
-
-                render_job_progress_strip(
-                    snapshot.project_id,
-                    limit=4,
-                    active_only=False,
-                    title="任务进度",
-                    allow_process_once=True,
-                    show_worker_hint=False,
-                )
-            except Exception:
-                pass
-            try:
-                from archium.ui.project_members_panel import render_project_members_panel
-
-                render_project_members_panel(
-                    snapshot.project_id,
-                    key_prefix="home_members",
-                    expanded=False,
-                )
-            except Exception:
-                logger.exception("Failed to render project members panel")
-        _render_pending_issues(snapshot)
-        _render_recent_versions(snapshot)
+    details = st.expander(
+        "项目详情与高级信息",
+        expanded=False,
+        icon=":material/tune:",
+        on_change="rerun",
+    )
+    if details.open:
+        with details:
+            _render_project_details(snapshot)
 
     st.space("small")
     with st.container(horizontal=True, vertical_alignment="center"):

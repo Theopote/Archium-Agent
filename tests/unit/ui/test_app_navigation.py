@@ -190,6 +190,12 @@ def test_home_is_project_cockpit_not_welcome_wall() -> None:
     assert "五阶段说明（首次使用）" in text
     assert "list_recent_project_snapshots" in text
     assert "_render_project_cockpit" in text
+    assert "_render_project_details" in text
+    assert 'on_change="rerun"' in text
+    assert "if details.open:" in text
+    assert 'st.metric("当前阶段"' in text
+    assert 'st.metric("待完成页面"' in text
+    assert 'st.metric("交付状态"' in text
 
 
 def test_sidebar_uses_project_progress_not_module_status() -> None:
