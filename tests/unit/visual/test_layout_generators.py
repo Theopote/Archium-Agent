@@ -84,6 +84,15 @@ class TestLayoutFamilyRegistry:
         candidates = registry.candidates_for(VisualContentType.SITE_PLAN, asset_count=1)
         assert candidates[0].family == LayoutFamily.DRAWING_FOCUS
 
+    def test_site_plan_without_bound_asset_uses_asset_free_family(self) -> None:
+        registry = get_layout_family_registry()
+        candidates = registry.candidates_for(
+            VisualContentType.SITE_PLAN,
+            asset_count=0,
+        )
+        assert candidates
+        assert all(LayoutElementRole.HERO_VISUAL not in item.required_roles for item in candidates)
+
     def test_process_and_metrics_candidates(self) -> None:
         registry = get_layout_family_registry()
         process = registry.candidates_for(VisualContentType.PROCESS, asset_count=0)

@@ -169,7 +169,11 @@ _REGISTRY: dict[LayoutFamily, LayoutFamilyDefinition] = {
         variants=("diagram_focus", "diagram_with_callouts"),
         default="diagram_focus",
         required=(LayoutElementRole.TITLE, LayoutElementRole.HERO_VISUAL),
-        optional=(LayoutElementRole.ANNOTATION, LayoutElementRole.CAPTION, LayoutElementRole.SOURCE),
+        optional=(
+            LayoutElementRole.ANNOTATION,
+            LayoutElementRole.CAPTION,
+            LayoutElementRole.SOURCE,
+        ),
         implemented=True,
         description="Analytical diagram focus with optional callouts.",
     ),
@@ -249,7 +253,9 @@ _REGISTRY: dict[LayoutFamily, LayoutFamilyDefinition] = {
 class LayoutFamilyRegistry:
     """Register and query LayoutFamily definitions."""
 
-    def __init__(self, definitions: dict[LayoutFamily, LayoutFamilyDefinition] | None = None) -> None:
+    def __init__(
+        self, definitions: dict[LayoutFamily, LayoutFamilyDefinition] | None = None
+    ) -> None:
         self._definitions = dict(definitions or _REGISTRY)
 
     def get(self, family: LayoutFamily) -> LayoutFamilyDefinition:
@@ -279,13 +285,16 @@ class LayoutFamilyRegistry:
             for item in pool
             if content_type in item.supported_content_types
             and item.min_assets <= asset_count <= item.max_assets
+            and not (asset_count == 0 and LayoutElementRole.HERO_VISUAL in item.required_roles)
         ]
         if not compatible:
-            # Soft fallback: ignore asset bounds but keep content affinity.
+            # If the requested content cannot be rendered with available media,
+            # fall back to a genuinely asset-free family instead of creating an
+            # empty hero/drawing placeholder.
             compatible = [
                 item
                 for item in pool
-                if content_type in item.supported_content_types
+                if item.min_assets == 0 and LayoutElementRole.HERO_VISUAL not in item.required_roles
             ]
         if not compatible:
             compatible = list(pool)
