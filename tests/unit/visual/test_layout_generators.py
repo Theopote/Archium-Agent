@@ -116,6 +116,20 @@ class TestGenerators:
         assert concept is not None
         assert concept.content_type.value == "image"
 
+    def test_hybrid_freeform_adds_grounding_panel(self) -> None:
+        solver = LayoutSolver()
+        plan = solver.generate(
+            LayoutFamily.HYBRID_CANVAS,
+            _context(
+                LayoutFamily.HYBRID_CANVAS,
+                content_type=VisualContentType.MIXED,
+                variant="freeform",
+            ),
+        )
+        panel = plan.element_by_id("canvas_panel")
+        assert panel is not None
+        assert panel.role == LayoutElementRole.DECORATION
+
     def test_strategy_cards_reserve_gaps_around_lead_and_source(self) -> None:
         solver = LayoutSolver()
         plan = solver.generate(

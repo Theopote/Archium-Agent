@@ -145,9 +145,7 @@ class VisualCriticService:
                 )
             )
             if usage_brief is not None:
-                notes.append(
-                    f"TemplateUsageBrief {usage_brief.id} v{usage_brief.version}"
-                )
+                notes.append(f"TemplateUsageBrief {usage_brief.id} v{usage_brief.version}")
             elif usage_constraints is not None:
                 notes.append(
                     f"TemplateUsageBrief {usage_constraints.brief_id} "
@@ -267,9 +265,7 @@ class VisualCriticService:
         structure = self._structure_findings(plan, area, content_policy=content_policy)
         if structure:
             findings.extend(structure)
-            notes.append(
-                "screenshot_v1 structure pass (plan metrics; offline CI path)."
-            )
+            notes.append("screenshot_v1 structure pass (plan metrics; offline CI path).")
 
         # Promote method when v0.3 actionable visual findings are present
         # (structure codes or enhanced hero/focus suggestions).
@@ -300,8 +296,7 @@ class VisualCriticService:
                             severity=LayoutIssueSeverity.WARNING,
                             message="Screenshot palette looks noisy / over-saturated.",
                             suggestion=(
-                                "Reduce accent variety; prefer restrained "
-                                "presentation colors."
+                                "Reduce accent variety; prefer restrained presentation colors."
                             ),
                             evidence={"color_calm": color},
                         )
@@ -337,9 +332,7 @@ class VisualCriticService:
             hero_prominence=None if hero is None else round(hero, 3),
             color_chaos=None if color is None else round(color, 3),
             mechanical_feel=round(mechanical, 3),
-            multi_page_repetition=(
-                None if repetition is None else round(repetition, 3)
-            ),
+            multi_page_repetition=(None if repetition is None else round(repetition, 3)),
             balance=round(balance, 3),
             whitespace=round(whitespace, 3),
             tension=round(tension, 3),
@@ -377,9 +370,7 @@ class VisualCriticService:
             )
         return reports
 
-    def _llm_vision_critique(
-        self, plan: LayoutPlan, image_path: Path
-    ) -> _VisionCriticDraft | None:
+    def _llm_vision_critique(self, plan: LayoutPlan, image_path: Path) -> _VisionCriticDraft | None:
         assert self._llm is not None
         prompt = (
             "Critique this architectural presentation slide screenshot.\n"
@@ -542,9 +533,7 @@ class VisualCriticService:
                 }
             )
             diagram_count = sum(
-                1
-                for el in plan.elements
-                if el.content_type == LayoutContentType.DRAWING
+                1 for el in plan.elements if el.content_type == LayoutContentType.DRAWING
             )
             if image_count > content_policy.max_images:
                 findings.append(
@@ -556,8 +545,7 @@ class VisualCriticService:
                             f"content_policy max_images={content_policy.max_images}."
                         ),
                         suggestion=(
-                            f"Keep ≤{content_policy.max_images} images; "
-                            "prefer one dominant visual."
+                            f"Keep ≤{content_policy.max_images} images; prefer one dominant visual."
                         ),
                         evidence={
                             "image_count": image_count,
@@ -737,19 +725,17 @@ class VisualCriticService:
         noise = (tiny + annotations) / max(len(content), 1)
         return max(0.0, min(1.0, 1.0 - noise * 0.75))
 
-    def _score_repetition(
-        self, plan: LayoutPlan, peers: list[LayoutPlan]
-    ) -> float | None:
+    def _score_repetition(self, plan: LayoutPlan, peers: list[LayoutPlan]) -> float | None:
         if not peers:
             return None
         fingerprint = self._geometry_fingerprint(plan)
         best = 0.0
         for peer in peers:
+            if peer.id == plan.id:
+                continue
             best = max(
                 best,
-                self._fingerprint_similarity(
-                    fingerprint, self._geometry_fingerprint(peer)
-                ),
+                self._fingerprint_similarity(fingerprint, self._geometry_fingerprint(peer)),
             )
         return max(0.0, min(1.0, 1.0 - best))
 
@@ -822,9 +808,7 @@ class VisualCriticService:
         return findings
 
     @staticmethod
-    def _fingerprint_similarity(
-        left: list[tuple[Any, ...]], right: list[tuple[Any, ...]]
-    ) -> float:
+    def _fingerprint_similarity(left: list[tuple[Any, ...]], right: list[tuple[Any, ...]]) -> float:
         if not left or not right:
             return 0.0
         roles_l = [item[0] for item in left]
@@ -835,12 +819,7 @@ class VisualCriticService:
             return role_score * 0.35
         deltas: list[float] = []
         for a, b in zip(left, right, strict=False):
-            deltas.append(
-                abs(a[1] - b[1])
-                + abs(a[2] - b[2])
-                + abs(a[3] - b[3])
-                + abs(a[4] - b[4])
-            )
+            deltas.append(abs(a[1] - b[1]) + abs(a[2] - b[2]) + abs(a[3] - b[3]) + abs(a[4] - b[4]))
         mean_delta = statistics.fmean(deltas) if deltas else 0.0
         return max(0.0, min(1.0, 1.0 - mean_delta / 4.0))
 

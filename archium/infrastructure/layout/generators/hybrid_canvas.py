@@ -57,7 +57,12 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
             safe.width,
             max(1.2, safe.bottom - body_top - source_reserve),
         )
-        photo_panel, story_panel = split_horizontal(body, left_ratio=0.55, gap=spacing.lg)
+        opening_ratio = (0.50, 0.56, 0.62)[context.slide.order % 3]
+        photo_panel, story_panel = split_horizontal(
+            body,
+            left_ratio=opening_ratio,
+            gap=spacing.lg,
+        )
 
         hero_ref = context.content.hero_asset_ref or "grammar:historic_or_context_photo"
         elements.append(
@@ -363,7 +368,29 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
             safe.width,
             max(1.2, safe.bottom - body_top - source_reserve),
         )
-        left, right = split_horizontal(body, left_ratio=0.52, gap=spacing.lg)
+        canvas_ratio = (0.48, 0.56, 0.62)[context.slide.order % 3]
+        left, right = split_horizontal(
+            body,
+            left_ratio=canvas_ratio,
+            gap=spacing.lg,
+        )
+
+        elements.append(
+            LayoutElement(
+                id="canvas_panel",
+                role=LayoutElementRole.DECORATION,
+                content_type=LayoutContentType.SHAPE,
+                x=right.x,
+                y=right.y,
+                width=right.width,
+                height=right.height,
+                z_index=0,
+                fill_color="#F2F3F1",
+                stroke_color=None,
+                stroke_width=0,
+                opacity=0.72,
+            )
+        )
 
         supports = list(context.content.supporting_asset_refs[:2])
         metrics = (

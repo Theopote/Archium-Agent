@@ -122,9 +122,7 @@ class TestVisualCriticService:
             ),
         )
         report = VisualCriticService().evaluate_plan(plan)
-        assert any(
-            item.rule_code == CRITIC_READING_ORDER_AWKWARD for item in report.findings
-        )
+        assert any(item.rule_code == CRITIC_READING_ORDER_AWKWARD for item in report.findings)
         assert report.dimensions.reading_order_naturalness is not None
         assert report.dimensions.reading_order_naturalness < 0.55
 
@@ -161,6 +159,22 @@ class TestVisualCriticService:
             for report in reports
             for item in report.findings
         )
+
+    def test_single_page_does_not_compare_with_itself(self) -> None:
+        plan = _plan(
+            LayoutElement(
+                id="title",
+                role=LayoutElementRole.TITLE,
+                content_type=LayoutContentType.TEXT,
+                text_content="Only page",
+                x=0.7,
+                y=0.4,
+                width=8,
+                height=0.5,
+            )
+        )
+        report = VisualCriticService().evaluate_deck([plan])[0]
+        assert not any(item.rule_code == CRITIC_PAGE_REPETITION for item in report.findings)
 
     def test_color_chaos_from_screenshot(self, tmp_path) -> None:  # noqa: ANN001
         try:

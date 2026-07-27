@@ -94,7 +94,12 @@ class StrategyCardsLayoutGenerator(LayoutGenerator):
         concept_area = Rect(safe.x, concept_top, safe.width, concept_h)
 
         if context.content.hero_asset_ref:
-            diagram, spatial_area = split_horizontal(concept_area, left_ratio=0.62, gap=spacing.lg)
+            concept_ratio = (0.58, 0.64, 0.70)[context.slide.order % 3]
+            diagram, spatial_area = split_horizontal(
+                concept_area,
+                left_ratio=concept_ratio,
+                gap=spacing.lg,
+            )
             elements.append(
                 LayoutElement(
                     id="concept",
@@ -141,7 +146,7 @@ class StrategyCardsLayoutGenerator(LayoutGenerator):
         elements.append(
             LayoutElement(
                 id="spatial_change",
-                role=LayoutElementRole.BODY_TEXT,
+                role=LayoutElementRole.ANNOTATION,
                 content_type=LayoutContentType.TEXT,
                 text_content=spatial_text,
                 x=spatial_area.x,
