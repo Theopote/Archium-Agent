@@ -473,6 +473,10 @@ def render(
 
     _render_studio_partner_strip(context)
 
+    welcome = st.session_state.pop("studio_genesis_welcome", None)
+    if isinstance(welcome, str) and welcome.strip():
+        st.success(welcome)
+
     selected_index = int(st.session_state.get("studio_selected_slide_index", 0))
     slide_snapshot = get_selected_slide_snapshot(context, selected_index)
     advanced = bool(st.session_state.get("studio_advanced_mode", False))

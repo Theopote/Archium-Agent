@@ -265,6 +265,7 @@ def _render_home_starter_preview(snapshot: ProjectProgressSnapshot) -> None:
         ):
             if snapshot.presentation_id is not None:
                 st.session_state.selected_presentation_id = str(snapshot.presentation_id)
+            st.session_state.studio_selected_slide_index = 0
             st.switch_page(get_app_page("edit"))
     except Exception:
         logger.exception("Failed to render home starter preview")

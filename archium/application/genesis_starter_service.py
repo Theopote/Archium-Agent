@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from archium.application.outline_service import infer_audience_mode
 from archium.application.outline_templates import detect_scenario_template, template_sections
-from archium.domain.enums import ApprovalStatus, OutlineAudienceMode, SlideType
+from archium.domain.enums import ApprovalStatus, OutlineAudienceMode, SlideStatus, SlideType
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import Presentation
 from archium.domain.slide import SlideSpec, build_slide_logical_key
@@ -25,7 +25,10 @@ class GenesisStarterResult:
     outline_id: UUID | None
     page_count: int
     has_first_slide: bool
-    summary: str
+    slides_ready_count: int = 0
+    has_cover_layout: bool = False
+    cover_preview_path: str | None = None
+    summary: str = ""
 
 
 _GENERIC_STARTER: tuple[tuple[str, str, str, str], ...] = (
@@ -44,6 +47,132 @@ _ROLE_BY_CATEGORY: dict[str, SlideRole] = {
     "strategy": SlideRole.STRATEGY,
     "decision": SlideRole.CONCLUSION,
 }
+
+_SLIDE_TYPE_BY_ROLE: dict[SlideRole, SlideType] = {
+    SlideRole.OPENING: SlideType.TITLE,
+    SlideRole.CONCLUSION: SlideType.CLOSING,
+    SlideRole.SUMMARY: SlideType.SUMMARY,
+    SlideRole.BACKGROUND: SlideType.SECTION,
+    SlideRole.DATA: SlideType.DATA,
+    SlideRole.COMPARISON: SlideType.COMPARISON,
+    SlideRole.TIMELINE: SlideType.TIMELINE,
+    SlideRole.EXPERIENCE: SlideType.IMAGE,
+    SlideRole.VISION: SlideType.IMAGE,
+    SlideRole.CONCEPT: SlideType.IMAGE,
+}
+
+
+def _slide_type_for_role(role: SlideRole | None) -> SlideType:
+    if role is None:
+        return SlideType.CONTENT
+    return _SLIDE_TYPE_BY_ROLE.get(role, SlideType.CONTENT)
+
+
+def _section_by_id(sections: list[OutlineSection]) -> dict[str, OutlineSection]:
+    return {section.id: section for section in sections}
+
+
+def _placeholder_message(*, intent: SlideIntent, section: OutlineSection | None) -> str:
+    for candidate in (
+        (intent.central_conclusion or "").strip(),
+        (section.key_message if section is not None else "").strip(),
+        (section.purpose if section is not None else "").strip(),
+        (intent.page_task or "").strip(),
+    ):
+        if candidate:
+            return candidate[:500]
+    return "本页核心结论待补充"
+
+
+def _placeholder_title(
+    *,
+    intent: SlideIntent,
+    section: OutlineSection | None,
+    project_title: str,
+    order: int,
+) -> str:
+    if order == 0:
+        return project_title
+    for candidate in (
+        (intent.page_task or "").strip(),
+        (section.title if section is not None else "").strip(),
+    ):
+        if candidate:
+            return candidate[:500]
+    return f"第 {order + 1} 页"
+
+
+def _ensure_starter_slides(
+    presentations: PresentationRepository,
+    *,
+    presentation_id: UUID,
+    page_intents: list[SlideIntent],
+    sections: list[OutlineSection],
+    project_title: str,
+    cover_message_override: str | None = None,
+) -> int:
+    """Create placeholder SlideSpec rows for each outline page intent (no LLM)."""
+    existing = {
+        slide.order: slide
+        for slide in presentations.list_slides(presentation_id)
+    }
+    section_map = _section_by_id(sections)
+    created = 0
+    for intent in sorted(page_intents, key=lambda item: item.order):
+        order = int(intent.order)
+        if order in existing:
+            continue
+        section = section_map.get(intent.chapter_id)
+        role = intent.slide_role or _ROLE_BY_CATEGORY.get(
+            section.category if section is not None else "",
+            SlideRole.OTHER,
+        )
+        if order == 0 and cover_message_override:
+            message = cover_message_override.strip()[:500]
+        else:
+            message = _placeholder_message(intent=intent, section=section)
+        slide = SlideSpec(
+            presentation_id=presentation_id,
+            chapter_id=intent.chapter_id,
+            order=order,
+            title=_placeholder_title(
+                intent=intent,
+                section=section,
+                project_title=project_title,
+                order=order,
+            ),
+            message=message,
+            slide_type=_slide_type_for_role(role),
+            slide_role=role,
+            visual_strategy=intent.visual_strategy or visual_strategy_from_role(role),
+            logical_key=build_slide_logical_key(intent.chapter_id, order),
+            status=SlideStatus.PLANNED,
+        )
+        presentations.save_slide(slide)
+        created += 1
+    return created
+
+
+def _starter_summary(
+    *,
+    page_count: int,
+    slides_ready_count: int,
+    has_cover_layout: bool,
+    created: bool,
+) -> str:
+    if created:
+        lead = f"已生成 {page_count} 页大纲草稿"
+    else:
+        lead = f"已有 {page_count} 页大纲草稿"
+    if slides_ready_count >= page_count:
+        lead += f"，{slides_ready_count} 页内容占位已就绪"
+    elif slides_ready_count > 0:
+        lead += f"，{slides_ready_count}/{page_count} 页内容占位已就绪"
+    if has_cover_layout:
+        lead += "，封面版式线框已就绪"
+    elif slides_ready_count > 0:
+        lead += "，封面页可预览"
+    return lead
 
 
 def _starter_sections(*, prompt: str, purpose: str) -> list[OutlineSection]:
@@ -112,13 +241,41 @@ def _existing_starter(session: Session, project_id: UUID) -> GenesisStarterResul
     if outline is None or not outline.sections:
         return None
     page_count = len(outline.page_intents) or len(outline.sections)
+    slides_ready_count = len(slides)
+    from archium.application.genesis_cover_layout_service import cover_wireframe_preview_path
+
+    preview_path = cover_wireframe_preview_path(session, presentation.id)
+    has_cover = preview_path is not None or (
+        bool(slides) and slides[0].layout_plan_id is not None
+    )
+    if slides_ready_count < page_count:
+        added = _ensure_starter_slides(
+            PresentationRepository(session),
+            presentation_id=presentation.id,
+            page_intents=list(outline.page_intents),
+            sections=list(outline.sections),
+            project_title=presentation.title or "新汇报",
+        )
+        if added:
+            session.commit()
+            slides = PresentationRepository(session).list_slides(presentation.id)
+            slides_ready_count = len(slides)
+    summary = _starter_summary(
+        page_count=page_count,
+        slides_ready_count=slides_ready_count,
+        has_cover_layout=has_cover,
+        created=False,
+    )
     return GenesisStarterResult(
         created=False,
         presentation_id=presentation.id,
         outline_id=outline.id,
         page_count=page_count,
         has_first_slide=bool(slides),
-        summary=f"已有 {page_count} 页大纲草稿",
+        slides_ready_count=slides_ready_count,
+        has_cover_layout=has_cover,
+        cover_preview_path=preview_path,
+        summary=summary,
     )
 
 
@@ -144,6 +301,31 @@ def ensure_genesis_starter_draft(
     """
     existing = _existing_starter(session, project_id)
     if existing is not None:
+        if not existing.has_cover_layout:
+            from archium.application.genesis_cover_layout_service import (
+                ensure_cover_wireframe_layout,
+            )
+
+            cover = ensure_cover_wireframe_layout(
+                session,
+                project_id=project_id,
+                presentation_id=existing.presentation_id,
+            )
+            if cover.preview_path or cover.layout_plan_id:
+                summary = existing.summary
+                if cover.summary and cover.summary not in summary:
+                    summary = f"{summary} · {cover.summary}"
+                return GenesisStarterResult(
+                    created=False,
+                    presentation_id=existing.presentation_id,
+                    outline_id=existing.outline_id,
+                    page_count=existing.page_count,
+                    has_first_slide=existing.has_first_slide,
+                    slides_ready_count=existing.slides_ready_count,
+                    has_cover_layout=True,
+                    cover_preview_path=cover.preview_path or existing.cover_preview_path,
+                    summary=summary,
+                )
         return existing
 
     project = ProjectRepository(session).get_by_id(project_id)
@@ -181,33 +363,46 @@ def ensure_genesis_starter_draft(
     presentations.update_presentation(presentation)
 
     first_intent = page_intents[0]
-    first_section = sections[0]
     cover_message = (
         first_intent.central_conclusion.strip()
         or understanding_summary.strip()[:160]
         or prompt.strip()[:160]
         or "汇报核心主张待补充"
     )
-    slide = SlideSpec(
+    slides_added = _ensure_starter_slides(
+        presentations,
         presentation_id=presentation.id,
-        chapter_id=first_section.id,
-        order=0,
-        title=title,
-        message=cover_message,
-        slide_type=SlideType.TITLE,
-        slide_role=SlideRole.OPENING,
-        visual_strategy=visual_strategy_from_role(SlideRole.OPENING),
-        logical_key=build_slide_logical_key(first_section.id, 0),
+        page_intents=page_intents,
+        sections=sections,
+        project_title=title,
+        cover_message_override=cover_message,
     )
-    presentations.save_slide(slide)
-    session.commit()
 
+    from archium.application.genesis_cover_layout_service import ensure_cover_wireframe_layout
+
+    cover = ensure_cover_wireframe_layout(
+        session,
+        project_id=project_id,
+        presentation_id=presentation.id,
+    )
+
+    slides_ready_count = len(presentations.list_slides(presentation.id))
     page_count = len(page_intents)
+    has_cover_layout = bool(cover.preview_path or cover.layout_plan_id)
+    summary = _starter_summary(
+        page_count=page_count,
+        slides_ready_count=slides_ready_count,
+        has_cover_layout=has_cover_layout,
+        created=True,
+    )
     return GenesisStarterResult(
         created=True,
         presentation_id=presentation.id,
         outline_id=saved_outline.id,
         page_count=page_count,
-        has_first_slide=True,
-        summary=f"已生成 {page_count} 页大纲草稿，封面页可预览",
+        has_first_slide=slides_ready_count > 0,
+        slides_ready_count=slides_ready_count,
+        has_cover_layout=has_cover_layout,
+        cover_preview_path=cover.preview_path,
+        summary=summary,
     )

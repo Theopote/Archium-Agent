@@ -853,7 +853,11 @@ def _render_outline_draft_banner(outline: OutlinePlan | None, *, slide_count: in
         return
     st.success(
         f"Genesis 已生成 {len(outline.page_intents) or len(outline.sections)} 页大纲草稿。"
-        + (f" 封面内容已就绪，共 {slide_count} 页 SlideSpec。" if slide_count else "")
+        + (
+            f" {slide_count} 页内容占位已就绪，可在工作室浏览全稿。"
+            if slide_count > 0
+            else ""
+        )
         + " 请逐页确认意图，或在工作室预览封面。"
     )
 

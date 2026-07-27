@@ -51,6 +51,7 @@ def render_genesis_next_steps(*, project_id: str, has_draft: bool = False) -> No
                 type="primary",
             ):
                 st.session_state.selected_project_id = project_id_str
+                st.session_state.studio_selected_slide_index = 0
                 st.switch_page(get_app_page("edit"))
         with cols[1]:
             if st.button(
