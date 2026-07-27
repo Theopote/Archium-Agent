@@ -1,0 +1,6 @@
+E3 notes
+- Changed title textbox to: 清凉寺重建 · 剧本E验证
+- Clicked 保存文字
+- Undo visual depth increased 1 → 2
+- Design assistant still showed: 陕西三原县清凉寺重建验证
+- Later PPTX slide1 text runs did not contain 剧本E

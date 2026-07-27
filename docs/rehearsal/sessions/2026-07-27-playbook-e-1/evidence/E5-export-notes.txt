@@ -1,0 +1,6 @@
+E5 notes
+- Deliver page: 导出 PPTX → 「PPTX 导出完成」
+- Round-trip QA pass; fidelity editable within support
+- Version: 2026-07-27 15:10 · hash d95f599f5ff7
+- Path: data/outputs/presentations/e48d0481-f625-48a7-b4b1-e1ee4163e76d/v1/presentation.pptx
+- FAIL criterion for playbook: Studio cover text edit marker 「剧本E」not found in PPTX slide1

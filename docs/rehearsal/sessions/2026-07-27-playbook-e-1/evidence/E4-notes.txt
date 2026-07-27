@@ -1,0 +1,5 @@
+E4 notes
+- Clicked 撤销视觉 while depth was 2
+- 重做视觉 became enabled (1)
+- No crash / blank page
+- Counts may stay visually confusing (undo still shows 2) — record as UX issue only if reproducible by human

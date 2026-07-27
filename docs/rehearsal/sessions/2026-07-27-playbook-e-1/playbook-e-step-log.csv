@@ -1,6 +1,6 @@
 step_id,step_name,project_id,pass,notes,evidence_path,blocker_level
-E1,选中单个元素,,,,
-E2,移动或缩放,,,,
-E3,换图或改文字,,,,
-E4,Undo,,,,
-E5,导出 PPTX,,,,
+E1,选中单个元素,02064f41-c161-4db7-870a-5738547a6ffd,Y,选中标题 genesis-title-0；属性显示角色/位置/尺寸；画布有选区高亮,evidence/E1-selection-properties.png,
+E2,移动或缩放,02064f41-c161-4db7-870a-5738547a6ffd,Y,点「右对齐页面」后撤销视觉 0→1；标题近满宽故位置数字可能不变但写入修订,evidence/E2-after-align-undo-available.png,
+E3,换图或改文字,02064f41-c161-4db7-870a-5738547a6ffd,Partial,属性框改为「清凉寺重建 · 剧本E验证」并保存；撤销深度升至2；设计助理仍显示旧标题；PPTX未含该文案,evidence/E3-notes.txt,e_blocker
+E4,Undo,02064f41-c161-4db7-870a-5738547a6ffd,Y,撤销后重做视觉变为1；可再重做；无崩溃,evidence/E4-notes.txt,
+E5,导出 PPTX,02064f41-c161-4db7-870a-5738547a6ffd,Partial,交付页导出成功 QA pass 哈希 d95f599f5ff7；可下载；但封面仍为原标题未见剧本E改动,evidence/E5-export-notes.txt,e_blocker

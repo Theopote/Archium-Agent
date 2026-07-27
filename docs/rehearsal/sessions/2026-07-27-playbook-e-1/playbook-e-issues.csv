@@ -1,2 +1,5 @@
 issue_id,step_id,severity,summary,repro,owner,status
-1,E1,e_blocker,,,,
+1,E3,e_blocker,Studio「保存文字」后属性框更新/撤销深度增加，但设计助理与导出 PPTX 封面仍为旧标题,工作室选中封面标题→改字→保存→交付导出→打开 PPTX 封面,,"open"
+2,E5,e_blocker,导出可成功但与 Studio 最新文字改动不一致（HITL 闭环断裂）,同 issue 1,,"open"
+3,E2,post_e_improvement,近满宽标题点右对齐后属性「位置」数字可能不变，易误判未生效；应以撤销计数或画布为准,,,"open"
+4,,post_e_improvement,项目存在空 draft 汇报壳（0 slides）与 6 页稿并存；版本切换易混淆,,,"open"

@@ -2,47 +2,32 @@
   "session_id": "2026-07-27-playbook-e-1",
   "date": "2026-07-27",
   "playbook": "E",
-  "status": "scheduled",
-  "facilitator": "",
-  "operator": "",
-  "operator_is_non_developer": true,
-  "llm_configured": null,
-  "pptx_export_ready": null,
-  "project_id": "",
-  "project_name": "",
+  "status": "failed",
+  "facilitator": "Cursor Agent",
+  "operator": "Cursor Agent (browser automation)",
+  "operator_is_non_developer": false,
+  "llm_configured": true,
+  "pptx_export_ready": true,
+  "project_id": "02064f41-c161-4db7-870a-5738547a6ffd",
+  "project_name": "陕西三原县清凉寺重建验证",
+  "presentation_id_exported": "e48d0481-f625-48a7-b4b1-e1ee4163e76d",
   "automated_gate": {
     "command": "python scripts/run_playbook_e_gate.py -q",
-    "passed": false,
-    "run_date": "",
+    "passed": true,
+    "run_date": "2026-07-27",
     "commit": ""
   },
   "steps": {
-    "E1": {
-      "pass": null,
-      "waived": false,
-      "waive_reason": ""
-    },
-    "E2": {
-      "pass": null,
-      "waived": false,
-      "waive_reason": ""
-    },
-    "E3": {
-      "pass": null,
-      "waived": false,
-      "waive_reason": ""
-    },
-    "E4": {
-      "pass": null,
-      "waived": false,
-      "waive_reason": ""
-    },
-    "E5": {
-      "pass": null,
-      "waived": false,
-      "waive_reason": ""
-    }
+    "E1": {"pass": true, "waived": false, "waive_reason": ""},
+    "E2": {"pass": true, "waived": false, "waive_reason": ""},
+    "E3": {"pass": false, "waived": false, "waive_reason": "Partial: UI accepts text; export deck lacks marker"},
+    "E4": {"pass": true, "waived": false, "waive_reason": ""},
+    "E5": {"pass": false, "waived": false, "waive_reason": "Partial: export OK; Studio edit not in PPTX"}
   },
   "overall_pass": false,
-  "blockers": []
+  "blockers": [
+    "Studio text save / visual revision does not appear in exported PPTX cover",
+    "Design assistant can lag behind property-panel text after save"
+  ],
+  "notes": "UI-006 remains open. Export path: data/outputs/presentations/e48d0481-.../v1/presentation.pptx hash d95f599f5ff7."
 }
