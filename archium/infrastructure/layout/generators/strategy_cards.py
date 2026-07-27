@@ -64,7 +64,7 @@ class StrategyCardsLayoutGenerator(LayoutGenerator):
             )
         )
 
-        cards_top = safe.y + title_h + lead_h + spacing.sm
+        cards_top = safe.y + title_h + spacing.xs + lead_h + spacing.sm
         cards_h = 0.72
         cards_area = Rect(safe.x, cards_top, safe.width, cards_h)
         cells = grid_cells(cards_area, rows=1, cols=card_count, gap_x=spacing.md, gap_y=0)
@@ -89,14 +89,12 @@ class StrategyCardsLayoutGenerator(LayoutGenerator):
             )
 
         concept_top = cards_area.bottom + spacing.md
-        spatial_h = 0.55
-        concept_h = max(1.0, safe.bottom - concept_top - spatial_h - spacing.sm)
+        source_reserve = 0.3 if context.content.source_text else 0.0
+        concept_h = max(1.0, safe.bottom - concept_top - source_reserve - spacing.sm)
         concept_area = Rect(safe.x, concept_top, safe.width, concept_h)
 
         if context.content.hero_asset_ref:
-            diagram, spatial_area = split_horizontal(
-                concept_area, left_ratio=0.62, gap=spacing.lg
-            )
+            diagram, spatial_area = split_horizontal(concept_area, left_ratio=0.62, gap=spacing.lg)
             elements.append(
                 LayoutElement(
                     id="concept",
@@ -241,8 +239,15 @@ class StrategyCardsLayoutGenerator(LayoutGenerator):
                 )
             )
 
-        board_top = safe.y + title_h + lead_h + spacing.md
-        board = Rect(safe.x, board_top, safe.width, max(1.2, safe.bottom - board_top - spacing.sm))
+        lead_gap = spacing.xs if lead_h else 0.0
+        board_top = safe.y + title_h + lead_gap + lead_h + spacing.md
+        source_reserve = 0.3 if context.content.source_text else 0.0
+        board = Rect(
+            safe.x,
+            board_top,
+            safe.width,
+            max(1.2, safe.bottom - board_top - source_reserve - spacing.sm),
+        )
         cells = grid_cells(board, rows=1, cols=card_count, gap_x=spacing.md, gap_y=0)
 
         card_ids: list[str] = []

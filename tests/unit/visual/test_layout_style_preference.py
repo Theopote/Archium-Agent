@@ -89,7 +89,10 @@ def test_art_direction_image_strategy_full_bleed() -> None:
     art = _art(image_strategy="full bleed hero cover", cover_strategy="hero full-bleed")
     pref = derive_layout_style_preference(art_direction=art)
     assert LayoutFamily.HERO in pref.preferred_families
-    assert any(family == LayoutFamily.HERO and variant == "full_bleed" for family, variant in pref.preferred_variants)
+    assert any(
+        family == LayoutFamily.HERO and variant == "full_bleed"
+        for family, variant in pref.preferred_variants
+    )
 
 
 def test_merge_preferred_families_order() -> None:
@@ -128,7 +131,10 @@ def test_select_best_prefers_style_family_over_higher_score() -> None:
         )
 
     candidates = [
-        (plan(LayoutFamily.TEXTUAL_ARGUMENT, "lead_and_points"), LayoutValidationReport(issues=[], score=0.96)),
+        (
+            plan(LayoutFamily.TEXTUAL_ARGUMENT, "lead_and_points"),
+            LayoutValidationReport(issues=[], score=0.96),
+        ),
         (plan(LayoutFamily.HERO, "full_bleed"), LayoutValidationReport(issues=[], score=0.86)),
     ]
     selected = service.select_best_for_deck(candidates, style_preference=style)
@@ -179,3 +185,30 @@ def test_apply_preference_orders_variant_before_sibling() -> None:
         candidate_count=3,
     )
     assert ordered[0].layout_variant == "full_bleed"
+
+
+def test_apply_preference_diversifies_candidate_families_before_sibling_variants() -> None:
+    decisions = [
+        LayoutDecisionDraft(layout_family="hero", layout_variant="full_bleed"),
+        LayoutDecisionDraft(layout_family="hero", layout_variant="split"),
+        LayoutDecisionDraft(layout_family="hero", layout_variant="overlay"),
+        LayoutDecisionDraft(
+            layout_family="textual_argument",
+            layout_variant="lead_and_points",
+        ),
+        LayoutDecisionDraft(
+            layout_family="strategy_cards",
+            layout_variant="three_cards",
+        ),
+    ]
+    ordered = LayoutPlanningService._apply_preference_to_decisions(
+        decisions,
+        None,
+        LayoutStylePreference(preferred_families=(LayoutFamily.HERO,)),
+        candidate_count=3,
+    )
+    assert [item.layout_family for item in ordered] == [
+        "hero",
+        "strategy_cards",
+        "textual_argument",
+    ]

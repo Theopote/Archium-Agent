@@ -34,11 +34,11 @@ from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.deck_composition import SlideCompositionDirective
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import (
+    DensityLevel,
     LayoutFamily,
     LayoutValidationStatus,
     OverflowPolicy,
     VisualContentType,
-    DensityLevel,
 )
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.slide_capacity_budget import (
@@ -178,9 +178,7 @@ class LayoutPlanningService:
         )
 
         usage_brief = load_brief_for_art_direction(self._session, art)
-        usage_constraints = (
-            constraints_from_brief(usage_brief) if usage_brief is not None else None
-        )
+        usage_constraints = constraints_from_brief(usage_brief) if usage_brief is not None else None
         if usage_constraints is not None:
             self._warnings.append(
                 {
@@ -218,9 +216,7 @@ class LayoutPlanningService:
             )
         elif capacity.status == CapacityStatus.OVERLOADED:
             overload_severity = (
-                "blocker"
-                if self._settings.visual_capacity_block_overloaded
-                else "major"
+                "blocker" if self._settings.visual_capacity_block_overloaded else "major"
             )
             self._warnings.append(
                 {
@@ -304,7 +300,11 @@ class LayoutPlanningService:
             VisualContentType.SECTION,
             VisualContentType.ELEVATION,
         }
-        if usage_constraints is not None and usage_constraints.forbid_drawing_cover_crop and drawing:
+        if (
+            usage_constraints is not None
+            and usage_constraints.forbid_drawing_cover_crop
+            and drawing
+        ):
             self._warnings.append(
                 {
                     "code": "TEMPLATE_USAGE_BRIEF.DRAWING_CONTAIN",
@@ -352,15 +352,12 @@ class LayoutPlanningService:
             report = self._validator.validate(
                 plan,
                 design,
-                require_source=bool(content.source_text)
-                or family == LayoutFamily.DRAWING_FOCUS,
+                require_source=bool(content.source_text) or family == LayoutFamily.DRAWING_FOCUS,
                 drawing_hero=drawing,
                 asset_context=asset_context,
             )
             plan.validation_status = (
-                LayoutValidationStatus.VALID
-                if report.valid
-                else LayoutValidationStatus.INVALID
+                LayoutValidationStatus.VALID if report.valid else LayoutValidationStatus.INVALID
             )
             results.append((plan, report))
         return results
@@ -390,26 +387,26 @@ class LayoutPlanningService:
         *,
         deck_directive: SlideCompositionDirective | None = None,
         previous_layout_plan: LayoutPlan | None = None,
+        recent_layout_plans: Sequence[LayoutPlan] | None = None,
         style_preference: LayoutStylePreference | None = None,
     ) -> LayoutPlan:
         if not candidates:
             raise ValueError("no layout candidates to select")
-        non_critical = [
-            (plan, report)
-            for plan, report in candidates
-            if not report.has_critical()
-        ]
+        non_critical = [(plan, report) for plan, report in candidates if not report.has_critical()]
         pool = non_critical or candidates
         if style_preference is not None:
             resolved_style = style_preference
         else:
-            resolved_style = getattr(self, "_last_style_preference", None) or LayoutStylePreference()
+            resolved_style = (
+                getattr(self, "_last_style_preference", None) or LayoutStylePreference()
+            )
         pool_sorted = sorted(
             pool,
             key=lambda item: self._selection_sort_key(
                 item,
                 deck_directive=deck_directive,
                 previous_layout_plan=previous_layout_plan,
+                recent_layout_plans=recent_layout_plans,
                 style_preference=resolved_style,
             ),
         )
@@ -443,6 +440,7 @@ class LayoutPlanningService:
         *,
         deck_directive: SlideCompositionDirective | None,
         previous_layout_plan: LayoutPlan | None,
+        recent_layout_plans: Sequence[LayoutPlan] | None = None,
         style_preference: LayoutStylePreference | None = None,
     ) -> tuple[float, float, float, str]:
         plan, report = item
@@ -479,16 +477,21 @@ class LayoutPlanningService:
                 composition_bonus += 0.12 * deck_directive.drawing_priority
 
             # Density waveform affinity.
-            if deck_directive.target_density == DensityLevel.SPACIOUS and plan.layout_family in {
-                LayoutFamily.HERO,
-                LayoutFamily.TEXTUAL_ARGUMENT,
-            }:
-                composition_bonus += 0.05
-            elif deck_directive.target_density == DensityLevel.COMPACT and plan.layout_family in {
-                LayoutFamily.EVIDENCE_BOARD,
-                LayoutFamily.METRIC_DASHBOARD,
-                LayoutFamily.DRAWING_FOCUS,
-            }:
+            if (
+                deck_directive.target_density == DensityLevel.SPACIOUS
+                and plan.layout_family
+                in {
+                    LayoutFamily.HERO,
+                    LayoutFamily.TEXTUAL_ARGUMENT,
+                }
+                or deck_directive.target_density == DensityLevel.COMPACT
+                and plan.layout_family
+                in {
+                    LayoutFamily.EVIDENCE_BOARD,
+                    LayoutFamily.METRIC_DASHBOARD,
+                    LayoutFamily.DRAWING_FOCUS,
+                }
+            ):
                 composition_bonus += 0.05
             elif deck_directive.target_density == DensityLevel.BALANCED and plan.layout_family in {
                 LayoutFamily.STRATEGY_CARDS,
@@ -514,6 +517,21 @@ class LayoutPlanningService:
                     composition_penalty += 0.04
             if plan.layout_variant == previous_layout_plan.layout_variant:
                 composition_penalty += 0.06
+
+        # Prevent an A-B-A wallpaper rhythm. The immediate predecessor already
+        # receives the stronger penalty above; the second-most-recent page gets
+        # a lighter penalty so a good family can still recur after a real beat.
+        history = list(recent_layout_plans or [])
+        for distance, recent in enumerate(reversed(history[-2:]), start=1):
+            if previous_layout_plan is not None and recent.id == previous_layout_plan.id:
+                continue
+            if plan.layout_family == recent.layout_family:
+                composition_penalty += 0.05 / distance
+            if (
+                plan.layout_family == recent.layout_family
+                and plan.layout_variant == recent.layout_variant
+            ):
+                composition_penalty += 0.08 / distance
 
         return (
             validity_rank + composition_penalty,
@@ -807,9 +825,7 @@ class LayoutPlanningService:
                     family.value for family in deck_directive.preferred_layout_families
                 )
             if style_preference is not None and style_preference.preferred_families:
-                preferred.extend(
-                    family.value for family in style_preference.preferred_families
-                )
+                preferred.extend(family.value for family in style_preference.preferred_families)
         if preferred:
             ordered = [family for family in preferred if family in filtered]
             ordered.extend(family for family in filtered if family not in ordered)
@@ -877,9 +893,20 @@ class LayoutPlanningService:
                 continue
             seen.add(key)
             deduped.append(item)
-            if len(deduped) >= candidate_count:
-                break
-        return deduped
+
+        # Give the deck selector one candidate from each family before adding
+        # near-identical sibling variants from an already represented family.
+        diversified: list[LayoutDecisionDraft] = []
+        deferred: list[LayoutDecisionDraft] = []
+        seen_families: set[str] = set()
+        for item in deduped:
+            if item.layout_family in seen_families:
+                deferred.append(item)
+                continue
+            seen_families.add(item.layout_family)
+            diversified.append(item)
+        diversified.extend(deferred)
+        return diversified[:candidate_count]
 
 
 def format_layout_decision_warnings(warnings: list[dict[str, Any]]) -> list[str]:

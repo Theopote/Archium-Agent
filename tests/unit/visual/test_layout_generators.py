@@ -31,9 +31,7 @@ def _slide(**overrides: object) -> SlideSpec:
         "title": "测试标题",
         "message": "这是一个核心结论。",
         "key_points": ["要点一", "要点二", "要点三"],
-        "visual_requirements": [
-            VisualRequirement(type=VisualType.SITE_PLAN, description="总平面")
-        ],
+        "visual_requirements": [VisualRequirement(type=VisualType.SITE_PLAN, description="总平面")],
     }
     defaults.update(overrides)
     return SlideSpec(**defaults)  # type: ignore[arg-type]
@@ -95,6 +93,23 @@ class TestLayoutFamilyRegistry:
 
 
 class TestGenerators:
+    def test_strategy_cards_reserve_gaps_around_lead_and_source(self) -> None:
+        solver = LayoutSolver()
+        plan = solver.generate(
+            LayoutFamily.STRATEGY_CARDS,
+            _context(
+                LayoutFamily.STRATEGY_CARDS,
+                content_type=VisualContentType.TEXT_ARGUMENT,
+                variant="cards_with_lead",
+            ),
+        )
+        elements = {element.id: element for element in plan.elements}
+        lead = elements["lead"]
+        cards = [elements[f"card_{index}"] for index in range(3)]
+        source = elements["source"]
+        assert all(card.y > lead.bottom for card in cards)
+        assert all(card.bottom < source.y for card in cards)
+
     def test_drawing_focus_protects_drawing(self) -> None:
         solver = LayoutSolver()
         plan = solver.generate(
@@ -158,9 +173,7 @@ class TestGenerators:
             title="实施路径",
             message="分三阶段推进院区更新。",
             key_points=["近期交通重组", "中期功能置换", "远期空间织补"],
-            visual_requirements=[
-                VisualRequirement(type=VisualType.TIMELINE, description="分期")
-            ],
+            visual_requirements=[VisualRequirement(type=VisualType.TIMELINE, description="分期")],
         )
         plan = LayoutSolver().generate(
             LayoutFamily.PROCESS_NARRATIVE,
@@ -179,9 +192,7 @@ class TestGenerators:
             title="下一步",
             message="先完成关键决策。",
             key_points=["确认总平面方案"],
-            visual_requirements=[
-                VisualRequirement(type=VisualType.TIMELINE, description="决策")
-            ],
+            visual_requirements=[VisualRequirement(type=VisualType.TIMELINE, description="决策")],
         )
         plan = LayoutSolver().generate(
             LayoutFamily.PROCESS_NARRATIVE,
@@ -200,9 +211,7 @@ class TestGenerators:
             title="核心指标",
             message="更新后公服可达性显著提升。",
             key_points=["绿地率 42%", "容积率 1.8", "服务半径 500m", "床位 800"],
-            visual_requirements=[
-                VisualRequirement(type=VisualType.CHART, description="指标")
-            ],
+            visual_requirements=[VisualRequirement(type=VisualType.CHART, description="指标")],
         )
         plan = LayoutSolver().generate(
             LayoutFamily.METRIC_DASHBOARD,
@@ -255,7 +264,9 @@ class TestGenerators:
         slide = _slide(title="院区总平面与改造范围说明页")
         plan = LayoutSolver().generate(
             LayoutFamily.DRAWING_FOCUS,
-            _context(LayoutFamily.DRAWING_FOCUS, content_type=VisualContentType.SITE_PLAN, slide=slide),
+            _context(
+                LayoutFamily.DRAWING_FOCUS, content_type=VisualContentType.SITE_PLAN, slide=slide
+            ),
         )
         report = LayoutValidationService().validate(plan, design, require_source=False)
         title_issues = [

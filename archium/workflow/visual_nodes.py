@@ -106,9 +106,7 @@ class VisualWorkflowRuntime:
         self.art_direction_service = ArtDirectionService(session, llm=llm)
         self.visual_intent_service = VisualIntentService(session, llm=llm)
         self.vision_image_service = VisionImageGenerationService(session, settings=settings)
-        self.layout_planning_service = LayoutPlanningService(
-            session, llm=llm, settings=settings
-        )
+        self.layout_planning_service = LayoutPlanningService(session, llm=llm, settings=settings)
         self.layout_validation_service = LayoutValidationService()
         self.layout_repair_service = LayoutRepairService()
         self.visual_critic_service = VisualCriticService(
@@ -512,9 +510,7 @@ class VisualWorkflowNodes:
                         "errors": [f"Slide {slide.id} is missing visual_intent_id"],
                         "current_step": step,
                     }
-                intent = VisualIntentRepository(self._runtime.session).get(
-                    slide.visual_intent_id
-                )
+                intent = VisualIntentRepository(self._runtime.session).get(slide.visual_intent_id)
                 if intent is None:
                     return {
                         "errors": [f"VisualIntent {slide.visual_intent_id} not found"],
@@ -592,9 +588,7 @@ class VisualWorkflowNodes:
                     art_direction_id=UUID(art_id) if art_id else None,
                     design_system_id=design_id,
                     candidate_count=candidate_count,
-                    project_id=UUID(str(state["project_id"]))
-                    if state.get("project_id")
-                    else None,
+                    project_id=UUID(str(state["project_id"])) if state.get("project_id") else None,
                     deck_directive=directive,
                     previous_layout_plan=previous_plan,
                 )
@@ -643,6 +637,7 @@ class VisualWorkflowNodes:
             selected_ids: list[str] = []
             updated_slides = []
             previous_plan: LayoutPlan | None = None
+            recent_plans: list[LayoutPlan] = []
             for slide in sorted(list(state.get("slides") or []), key=lambda item: item.order):
                 candidate_ids = by_slide.get(str(slide.id), [])
                 pairs = []
@@ -652,15 +647,12 @@ class VisualWorkflowNodes:
                         continue
                     drawing = False
                     # Prefer family-based drawing flag from plan content types.
-                    drawing = any(
-                        el.content_type.value == "drawing" for el in plan.elements
-                    )
+                    drawing = any(el.content_type.value == "drawing" for el in plan.elements)
                     report = self._runtime.layout_validation_service.validate(
                         plan,
                         design,
                         require_source=True,
-                        drawing_hero=drawing
-                        or plan.layout_family.value == "drawing_focus",
+                        drawing_hero=drawing or plan.layout_family.value == "drawing_focus",
                         asset_context=self._asset_context_for_plan(state, plan),
                     )
                     pairs.append((plan, report))
@@ -675,23 +667,22 @@ class VisualWorkflowNodes:
                     else None
                 )
                 art = state.get("art_direction")
-                project_id = (
-                    UUID(str(state["project_id"])) if state.get("project_id") else None
-                )
-                style_preference = (
-                    self._runtime.layout_planning_service.resolve_style_preference(
-                        project_id=project_id,
-                        art_direction=art,
-                    )
+                project_id = UUID(str(state["project_id"])) if state.get("project_id") else None
+                style_preference = self._runtime.layout_planning_service.resolve_style_preference(
+                    project_id=project_id,
+                    art_direction=art,
                 )
                 best = self._runtime.layout_planning_service.select_best_for_deck(
                     pairs,
                     deck_directive=directive,
                     previous_layout_plan=previous_plan,
+                    recent_layout_plans=recent_plans,
                     style_preference=style_preference,
                 )
                 saved = self._runtime.layout_plans.save(best)
                 previous_plan = saved
+                recent_plans.append(saved)
+                recent_plans = recent_plans[-2:]
                 slide.layout_plan_id = saved.id
                 self._runtime.presentations.save_slide(slide)
                 selected_ids.append(str(saved.id))
@@ -750,9 +741,7 @@ class VisualWorkflowNodes:
                     asset_context=self._asset_context_for_plan(state, plan),
                 )
                 plan.validation_status = (
-                    LayoutValidationStatus.VALID
-                    if report.valid
-                    else LayoutValidationStatus.INVALID
+                    LayoutValidationStatus.VALID if report.valid else LayoutValidationStatus.INVALID
                 )
                 self._runtime.layout_plans.save(plan)
                 payload = report.model_dump(mode="json")
@@ -827,9 +816,7 @@ class VisualWorkflowNodes:
                         VisualIntentRepository,
                     )
 
-                    slide = PresentationRepository(self._runtime.session).get_slide(
-                        plan.slide_id
-                    )
+                    slide = PresentationRepository(self._runtime.session).get_slide(plan.slide_id)
                     if slide is not None and design is not None:
                         intent = VisualIntentRepository(self._runtime.session).get(
                             plan.visual_intent_id
@@ -902,9 +889,7 @@ class VisualWorkflowNodes:
             updated_slides = []
 
             reports_by_slide = {
-                str(item.get("slide_id")): item
-                for item in reports
-                if item.get("slide_id")
+                str(item.get("slide_id")): item for item in reports if item.get("slide_id")
             }
 
             for slide in slides:
@@ -968,9 +953,7 @@ class VisualWorkflowNodes:
         from archium.domain.visual.design_system import DesignSystem
 
         assert isinstance(design, DesignSystem)
-        current_plan = (
-            self._runtime.layout_plans.get(UUID(current_id)) if current_id else None
-        )
+        current_plan = self._runtime.layout_plans.get(UUID(current_id)) if current_id else None
         for plan_id in candidate_ids:
             if plan_id == current_id:
                 continue
@@ -992,9 +975,7 @@ class VisualWorkflowNodes:
             ):
                 merged = preserve_locked_elements(plan, current_plan)
                 merged.validation_status = (
-                    LayoutValidationStatus.VALID
-                    if report.valid
-                    else LayoutValidationStatus.INVALID
+                    LayoutValidationStatus.VALID if report.valid else LayoutValidationStatus.INVALID
                 )
                 return self._runtime.layout_plans.save(merged)
         return None
@@ -1194,9 +1175,7 @@ class VisualWorkflowNodes:
                             "LayoutPlan validation PPTX export failed (non-fatal): %s",
                             pptx_exc,
                         )
-                        warnings.append(
-                            f"LayoutPlan validation PPTX export failed: {pptx_exc}"
-                        )
+                        warnings.append(f"LayoutPlan validation PPTX export failed: {pptx_exc}")
                 elif export_pptx and not plans:
                     warnings.append(
                         "Skipped formal PPTX export: no LayoutPlan available "
@@ -1256,9 +1235,7 @@ class VisualWorkflowNodes:
                 payloads = [report.model_dump(mode="json") for report in reports]
                 for report in reports:
                     for finding in report.findings:
-                        warnings.append(
-                            f"VisualCritic {finding.rule_code}: {finding.message}"
-                        )
+                        warnings.append(f"VisualCritic {finding.rule_code}: {finding.message}")
                 report_path = output_dir / "visual_critic_reports.json"
                 report_path.write_text(
                     json.dumps(payloads, ensure_ascii=False, indent=2),
@@ -1279,9 +1256,7 @@ class VisualWorkflowNodes:
                     plans,
                     slides=list(state.get("slides") or []),
                     design_system=state.get("design_system"),
-                    palette_strategy=(
-                        art.palette_strategy if art is not None else None
-                    ),
+                    palette_strategy=(art.palette_strategy if art is not None else None),
                     composition_plan=composition_plan,
                 )
                 deck_payload = deck_report.model_dump(mode="json")
@@ -1382,9 +1357,7 @@ class VisualWorkflowNodes:
         if result.scene_pptx_path:
             formal_pptx_path = result.scene_pptx_path
             render_paths.append(formal_pptx_path)
-            if bool(
-                getattr(self._runtime.settings, "visual_pptx_screenshots_enabled", True)
-            ):
+            if bool(getattr(self._runtime.settings, "visual_pptx_screenshots_enabled", True)):
                 from archium.infrastructure.renderers.pptx_screenshot import (
                     export_pptx_slide_pngs,
                 )
@@ -1396,8 +1369,7 @@ class VisualWorkflowNodes:
                         render_paths.append(str(png))
                 else:
                     warnings.append(
-                        "PPTX screenshots skipped "
-                        "(LibreOffice/pdftoppm unavailable or failed)."
+                        "PPTX screenshots skipped (LibreOffice/pdftoppm unavailable or failed)."
                     )
 
         report = {
@@ -1410,18 +1382,14 @@ class VisualWorkflowNodes:
             "scene_pptx_path": formal_pptx_path,
         }
         if not result.scenes and plans:
-            warnings.append(
-                f"Scene repair produced 0 scenes from {len(plans)} layout plan(s)"
-            )
+            warnings.append(f"Scene repair produced 0 scenes from {len(plans)} layout plan(s)")
         if result.repair_actions:
             warnings.append(
                 f"Scene repair applied {result.repair_actions} patch(es) "
                 f"in {result.repair_rounds} round(s)"
             )
         if result.remaining_issue_count:
-            warnings.append(
-                f"Scene repair left {result.remaining_issue_count} repairable issue(s)"
-            )
+            warnings.append(f"Scene repair left {result.remaining_issue_count} repairable issue(s)")
 
         report_path = output_dir / "scene_repair_report.json"
         report_path.write_text(
