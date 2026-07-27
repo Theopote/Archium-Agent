@@ -199,6 +199,25 @@ class ProjectProgressSnapshot:
             return "尚无页面"
         return f"{self.layout_ready_count}/{self.slide_count} 页完成"
 
+    @property
+    def narrative_summary(self) -> str:
+        """One-line human summary for sidebar / home chrome."""
+        if self.formal_delivery_ready:
+            return "可正式交付"
+        if self.slide_count > 0 and not self.outline_approved and self.has_outline:
+            return "Genesis 草稿预览 · 大纲待确认"
+        if not self.outline_approved and (self.has_outline or self.has_brief):
+            return f"建议先确认大纲（{self.outline_label}）"
+        if self.export_blocker_count > 0 and self.draft_export_ready:
+            return f"交付有阻塞（{self.export_blocker_count} 项）"
+        if self.draft_export_ready and self.document_count <= 0:
+            return "草稿可导出 · 正式交付需资料"
+        if self.draft_export_ready:
+            return "草稿可导出"
+        if self.slide_count <= 0:
+            return f"建议进入：{self.current_stage_label}"
+        return f"进行中：{self.current_stage_label}"
+
 
 @dataclass(frozen=True)
 class CockpitTaskSummary:
@@ -544,6 +563,7 @@ def render_project_progress_card() -> None:
         return
 
     st.markdown(f"**{snapshot.project_name}**")
+    st.caption(snapshot.narrative_summary)
     meta_bits = []
     if snapshot.presentation_title:
         meta_bits.append(snapshot.presentation_title)

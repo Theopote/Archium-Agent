@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 import streamlit as st
@@ -22,6 +23,9 @@ from archium.ui.project_knowledge_profile import (
     load_project_knowledge_display,
     render_project_knowledge_strip,
 )
+
+if TYPE_CHECKING:
+    from archium.ui.project_progress_card import ProjectProgressSnapshot
 
 _MODE_LABELS = {
     ArchitecturalWorkspaceMode.EXISTING_PROJECT: "资料整理优先",
@@ -138,24 +142,78 @@ def stage_caption_for_mode(
     return profile_for(mode).stage_captions.get(stage_id, default)
 
 
+def _is_genesis_shortcut(snapshot: ProjectProgressSnapshot) -> bool:
+    return (
+        snapshot.slide_count > 0
+        and not snapshot.outline_approved
+        and snapshot.has_outline
+    )
+
+
 def flow_stage_caption(
     stage_id: str,
     project_id: UUID,
     *,
     default: str,
+    snapshot: ProjectProgressSnapshot | None = None,
 ) -> str:
-    """Prefer knowledge situation over workspace mode for stage subtitles."""
+    """Stage subtitle aligned with delivery readiness — not static partial-context text."""
+    if snapshot is not None:
+        has_docs = snapshot.document_count > 0
+        genesis_shortcut = _is_genesis_shortcut(snapshot)
+
+        if stage_id == "deliver":
+            if snapshot.formal_delivery_ready:
+                return "检查通过，可正式导出 PPTX / PDF。"
+            if has_docs and snapshot.draft_export_ready:
+                if snapshot.export_blocker_count > 0:
+                    return "资料已整理；清除阻塞项后可正式导出。"
+                return "资料已整理；完成检查后可正式导出。"
+            if has_docs:
+                return "资料已整理；完成版式与检查后导出。"
+            if snapshot.draft_export_ready:
+                return "可导出工作稿；正式交付需绑定项目资料。"
+            return "完成版式与检查后导出。"
+
+        if stage_id == "materials":
+            if has_docs:
+                return "整理项目资料与事实；可并行推进大纲与生成。"
+            return "资料可选：无资料也可先定大纲与草稿预览。"
+
+        if stage_id == "outline":
+            if snapshot.outline_approved:
+                return default
+            if genesis_shortcut:
+                return "Genesis 已生成草稿大纲；请确认结构与各页设计摘要。"
+            if snapshot.has_outline:
+                return "确认汇报结构与各页设计摘要后再进入生成。"
+            return "描述汇报任务并生成大纲结构。"
+
+        if stage_id == "generate":
+            if genesis_shortcut:
+                return "当前为草稿捷径预览；确认大纲后可运行正式生成管线。"
+            if snapshot.slide_count <= 0:
+                return "运行汇报管线，生成页面内容与版式预览。"
+            if snapshot.pending_count > 0:
+                return "部分页面版式待完成；可在工作室补做。"
+
+        if stage_id == "edit":
+            if genesis_shortcut:
+                return "预览 Genesis 线框草稿；确认大纲后可迭代正式版式。"
+            if snapshot.slide_count <= 0:
+                return "尚无页面；请先在生成页运行汇报管线。"
+
     display = load_project_knowledge_display(project_id)
     if display is None:
         mode = resolve_ui_workspace_mode(project_id)
         return stage_caption_for_mode(stage_id, mode, default=default)
     if display.situation.value == "partial_context":
         partial_captions = {
-            "materials": "补充或整理已有片段资料；完整度仍可能不足，可并行澄清与推演。",
-            "outline": "在部分资料下确认沟通结构；正式交付仍需补证据。",
-            "generate": "生成草稿预览；不是「资料已完备」的意思。",
+            "materials": "补充或整理已有片段资料；可并行澄清与推演。",
+            "outline": "在部分资料下确认沟通结构。",
+            "generate": "生成草稿预览；确认大纲后效果更佳。",
             "edit": "迭代叙事与版式。",
-            "deliver": "草稿可导出；正式交付需补资料。",
+            "deliver": "可导出工作稿；正式交付需绑定项目资料。",
         }
         return partial_captions.get(stage_id, default)
     return stage_caption_for_mode(stage_id, resolve_ui_workspace_mode(project_id), default=default)

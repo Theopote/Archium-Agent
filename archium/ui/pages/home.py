@@ -255,17 +255,10 @@ def _render_recent_design_changes(snapshot: ProjectProgressSnapshot) -> None:
 
 def _render_partner_next_steps(snapshot: ProjectProgressSnapshot) -> None:
     st.markdown("**下一步**")
-    try:
-        from archium.ui.project_knowledge_profile import render_project_knowledge_action_buttons
-
-        render_project_knowledge_action_buttons(
-            snapshot.project_id,
-            key_prefix=f"home_nba_{snapshot.project_id}",
-            max_items=3,
-        )
-    except Exception:
-        logger.exception("Failed to render home next-best actions")
-        st.caption(f"建议进入：{snapshot.continue_work_label}")
+    st.caption(
+        f"点击下方「继续工作」进入 **{snapshot.continue_work_label}**。"
+        "侧栏显示当前阶段与资料/大纲/交付状态。"
+    )
 
 
 def _render_home_starter_preview(snapshot: ProjectProgressSnapshot) -> None:
@@ -311,16 +304,23 @@ def _render_home_starter_preview(snapshot: ProjectProgressSnapshot) -> None:
                     st.session_state.studio_center_mode = "overview"
                     st.switch_page(get_app_page("edit"))
             with cols[1]:
-                if st.button(
-                    "继续生成",
-                    key=f"home_continue_generate_{snapshot.project_id}",
+                if snapshot.outline_approved:
+                    if st.button(
+                        "继续生成",
+                        key=f"home_continue_generate_{snapshot.project_id}",
+                        use_container_width=True,
+                    ):
+                        if snapshot.presentation_id is not None:
+                            st.session_state.selected_presentation_id = str(
+                                snapshot.presentation_id
+                            )
+                        st.switch_page(get_app_page("generate"))
+                elif st.button(
+                    "前往确认大纲",
+                    key=f"home_confirm_outline_{snapshot.project_id}",
                     use_container_width=True,
                 ):
-                    if snapshot.presentation_id is not None:
-                        st.session_state.selected_presentation_id = str(
-                            snapshot.presentation_id
-                        )
-                    st.switch_page(get_app_page("generate"))
+                    st.switch_page(get_app_page("outline"))
         elif st.button(
             "预览封面页",
             key=f"home_studio_preview_{snapshot.project_id}",
@@ -373,64 +373,71 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
 
     if snapshot.outline_changes_pending:
         st.warning("大纲已编辑 · 待重新确认后再进入生成。")
+    elif (
+        snapshot.slide_count > 0
+        and not snapshot.outline_approved
+        and snapshot.has_outline
+    ):
+        st.info("Genesis 草稿已生成线框；确认大纲后可运行正式生成管线。")
 
     meta = st.columns(3)
     with meta[0]:
         st.markdown(f"**当前阶段**  \n{snapshot.current_stage_label}")
     with meta[1]:
-        st.markdown(f"**大纲**  \n{snapshot.outline_label}")
+        st.markdown(f"**状态摘要**  \n{snapshot.narrative_summary}")
     with meta[2]:
         st.markdown("**总体进度**")
         _render_progress_bar(snapshot)
 
     st.divider()
-    left, mid, right = st.columns(3)
-    with left:
-        _render_partner_next_steps(snapshot)
-    with mid:
-        _render_recent_design_changes(snapshot)
-        try:
-            from archium.ui.project_event_panel import (
-                render_project_event_log,
-                render_project_usage_strip,
-            )
+    _render_partner_next_steps(snapshot)
+    with st.expander("项目详情与高级信息", expanded=False):
+        left, mid, right = st.columns(3)
+        with left:
+            _render_recent_design_changes(snapshot)
+        with mid:
+            try:
+                from archium.ui.project_event_panel import (
+                    render_project_event_log,
+                    render_project_usage_strip,
+                )
 
-            render_project_event_log(
-                snapshot.project_id,
-                limit=6,
-                expanded=False,
-                title="项目事件记忆",
-            )
-            render_project_usage_strip(
-                snapshot.project_id,
-                expanded=False,
-                title="本月 LLM 用量",
-            )
-        except Exception:
-            pass
-    with right:
-        try:
-            from archium.ui.project_event_panel import render_job_progress_strip
+                render_project_event_log(
+                    snapshot.project_id,
+                    limit=6,
+                    expanded=False,
+                    title="项目事件记忆",
+                )
+                render_project_usage_strip(
+                    snapshot.project_id,
+                    expanded=False,
+                    title="本月 LLM 用量",
+                )
+            except Exception:
+                pass
+        with right:
+            try:
+                from archium.ui.project_event_panel import render_job_progress_strip
 
-            render_job_progress_strip(
-                snapshot.project_id,
-                limit=4,
-                active_only=False,
-                title="任务进度",
-                allow_process_once=True,
-            )
-        except Exception:
-            pass
-        try:
-            from archium.ui.project_members_panel import render_project_members_panel
+                render_job_progress_strip(
+                    snapshot.project_id,
+                    limit=4,
+                    active_only=False,
+                    title="任务进度",
+                    allow_process_once=True,
+                )
+            except Exception:
+                pass
+            try:
+                from archium.ui.project_members_panel import render_project_members_panel
 
-            render_project_members_panel(
-                snapshot.project_id,
-                key_prefix="home_members",
-                expanded=False,
-            )
-        except Exception:
-            logger.exception("Failed to render project members panel")
+                render_project_members_panel(
+                    snapshot.project_id,
+                    key_prefix="home_members",
+                    expanded=False,
+                )
+            except Exception:
+                logger.exception("Failed to render project members panel")
         _render_pending_issues(snapshot)
         _render_recent_versions(snapshot)
 
@@ -445,7 +452,7 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
         ):
             _select_and_continue(snapshot)
     with cta_r:
-        st.caption(f"建议进入：{snapshot.continue_work_label}")
+        st.caption(snapshot.narrative_summary)
 
 
 def _render_other_projects(

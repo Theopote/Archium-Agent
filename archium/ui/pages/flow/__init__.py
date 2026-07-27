@@ -238,6 +238,85 @@ def evaluate_stage_gate(
     return StageGateResult(can_proceed=True)
 
 
+def _is_genesis_shortcut(snapshot: ProjectProgressSnapshot) -> bool:
+    return (
+        snapshot.slide_count > 0
+        and not snapshot.outline_approved
+        and snapshot.has_outline
+    )
+
+
+def evaluate_stage_access(
+    stage_id: str,
+    snapshot: ProjectProgressSnapshot | None,
+) -> tuple[str, ...]:
+    """Warnings when the user opens a stage before typical prerequisites."""
+    if snapshot is None:
+        return ("先创建或选择一个项目",)
+
+    warnings: list[str] = []
+    genesis_shortcut = _is_genesis_shortcut(snapshot)
+
+    if stage_id == "generate":
+        if genesis_shortcut:
+            warnings.append(
+                "当前为 Genesis 草稿捷径：建议先在大纲页确认结构与各页设计摘要，"
+                "再运行正式生成管线。"
+            )
+        elif not snapshot.has_outline and not snapshot.has_brief:
+            warnings.append("建议先在大纲页描述任务并生成大纲结构。")
+        elif snapshot.has_outline and not snapshot.outline_approved:
+            warnings.append("大纲尚未确认；正式生成前请在大纲页完成确认。")
+        elif not snapshot.design_briefs_approved:
+            warnings.append("仍有页面设计摘要未批准；正式生成前需在大纲页完成确认。")
+
+    if stage_id == "edit" and snapshot.slide_count <= 0:
+        warnings.append("尚无页面内容；请先在生成页运行管线，或从大纲确认后生成。")
+
+    if stage_id == "deliver":
+        if genesis_shortcut:
+            warnings.append(
+                "大纲尚未确认：当前导出基于 Genesis 草稿线框，建议先回大纲页确认结构。"
+            )
+        elif not snapshot.ready_for_export and snapshot.slide_count > 0:
+            warnings.append("部分页面版式未齐；导出结果可能不完整。")
+
+    if stage_id in {"generate", "edit", "deliver"}:
+        if (
+            snapshot.document_count <= 0
+            and snapshot.evidence_availability != EvidenceAvailability.UNKNOWN
+        ):
+            warnings.append("尚无项目资料：当前为草稿预览模式，不可正式交付。")
+
+    return tuple(warnings)
+
+
+def render_stage_access_advisory(
+    stage_id: str,
+    snapshot: ProjectProgressSnapshot | None,
+) -> None:
+    """Soft gate when users jump ahead via sidebar navigation."""
+    for message in evaluate_stage_access(stage_id, snapshot):
+        render_warning_callout(message)
+
+
+def _stage_next_action_label(
+    stage_id: str,
+    snapshot: ProjectProgressSnapshot | None,
+) -> str:
+    nxt = next_stage(stage_id)
+    if nxt is None:
+        return ""
+    if (
+        stage_id == "materials"
+        and snapshot is not None
+        and snapshot.document_count <= 0
+        and snapshot.evidence_availability != EvidenceAvailability.UNKNOWN
+    ):
+        return "暂无资料，先进入大纲 →"
+    return _NEXT_ACTION_LABELS.get(stage_id, f"下一阶段：{nxt.title} →")
+
+
 def _stage_marker(status: str) -> str:
     return {
         "done": "●",
@@ -487,7 +566,12 @@ def render_stage_header(stage_id: str) -> None:
     if snapshot is not None:
         from archium.ui.workspace_mode_chrome import flow_stage_caption
 
-        caption = flow_stage_caption(stage_id, snapshot.project_id, default=stage.caption)
+        caption = flow_stage_caption(
+            stage_id,
+            snapshot.project_id,
+            default=stage.caption,
+            snapshot=snapshot,
+        )
         render_page_header(stage.title, caption)
         from archium.ui.project_knowledge_profile import render_project_knowledge_strip
 
@@ -512,6 +596,7 @@ def render_stage_header(stage_id: str) -> None:
             pass
     else:
         render_page_header(stage.title, caption)
+    render_stage_access_advisory(stage_id, snapshot)
     render_flow_stepper(stage_id)
     render_concept_draft_banner(snapshot)
 
@@ -619,7 +704,7 @@ def render_stage_nav(
     with right:
         if nxt is None:
             return
-        label = _NEXT_ACTION_LABELS.get(stage_id, f"下一阶段：{nxt.title} →")
+        label = _stage_next_action_label(stage_id, snapshot)
         if render_primary_action(
             label,
             key=f"stage_next_{stage_id}",

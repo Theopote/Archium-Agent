@@ -61,7 +61,7 @@ def _render_entry_form() -> None:
         )
         go_studio_after = st.checkbox(
             "完成后直接进入工作室预览封面",
-            value=True,
+            value=False,
             key="genesis_go_studio_after",
         )
         submit = st.form_submit_button(
