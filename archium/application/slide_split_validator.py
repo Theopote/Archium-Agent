@@ -125,6 +125,8 @@ def _citation_separation_issues(
         evidence_moved = quote in moved_text or any(quote in point for point in moved_points)
         if not evidence_moved:
             continue
+        if citation.document_id is None:
+            continue
 
         key = citation_key(citation.document_id, citation.chunk_id, index)
         target_id = citation_mapping.get(key)

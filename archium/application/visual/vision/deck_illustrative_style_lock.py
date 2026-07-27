@@ -48,7 +48,7 @@ def resolve_deck_illustrative_style_lock(
         if vp.style.strip() or vp.image_prompt.strip():
             style = resolve_style_from_visual_prompt(vp.style)
             dna = tuple(build_direction_seed_elements(direction)[:6])
-            avoid = (
+            avoid: tuple[str, ...] = (
                 "luxury commercial real-estate rendering",
                 "photorealistic site survey photo presented as evidence",
             )

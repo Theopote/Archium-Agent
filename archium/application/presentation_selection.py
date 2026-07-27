@@ -38,7 +38,8 @@ def select_presentation(
         return None
 
     by_id = {item.id: item for item in presentations}
-    preferred = by_id.get(_as_uuid(preferred_id)) if preferred_id is not None else None
+    preferred_uuid = _as_uuid(preferred_id)
+    preferred = by_id.get(preferred_uuid) if preferred_uuid is not None else None
     repo = PresentationRepository(session)
 
     def has_slides(presentation: Presentation) -> bool:

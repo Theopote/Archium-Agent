@@ -421,7 +421,7 @@ class PageDirectionService:
             # Keep tighter of situation vs mode when both present.
             if direction.copy_budget.max_key_points < budget.max_key_points:
                 budget = direction.copy_budget.model_copy()
-            density = mode.density
+            density: DensityLevel | None = mode.density
             biases = list(mode.composition_bias) or list(direction.composition_bias)
             must_show = list(dict.fromkeys([*mode.must_show, *direction.must_show]))
             must_hide = list(dict.fromkeys([*mode.must_hide, *direction.must_hide]))
@@ -441,7 +441,7 @@ class PageDirectionService:
         if not preferred:
             preferred = [mode.primary_family]
 
-        locked_variant = mode.primary_variant
+        locked_variant: str | None = mode.primary_variant
         if preferred and preferred[0] != mode.primary_family:
             # Don't lock a foreign family's variant.
             locked_variant = None

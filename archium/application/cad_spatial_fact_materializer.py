@@ -36,9 +36,15 @@ def materialize_cad_spatial_facts(
     if not meta.get("cad_bim") and analysis is None:
         return 0
 
-    analysis_blob = meta.get("analysis") if isinstance(meta.get("analysis"), dict) else {}
-    semantics = analysis_blob.get("ifc_semantics") if isinstance(analysis_blob, dict) else None
-    if not isinstance(semantics, dict):
+    raw_analysis = meta.get("analysis")
+    analysis_blob: dict[str, object] = (
+        raw_analysis if isinstance(raw_analysis, dict) else {}
+    )
+    raw_semantics = analysis_blob.get("ifc_semantics")
+    semantics: dict[str, object]
+    if isinstance(raw_semantics, dict):
+        semantics = raw_semantics
+    else:
         # Flat fields from analyze_cad_bim_file
         semantics = {
             "storey_count": analysis_blob.get("storey_count") or meta.get("storey_count"),
@@ -177,7 +183,7 @@ def _upsert_extracted(facts: FactRepository, incoming: ProjectFact) -> int:
     if existing.is_confirmed:
         return 0
     # Soft refresh unconfirmed EXTRACTED values from CAD when empty-ish or identical source
-    if (existing.value or "").strip() == (incoming.value or "").strip():
+    if str(existing.value or "").strip() == str(incoming.value or "").strip():
         return 0
     if existing.verification_status == VerificationStatus.EXTRACTED and not existing.is_confirmed:
         # Prefer richer CAD inventory for constraints / main_function; floors keep first
@@ -195,10 +201,18 @@ def _upsert_extracted(facts: FactRepository, incoming: ProjectFact) -> int:
 
 
 def _as_int(value: object) -> int:
-    try:
-        return int(value) if value is not None else 0
-    except (TypeError, ValueError):
+    if value is None or isinstance(value, bool):
         return 0
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, (str, bytes, bytearray)):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
+    return 0
 
 
 def _as_str_list(value: object) -> list[str]:

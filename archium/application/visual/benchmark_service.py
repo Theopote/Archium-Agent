@@ -9,7 +9,7 @@ from uuid import UUID
 from archium.application.visual.deck_qa_service import DeckQAService
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.visual_intent_service import VisualIntentService
-from archium.domain.citation import Citation
+from archium.domain.project_knowledge import SourceCitation
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.domain.visual.benchmark import BenchmarkCaseDefinition, BenchmarkRuleScore
 from archium.domain.visual.design_system import DesignSystem
@@ -97,7 +97,7 @@ class BenchmarkService:
             key_points=list(content_input.key_points or []) if content_input else [],
             visual_requirements=list(request.visual_requirements),
             source_citations=[
-                Citation(
+                SourceCitation(
                     document_id=BENCHMARK_DOCUMENT_ID,
                     document_name=request.source_document,
                     page_number=request.source_page,

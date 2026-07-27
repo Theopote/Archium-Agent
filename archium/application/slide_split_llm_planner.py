@@ -223,11 +223,15 @@ def _apply_llm_resource_indices(
             ]
             for index in draft.source.citation_indices:
                 citation = original.source_citations[index]
+                if citation.document_id is None:
+                    continue
                 citation_mapping[citation_key(citation.document_id, citation.chunk_id, index)] = (
                     source.id
                 )
             for index in draft.continuation.citation_indices:
                 citation = original.source_citations[index]
+                if citation.document_id is None:
+                    continue
                 citation_mapping[citation_key(citation.document_id, citation.chunk_id, index)] = (
                     continuation.id
                 )

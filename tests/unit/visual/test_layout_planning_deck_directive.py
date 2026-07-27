@@ -227,3 +227,16 @@ class TestLayoutPlanningDeckDirective:
             candidate_count=2,
         )
         assert ordered[0].layout_variant == "quote_argument"
+
+    def test_select_best_protects_closing_poster(self) -> None:
+        service = LayoutPlanningService.__new__(LayoutPlanningService)
+        directive = _closing_directive()
+        candidates = [
+            (_plan(LayoutFamily.STRATEGY_CARDS), _report(score=1.0)),
+            (
+                _plan(LayoutFamily.TEXTUAL_ARGUMENT, variant="quote_argument"),
+                _report(score=0.82),
+            ),
+        ]
+        selected = service.select_best_for_deck(candidates, deck_directive=directive)
+        assert selected.layout_variant == "quote_argument"

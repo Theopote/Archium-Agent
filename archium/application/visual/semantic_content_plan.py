@@ -194,13 +194,13 @@ def build_semantic_content_plan(
 
     source = ""
     if slide_spec.source_citations:
-        cite = slide_spec.source_citations[0]
-        page = f", p.{cite.page_number}" if cite.page_number else ""
-        source = f"{cite.document_name}{page}"
+        first_cite = slide_spec.source_citations[0]
+        page = f", p.{first_cite.page_number}" if first_cite.page_number else ""
+        source = f"{first_cite.document_name}{page}"
     elif generation_context and generation_context.relevant_citations:
-        cite = generation_context.relevant_citations[0]
-        page = f", p.{cite.page_number}" if cite.page_number else ""
-        source = f"{cite.document_name}{page}"
+        first_cite = generation_context.relevant_citations[0]
+        page = f", p.{first_cite.page_number}" if first_cite.page_number else ""
+        source = f"{first_cite.document_name}{page}"
 
     captions: list[str] = []
     if slide_spec.speaker_notes and slide_spec.speaker_notes.strip():

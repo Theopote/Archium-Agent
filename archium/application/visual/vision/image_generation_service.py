@@ -477,7 +477,7 @@ class VisionImageGenerationService:
             asset_id = saved.id
             # Back-fill asset_id on nested design_artifact blob
             if isinstance(saved.metadata.get("design_artifact"), dict):
-                nested = dict(saved.metadata["design_artifact"])
+                nested = dict(cast(dict[str, object], saved.metadata["design_artifact"]))
                 nested["asset_id"] = str(saved.id)
                 updated_meta = dict(saved.metadata)
                 updated_meta["design_artifact"] = nested

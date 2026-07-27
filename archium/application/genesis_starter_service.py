@@ -218,8 +218,8 @@ _STARTER_CITATION_ROLES = frozenset(
 
 def seed_starter_citations_from_documents(session: Session, project_id: UUID) -> int:
     """Attach the latest imported document as a placeholder citation on starter analysis pages."""
-    from archium.domain.citation import Citation
     from archium.domain.enums import ProcessingStatus
+    from archium.domain.project_knowledge import SourceCitation
     from archium.infrastructure.database.repositories import (
         DocumentRepository,
         PresentationRepository,
@@ -251,7 +251,7 @@ def seed_starter_citations_from_documents(session: Session, project_id: UUID) ->
         if getattr(slide, "source_citations", None):
             continue
         slide.source_citations = [
-            Citation(
+            SourceCitation(
                 document_id=document.id,
                 document_name=document.filename,
                 confidence=0.7,
@@ -312,8 +312,7 @@ def _starter_summary(
 def _starter_sections(*, prompt: str, purpose: str) -> list[OutlineSection]:
     template_key = detect_scenario_template(purpose=purpose, audience="", required_sections=[])
     if template_key is not None:
-        sections = template_sections(template_key)
-        return sections[:8]
+        return template_sections(template_key)[:8]
     sections: list[OutlineSection] = []
     for order, (section_id, title, category, key_message) in enumerate(_GENERIC_STARTER):
         sections.append(
@@ -459,6 +458,7 @@ def presentation_has_formal_visual_previews(
     """True when any slide has scene or PPTX screenshot preview (not wireframe-only)."""
     from archium.application.visual.slide_preview_service import SlidePreviewService
     from archium.config.settings import get_settings
+    from archium.domain.visual.layout import LayoutPlan
     from archium.infrastructure.database.repositories import PresentationRepository
     from archium.infrastructure.database.visual_repositories import LayoutPlanRepository
 
@@ -468,7 +468,7 @@ def presentation_has_formal_visual_previews(
     if not slides:
         return False
 
-    layout_plans = []
+    layout_plans: list[LayoutPlan | None] = []
     for slide in slides:
         if slide.layout_plan_id is None:
             layout_plans.append(None)

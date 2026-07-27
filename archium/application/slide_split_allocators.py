@@ -26,6 +26,8 @@ def allocate_citations(
     continuation_citations = []
 
     for index, citation in enumerate(original.source_citations):
+        if citation.document_id is None:
+            continue
         key = citation_key(citation.document_id, citation.chunk_id, index)
         quote = citation.quote or ""
         quote_in_moved = bool(quote and quote in moved_text)

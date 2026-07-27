@@ -468,6 +468,12 @@ class LayoutPlanningService:
                 )
             elif preferred and plan.layout_family in preferred[1:]:
                 composition_bonus += 0.03
+            if (
+                deck_directive.pacing_role == PacingRole.CLOSING
+                and plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                and plan.layout_variant == "quote_argument"
+            ):
+                composition_bonus += 0.32
 
             # Priority weights: hero / text / drawing must move candidate scores.
             if plan.layout_family in {
@@ -785,7 +791,12 @@ class LayoutPlanningService:
                 and definition.family in deck_directive.forbidden_layout_families
             ):
                 continue
-            if definition.family in grammar_forbidden:
+            closing_poster_override = (
+                deck_directive is not None
+                and deck_directive.pacing_role == PacingRole.CLOSING
+                and definition.family == LayoutFamily.TEXTUAL_ARGUMENT
+            )
+            if definition.family in grammar_forbidden and not closing_poster_override:
                 continue
             variants = self._order_variants(
                 definition.family,

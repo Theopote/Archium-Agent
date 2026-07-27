@@ -358,11 +358,11 @@ class VisualLanguageService:
     ) -> ColorStory:
         # Prefer full VisualNarrative color roles when present.
         if concept is not None and concept.narrative is not None and concept.narrative.color_roles:
-            roles = dict(concept.narrative.color_roles)
-            meaning = {swatch: role for role, swatch in roles.items()}
+            narrative_roles = dict(concept.narrative.color_roles)
+            narrative_meaning = {swatch: role for role, swatch in narrative_roles.items()}
             return ColorStory(
-                roles=roles,
-                meaning=meaning,
+                roles=narrative_roles,
+                meaning=narrative_meaning,
                 source=concept.narrative.source,
             )
         if concept is not None and concept.visual_metaphor == VisualMetaphor.FRAGMENT_TO_NETWORK:
@@ -461,14 +461,13 @@ class VisualLanguageService:
                 continue
             seen.add(item)
             unique.append(item)
-        line_like = [
+        line_like: list[DecorationId] = [
             d
             for d in unique
             if d in {DecorationId.THIN_LINE, DecorationId.AXIS_LINE}
         ]
         other = [d for d in unique if d not in set(line_like)]
-        line_like = line_like[: budget.decorative_lines]
-        unique = other + line_like
+        unique = other + line_like[: budget.decorative_lines]
 
         return DecorationRecipe(
             decorations=unique,

@@ -106,7 +106,7 @@ def preferred_variant_for_intent(
     family: LayoutFamily,
 ) -> str | None:
     """Expression-mode / grammar-preferred variant for a layout family, if any."""
-    locked = getattr(intent, "preferred_layout_variant", None)
+    locked = intent.preferred_layout_variant
     if locked:
         # Only honor lock when it targets this family (or family is primary preferred).
         preferred = list(intent.preferred_layout_families)

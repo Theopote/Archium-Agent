@@ -22,6 +22,7 @@ from archium.domain.fact import ProjectFact
 from archium.domain.narrative_arc import NarrativeArc
 from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
+from archium.domain.project_knowledge import SourceCitation
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.infrastructure.database.repositories import DocumentRepository, FactRepository
 from archium.infrastructure.llm.presentation_schemas import (
@@ -464,12 +465,22 @@ def _citation_from_draft(
     *,
     document_names: dict[UUID, str] | None = None,
     context_chunks: list[DocumentChunk] | None = None,
-) -> Citation | None:
-    return citation_from_draft(
+) -> SourceCitation | None:
+    citation = citation_from_draft(
         item,
         session,
         document_names=document_names,
         context_chunks=context_chunks,
+    )
+    if citation is None:
+        return None
+    return SourceCitation(
+        document_id=citation.document_id,
+        document_name=citation.document_name,
+        page_number=citation.page_number,
+        chunk_id=citation.chunk_id,
+        quote=citation.quote,
+        confidence=citation.confidence,
     )
 
 

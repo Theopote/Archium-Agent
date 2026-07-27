@@ -84,7 +84,7 @@ class DesignLoopPassResult:
     pending_offer: DesignReviseOffer | None = None
 
     @property
-    def report(self):
+    def report(self) -> DesignCritiqueReport:
         return self.gate.report
 
     @property
@@ -223,7 +223,7 @@ def run_design_loop_on_select(
 
 def _maybe_verify_on_proceed(
     direction: ConceptDirection,
-    report,
+    report: DesignCritiqueReport,
 ) -> tuple[ConceptDirection, list[str]]:
     """Mark ReasoningArtifact.verified only on Critic proceed + proceedable chain."""
     notes: list[str] = []

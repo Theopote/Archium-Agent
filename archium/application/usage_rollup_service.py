@@ -88,22 +88,42 @@ class UsageRollupService:
             since=resolved_since,
             capability_limit=capability_limit,
         )
+        by_capability_raw = agg.get("by_capability")
+        by_capability_rows: list[dict[str, object]] = (
+            list(by_capability_raw) if isinstance(by_capability_raw, list) else []
+        )
         return ProjectUsageRollup(
             project_id=project_id,
-            call_count=agg["call_count"],
-            success_count=agg["success_count"],
-            prompt_tokens=agg["prompt_tokens"],
-            completion_tokens=agg["completion_tokens"],
-            total_tokens=agg["total_tokens"],
+            call_count=_as_int(agg.get("call_count")),
+            success_count=_as_int(agg.get("success_count")),
+            prompt_tokens=_as_int(agg.get("prompt_tokens")),
+            completion_tokens=_as_int(agg.get("completion_tokens")),
+            total_tokens=_as_int(agg.get("total_tokens")),
             by_capability=tuple(
                 CapabilityUsage(
-                    capability=row["capability"],
-                    call_count=row["call_count"],
-                    total_tokens=row["total_tokens"],
+                    capability=str(row.get("capability") or "unknown"),
+                    call_count=_as_int(row.get("call_count")),
+                    total_tokens=_as_int(row.get("total_tokens")),
                 )
-                for row in agg["by_capability"]
+                for row in by_capability_rows
+                if isinstance(row, dict)
             ),
-            soft_budget_tokens=max(0, int(budget or 0)),
+            soft_budget_tokens=max(0, _as_int(budget)),
             since=resolved_since,
             until=datetime.now(UTC),
         )
+
+
+def _as_int(value: object) -> int:
+    if value is None or isinstance(value, bool):
+        return 0
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, (str, bytes, bytearray)):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
+    return 0

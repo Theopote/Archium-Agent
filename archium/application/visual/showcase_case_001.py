@@ -116,7 +116,10 @@ def case_001_outputs_dir() -> Path:
 
 def load_case_001_manifest(path: Path | None = None) -> dict[str, Any]:
     target = path or (showcase_case_001_dir() / "manifest.json")
-    return json.loads(target.read_text(encoding="utf-8"))
+    payload = json.loads(target.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"Case 001 manifest must be a JSON object: {target}")
+    return payload
 
 
 def load_case_001_outline(path: Path | None = None) -> list[dict[str, Any]]:

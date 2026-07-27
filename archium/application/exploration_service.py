@@ -27,6 +27,7 @@ from archium.domain.exploration_session import ExplorationSession
 from archium.domain.intent.idea_seed import IdeaSeed
 from archium.domain.intent.intent_evolution import IntentEvolution, IntentEvolutionKind
 from archium.domain.project_mission import ProjectMission
+from archium.domain.spatial_design import DesignDecision
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.mission_repositories import MissionRepository
 from archium.infrastructure.database.repositories import (
@@ -615,7 +616,7 @@ class ExplorationService:
         new_summary: str | None = None,
         reason: str | None = None,
         evidence_refs: list[str] | None = None,
-        design_decision: object | None = None,
+        design_decision: DesignDecision | dict[str, object] | None = None,
         actor_id: str | None = None,
     ) -> None:
         project = self._projects.get_by_id(project_id)

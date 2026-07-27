@@ -58,7 +58,9 @@ class VisualNarrative(DomainModel):
         max_length=160,
         description="Human-readable metaphor sentence.",
     )
-    graphic_language: GraphicBehavior = Field(default_factory=GraphicBehavior)
+    graphic_language: GraphicBehavior = Field(
+        default_factory=lambda: GraphicBehavior(geometry="static")
+    )
     # Semantic roles → swatch ids (aligned with ColorStory / VisualConcept.color_story).
     color_roles: dict[str, str] = Field(default_factory=dict)
     recommended_components: list[str] = Field(

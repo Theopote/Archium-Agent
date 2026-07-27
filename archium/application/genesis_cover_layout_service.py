@@ -17,6 +17,7 @@ from archium.config.settings import Settings, get_settings
 from archium.domain.enums import AssetType
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.defaults import default_presentation_design_system
+from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole, LayoutFamily
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -158,7 +159,7 @@ def cover_wireframe_preview_path(
     return None
 
 
-def _resolve_design_system(session: Session) -> object:
+def _resolve_design_system(session: Session) -> DesignSystem:
     design_repo = DesignSystemRepository(session)
     design = design_repo.get(default_presentation_design_system().id)
     if design is None:
@@ -173,7 +174,7 @@ def _ensure_slide_wireframe_layout(
     presentation_id: UUID,
     slide: SlideSpec,
     settings: Settings,
-    design_system: object,
+    design_system: DesignSystem,
     commit: bool,
 ) -> GenesisSlideWireframeResult:
     """Rule-based VisualIntent + LayoutPlan + wireframe PNG for one slide."""
