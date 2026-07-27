@@ -19,9 +19,41 @@ def load_project_knowledge_display(project_id: UUID) -> ProjectKnowledgeDisplay 
 
     with get_session() as session:
         context = build_project_context(session, project_id)
-    if context is None:
-        return None
-    return build_project_knowledge_display(context)
+        if context is None:
+            return None
+        display = build_project_knowledge_display(context)
+        return _apply_fresh_gap_report(session, project_id, display)
+
+
+def _apply_fresh_gap_report(
+    session,
+    project_id: UUID,
+    display: ProjectKnowledgeDisplay,
+) -> ProjectKnowledgeDisplay:
+    """Overlay deterministic gap detection on top of cached KnowledgeState display."""
+    from dataclasses import replace
+
+    from archium.application.project_knowledge_service import ProjectKnowledgeService
+
+    gap_report = ProjectKnowledgeService(session).get_view(project_id).gap_report
+    if gap_report is None:
+        return display
+
+    fresh_blocking = len(gap_report.blocking_gaps)
+    if not gap_report.gaps:
+        if fresh_blocking != display.blocking_unknown_count:
+            return replace(display, blocking_unknown_count=fresh_blocking)
+        return display
+
+    missing = tuple(
+        f"{'? [阻断] ' if gap.blocking else '? '}{gap.description}"
+        for gap in gap_report.gaps[:6]
+    )
+    return replace(
+        display,
+        missing_highlights=missing,
+        blocking_unknown_count=fresh_blocking,
+    )
 
 
 def render_ai_understanding_panel(
@@ -41,24 +73,7 @@ def render_ai_understanding_panel(
         if context is None:
             return None
         display = build_project_knowledge_display(context)
-        try:
-            from dataclasses import replace
-
-            from archium.application.project_knowledge_service import ProjectKnowledgeService
-
-            gap_report = ProjectKnowledgeService(session).get_view(project_id).gap_report
-            if gap_report is not None and gap_report.gaps:
-                missing = tuple(
-                    f"{'? [阻断] ' if gap.blocking else '? '}{gap.description}"
-                    for gap in gap_report.gaps[:6]
-                )
-                display = replace(
-                    display,
-                    missing_highlights=missing,
-                    blocking_unknown_count=len(gap_report.blocking_gaps),
-                )
-        except Exception:
-            pass
+        display = _apply_fresh_gap_report(session, project_id, display)
 
     st.markdown(f"**{title}**")
     st.info(display.partner_headline or display.headline)

@@ -19,7 +19,18 @@ def test_resolve_required_fact_keys_excludes_bed_count_for_temple() -> None:
         project_description="原址重建寺庙",
     )
     assert "bed_count" not in keys
+    assert "plot_ratio" not in keys
     assert "location" in keys
+    assert "main_function" in keys
+
+
+def test_lightweight_mode_uses_minimal_keys() -> None:
+    keys = resolve_required_fact_keys(
+        facts=[],
+        project_name="某综合体",
+        lightweight=True,
+    )
+    assert keys == ("project_name", "location", "main_function")
 
 
 def test_lightweight_mode_skips_blocking_missing_metrics() -> None:

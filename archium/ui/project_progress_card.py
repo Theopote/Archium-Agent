@@ -173,8 +173,25 @@ class ProjectProgressSnapshot:
             "generate": "生成",
             "edit": "工作室",
             "deliver": "交付",
+            "concept-exploration": "概念探索",
+            "project-mission": "项目任务",
+            "project-genesis": "开始项目",
         }
         return labels.get(self.current_stage_id, "资料")
+
+    @property
+    def continue_work_label(self) -> str:
+        labels = {
+            "materials": "资料",
+            "outline": "大纲",
+            "generate": "生成",
+            "edit": "工作室",
+            "deliver": "交付",
+            "concept-exploration": "概念探索",
+            "project-mission": "项目任务",
+            "project-genesis": "开始项目",
+        }
+        return labels.get(continue_work_page_key(self), "下一步")
 
     @property
     def completion_label(self) -> str:

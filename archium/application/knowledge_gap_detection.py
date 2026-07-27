@@ -10,6 +10,19 @@ from archium.domain.enums import InformationOrigin, KnowledgeGapStatus, Verifica
 from archium.domain.fact import ProjectFact
 from archium.domain.fact_ledger import LIGHTWEIGHT_REQUIRED_FACT_KEYS, STANDARD_FACT_KEYS
 
+_HERITAGE_OPTIONAL_METRICS = frozenset(
+    {
+        "site_area",
+        "building_area",
+        "plot_ratio",
+        "building_density",
+        "green_ratio",
+        "height",
+        "floors",
+        "bed_count",
+        "parking_count",
+    }
+)
 _TEMPLE_HINTS = ("寺", "庙", "庵", "观", "宗教", "文物", "古建", "遗产", "复原", "重建")
 _HOSPITAL_HINTS = ("医院", "医疗", "床位", "hospital", "clinic")
 from archium.domain.knowledge_gap import KnowledgeGap
@@ -64,9 +77,13 @@ def resolve_required_fact_keys(
         if part
     ).lower()
 
+    if lightweight:
+        return LIGHTWEIGHT_REQUIRED_FACT_KEYS
+
     keys = [definition.key for definition in STANDARD_FACT_KEYS]
-    if any(hint in context for hint in _TEMPLE_HINTS):
-        keys = [key for key in keys if key not in {"bed_count", "parking_count"}]
+    is_heritage = any(hint in context for hint in _TEMPLE_HINTS)
+    if is_heritage:
+        keys = [key for key in keys if key not in _HERITAGE_OPTIONAL_METRICS]
     elif not any(hint in context for hint in _HOSPITAL_HINTS):
         keys = [key for key in keys if key != "bed_count"]
     return tuple(keys)

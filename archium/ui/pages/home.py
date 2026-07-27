@@ -265,7 +265,7 @@ def _render_partner_next_steps(snapshot: ProjectProgressSnapshot) -> None:
         )
     except Exception:
         logger.exception("Failed to render home next-best actions")
-        st.caption(f"建议进入：{snapshot.current_stage_label}")
+        st.caption(f"建议进入：{snapshot.continue_work_label}")
 
 
 def _render_home_starter_preview(snapshot: ProjectProgressSnapshot) -> None:
@@ -445,7 +445,7 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
         ):
             _select_and_continue(snapshot)
     with cta_r:
-        st.caption(f"建议进入：{snapshot.current_stage_label}")
+        st.caption(f"建议进入：{snapshot.continue_work_label}")
 
 
 def _render_other_projects(

@@ -418,6 +418,56 @@ def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
                 st.error(str(exc))
 
 
+def _generation_form_placeholders(project_id: UUID) -> dict[str, str]:
+    """Project-aware placeholders — avoid hospital defaults on heritage projects."""
+    defaults = {
+        "title": "概念汇报",
+        "audience": "汇报对象",
+        "purpose": "确认方案方向与下一步",
+        "core_message": "用一句话概括本页核心主张",
+        "sections": "背景与语境\n设计策略\n空间与效果",
+        "target_slide_count": 12,
+    }
+    try:
+        from archium.infrastructure.database.repositories import ProjectRepository
+        from archium.infrastructure.database.session import get_session
+
+        with get_session() as session:
+            project = ProjectRepository(session).get_by_id(project_id)
+        if project is None:
+            return defaults
+        name = (project.name or "").strip()
+        if name:
+            defaults["title"] = name
+        context = f"{name} {(project.description or '')}".lower()
+        heritage = any(
+            hint in context
+            for hint in ("寺", "庙", "文物", "古建", "遗产", "复原", "重建", "文化")
+        )
+        if heritage:
+            defaults.update(
+                {
+                    "audience": "主管部门 / 专家委员会",
+                    "purpose": "争取立项认可与下一步工作共识",
+                    "core_message": "原址重建的文化价值、设计定位与实施路径",
+                    "sections": "历史沿革与损毁\n重建定位\n空间策略\n实施计划",
+                    "target_slide_count": 8,
+                }
+            )
+        elif any(hint in context for hint in ("医院", "医疗", "院区")):
+            defaults.update(
+                {
+                    "audience": "医院管理层",
+                    "purpose": "确认总体改造方向",
+                    "core_message": "通过交通重组改善院区体验",
+                    "sections": "现状分析\n改造策略\n实施计划",
+                }
+            )
+    except Exception:
+        pass
+    return defaults
+
+
 def _render_generation_form(project_id: UUID) -> None:
     st.markdown("#### 生成汇报")
     settings = get_ui_effective_settings()
@@ -432,15 +482,22 @@ def _render_generation_form(project_id: UUID) -> None:
         st.error("未配置 LLM API Key。请前往 **设置 → AI 服务** 配置，或在 `.env` 中设置 `GEMINI_API_KEY`。")
         return
 
+    placeholders = _generation_form_placeholders(project_id)
+
     with st.form("presentation_form"):
-        title = st.text_input("汇报标题", placeholder="老院区更新概念汇报")
-        audience = st.text_input("汇报对象", placeholder="医院管理层")
-        purpose = st.text_input("汇报目的", placeholder="确认总体改造方向")
-        core_message = st.text_area("核心信息", placeholder="通过交通重组改善院区体验")
-        target_slide_count = st.number_input("目标页数", min_value=3, max_value=40, value=12)
+        title = st.text_input("汇报标题", placeholder=placeholders["title"])
+        audience = st.text_input("汇报对象", placeholder=placeholders["audience"])
+        purpose = st.text_input("汇报目的", placeholder=placeholders["purpose"])
+        core_message = st.text_area("核心信息", placeholder=placeholders["core_message"])
+        target_slide_count = st.number_input(
+            "目标页数",
+            min_value=3,
+            max_value=40,
+            value=int(placeholders["target_slide_count"]),
+        )
         required_sections = st.text_area(
             "必要章节（每行一项，或用顿号分隔）",
-            placeholder="现状分析\n改造策略\n实施计划",
+            placeholder=placeholders["sections"],
         )
         with st.expander("高级选项", expanded=False):
             st.caption("导出格式与分阶段审核暂停。默认即可生成；需要时再展开调整。")

@@ -30,6 +30,15 @@ def _project_name(session: Session, project_id: UUID) -> str:
     return project.name if project is not None else ""
 
 
+def _project_description(session: Session, project_id: UUID) -> str:
+    from archium.infrastructure.database.repositories import ProjectRepository
+
+    project = ProjectRepository(session).get_by_id(project_id)
+    if project is None or not project.description:
+        return ""
+    return project.description
+
+
 def _project_lightweight(session: Session, project_id: UUID) -> bool:
     from archium.infrastructure.database.repositories import ProjectRepository
 
@@ -126,6 +135,7 @@ def gather_project_evidence(
         required_fact_keys=resolve_required_fact_keys(
             facts=facts,
             project_name=_project_name(session, project_id),
+            project_description=_project_description(session, project_id),
             lightweight=_project_lightweight(session, project_id),
         ),
         lightweight_mode=_project_lightweight(session, project_id),
