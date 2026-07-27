@@ -71,9 +71,12 @@ def _append_cognition_gate_warnings(project_id: UUID, warnings: list[str]) -> No
             text = (msg or "").strip()
             if text and text not in warnings:
                 warnings.append(f"认知门禁：{text}")
-        if readiness.summary and readiness.summary not in warnings:
-            if readiness.verdict != PresentationGateVerdict.PROCEED:
-                warnings.append(f"认知门禁：{readiness.summary}")
+        if (
+            readiness.summary
+            and readiness.summary not in warnings
+            and readiness.verdict != PresentationGateVerdict.PROCEED
+        ):
+            warnings.append(f"认知门禁：{readiness.summary}")
     except Exception:
         return
 
@@ -282,12 +285,12 @@ def evaluate_stage_access(
         elif not snapshot.ready_for_export and snapshot.slide_count > 0:
             warnings.append("部分页面版式未齐；导出结果可能不完整。")
 
-    if stage_id in {"generate", "edit", "deliver"}:
-        if (
-            snapshot.document_count <= 0
-            and snapshot.evidence_availability != EvidenceAvailability.UNKNOWN
-        ):
-            warnings.append("尚无项目资料：当前为草稿预览模式，不可正式交付。")
+    if (
+        stage_id in {"generate", "edit", "deliver"}
+        and snapshot.document_count <= 0
+        and snapshot.evidence_availability != EvidenceAvailability.UNKNOWN
+    ):
+        warnings.append("尚无项目资料：当前为草稿预览模式，不可正式交付。")
 
     return tuple(warnings)
 

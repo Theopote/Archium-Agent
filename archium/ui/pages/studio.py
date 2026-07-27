@@ -217,7 +217,7 @@ def _render_view_controls(*, compact: bool = False) -> None:
     center_mode = str(st.session_state.get("studio_center_mode", "edit"))
     is_three = show_nav and show_inspector
 
-    with st.popover("视图", use_container_width=True):
+    with st.popover("视图", width="stretch"):
         st.radio(
             "中心区域",
             options=["edit", "overview"],
@@ -229,13 +229,13 @@ def _render_view_controls(*, compact: bool = False) -> None:
         st.checkbox("设计助理", key="studio_show_inspector")
         if is_three:
             st.caption("当前：三栏")
-            if st.button("画布专注", use_container_width=True, key="studio_canvas_focus"):
+            if st.button("画布专注", width="stretch", key="studio_canvas_focus"):
                 st.session_state.studio_show_nav = False
                 st.session_state.studio_show_inspector = False
                 st.rerun()
         else:
             st.caption("当前：专注 / 双栏")
-            if st.button("恢复三栏", use_container_width=True, key="studio_restore_three"):
+            if st.button("恢复三栏", width="stretch", key="studio_restore_three"):
                 st.session_state.studio_show_nav = True
                 st.session_state.studio_show_inspector = True
                 st.rerun()
@@ -280,7 +280,7 @@ def _render_deck_issue_list(*, context: StudioPresentationContext) -> None:
         if st.button(
             label,
             key=f"studio_deck_issue_{context.presentation.id}_{row.order}",
-            use_container_width=True,
+            width="stretch",
         ):
             if row.slide_id is not None:
                 st.session_state.studio_focus_slide_id = str(row.slide_id)
@@ -326,7 +326,7 @@ def _render_studio_info_menus(
         st.session_state.studio_show_inspector = True
 
     cols = st.columns([1.35, 1.1, 3.5])
-    with cols[0], st.popover("活动中心", use_container_width=True):
+    with cols[0], st.popover("活动中心", width="stretch"):
         active = _select_activity_tab(
             ["状态", "问题", "历史"],
             key="studio_activity_center_tab",
@@ -402,7 +402,7 @@ def _render_studio_partner_strip(context: StudioPresentationContext) -> None:
                 if st.button(
                     "全稿鸟瞰",
                     key=f"studio_partner_overview_{context.presentation.id}",
-                    use_container_width=True,
+                    width="stretch",
                 ):
                     st.session_state.studio_center_mode = "overview"
                     st.rerun()
@@ -410,7 +410,7 @@ def _render_studio_partner_strip(context: StudioPresentationContext) -> None:
                 if st.button(
                     "聚焦本页建议",
                     key=f"studio_open_ai_{context.presentation.id}",
-                    use_container_width=True,
+                    width="stretch",
                 ):
                     st.session_state.studio_show_inspector = True
                     st.session_state.studio_show_nav = True
@@ -455,14 +455,14 @@ def _render_wireframe_mode_banner(context: StudioPresentationContext) -> None:
         if st.button(
             "前往生成",
             key=f"studio_wireframe_generate_{context.presentation.id}",
-            use_container_width=True,
+            width="stretch",
         ):
             st.switch_page(get_app_page("generate"))
     with cols[1]:
         if st.button(
             "全稿鸟瞰",
             key=f"studio_wireframe_overview_{context.presentation.id}",
-            use_container_width=True,
+            width="stretch",
         ):
             st.session_state.studio_center_mode = "overview"
             st.rerun()
@@ -480,13 +480,19 @@ def _render_partner_right_rail(
 
     render_design_assistant_panel(slide_snapshot=slide_snapshot)
     expanded = bool(st.session_state.get("studio_inspector_expanded", False))
-    with st.expander("检查器（属性 / 布局 / 内容 / 修改…）", expanded=expanded):
-        _render_inspector_tabs(
-            slide_snapshot=slide_snapshot,
-            advanced=advanced,
-            project_id=project_id,
-            presentation_id=presentation_id,
-        )
+    inspector = st.expander(
+        "检查器（属性 / 布局 / 内容 / 修改…）",
+        expanded=expanded,
+        on_change="rerun",
+    )
+    if inspector.open:
+        with inspector:
+            _render_inspector_tabs(
+                slide_snapshot=slide_snapshot,
+                advanced=advanced,
+                project_id=project_id,
+                presentation_id=presentation_id,
+            )
 
 
 def render(

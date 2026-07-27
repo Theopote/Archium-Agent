@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -385,7 +385,6 @@ def _snapshot_for_project(
     )
     try:
         from archium.application.product_stage_truth import resolve_product_stage_truth
-        from dataclasses import replace
 
         truth = resolve_product_stage_truth(
             session,

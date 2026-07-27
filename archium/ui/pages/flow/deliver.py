@@ -324,18 +324,18 @@ def _render_delivery_record_actions(
                 "下载",
                 data=path.read_bytes(),
                 file_name=path.name,
-                use_container_width=True,
+                width="stretch",
                 key=f"deliver_dl_{key_suffix}",
             )
         else:
             st.button(
                 "下载",
                 disabled=True,
-                use_container_width=True,
+                width="stretch",
                 key=f"deliver_dl_{key_suffix}",
             )
     with cols[2]:
-        if st.button("打开目录", use_container_width=True, key=f"deliver_open_{key_suffix}"):
+        if st.button("打开目录", width="stretch", key=f"deliver_open_{key_suffix}"):
             _open_containing_folder(file_uri)
 
 

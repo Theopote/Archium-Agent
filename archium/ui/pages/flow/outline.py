@@ -76,7 +76,7 @@ def _render_task_composer(project_id: UUID) -> None:
         placeholder="例如：面向院领导汇报清凉寺前期策划，约 15 页，需覆盖现状问题、概念方案与下一步决策…",
         key="outline_task_draft",
     )
-    if st.button("生成大纲", type="primary", use_container_width=True, key="outline_generate"):
+    if st.button("生成大纲", type="primary", width="stretch", key="outline_generate"):
         st.session_state.mission_task_draft = task
         project_mission.start_outline_planning(project_id, task)
 
@@ -341,7 +341,7 @@ def _render_chapter_tree(
             if st.button(
                 f"{mark} {section.title} · {section.estimated_slide_count} 页",
                 key=f"outline_sec_toggle_{section.id}",
-                use_container_width=True,
+                width="stretch",
             ):
                 _toggle_section_expanded(outline, section.id)
             count = max(1, section.estimated_slide_count) if section.expanded else 0
@@ -351,7 +351,7 @@ def _render_chapter_tree(
                     if st.button(
                         f"　{page_index + 1:02d}  {title}",
                         key=f"outline_tree_page_{page_index}",
-                        use_container_width=True,
+                        width="stretch",
                     ):
                         st.session_state.outline_selected_card = page_index
                         st.rerun()
@@ -367,7 +367,7 @@ def _render_chapter_tree(
                 if st.button(
                     f"{index + 1:02d}  {card['title']}",
                     key=f"outline_tree_page_{index}",
-                    use_container_width=True,
+                    width="stretch",
                 ):
                     st.session_state.outline_selected_card = index
                     st.rerun()
@@ -377,7 +377,7 @@ def _render_chapter_tree(
             if st.button(
                 f"{index + 1:02d}  {card['title']}",
                 key=f"outline_tree_page_{index}",
-                use_container_width=True,
+                width="stretch",
             ):
                 st.session_state.outline_selected_card = index
                 st.rerun()
@@ -553,7 +553,7 @@ def _render_intent_cards(
 
     actions = st.columns(4)
     with actions[0]:
-        if st.button("保存当前页", type="primary", use_container_width=True, key="outline_intent_save"):
+        if st.button("保存当前页", type="primary", width="stretch", key="outline_intent_save"):
             evidence_items = merge_grammar_evidence(
                 _split_items(evidence),
                 selected_archetype,
@@ -575,7 +575,7 @@ def _render_intent_cards(
             st.success("已保存当前页意图（生成 Outline Revision）。")
             st.rerun()
     with actions[1]:
-        if st.button("复制意图", use_container_width=True, key="outline_intent_copy"):
+        if st.button("复制意图", width="stretch", key="outline_intent_copy"):
             cloned = deepcopy(intent)
             cloned.order = len(intents)
             cloned.notes = f"{(cloned.notes or cloned.page_task).strip()}（副本）"
@@ -585,7 +585,7 @@ def _render_intent_cards(
     with actions[2]:
         if st.button(
             "删除页面",
-            use_container_width=True,
+            width="stretch",
             disabled=len(intents) <= 1,
             key="outline_intent_delete",
         ):
@@ -594,7 +594,7 @@ def _render_intent_cards(
             st.session_state.outline_selected_card = max(0, int(choice) - 1)
             st.rerun()
     with actions[3]:
-        if st.button("插入下一页", use_container_width=True, key="outline_intent_insert"):
+        if st.button("插入下一页", width="stretch", key="outline_intent_insert"):
             insert_at = int(choice) + 1
             blank = SlideIntent(
                 order=insert_at,
@@ -734,7 +734,7 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
     st.divider()
     cols = st.columns(2)
     with cols[0]:
-        if st.button("重新规划", use_container_width=True, key="outline_replan"):
+        if st.button("重新规划", width="stretch", key="outline_replan"):
             project_mission.reset_planning_session()
             st.rerun()
     with cols[1]:
@@ -788,7 +788,7 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
                     if st.button(
                         label,
                         type="primary",
-                        use_container_width=True,
+                        width="stretch",
                         key="outline_goto_next_stage",
                     ):
                         st.switch_page(get_app_page(target))
@@ -796,7 +796,7 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
                     with action_cols[1]:
                         if st.button(
                             "前往交付 →",
-                            use_container_width=True,
+                            width="stretch",
                             key="outline_goto_deliver",
                         ):
                             st.switch_page(get_app_page("deliver"))
@@ -804,7 +804,7 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
                 st.caption("进入生成前需完成：" + "；".join(brief_missing))
                 if not outline.page_design_briefs and st.button(
                     "生成全部设计摘要",
-                    use_container_width=True,
+                    width="stretch",
                     key="outline_generate_briefs_cta",
                 ):
                     from archium.application.slide_design_brief_service import (
@@ -826,7 +826,7 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
             if st.button(
                 "确认任务并生成大纲",
                 type="primary",
-                use_container_width=True,
+                width="stretch",
                 disabled=not task_ready,
                 key="outline_confirm_task",
             ):
@@ -858,7 +858,7 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
             if st.button(
                 "确认大纲",
                 type="primary",
-                use_container_width=True,
+                width="stretch",
                 disabled=not can_confirm,
                 key="outline_confirm",
             ):

@@ -340,7 +340,7 @@ def _render_home_starter_preview(snapshot: ProjectProgressSnapshot) -> None:
         elif st.button(
             "预览封面页",
             key=f"home_studio_preview_{snapshot.project_id}",
-            use_container_width=False,
+            width="content",
         ):
             if snapshot.presentation_id is not None:
                 st.session_state.selected_presentation_id = str(snapshot.presentation_id)

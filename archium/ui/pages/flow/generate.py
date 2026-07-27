@@ -9,6 +9,7 @@ import streamlit as st
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 from archium.ui.generate_queue import GenerateQueueMetrics, metrics_from_board, queue_row_status
+from archium.ui.label_map import CONTENT_PIPELINE_ACTION
 from archium.ui.page_status_board_panel import (
     load_page_status_board,
     render_compact_page_actions,
@@ -18,7 +19,6 @@ from archium.ui.pages.flow import (
     render_stage_header,
     render_stage_nav,
 )
-from archium.ui.label_map import CONTENT_PIPELINE_ACTION
 from archium.ui.pages.workspace import render_generate_stage
 from archium.ui.product_flow import product_studio_page_key
 from archium.ui.project_progress_card import load_project_progress_snapshot
@@ -165,14 +165,14 @@ def _render_bottom_actions(*, has_attention: bool, ready_for_export: bool) -> No
         if st.button(
             "处理问题页",
             type="primary" if has_attention else "secondary",
-            use_container_width=True,
+            width="stretch",
             disabled=not has_attention,
             help=None if has_attention else "当前没有需要处理的问题页",
         ):
             st.session_state["studio_focus_attention"] = True
             st.switch_page(get_app_page(product_studio_page_key()))
     with cols[1]:
-        if st.button("进入工作室", type="primary", use_container_width=True):
+        if st.button("进入工作室", type="primary", width="stretch"):
             st.switch_page(get_app_page(product_studio_page_key()))
     if ready_for_export:
         from archium.ui import icons
@@ -212,7 +212,7 @@ def _render_starter_content_banner(project_id: UUID) -> None:
         if st.button(
             "全稿鸟瞰",
             key=f"generate_deck_overview_{project_id}",
-            use_container_width=True,
+            width="stretch",
         ):
             st.session_state.studio_center_mode = "overview"
             st.switch_page(get_app_page(product_studio_page_key()))
@@ -220,7 +220,7 @@ def _render_starter_content_banner(project_id: UUID) -> None:
         if st.button(
             "进入工作室",
             key=f"generate_open_studio_{project_id}",
-            use_container_width=True,
+            width="stretch",
         ):
             st.switch_page(get_app_page(product_studio_page_key()))
 
