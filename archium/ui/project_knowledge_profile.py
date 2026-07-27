@@ -38,9 +38,27 @@ def render_ai_understanding_panel(
 
     with get_session() as session:
         context = build_project_context(session, project_id)
-    if context is None:
-        return None
-    display = build_project_knowledge_display(context)
+        if context is None:
+            return None
+        display = build_project_knowledge_display(context)
+        try:
+            from dataclasses import replace
+
+            from archium.application.project_knowledge_service import ProjectKnowledgeService
+
+            gap_report = ProjectKnowledgeService(session).get_view(project_id).gap_report
+            if gap_report is not None and gap_report.gaps:
+                missing = tuple(
+                    f"{'? [阻断] ' if gap.blocking else '? '}{gap.description}"
+                    for gap in gap_report.gaps[:6]
+                )
+                display = replace(
+                    display,
+                    missing_highlights=missing,
+                    blocking_unknown_count=len(gap_report.blocking_gaps),
+                )
+        except Exception:
+            pass
 
     st.markdown(f"**{title}**")
     st.info(display.partner_headline or display.headline)

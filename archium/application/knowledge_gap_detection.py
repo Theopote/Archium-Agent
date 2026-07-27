@@ -8,7 +8,10 @@ from uuid import UUID
 from archium.application.knowledge_isolation import CRITICAL_FACT_KEYS
 from archium.domain.enums import InformationOrigin, KnowledgeGapStatus, VerificationStatus
 from archium.domain.fact import ProjectFact
-from archium.domain.fact_ledger import STANDARD_FACT_KEYS
+from archium.domain.fact_ledger import LIGHTWEIGHT_REQUIRED_FACT_KEYS, STANDARD_FACT_KEYS
+
+_TEMPLE_HINTS = ("寺", "庙", "庵", "观", "宗教", "文物", "古建", "遗产", "复原", "重建")
+_HOSPITAL_HINTS = ("医院", "医疗", "床位", "hospital", "clinic")
 from archium.domain.knowledge_gap import KnowledgeGap
 from archium.domain.project_knowledge import ProjectKnowledgeItem
 
@@ -40,6 +43,35 @@ class KnowledgeGapReport:
         return len(self.gaps)
 
 
+def resolve_required_fact_keys(
+    *,
+    facts: list[ProjectFact],
+    project_name: str = "",
+    project_description: str = "",
+    lightweight: bool = False,
+) -> tuple[str, ...]:
+    """Project-type aware fact keys — avoid hospital metrics on temple projects, etc."""
+    if lightweight:
+        return LIGHTWEIGHT_REQUIRED_FACT_KEYS
+
+    context = " ".join(
+        part
+        for part in (
+            project_name,
+            project_description,
+            " ".join(f"{fact.label} {fact.value}" for fact in facts[:12]),
+        )
+        if part
+    ).lower()
+
+    keys = [definition.key for definition in STANDARD_FACT_KEYS]
+    if any(hint in context for hint in _TEMPLE_HINTS):
+        keys = [key for key in keys if key not in {"bed_count", "parking_count"}]
+    elif not any(hint in context for hint in _HOSPITAL_HINTS):
+        keys = [key for key in keys if key != "bed_count"]
+    return tuple(keys)
+
+
 def detect_knowledge_gaps(
     project_id: UUID,
     *,
@@ -47,6 +79,7 @@ def detect_knowledge_gaps(
     knowledge_items: list[ProjectKnowledgeItem] | None = None,
     mission_gaps: list[KnowledgeGap] | None = None,
     required_fact_keys: tuple[str, ...] | None = None,
+    lightweight_mode: bool = False,
 ) -> KnowledgeGapReport:
     """Identify missing or unconfirmed knowledge before formal generation."""
     report = KnowledgeGapReport(project_id=project_id)
@@ -65,7 +98,7 @@ def detect_knowledge_gaps(
                     category="missing_fact",
                     description=f"缺少标准事实：{label}",
                     why_it_matters="正式汇报页不应虚构关键项目参数。",
-                    blocking=key in CRITICAL_FACT_KEYS,
+                    blocking=key in CRITICAL_FACT_KEYS and not lightweight_mode,
                     related_keys=(key,),
                 )
             )

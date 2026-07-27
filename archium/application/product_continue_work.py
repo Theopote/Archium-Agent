@@ -104,6 +104,7 @@ def page_for_starter_draft(
             return "edit"
         if not presentation_has_formal_visual_previews(session, starter.presentation_id):
             return "edit"
+        return None
     if starter.page_count > 0:
         return "outline"
     return None

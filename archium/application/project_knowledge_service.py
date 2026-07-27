@@ -65,6 +65,10 @@ class ProjectKnowledgeService:
         self._documents = DocumentRepository(session)
 
     def get_view(self, project_id: UUID) -> ProjectKnowledgeView:
+        from archium.application.knowledge_gap_detection import resolve_required_fact_keys
+        from archium.application.project_context_routing import skips_default_clarification
+        from archium.infrastructure.database.repositories import ProjectRepository
+
         reference_doc_ids = self._reference_document_ids(project_id)
         fact_items = [
             fact_to_knowledge_item(
@@ -76,10 +80,26 @@ class ProjectKnowledgeService:
         stored_items = self._knowledge.list_by_project(project_id)
         combined = self._merge_fact_and_stored_items(fact_items, stored_items)
         sections = self._build_sections(combined)
+        project = ProjectRepository(self._session).get_by_id(project_id)
+        lightweight = (
+            skips_default_clarification(self._session, project_id) if project else False
+        )
+        description = ""
+        if project is not None and project.description:
+            description = project.description
+        facts = self._facts.list_by_project(project_id)
+        required_keys = resolve_required_fact_keys(
+            facts=facts,
+            project_name=project.name if project else "",
+            project_description=description,
+            lightweight=lightweight,
+        )
         gap_report = detect_knowledge_gaps(
             project_id,
-            facts=self._facts.list_by_project(project_id),
+            facts=facts,
             knowledge_items=combined,
+            required_fact_keys=required_keys,
+            lightweight_mode=lightweight,
         )
         return ProjectKnowledgeView(
             project_id=project_id,

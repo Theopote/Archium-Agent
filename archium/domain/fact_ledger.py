@@ -37,6 +37,12 @@ STANDARD_FACT_KEYS: tuple[FactKeyDefinition, ...] = (
 
 STANDARD_FACT_KEY_MAP = {item.key: item for item in STANDARD_FACT_KEYS}
 
+LIGHTWEIGHT_REQUIRED_FACT_KEYS: tuple[str, ...] = (
+    "project_name",
+    "location",
+    "main_function",
+)
+
 # Keys that represent the same metric under different names.
 SEMANTIC_ALIAS_GROUPS: tuple[tuple[str, ...], ...] = (
     ("plot_ratio", "far"),

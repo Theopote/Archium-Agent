@@ -139,7 +139,11 @@ class ProjectProgressSnapshot:
         if self.lightweight_mode:
             if not self.outline_approved:
                 return "outline"
-            if not self.design_briefs_approved and self.has_outline:
+            if (
+                not self.design_briefs_approved
+                and self.has_outline
+                and (self.slide_count <= 0 or self.layout_ready_count <= 0)
+            ):
                 return "outline"
             if self.slide_count <= 0 or self.pending_count > 0:
                 return "generate" if self.has_outline or self.has_brief else "outline"

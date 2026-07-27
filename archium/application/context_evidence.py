@@ -11,6 +11,7 @@ from archium.application._helpers import _format_fact_line
 from archium.application.knowledge_gap_detection import (
     KnowledgeGapEntry,
     detect_knowledge_gaps,
+    resolve_required_fact_keys,
 )
 from archium.domain.enums import KnowledgeItemStatus, VerificationStatus
 from archium.domain.fact import ProjectFact
@@ -20,6 +21,22 @@ from archium.infrastructure.database.repositories import (
     FactRepository,
     ProjectKnowledgeRepository,
 )
+
+
+def _project_name(session: Session, project_id: UUID) -> str:
+    from archium.infrastructure.database.repositories import ProjectRepository
+
+    project = ProjectRepository(session).get_by_id(project_id)
+    return project.name if project is not None else ""
+
+
+def _project_lightweight(session: Session, project_id: UUID) -> bool:
+    from archium.infrastructure.database.repositories import ProjectRepository
+
+    project = ProjectRepository(session).get_by_id(project_id)
+    if project is None:
+        return False
+    return project.origin_mode.skips_default_clarification
 
 
 @dataclass(frozen=True)
@@ -106,6 +123,12 @@ def gather_project_evidence(
         project_id,
         facts=facts,
         knowledge_items=knowledge_items,
+        required_fact_keys=resolve_required_fact_keys(
+            facts=facts,
+            project_name=_project_name(session, project_id),
+            lightweight=_project_lightweight(session, project_id),
+        ),
+        lightweight_mode=_project_lightweight(session, project_id),
     )
     ordered_gaps = sorted(
         gap_report.gaps,

@@ -744,15 +744,47 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
             from archium.application.slide_design_brief_service import design_briefs_ready
 
             briefs_ready, brief_missing = design_briefs_ready(outline)
+            slides_generated = False
+            try:
+                with get_session() as session:
+                    from archium.infrastructure.database.repositories import (
+                        PresentationRepository,
+                    )
+
+                    presentations = PresentationRepository(session).list_by_project(
+                        project_id
+                    )
+                    if presentations:
+                        slides = PresentationRepository(session).list_slides(
+                            presentations[0].id
+                        )
+                        slides_generated = bool(slides) and all(
+                            slide.layout_plan_id is not None for slide in slides
+                        )
+            except Exception:
+                slides_generated = False
+
             st.success(f"大纲已确认（v{outline.version}）")
-            if briefs_ready:
-                if st.button(
-                    "进入生成 →",
-                    type="primary",
-                    use_container_width=True,
-                    key="outline_goto_generate",
-                ):
-                    st.switch_page(get_app_page("generate"))
+            if briefs_ready or slides_generated:
+                action_cols = st.columns(2)
+                with action_cols[0]:
+                    label = "进入工作室 →" if slides_generated else "进入生成 →"
+                    target = "edit" if slides_generated else "generate"
+                    if st.button(
+                        label,
+                        type="primary",
+                        use_container_width=True,
+                        key="outline_goto_next_stage",
+                    ):
+                        st.switch_page(get_app_page(target))
+                if slides_generated:
+                    with action_cols[1]:
+                        if st.button(
+                            "前往交付 →",
+                            use_container_width=True,
+                            key="outline_goto_deliver",
+                        ):
+                            st.switch_page(get_app_page("deliver"))
             else:
                 st.caption("进入生成前需完成：" + "；".join(brief_missing))
                 if not outline.page_design_briefs and st.button(

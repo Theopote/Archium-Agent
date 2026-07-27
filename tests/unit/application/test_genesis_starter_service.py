@@ -120,7 +120,14 @@ def test_page_for_starter_draft_prefers_studio_when_wireframes_complete(db_sessi
         slide_count=starter.slides_ready_count,
         layout_ready_count=starter.layout_ready_count,
     )
-    assert page == "edit"
+    from archium.application.genesis_starter_service import (
+        presentation_has_formal_visual_previews,
+    )
+
+    if presentation_has_formal_visual_previews(db_session, starter.presentation_id):
+        assert page is None
+    else:
+        assert page == "edit"
 
 
 def test_existing_starter_backfills_missing_placeholder_slides(db_session) -> None:
