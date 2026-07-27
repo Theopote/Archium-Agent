@@ -268,6 +268,48 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stText, .stCaption {
     border-color: #d4d1c8;
 }
 
+.page-intelligence-strip {
+    margin: 0 0 0.65rem 0;
+    padding: 0.55rem 0.75rem;
+    background: var(--archium-surface);
+    border: 1px solid var(--archium-line);
+    border-radius: var(--archium-radius);
+}
+.page-intelligence-title {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--archium-ink);
+    margin-bottom: 0.4rem;
+}
+.page-intelligence-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+.page-intel-chip {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.05rem;
+    padding: 0.2rem 0.45rem;
+    border: 1px solid var(--archium-line);
+    border-radius: var(--archium-radius);
+    background: var(--archium-surface-raised);
+    max-width: 100%;
+}
+.page-intel-chip-label {
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--archium-muted);
+}
+.page-intel-chip-value {
+    font-size: 0.78rem;
+    color: var(--archium-ink);
+    line-height: 1.3;
+    word-break: break-word;
+}
+
 .section-label {
     font-size: 0.68rem;
     font-weight: 500;

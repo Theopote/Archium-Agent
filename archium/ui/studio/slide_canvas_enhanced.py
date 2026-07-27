@@ -563,17 +563,11 @@ def render_slide_canvas(
 
     header_cols = st.columns([3, 1])
     with header_cols[0]:
-        st.markdown(f"#### P{slide.order + 1} · {slide.title}")
         st.caption(slide.message or "（无核心信息）")
     with header_cols[1]:
-        if slide_snapshot.validation is not None:
+        if slide_snapshot.validation is not None and not advanced:
             valid = slide_snapshot.validation.valid
-            st.metric(
-                "版式质量",
-                f"{slide_snapshot.validation.score:.2f}",
-                delta="通过" if valid else "需修复",
-                delta_color="normal" if valid else "inverse",
-            )
+            st.caption("版式 " + ("通过" if valid else "需修复"))
 
     preview_path = slide_snapshot.preview_image
     interactive_ready = can_render_interactive_canvas(

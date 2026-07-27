@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from archium.domain.slide_role import SlideRole
+
 ENTITY_LABELS: dict[str, str] = {
     "ProjectMission": "我们对任务的理解",
     "KnowledgeGap": "还需要确认的信息",
@@ -51,6 +53,39 @@ STATUS_LABELS: dict[str, str] = {
     "has_issues": "有问题",
     "empty": "暂无页面",
 }
+
+SLIDE_ROLE_LABELS: dict[SlideRole, str] = {
+    SlideRole.OPENING: "封面 / 开篇",
+    SlideRole.BACKGROUND: "背景",
+    SlideRole.QUESTION: "问题提出",
+    SlideRole.VISION: "愿景",
+    SlideRole.CONCLUSION: "结论 / 收尾",
+    SlideRole.SITE_ANALYSIS: "基地分析",
+    SlideRole.CONTEXT_ANALYSIS: "语境分析",
+    SlideRole.PROBLEM_ANALYSIS: "问题分析",
+    SlideRole.CONCEPT: "概念",
+    SlideRole.STRATEGY: "策略",
+    SlideRole.SPATIAL_LOGIC: "空间逻辑",
+    SlideRole.FORM: "形态",
+    SlideRole.MATERIAL: "材料",
+    SlideRole.EXPERIENCE: "体验",
+    SlideRole.CASE_STUDY: "案例",
+    SlideRole.COMPARISON: "对比",
+    SlideRole.DATA: "数据",
+    SlideRole.SUMMARY: "总结",
+    SlideRole.TIMELINE: "时间线",
+    SlideRole.IMPLEMENTATION: "实施",
+    SlideRole.OTHER: "其他",
+}
+
+
+def slide_role_label(role: SlideRole | None, *, advanced: bool = False) -> str:
+    """Architect-facing page role label."""
+    if role is None:
+        return "未标注"
+    if advanced:
+        return role.value
+    return SLIDE_ROLE_LABELS.get(role, role.value.replace("_", " "))
 
 
 def entity_label(name: str, *, advanced: bool = False) -> str:

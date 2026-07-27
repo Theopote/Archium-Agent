@@ -161,7 +161,9 @@ def render_storyline_navigator(
                 role = getattr(slide, "slide_role", None)
                 role_bit = ""
                 if role is not None:
-                    role_bit = f" · {getattr(role, 'value', role)}"
+                    from archium.ui.label_map import slide_role_label
+
+                    role_bit = f" · {slide_role_label(role)}"
                 label = f"P{index + 1}  {slide.title or '未命名'}{role_bit}"
                 if badge:
                     label = f"{label}  {badge}"

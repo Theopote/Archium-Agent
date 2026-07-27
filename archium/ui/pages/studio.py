@@ -209,14 +209,24 @@ def _render_view_controls(*, compact: bool = False) -> None:
         st.session_state.studio_show_nav = True
     if "studio_show_inspector" not in st.session_state:
         st.session_state.studio_show_inspector = True
+    if "studio_center_mode" not in st.session_state:
+        st.session_state.studio_center_mode = "edit"
 
     show_nav = bool(st.session_state.studio_show_nav)
     show_inspector = bool(st.session_state.studio_show_inspector)
+    center_mode = str(st.session_state.get("studio_center_mode", "edit"))
     is_three = show_nav and show_inspector
 
     with st.popover("视图", use_container_width=True):
+        st.radio(
+            "中心区域",
+            options=["edit", "overview"],
+            format_func=lambda value: "单页编辑" if value == "edit" else "全稿鸟瞰",
+            key="studio_center_mode",
+            horizontal=True,
+        )
         st.checkbox("页面列表", key="studio_show_nav")
-        st.checkbox("检查器", key="studio_show_inspector")
+        st.checkbox("设计助理", key="studio_show_inspector")
         if is_three:
             st.caption("当前：三栏")
             if st.button("画布专注", use_container_width=True, key="studio_canvas_focus"):
@@ -231,10 +241,14 @@ def _render_view_controls(*, compact: bool = False) -> None:
                 st.rerun()
     if not compact:
         bits = []
+        if center_mode == "overview":
+            bits.append("全稿鸟瞰")
+        else:
+            bits.append("单页编辑")
         if show_nav:
             bits.append("页面列表")
         if show_inspector:
-            bits.append("检查器")
+            bits.append("设计助理")
         st.caption("视图：" + (" · ".join(bits) if bits else "画布专注"))
 
 
@@ -357,7 +371,7 @@ def _render_studio_info_menus(
         if show_nav:
             bits.append("页面列表")
         if show_inspector:
-            bits.append("检查器")
+            bits.append("设计助理")
         st.caption("视图：" + (" · ".join(bits) if bits else "画布专注"))
 
 
@@ -382,7 +396,7 @@ def _render_studio_partner_strip(context: StudioPresentationContext) -> None:
                 st.caption(f"故事线论点：{narrative.thesis[:160]}")
         with right:
             st.caption(studio_readiness_label(context))
-            st.caption("工作台：故事线 · 页面 · AI 建议")
+            st.caption("工作台：故事线 · 页面 · 设计助理")
             if st.button(
                 "聚焦本页建议",
                 key=f"studio_open_ai_{context.presentation.id}",
@@ -390,7 +404,7 @@ def _render_studio_partner_strip(context: StudioPresentationContext) -> None:
             ):
                 st.session_state.studio_show_inspector = True
                 st.session_state.studio_show_nav = True
-                st.session_state.studio_inspector_tab = "修改"
+                st.session_state.studio_inspector_expanded = False
                 st.rerun()
     except Exception:
         return
@@ -403,19 +417,18 @@ def _render_partner_right_rail(
     project_id: UUID,
     presentation_id: UUID,
 ) -> None:
-    """Storyline-first right rail: always-on page tips, then inspector tools."""
-    from archium.ui.studio.page_ai_suggestions import render_page_ai_suggestions_rail
+    """Design Assistant primary; inspector tools in collapsed expander."""
+    from archium.ui.studio.design_assistant_panel import render_design_assistant_panel
 
-    slide = slide_snapshot.slide if slide_snapshot is not None else None
-    render_page_ai_suggestions_rail(slide, title="本页 AI 建议")
-    st.divider()
-    st.caption("检查器（属性 / 修改 / 评论…）")
-    _render_inspector_tabs(
-        slide_snapshot=slide_snapshot,
-        advanced=advanced,
-        project_id=project_id,
-        presentation_id=presentation_id,
-    )
+    render_design_assistant_panel(slide_snapshot=slide_snapshot)
+    expanded = bool(st.session_state.get("studio_inspector_expanded", False))
+    with st.expander("检查器（属性 / 布局 / 内容 / 修改…）", expanded=expanded):
+        _render_inspector_tabs(
+            slide_snapshot=slide_snapshot,
+            advanced=advanced,
+            project_id=project_id,
+            presentation_id=presentation_id,
+        )
 
 
 def render(
@@ -503,16 +516,25 @@ def render(
 
     slide_snapshot = get_selected_slide_snapshot(context, selected_index)
 
+    center_mode = str(st.session_state.get("studio_center_mode", "edit"))
     with center_col:
-        from archium.ui.studio.undo_toolbar import render_undo_toolbar
+        if center_mode == "overview":
+            from archium.ui.studio.deck_overview_panel import render_deck_overview
 
-        render_undo_toolbar(slide_snapshot=slide_snapshot)
-        render_slide_canvas(
-            slide_snapshot=slide_snapshot,
-            advanced=advanced,
-            use_interactive_canvas=True,
-            project_id=context.project.id,
-        )
+            render_deck_overview(context=context)
+        else:
+            from archium.ui.studio.page_intelligence_strip import render_page_intelligence_strip
+
+            render_page_intelligence_strip(slide_snapshot, advanced=advanced)
+            from archium.ui.studio.undo_toolbar import render_undo_toolbar
+
+            render_undo_toolbar(slide_snapshot=slide_snapshot)
+            render_slide_canvas(
+                slide_snapshot=slide_snapshot,
+                advanced=advanced,
+                use_interactive_canvas=True,
+                project_id=context.project.id,
+            )
 
     if right_col is not None:
         with right_col:
