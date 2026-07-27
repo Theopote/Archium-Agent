@@ -94,7 +94,7 @@ def test_ensure_genesis_starter_creates_cover_wireframe(db_session) -> None:
     assert result.cover_preview_path is None or Path(result.cover_preview_path).is_file()
 
 
-def test_page_for_starter_draft_prefers_studio_before_layout(db_session) -> None:
+def test_page_for_starter_draft_prefers_outline_before_confirm(db_session) -> None:
     project = ProjectRepository(db_session).create(Project(name="草稿路由"))
     db_session.commit()
     starter = ensure_genesis_starter_draft(
@@ -109,11 +109,11 @@ def test_page_for_starter_draft_prefers_studio_before_layout(db_session) -> None
         slide_count=starter.slides_ready_count,
         layout_ready_count=0,
     )
-    assert page == "edit"
+    assert page == "outline"
     assert starter.has_first_slide
 
 
-def test_page_for_starter_draft_prefers_studio_when_wireframes_complete(db_session) -> None:
+def test_page_for_starter_draft_prefers_outline_when_wireframes_complete(db_session) -> None:
     project = ProjectRepository(db_session).create(Project(name="线框路由"))
     db_session.commit()
     starter = ensure_genesis_starter_draft(
@@ -129,14 +129,7 @@ def test_page_for_starter_draft_prefers_studio_when_wireframes_complete(db_sessi
         slide_count=starter.slides_ready_count,
         layout_ready_count=starter.layout_ready_count,
     )
-    from archium.application.genesis_starter_service import (
-        presentation_has_formal_visual_previews,
-    )
-
-    if presentation_has_formal_visual_previews(db_session, starter.presentation_id):
-        assert page is None
-    else:
-        assert page == "edit"
+    assert page == "outline"
 
 
 def test_existing_starter_backfills_missing_brief(db_session) -> None:

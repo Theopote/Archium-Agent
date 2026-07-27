@@ -88,7 +88,7 @@ def page_for_starter_draft(
     slide_count: int,
     layout_ready_count: int,
 ) -> str | None:
-    """When genesis seeded slides exist, prefer studio/outline over open exploration."""
+    """When genesis seeded slides exist, prefer outline confirm / studio preview."""
     if slide_count <= 0:
         return None
     from archium.application.genesis_starter_service import (
@@ -96,18 +96,28 @@ def page_for_starter_draft(
         presentation_has_formal_visual_previews,
     )
     from archium.domain.enums import ApprovalStatus
-    from archium.infrastructure.database.repositories import OutlinePlanRepository
+    from archium.infrastructure.database.repositories import PresentationRepository
 
-    starter = get_genesis_starter_state(session, project_id)
+    try:
+        starter = get_genesis_starter_state(session, project_id)
+    except Exception:
+        starter = None
     if starter is None:
         return None
 
-    outline = OutlinePlanRepository(session).get_by_presentation(starter.presentation_id)
+    presentations = PresentationRepository(session)
+    outline = None
+    presentation = presentations.get_presentation(starter.presentation_id)
+    if presentation is not None and presentation.current_outline_id is not None:
+        outline = presentations.get_outline(presentation.current_outline_id)
+    if outline is None:
+        outlines = presentations.list_outlines(starter.presentation_id)
+        outline = outlines[0] if outlines else None
     outline_approved = (
         outline is not None and outline.approval_status == ApprovalStatus.APPROVED
     )
-    # Wireframes ready but outline not confirmed → confirm outline before studio/generate.
-    if starter.page_count > 0 and not outline_approved:
+    # Draft outline exists but not confirmed → confirm before studio/generate.
+    if outline is not None and not outline_approved:
         return "outline"
 
     if starter.slides_ready_count > 0:
