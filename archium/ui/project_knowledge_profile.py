@@ -134,7 +134,9 @@ def render_project_knowledge_strip(
         context = build_project_context(session, project_id)
     if context is None:
         return None
-    display = build_project_knowledge_display(context)
+    with get_session() as session:
+        display = build_project_knowledge_display(context)
+        display = _apply_fresh_gap_report(session, project_id, display)
 
     st.info(display.partner_headline or display.headline)
     if display.cognition_stale:
