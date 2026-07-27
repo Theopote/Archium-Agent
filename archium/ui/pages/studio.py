@@ -397,17 +397,75 @@ def _render_studio_partner_strip(context: StudioPresentationContext) -> None:
         with right:
             st.caption(studio_readiness_label(context))
             st.caption("工作台：故事线 · 页面 · 设计助理")
-            if st.button(
-                "聚焦本页建议",
-                key=f"studio_open_ai_{context.presentation.id}",
-                use_container_width=True,
-            ):
-                st.session_state.studio_show_inspector = True
-                st.session_state.studio_show_nav = True
-                st.session_state.studio_inspector_expanded = False
-                st.rerun()
+            action_cols = st.columns(2)
+            with action_cols[0]:
+                if st.button(
+                    "全稿鸟瞰",
+                    key=f"studio_partner_overview_{context.presentation.id}",
+                    use_container_width=True,
+                ):
+                    st.session_state.studio_center_mode = "overview"
+                    st.rerun()
+            with action_cols[1]:
+                if st.button(
+                    "聚焦本页建议",
+                    key=f"studio_open_ai_{context.presentation.id}",
+                    use_container_width=True,
+                ):
+                    st.session_state.studio_show_inspector = True
+                    st.session_state.studio_show_nav = True
+                    st.session_state.studio_inspector_expanded = False
+                    st.rerun()
     except Exception:
         return
+
+
+def _render_wireframe_mode_banner(context: StudioPresentationContext) -> None:
+    """Inform user when deck is still in genesis wireframe preview mode."""
+    try:
+        from archium.application.genesis_starter_service import (
+            get_genesis_starter_state,
+            presentation_has_formal_visual_previews,
+        )
+        from archium.infrastructure.database.session import get_session
+        from archium.ui.app_navigation import get_app_page
+
+        with get_session() as session:
+            starter = get_genesis_starter_state(session, context.project.id)
+            if starter is None:
+                return
+            if presentation_has_formal_visual_previews(session, starter.presentation_id):
+                return
+    except Exception:
+        return
+
+    wireframe_count = sum(
+        1 for item in context.snapshot.slides if item.preview_kind == "wireframe"
+    )
+    if wireframe_count <= 0 and context.layout_ready_count <= 0:
+        return
+
+    shown = wireframe_count if wireframe_count > 0 else context.layout_ready_count
+    st.info(
+        f"当前为 Genesis 线框预览（{shown}/{context.slide_count} 页）。"
+        "运行「生成」页汇报管线可升级为正式版式与截图。"
+    )
+    cols = st.columns(2)
+    with cols[0]:
+        if st.button(
+            "前往生成",
+            key=f"studio_wireframe_generate_{context.presentation.id}",
+            use_container_width=True,
+        ):
+            st.switch_page(get_app_page("generate"))
+    with cols[1]:
+        if st.button(
+            "全稿鸟瞰",
+            key=f"studio_wireframe_overview_{context.presentation.id}",
+            use_container_width=True,
+        ):
+            st.session_state.studio_center_mode = "overview"
+            st.rerun()
 
 
 def _render_partner_right_rail(
@@ -476,6 +534,8 @@ def render(
     welcome = st.session_state.pop("studio_genesis_welcome", None)
     if isinstance(welcome, str) and welcome.strip():
         st.success(welcome)
+
+    _render_wireframe_mode_banner(context)
 
     selected_index = int(st.session_state.get("studio_selected_slide_index", 0))
     slide_snapshot = get_selected_slide_snapshot(context, selected_index)

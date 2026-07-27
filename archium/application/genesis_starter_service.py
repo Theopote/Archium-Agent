@@ -312,6 +312,41 @@ def get_genesis_starter_state(
     return _existing_starter(session, project_id)
 
 
+def presentation_has_formal_visual_previews(
+    session: Session,
+    presentation_id: UUID,
+) -> bool:
+    """True when any slide has scene or PPTX screenshot preview (not wireframe-only)."""
+    from archium.application.visual.slide_preview_service import SlidePreviewService
+    from archium.config.settings import get_settings
+    from archium.infrastructure.database.repositories import PresentationRepository
+    from archium.infrastructure.database.visual_repositories import LayoutPlanRepository
+
+    presentations = PresentationRepository(session)
+    plan_repo = LayoutPlanRepository(session)
+    slides = sorted(presentations.list_slides(presentation_id), key=lambda item: item.order)
+    if not slides:
+        return False
+
+    layout_plans = []
+    for slide in slides:
+        if slide.layout_plan_id is None:
+            layout_plans.append(None)
+            continue
+        layout_plans.append(plan_repo.get(slide.layout_plan_id))
+
+    preview_service = SlidePreviewService(get_settings())
+    resolutions = preview_service.resolve_previews(
+        presentation_id=presentation_id,
+        layout_plans=layout_plans,
+        existing_preview_by_index={},
+        render_paths=[],
+        workflow_output_dir=None,
+        scene_preview_by_index={},
+    )
+    return any(item.kind in {"scene", "screenshot"} for item in resolutions)
+
+
 def ensure_genesis_starter_draft(
     session: Session,
     project_id: UUID,

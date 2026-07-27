@@ -23,11 +23,36 @@ from archium.ui.workspace_service import list_project_presentations
 logger = logging.getLogger(__name__)
 
 
+def _apply_studio_overview_for_wireframe_deck(snapshot: ProjectProgressSnapshot) -> None:
+    """When genesis wireframes are ready, open studio in deck overview mode."""
+    try:
+        from archium.application.genesis_starter_service import (
+            get_genesis_starter_state,
+            presentation_has_formal_visual_previews,
+        )
+
+        with get_session() as session:
+            starter = get_genesis_starter_state(session, snapshot.project_id)
+            if starter is None:
+                return
+            if starter.layout_ready_count < max(1, starter.page_count):
+                return
+            if presentation_has_formal_visual_previews(session, starter.presentation_id):
+                return
+        st.session_state.studio_center_mode = "overview"
+        st.session_state.studio_selected_slide_index = 0
+    except Exception:
+        logger.exception("Failed to apply studio overview defaults")
+
+
 def _select_and_continue(snapshot: ProjectProgressSnapshot) -> None:
     st.session_state.selected_project_id = str(snapshot.project_id)
     if snapshot.presentation_id is not None:
         st.session_state.selected_presentation_id = str(snapshot.presentation_id)
-    st.switch_page(get_app_page(continue_work_page_key(snapshot)))
+    page_key = continue_work_page_key(snapshot)
+    if page_key == "edit":
+        _apply_studio_overview_for_wireframe_deck(snapshot)
+    st.switch_page(get_app_page(page_key))
 
 
 def _resolve_primary(snapshots: list[ProjectProgressSnapshot]) -> ProjectProgressSnapshot | None:
@@ -244,21 +269,59 @@ def _render_partner_next_steps(snapshot: ProjectProgressSnapshot) -> None:
 
 
 def _render_home_starter_preview(snapshot: ProjectProgressSnapshot) -> None:
-    """Show cover draft preview when genesis starter exists but layout is not ready."""
-    if snapshot.slide_count <= 0 or snapshot.layout_ready_count >= snapshot.slide_count:
+    """Show genesis draft card while deck is still in wireframe / placeholder mode."""
+    if snapshot.slide_count <= 0:
         return
     try:
-        from archium.application.genesis_starter_service import get_genesis_starter_state
+        from archium.application.genesis_starter_service import (
+            get_genesis_starter_state,
+            presentation_has_formal_visual_previews,
+        )
         from archium.ui.components.genesis_draft_card import render_genesis_draft_card
 
         with get_session() as session:
             starter = get_genesis_starter_state(session, snapshot.project_id)
+            formal_previews = False
+            if starter is not None:
+                formal_previews = presentation_has_formal_visual_previews(
+                    session, starter.presentation_id
+                )
         if starter is None or not starter.has_first_slide:
+            return
+        if formal_previews:
             return
         if snapshot.presentation_id is not None:
             st.session_state.selected_presentation_id = str(snapshot.presentation_id)
         render_genesis_draft_card(starter, compact=True)
-        if st.button(
+        wireframe_complete = starter.layout_ready_count >= max(1, starter.page_count)
+        if wireframe_complete:
+            cols = st.columns(2)
+            with cols[0]:
+                if st.button(
+                    "全稿鸟瞰",
+                    key=f"home_deck_overview_{snapshot.project_id}",
+                    use_container_width=True,
+                    type="primary",
+                ):
+                    if snapshot.presentation_id is not None:
+                        st.session_state.selected_presentation_id = str(
+                            snapshot.presentation_id
+                        )
+                    st.session_state.studio_selected_slide_index = 0
+                    st.session_state.studio_center_mode = "overview"
+                    st.switch_page(get_app_page("edit"))
+            with cols[1]:
+                if st.button(
+                    "继续生成",
+                    key=f"home_continue_generate_{snapshot.project_id}",
+                    use_container_width=True,
+                ):
+                    if snapshot.presentation_id is not None:
+                        st.session_state.selected_presentation_id = str(
+                            snapshot.presentation_id
+                        )
+                    st.switch_page(get_app_page("generate"))
+        elif st.button(
             "预览封面页",
             key=f"home_studio_preview_{snapshot.project_id}",
             use_container_width=False,

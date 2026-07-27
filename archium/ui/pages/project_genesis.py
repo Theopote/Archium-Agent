@@ -362,6 +362,10 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
     render_genesis_next_steps(
         project_id=project_id,
         has_draft=bool(starter is not None and starter.has_first_slide),
+        wireframe_ready=bool(
+            starter is not None
+            and starter.layout_ready_count >= max(1, starter.page_count)
+        ),
     )
     st.divider()
     if not actions:

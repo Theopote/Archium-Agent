@@ -104,6 +104,25 @@ def test_page_for_starter_draft_prefers_studio_before_layout(db_session) -> None
     assert starter.has_first_slide
 
 
+def test_page_for_starter_draft_prefers_studio_when_wireframes_complete(db_session) -> None:
+    project = ProjectRepository(db_session).create(Project(name="线框路由"))
+    db_session.commit()
+    starter = ensure_genesis_starter_draft(
+        db_session,
+        project.id,
+        prompt="线框测试",
+        project_name=project.name,
+    )
+    assert starter.layout_ready_count >= starter.page_count
+    page = page_for_starter_draft(
+        db_session,
+        project.id,
+        slide_count=starter.slides_ready_count,
+        layout_ready_count=starter.layout_ready_count,
+    )
+    assert page == "edit"
+
+
 def test_existing_starter_backfills_missing_placeholder_slides(db_session) -> None:
     project = ProjectRepository(db_session).create(Project(name="回填测试"))
     db_session.commit()

@@ -91,13 +91,19 @@ def page_for_starter_draft(
     """When genesis seeded slides exist, prefer studio/outline over open exploration."""
     if slide_count <= 0:
         return None
-    from archium.application.genesis_starter_service import get_genesis_starter_state
+    from archium.application.genesis_starter_service import (
+        get_genesis_starter_state,
+        presentation_has_formal_visual_previews,
+    )
 
     starter = get_genesis_starter_state(session, project_id)
     if starter is None:
         return None
-    if layout_ready_count < slide_count:
-        return "edit"
+    if starter.slides_ready_count > 0:
+        if layout_ready_count < slide_count:
+            return "edit"
+        if not presentation_has_formal_visual_previews(session, starter.presentation_id):
+            return "edit"
     if starter.page_count > 0:
         return "outline"
     return None

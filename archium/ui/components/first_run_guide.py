@@ -36,7 +36,12 @@ def render_first_run_steps(*, current_step: int = 1, compact: bool = False) -> N
         st.caption(f"推荐路径：{product_flow_chain()}")
 
 
-def render_genesis_next_steps(*, project_id: str, has_draft: bool = False) -> None:
+def render_genesis_next_steps(
+    *,
+    project_id: str,
+    has_draft: bool = False,
+    wireframe_ready: bool = False,
+) -> None:
     """After genesis assessment — show step 2/3 CTAs."""
     render_first_run_steps(current_step=3 if has_draft else 2, compact=True)
     st.markdown("**从这里继续**")
@@ -52,6 +57,9 @@ def render_genesis_next_steps(*, project_id: str, has_draft: bool = False) -> No
             ):
                 st.session_state.selected_project_id = project_id_str
                 st.session_state.studio_selected_slide_index = 0
+                st.session_state.studio_center_mode = (
+                    "overview" if wireframe_ready else "edit"
+                )
                 st.switch_page(get_app_page("edit"))
         with cols[1]:
             if st.button(
