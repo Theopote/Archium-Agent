@@ -308,6 +308,39 @@ class TestLayoutValidationService:
         assert report.issues_for(LAYOUT_HERO_ASSET_MISSING)
         assert report.issues_for(LAYOUT_TECHNICAL_DRAWING_MISSING)
 
+    def test_portable_asset_uri_uses_runtime_absolute_path(self, tmp_path) -> None:  # noqa: ANN001
+        asset_id = str(uuid4())
+        image = tmp_path / "hero.png"
+        image.write_bytes(b"fake")
+        ctx = AssetReferenceContext(
+            known_asset_ids=frozenset({asset_id}),
+            resolved_paths={asset_id: f"asset://project/{asset_id}/hero.png"},
+            absolute_paths={asset_id: str(image)},
+            asset_types={asset_id: AssetType.IMAGE.value},
+        )
+        plan = _base_plan(
+            LayoutElement(
+                id="hero",
+                role=LayoutElementRole.HERO_VISUAL,
+                content_type=LayoutContentType.IMAGE,
+                content_ref=asset_id,
+                x=0.7,
+                y=1.0,
+                width=8,
+                height=3.5,
+                fit_mode=ImageFit.COVER,
+            ),
+            family=LayoutFamily.HERO,
+        )
+        report = LayoutValidationService().validate(
+            plan,
+            default_presentation_design_system(),
+            require_source=False,
+            asset_context=ctx,
+        )
+        assert not report.issues_for(LAYOUT_UNRESOLVED_ASSET_PATH)
+        assert not report.issues_for(LAYOUT_HERO_ASSET_MISSING)
+
     def test_technical_drawing_missing_when_bound_photo(self, tmp_path) -> None:  # noqa: ANN001
         asset_id = str(uuid4())
         photo = tmp_path / "site.jpg"
@@ -419,7 +452,6 @@ class TestLayoutValidationService:
         assert fmt_issues[0].severity == LayoutIssueSeverity.WARNING
         assert not any(
             issue.rule_code == LAYOUT_UNSUPPORTED_IMAGE_FORMAT
-            and issue.severity
-            in {LayoutIssueSeverity.ERROR, LayoutIssueSeverity.CRITICAL}
+            and issue.severity in {LayoutIssueSeverity.ERROR, LayoutIssueSeverity.CRITICAL}
             for issue in report.issues
         )

@@ -88,9 +88,7 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
         while len(points) < 3:
             points.append("")
 
-        story_rows = grid_cells(
-            story_panel, rows=3, cols=1, gap_x=0.0, gap_y=spacing.sm
-        )
+        story_rows = grid_cells(story_panel, rows=3, cols=1, gap_x=0.0, gap_y=spacing.sm)
         reading = ["title", "historic_photo"]
         for (slot_id, label, role, style), row, point in zip(
             labels, story_rows, points, strict=True
@@ -187,7 +185,7 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
             LayoutElement(
                 id="hero",
                 role=LayoutElementRole.HERO_VISUAL,
-                content_type=LayoutContentType.DRAWING,
+                content_type=self._hero_content_type(context),
                 content_ref=context.content.hero_asset_ref,
                 x=map_panel.x,
                 y=map_panel.y,
@@ -201,16 +199,12 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
         )
 
         traffic_points = [
-            point
-            for point in context.content.key_points
-            if point not in context.content.metrics
+            point for point in context.content.key_points if point not in context.content.metrics
         ][:4]
         metrics = list(context.content.metrics[:3])
         if not metrics:
             metrics = [
-                point
-                for point in context.content.key_points
-                if any(ch.isdigit() for ch in point)
+                point for point in context.content.key_points if any(ch.isdigit() for ch in point)
             ][:3]
 
         cursor_top = info_panel.y
@@ -372,22 +366,21 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
         left, right = split_horizontal(body, left_ratio=0.52, gap=spacing.lg)
 
         supports = list(context.content.supporting_asset_refs[:2])
-        metrics = list(context.content.metrics[:3]) or [
-            point for point in context.content.key_points if any(ch.isdigit() for ch in point)
-        ][:3]
+        metrics = (
+            list(context.content.metrics[:3])
+            or [point for point in context.content.key_points if any(ch.isdigit() for ch in point)][
+                :3
+            ]
+        )
         captions = list(context.content.captions[:2])
-        points = [
-            point
-            for point in context.content.key_points
-            if point not in metrics
-        ][:3]
+        points = [point for point in context.content.key_points if point not in metrics][:3]
 
         # Main drawing (prefer technical drawing treatment when a drawing hero is present).
         elements.append(
             LayoutElement(
                 id="hero",
                 role=LayoutElementRole.HERO_VISUAL,
-                content_type=LayoutContentType.DRAWING,
+                content_type=self._hero_content_type(context),
                 content_ref=context.content.hero_asset_ref,
                 x=left.x,
                 y=left.y,

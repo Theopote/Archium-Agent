@@ -99,7 +99,7 @@ class StrategyCardsLayoutGenerator(LayoutGenerator):
                 LayoutElement(
                     id="concept",
                     role=LayoutElementRole.HERO_VISUAL,
-                    content_type=LayoutContentType.DRAWING,
+                    content_type=self._hero_content_type(context),
                     content_ref=context.content.hero_asset_ref,
                     x=diagram.x,
                     y=diagram.y,

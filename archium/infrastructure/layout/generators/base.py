@@ -10,7 +10,11 @@ from archium.domain.enums import VisualType
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.design_system import DesignSystem
-from archium.domain.visual.enums import LayoutFamily
+from archium.domain.visual.enums import (
+    LayoutContentType,
+    LayoutFamily,
+    VisualContentType,
+)
 from archium.domain.visual.layout import LayoutConstraint, LayoutElement, LayoutPlan
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.layout.geometry import Rect, occupied_area, safe_area, whitespace_ratio
@@ -57,6 +61,19 @@ class LayoutGenerator(ABC):
 
     def _safe(self, design_system: DesignSystem) -> Rect:
         return safe_area(design_system)
+
+    @staticmethod
+    def _hero_content_type(context: LayoutGeneratorContext) -> LayoutContentType:
+        technical = {
+            VisualContentType.SITE_PLAN,
+            VisualContentType.FLOOR_PLAN,
+            VisualContentType.SECTION,
+            VisualContentType.ELEVATION,
+            VisualContentType.ANALYTICAL_DIAGRAM,
+        }
+        if context.visual_intent.dominant_content_type in technical:
+            return LayoutContentType.DRAWING
+        return LayoutContentType.IMAGE
 
     def _build_plan(
         self,

@@ -551,9 +551,9 @@ class LayoutPlanningService:
         style_preference: LayoutStylePreference | None = None,
     ) -> list[LayoutDecisionDraft]:
         _ = design  # reserved for future design-aware family filters
-        asset_count = (
-            (1 if intent.hero_asset_id else 0) + len(intent.supporting_asset_ids)
-        ) or len(slide.visual_requirements)
+        # Requirements describe desired media, not media that can actually be
+        # placed. Only bound assets may unlock asset-dependent layout families.
+        asset_count = (1 if intent.hero_asset_id else 0) + len(intent.supporting_asset_ids)
         style_pref = style_preference or LayoutStylePreference()
         # Rank: deck rhythm → slide intent (user/explicit) → reference style cues.
         preferred_for_registry = merge_preferred_families(

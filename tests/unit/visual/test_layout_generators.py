@@ -93,6 +93,20 @@ class TestLayoutFamilyRegistry:
 
 
 class TestGenerators:
+    def test_strategy_concept_uses_image_slot_for_text_led_intent(self) -> None:
+        solver = LayoutSolver()
+        plan = solver.generate(
+            LayoutFamily.STRATEGY_CARDS,
+            _context(
+                LayoutFamily.STRATEGY_CARDS,
+                content_type=VisualContentType.TEXT_ARGUMENT,
+                variant="strategy_concept",
+            ),
+        )
+        concept = plan.element_by_id("concept")
+        assert concept is not None
+        assert concept.content_type.value == "image"
+
     def test_strategy_cards_reserve_gaps_around_lead_and_source(self) -> None:
         solver = LayoutSolver()
         plan = solver.generate(

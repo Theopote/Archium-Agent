@@ -80,11 +80,13 @@ class LayoutValidationService:
         issues.extend(self._check_overlaps(layout_plan, thresholds.max_overlap_tolerance))
         issues.extend(self._check_required_roles(layout_plan, require_source=require_source))
         issues.extend(self._check_typography(layout_plan, design_system.typography, thresholds))
-        issues.extend(self._check_text_overflow(
-            layout_plan,
-            design_system.typography,
-            thresholds,
-        ))
+        issues.extend(
+            self._check_text_overflow(
+                layout_plan,
+                design_system.typography,
+                thresholds,
+            )
+        )
         issues.extend(self._check_image_rules(layout_plan, drawing_hero=drawing_hero))
         issues.extend(self._check_hero_dominance(layout_plan, safe, thresholds.min_hero_area_ratio))
         issues.extend(
@@ -121,9 +123,7 @@ class LayoutValidationService:
                 continue
             is_hero = self._is_hero_element(plan, element)
             is_drawing_slot = element.content_type == LayoutContentType.DRAWING
-            severity = (
-                LayoutIssueSeverity.ERROR if is_hero else LayoutIssueSeverity.WARNING
-            )
+            severity = LayoutIssueSeverity.ERROR if is_hero else LayoutIssueSeverity.WARNING
 
             if not element.content_ref:
                 if is_hero:
@@ -144,8 +144,7 @@ class LayoutValidationService:
                             severity=LayoutIssueSeverity.WARNING,
                             element_ids=[element.id],
                             message=(
-                                f"Element {element.id} expects an asset but "
-                                "content_ref is empty."
+                                f"Element {element.id} expects an asset but content_ref is empty."
                             ),
                             suggestion="Bind a supporting asset or remove the visual slot.",
                             auto_repairable=False,
@@ -161,10 +160,10 @@ class LayoutValidationService:
 
             ref = element.content_ref
             missing = ref not in known
-            path = resolved.get(ref)
-            unresolved = (not missing) and (
-                path is None or not Path(str(path)).is_file()
-            )
+            # Persisted paths are portable asset:// URIs. Filesystem existence
+            # must be checked against the runtime-only absolute path map.
+            path = asset_context.absolute_paths.get(ref) or resolved.get(ref)
+            unresolved = (not missing) and (path is None or not Path(str(path)).is_file())
 
             if missing:
                 issues.append(
@@ -221,9 +220,7 @@ class LayoutValidationService:
                             rule_code=LAYOUT_HERO_ASSET_MISSING,
                             severity=LayoutIssueSeverity.ERROR,
                             element_ids=[element.id],
-                            message=(
-                                f"Hero asset for {element.id} cannot be loaded from storage."
-                            ),
+                            message=(f"Hero asset for {element.id} cannot be loaded from storage."),
                             suggestion="Fix the hero asset file path before export.",
                             auto_repairable=False,
                         )
@@ -252,8 +249,7 @@ class LayoutValidationService:
                             "is not supported by the layout PPTX renderer."
                         ),
                         suggestion=(
-                            "Convert to png/jpg/jpeg/webp/gif before binding, "
-                            "or replace the asset."
+                            "Convert to png/jpg/jpeg/webp/gif before binding, or replace the asset."
                         ),
                         auto_repairable=False,
                     )
@@ -274,10 +270,7 @@ class LayoutValidationService:
                         self._technical_drawing_missing_issue(
                             element.id,
                             severity=severity,
-                            reason=(
-                                f"bound asset type is {asset_type}, "
-                                "expected drawing/diagram"
-                            ),
+                            reason=(f"bound asset type is {asset_type}, expected drawing/diagram"),
                         )
                     )
 
@@ -295,9 +288,7 @@ class LayoutValidationService:
             severity=severity,
             element_ids=[element_id],
             message=f"Technical drawing for {element_id} is missing ({reason}).",
-            suggestion=(
-                "Bind a project drawing/diagram asset with a supported image format."
-            ),
+            suggestion=("Bind a project drawing/diagram asset with a supported image format."),
             auto_repairable=False,
         )
 
@@ -377,9 +368,7 @@ class LayoutValidationService:
                 )
         return issues
 
-    def _check_overlaps(
-        self, plan: LayoutPlan, tolerance: float
-    ) -> list[LayoutValidationIssue]:
+    def _check_overlaps(self, plan: LayoutPlan, tolerance: float) -> list[LayoutValidationIssue]:
         issues: list[LayoutValidationIssue] = []
         elements = plan.elements
         for i, left in enumerate(elements):
@@ -580,9 +569,7 @@ class LayoutValidationService:
                     rule_code=LAYOUT_HERO_NOT_DOMINANT,
                     severity=LayoutIssueSeverity.WARNING,
                     element_ids=[hero.id],
-                    message=(
-                        f"Hero area ratio {ratio:.2f} is below minimum {min_ratio:.2f}."
-                    ),
+                    message=(f"Hero area ratio {ratio:.2f} is below minimum {min_ratio:.2f}."),
                     suggestion="Enlarge the hero visual.",
                     auto_repairable=True,
                 )
@@ -667,9 +654,7 @@ class LayoutValidationService:
                 )
         return issues
 
-    def _score(
-        self, plan: LayoutPlan, issues: list[LayoutValidationIssue]
-    ) -> LayoutScore:
+    def _score(self, plan: LayoutPlan, issues: list[LayoutValidationIssue]) -> LayoutScore:
         """Compute Layout Quality Score from geometric / rule findings only.
 
         Explicitly excludes semantic visual judgment (image–message fit, color
@@ -680,24 +665,27 @@ class LayoutValidationService:
         warnings = sum(1 for i in issues if i.severity == LayoutIssueSeverity.WARNING)
 
         validity = max(0.0, 1.0 - critical * 0.4 - errors * 0.15)
-        readability = max(0.0, 1.0 - sum(
-            0.2 for i in issues if i.rule_code in {LAYOUT_TEXT_OVERFLOW, LAYOUT_FONT_TOO_SMALL}
-        ))
-        hierarchy = 1.0 if plan.hero_element_id or plan.elements_by_role(
-            LayoutElementRole.LEAD_STATEMENT
-        ) else 0.7
+        readability = max(
+            0.0,
+            1.0
+            - sum(
+                0.2 for i in issues if i.rule_code in {LAYOUT_TEXT_OVERFLOW, LAYOUT_FONT_TOO_SMALL}
+            ),
+        )
+        hierarchy = (
+            1.0
+            if plan.hero_element_id or plan.elements_by_role(LayoutElementRole.LEAD_STATEMENT)
+            else 0.7
+        )
         if any(i.rule_code == LAYOUT_HERO_NOT_DOMINANT for i in issues):
             hierarchy -= 0.25
         alignment = max(
             0.0,
-            1.0
-            - 0.2
-            * sum(1 for i in issues if i.rule_code == LAYOUT_INCONSISTENT_ALIGNMENT),
+            1.0 - 0.2 * sum(1 for i in issues if i.rule_code == LAYOUT_INCONSISTENT_ALIGNMENT),
         )
         whitespace = 1.0
         if any(
-            i.rule_code
-            in {LAYOUT_INSUFFICIENT_WHITESPACE, LAYOUT_EXCESSIVE_DENSITY}
+            i.rule_code in {LAYOUT_INSUFFICIENT_WHITESPACE, LAYOUT_EXCESSIVE_DENSITY}
             for i in issues
         ):
             whitespace = 0.6
