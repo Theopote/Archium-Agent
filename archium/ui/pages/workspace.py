@@ -34,6 +34,7 @@ from archium.ui.error_handlers import format_user_error
 from archium.ui.fact_ledger_panel import render_fact_ledger_panel
 from archium.ui.knowledge_panel import render_knowledge_panel
 from archium.ui.label_map import (
+    CONTENT_PIPELINE_ACTION,
     brief_storyline_pair,
     entity_label,
 )
@@ -418,56 +419,6 @@ def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
                 st.error(str(exc))
 
 
-def _generation_form_placeholders(project_id: UUID) -> dict[str, str]:
-    """Project-aware placeholders — avoid hospital defaults on heritage projects."""
-    defaults = {
-        "title": "概念汇报",
-        "audience": "汇报对象",
-        "purpose": "确认方案方向与下一步",
-        "core_message": "用一句话概括本页核心主张",
-        "sections": "背景与语境\n设计策略\n空间与效果",
-        "target_slide_count": 12,
-    }
-    try:
-        from archium.infrastructure.database.repositories import ProjectRepository
-        from archium.infrastructure.database.session import get_session
-
-        with get_session() as session:
-            project = ProjectRepository(session).get_by_id(project_id)
-        if project is None:
-            return defaults
-        name = (project.name or "").strip()
-        if name:
-            defaults["title"] = name
-        context = f"{name} {(project.description or '')}".lower()
-        heritage = any(
-            hint in context
-            for hint in ("寺", "庙", "文物", "古建", "遗产", "复原", "重建", "文化")
-        )
-        if heritage:
-            defaults.update(
-                {
-                    "audience": "主管部门 / 专家委员会",
-                    "purpose": "争取立项认可与下一步工作共识",
-                    "core_message": "原址重建的文化价值、设计定位与实施路径",
-                    "sections": "历史沿革与损毁\n重建定位\n空间策略\n实施计划",
-                    "target_slide_count": 8,
-                }
-            )
-        elif any(hint in context for hint in ("医院", "医疗", "院区")):
-            defaults.update(
-                {
-                    "audience": "医院管理层",
-                    "purpose": "确认总体改造方向",
-                    "core_message": "通过交通重组改善院区体验",
-                    "sections": "现状分析\n改造策略\n实施计划",
-                }
-            )
-    except Exception:
-        pass
-    return defaults
-
-
 def _render_generation_form(project_id: UUID) -> None:
     st.markdown("#### 生成汇报")
     settings = get_ui_effective_settings()
@@ -482,22 +433,25 @@ def _render_generation_form(project_id: UUID) -> None:
         st.error("未配置 LLM API Key。请前往 **设置 → AI 服务** 配置，或在 `.env` 中设置 `GEMINI_API_KEY`。")
         return
 
-    placeholders = _generation_form_placeholders(project_id)
+    from archium.ui.workspace_service import resolve_generation_form_defaults as _resolve_form_defaults
+
+    with get_session() as session:
+        defaults = _resolve_form_defaults(session, project_id)
 
     with st.form("presentation_form"):
-        title = st.text_input("汇报标题", placeholder=placeholders["title"])
-        audience = st.text_input("汇报对象", placeholder=placeholders["audience"])
-        purpose = st.text_input("汇报目的", placeholder=placeholders["purpose"])
-        core_message = st.text_area("核心信息", placeholder=placeholders["core_message"])
+        title = st.text_input("汇报标题", value=defaults.title)
+        audience = st.text_input("汇报对象", value=defaults.audience)
+        purpose = st.text_input("汇报目的", value=defaults.purpose)
+        core_message = st.text_area("核心信息", value=defaults.core_message)
         target_slide_count = st.number_input(
             "目标页数",
             min_value=3,
             max_value=40,
-            value=int(placeholders["target_slide_count"]),
+            value=int(defaults.target_slide_count),
         )
         required_sections = st.text_area(
             "必要章节（每行一项，或用顿号分隔）",
-            placeholder=placeholders["sections"],
+            value=defaults.sections,
         )
         with st.expander("高级选项", expanded=False):
             st.caption("导出格式与分阶段审核暂停。默认即可生成；需要时再展开调整。")
@@ -543,20 +497,24 @@ def _render_generation_form(project_id: UUID) -> None:
                 f"{entity_label('SlideSpec')} 生成后暂停审核",
                 value=False,
             )
-        submitted = st.form_submit_button("运行汇报管线", use_container_width=True)
+        submitted = st.form_submit_button(CONTENT_PIPELINE_ACTION, use_container_width=True)
 
     if not submitted:
         return
 
-    if not all([title.strip(), audience.strip(), purpose.strip(), core_message.strip()]):
+    resolved_title = title.strip() or defaults.title
+    resolved_audience = audience.strip() or defaults.audience
+    resolved_purpose = purpose.strip() or defaults.purpose
+    resolved_core = core_message.strip() or defaults.core_message
+    if not all([resolved_title, resolved_audience, resolved_purpose, resolved_core]):
         st.error("请完整填写标题、对象、目的与核心信息。")
         return
 
     request = build_presentation_request(
-        title=title,
-        audience=audience,
-        purpose=purpose,
-        core_message=core_message,
+        title=resolved_title,
+        audience=resolved_audience,
+        purpose=resolved_purpose,
+        core_message=resolved_core,
         target_slide_count=int(target_slide_count),
         required_sections_text=required_sections,
     )

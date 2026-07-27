@@ -78,6 +78,142 @@ class ProjectOverview:
     presentation_count: int
 
 
+@dataclass(frozen=True)
+class GenerationFormDefaults:
+    """Prefill values for the presentation generation form (not placeholders)."""
+
+    title: str
+    audience: str
+    purpose: str
+    core_message: str
+    sections: str
+    target_slide_count: int
+
+
+_HERITAGE_HINTS = ("寺", "庙", "庵", "观", "宗教", "文物", "古建", "遗产", "复原", "重建", "文化")
+_HOSPITAL_HINTS = ("医院", "医疗", "院区", "hospital", "clinic")
+
+
+def _looks_like_internal_assessment(text: str) -> bool:
+    """Skip Brief fields that are knowledge-rule noise, not user-facing copy."""
+    cleaned = (text or "").strip()
+    if not cleaned:
+        return True
+    if "规则评估" in cleaned and "%" in cleaned:
+        return True
+    if cleaned.startswith("[刷新]"):
+        return True
+    return False
+
+
+def _looks_like_placeholder_audience(text: str) -> bool:
+    cleaned = (text or "").strip()
+    return cleaned in {"", "汇报对象", "汇报对象待确认"}
+
+
+def resolve_generation_form_defaults(session: Session, project_id: UUID) -> GenerationFormDefaults:
+    """Project / Brief / Outline / Genesis-aware defaults for the generate form."""
+    from archium.domain.intent.intent_evolution import IntentEvolutionKind
+
+    base = GenerationFormDefaults(
+        title="概念汇报",
+        audience="汇报对象",
+        purpose="确认方案方向与下一步",
+        core_message="用一句话概括本页核心主张",
+        sections="背景与语境\n设计策略\n空间与效果",
+        target_slide_count=12,
+    )
+    project = ProjectRepository(session).get_by_id(project_id)
+    if project is None:
+        return base
+
+    title = (project.name or "").strip() or base.title
+    audience = base.audience
+    purpose = base.purpose
+    core_message = base.core_message
+    sections = base.sections
+    target_slide_count = base.target_slide_count
+
+    context = f"{title} {(project.description or '')}".lower()
+    if any(hint in context for hint in _HERITAGE_HINTS):
+        audience = "主管部门 / 专家委员会"
+        purpose = "争取立项认可与下一步工作共识"
+        core_message = "原址重建的文化价值、设计定位与实施路径"
+        sections = "历史沿革与损毁\n重建定位\n空间策略\n实施计划"
+        target_slide_count = 8
+    elif any(hint in context for hint in _HOSPITAL_HINTS):
+        audience = "医院管理层"
+        purpose = "确认总体改造方向"
+        core_message = "通过交通重组改善院区体验"
+        sections = "现状分析\n改造策略\n实施计划"
+
+    for event in project.intent_evolution.events:
+        if event.kind == IntentEvolutionKind.SEED and (event.summary or "").strip():
+            seed = event.summary.strip()
+            if len(seed) > 20:
+                core_message = seed[:400]
+                if purpose == base.purpose or _looks_like_internal_assessment(purpose):
+                    purpose = "形成前期策划与概念设计汇报，明确重建定位与决策路径"
+            break
+
+    presentations = PresentationRepository(session)
+    deck_rows = list_project_presentations(session, project_id)
+    if deck_rows:
+        deck = max(deck_rows, key=lambda item: item.updated_at)
+        briefs = presentations.list_briefs(deck.id)
+        if briefs:
+            brief = briefs[-1]
+            if (brief.title or "").strip():
+                title = brief.title.strip()
+            if (brief.audience or "").strip() and not _looks_like_placeholder_audience(
+                brief.audience
+            ):
+                audience = brief.audience.strip()
+            if (brief.purpose or "").strip() and not _looks_like_internal_assessment(
+                brief.purpose
+            ):
+                purpose = brief.purpose.strip()
+            if (brief.core_message or "").strip() and not _looks_like_internal_assessment(
+                brief.core_message
+            ):
+                core_message = brief.core_message.strip()
+            if brief.required_sections:
+                sections = "\n".join(
+                    section.strip()
+                    for section in brief.required_sections
+                    if str(section).strip()
+                )
+            if brief.target_slide_count:
+                target_slide_count = int(brief.target_slide_count)
+
+        outline = None
+        if deck.current_outline_id is not None:
+            outline = presentations.get_outline(deck.current_outline_id)
+        if outline is None:
+            outlines = presentations.list_outlines(deck.id)
+            outline = outlines[0] if outlines else None
+        if outline is not None:
+            section_titles = [
+                section.title.strip()
+                for section in outline.sections
+                if getattr(section, "title", None) and str(section.title).strip()
+            ]
+            if section_titles:
+                sections = "\n".join(section_titles)
+            page_count = len(outline.page_intents) or len(outline.sections)
+            if page_count > 0:
+                target_slide_count = page_count
+
+    return GenerationFormDefaults(
+        title=title,
+        audience=audience,
+        purpose=purpose,
+        core_message=core_message,
+        sections=sections,
+        target_slide_count=target_slide_count,
+    )
+
+
 def list_projects(session: Session, actor_id: str | None = None) -> list[Project]:
     """List projects visible to ``actor_id`` (default: session / local-user)."""
     from archium.application.project_access_service import ProjectAccessService

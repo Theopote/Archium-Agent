@@ -12,6 +12,7 @@ from archium.ui.workspace_service import (
     get_project_overview,
     import_uploaded_file,
     list_projects,
+    resolve_generation_form_defaults,
 )
 from sqlalchemy.orm import Session
 
@@ -60,6 +61,31 @@ def test_build_presentation_request_supports_chinese_separator() -> None:
         required_sections_text="现状分析、改造策略",
     )
     assert request.required_sections == ["现状分析", "改造策略"]
+
+
+def test_resolve_generation_form_defaults_from_genesis_outline(db_session: Session) -> None:
+    from archium.application.genesis_starter_service import ensure_genesis_starter_draft
+    from archium.domain.project import Project
+    from archium.infrastructure.database.repositories import ProjectRepository
+
+    project = ProjectRepository(db_session).create(
+        Project(name="陕西三原县清凉寺重建验证", description="寺庙原址重建")
+    )
+    db_session.commit()
+    starter = ensure_genesis_starter_draft(
+        db_session,
+        project.id,
+        prompt="陕西三原县清凉寺历史上多次被毁坏，要在原址重建，投资2亿元。",
+        project_name=project.name,
+    )
+    db_session.commit()
+    defaults = resolve_generation_form_defaults(db_session, project.id)
+    assert "清凉寺" in defaults.title
+    assert defaults.audience
+    assert defaults.purpose
+    assert defaults.core_message
+    assert defaults.target_slide_count == starter.page_count
+    assert "背景" in defaults.sections or "封面" in defaults.sections
 
 
 def test_import_uploaded_file_triggers_reassess(db_session: Session) -> None:

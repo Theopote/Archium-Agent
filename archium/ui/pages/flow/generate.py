@@ -54,13 +54,14 @@ def _resolve_flow_project_id() -> UUID | None:
 
 
 def _render_project_context_readiness(project_id: UUID) -> None:
-    """Surface ProjectContext / KnowledgeState before the presentation pipeline."""
+    """Surface project knowledge posture before the presentation pipeline."""
     from archium.application.context import (
         PresentationGateVerdict,
         build_project_context,
         presentation_readiness_from_context,
     )
     from archium.application.context.workflow_navigation import as_session_state
+    from archium.application.project_knowledge_display import _partner_gap_text
     from archium.config.settings import get_settings
     from archium.ui.context_navigation import dispatch_next_best_action
 
@@ -69,18 +70,27 @@ def _render_project_context_readiness(project_id: UUID) -> None:
             context = build_project_context(session, project_id)
         readiness = presentation_readiness_from_context(context)
     except Exception:
-        st.caption("知识状态暂不可用")
+        st.caption("项目理解状态暂不可用")
         return
 
-    st.caption(readiness.summary)
+    if readiness.has_context and readiness.completeness_pct > 0:
+        if readiness.completeness_pct < 45:
+            st.caption(
+                f"资料掌握约 {readiness.completeness_pct}%，可先出草稿；"
+                "正式交付前建议继续补资料。"
+            )
+        else:
+            st.caption(f"资料掌握约 {readiness.completeness_pct}%，可开始生成。")
+
     if readiness.verdict == PresentationGateVerdict.BLOCK:
-        st.error(
-            "当前知识完备性偏低，正式汇报前建议先执行建议动作。"
-            "（门禁默认 warn 仍可生成；设 PRESENTATION_COGNITION_GATE=block 可硬阻断。）"
-        )
-    if readiness.warnings:
-        # One combined callout keeps the generate page from becoming a dashboard.
-        st.warning("\n\n".join(readiness.warnings))
+        st.error("当前资料较少，正式汇报前建议先补充研究或澄清关键问题。")
+    partner_warnings = [
+        _partner_gap_text(line)
+        for line in readiness.warnings
+        if str(line).strip() and not str(line).strip().startswith("知识完整度约")
+    ]
+    if partner_warnings:
+        st.warning("\n\n".join(partner_warnings))
     if readiness.suggested_action is not None:
         label = {
             "research": "补充研究",
