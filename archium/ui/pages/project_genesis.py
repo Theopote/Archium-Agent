@@ -273,6 +273,10 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
     st.markdown("**下一步行动**")
     actions = [NextBestAction.model_validate(item) for item in payload.get("actions") or []]
     _render_assessment_reasons(payload, knowledge_state=state)
+    from archium.ui.components.first_run_guide import render_genesis_next_steps
+
+    render_genesis_next_steps(project_id=project_id)
+    st.divider()
     if not actions:
         st.caption("暂无行动，可继续描述项目或补充资料。")
     for index, action in enumerate(actions):

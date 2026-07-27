@@ -145,6 +145,12 @@ def render_design_assistant_panel(
         st.caption("选择一页后，这里显示视觉评分、问题与可执行建议。")
         return
 
+    from archium.ui.studio.element_intent_panel import render_element_intent_panel
+
+    has_selection = render_element_intent_panel(slide_snapshot=slide_snapshot)
+    if has_selection:
+        st.divider()
+
     slide_id = slide_snapshot.slide.id
     score = _page_score(slide_snapshot)
     if score is not None:

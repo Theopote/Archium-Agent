@@ -310,6 +310,55 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stText, .stCaption {
     word-break: break-word;
 }
 
+.delivery-check-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid #eceae4;
+    font-size: 0.84rem;
+}
+.delivery-check-detail {
+    color: var(--archium-muted);
+    font-size: 0.78rem;
+    text-align: right;
+}
+
+.first-run-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin: 0.65rem 0 0.35rem 0;
+}
+.first-run-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.55rem;
+    border: 1px solid var(--archium-line);
+    border-radius: var(--archium-radius);
+    font-size: 0.78rem;
+    background: var(--archium-surface-raised);
+}
+.first-run-step-num {
+    font-weight: 700;
+    font-size: 0.72rem;
+}
+.first-run-step-done {
+    color: var(--archium-ok);
+    border-color: var(--archium-ok-border);
+    background: var(--archium-ok-bg);
+}
+.first-run-step-active {
+    color: var(--archium-ink);
+    border-color: var(--archium-ink);
+    font-weight: 600;
+}
+.first-run-step-todo {
+    color: var(--archium-muted);
+}
+
 .section-label {
     font-size: 0.68rem;
     font-weight: 500;

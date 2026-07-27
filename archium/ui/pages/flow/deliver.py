@@ -317,7 +317,7 @@ def _open_containing_folder(file_uri: str) -> None:
 
 def render() -> None:
     render_stage_header("deliver")
-    st.caption("准备度、QA、导出与版本记录。不在此页做 Benchmark 或复杂工作室配置。")
+    st.caption("交付检查、导出与版本记录。")
 
     context = _resolve_deliver_context()
     if context is None:
@@ -329,16 +329,20 @@ def render() -> None:
         render_stage_nav("deliver")
         return
 
-    _render_readiness(context)
-    st.divider()
-    _render_qa(context.project.id)
+    from archium.ui.delivery.delivery_review_panel import render_delivery_review_panel
+
+    render_delivery_review_panel(context=context)
     st.divider()
 
     selected_index = int(st.session_state.get("studio_selected_slide_index", 0))
     slide_snapshot = get_selected_slide_snapshot(context, selected_index)
     st.markdown("#### 导出")
-    st.caption("选择格式并导出。路径写入下方版本记录。")
+    st.caption("检查通过后选择格式并导出。路径写入下方版本记录。")
     render_export_panel(context=context, slide_snapshot=slide_snapshot)
+
+    from archium.ui.delivery.fidelity_report_panel import render_fidelity_report_panel
+
+    render_fidelity_report_panel(key_prefix="deliver_post_export")
 
     st.divider()
     _render_delivery_records(context.presentation.id)

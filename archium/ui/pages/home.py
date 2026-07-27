@@ -56,6 +56,9 @@ def _render_empty_state() -> None:
         primary_key="home_new_project_empty",
         on_primary=_go_create,
     )
+    from archium.ui.components.first_run_guide import render_first_run_steps
+
+    render_first_run_steps(current_step=1)
     st.caption(
         "Archium 会评估当前知识状态（已知 / 未知），并建议下一步："
         "探索方向、补充研究、澄清问题或上传部分资料。"
