@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from archium.application.genesis_starter_service import GenesisStarterResult
 from archium.application.project_management_service import ProjectManagementService
 from archium.domain.context.lifecycle_stage import ProjectLifecycleStage
 from archium.domain.context.recommended_workflow import RecommendedWorkflow
@@ -261,13 +262,10 @@ def _render_intent_evidence_summary(project_id: str) -> None:
         st.caption(f"[{entry.source_label()} {conf}%] {entry.statement}{materials}")
 
 
-def _starter_from_payload(payload: dict, project_id: str) -> object | None:
+def _starter_from_payload(payload: dict, project_id: str) -> GenesisStarterResult | None:
     from uuid import UUID
 
-    from archium.application.genesis_starter_service import (
-        GenesisStarterResult,
-        ensure_genesis_starter_draft,
-    )
+    from archium.application.genesis_starter_service import ensure_genesis_starter_draft
 
     raw = payload.get("starter_draft")
     if isinstance(raw, dict) and raw.get("presentation_id"):

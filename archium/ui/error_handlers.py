@@ -18,7 +18,7 @@ logger = get_logger(__name__, operation="ui_errors")
 GENERIC_USER_ERROR = "操作失败，请稍后重试。若问题持续，请联系管理员。"
 
 
-def format_user_error(exc: Exception) -> str:
+def format_user_error(exc: BaseException) -> str:
     """Return a user-facing message for common Archium failures."""
     if isinstance(exc, ConfigurationError):
         return "配置错误，请联系管理员检查系统设置。"
@@ -37,7 +37,7 @@ def format_user_error(exc: Exception) -> str:
     return GENERIC_USER_ERROR
 
 
-def report_user_error(exc: Exception) -> str:
+def report_user_error(exc: BaseException) -> str:
     """Log unexpected failures and return a safe message for Streamlit."""
     if isinstance(exc, ArchiumError):
         return format_user_error(exc)

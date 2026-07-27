@@ -45,6 +45,7 @@ from archium.domain.enums import (
 )
 from archium.domain.slide_design_brief import SlideDesignBrief
 from archium.domain.visual.deck_composition import DeckCompositionPlan
+from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutValidationStatus
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.preferences import VisualPreferences
@@ -83,7 +84,7 @@ def composition_plan_from_state(state: VisualWorkflowState) -> DeckCompositionPl
     return None
 
 
-def effective_design_from_state(state: VisualWorkflowState):
+def effective_design_from_state(state: VisualWorkflowState) -> DesignSystem | None:
     """Use the same style-overlaid DesignSystem as candidate generation."""
     design = state.get("design_system")
     art = state.get("art_direction")

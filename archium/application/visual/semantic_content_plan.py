@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from archium.domain.citation import Citation
 from archium.domain.enums import SlideType
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.slide import SlideSpec
@@ -28,6 +29,11 @@ _VISUAL_EVIDENCE_ROLE_SET = frozenset(
         "multi_image_grid",
     }
 )
+
+
+def _citation_source_label(cite: Citation) -> str:
+    page = f", p.{cite.page_number}" if cite.page_number else ""
+    return f"{cite.document_name}{page}"
 
 @dataclass
 class SemanticContentPlan:
@@ -194,13 +200,9 @@ def build_semantic_content_plan(
 
     source = ""
     if slide_spec.source_citations:
-        first_cite = slide_spec.source_citations[0]
-        page = f", p.{first_cite.page_number}" if first_cite.page_number else ""
-        source = f"{first_cite.document_name}{page}"
+        source = _citation_source_label(slide_spec.source_citations[0])
     elif generation_context and generation_context.relevant_citations:
-        first_cite = generation_context.relevant_citations[0]
-        page = f", p.{first_cite.page_number}" if first_cite.page_number else ""
-        source = f"{first_cite.document_name}{page}"
+        source = _citation_source_label(generation_context.relevant_citations[0])
 
     captions: list[str] = []
     if slide_spec.speaker_notes and slide_spec.speaker_notes.strip():

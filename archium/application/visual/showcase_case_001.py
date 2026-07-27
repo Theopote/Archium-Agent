@@ -114,6 +114,16 @@ def case_001_outputs_dir() -> Path:
     return showcase_case_001_dir() / "outputs"
 
 
+def _settings_without_dotenv() -> Any:
+    """Build Settings without reading the project ``.env`` (deterministic showcase)."""
+    from typing import Callable, cast
+
+    from archium.config.settings import Settings
+
+    factory = cast(Callable[..., Settings], Settings)
+    return factory(_env_file=None)
+
+
 def load_case_001_manifest(path: Path | None = None) -> dict[str, Any]:
     target = path or (showcase_case_001_dir() / "manifest.json")
     payload = json.loads(target.read_text(encoding="utf-8"))
@@ -311,7 +321,7 @@ def write_case_001_dry_run(
         encoding="utf-8",
     )
 
-    renderer = PptxGenPresentationRenderer(Settings(_env_file=None))
+    renderer = PptxGenPresentationRenderer(_settings_without_dotenv())
     deck = renderer.build_layout_instruction_deck(
         title="医院更新汇报 — Showcase Case 001",
         plans=bundle.plans,
@@ -484,7 +494,7 @@ def export_case_001_pptx(
 
     summary = write_case_001_dry_run(bundle, output_dir=output_dir)
     out = Path(summary["output_dir"])
-    renderer = PptxGenPresentationRenderer(Settings(_env_file=None))
+    renderer = PptxGenPresentationRenderer(_settings_without_dotenv())
     if not renderer.is_available():
         summary["mode"] = "dry_run_only"
         summary["pptx_path"] = None

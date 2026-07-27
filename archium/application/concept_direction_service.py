@@ -168,7 +168,8 @@ class ConceptDirectionService:
         direction = self._directions.get(direction_id)
         if direction is None:
             raise WorkflowError(f"概念方向 {direction_id} 不存在")
-        if direction.mission_id is None:
+        mission_id = direction.mission_id
+        if mission_id is None:
             raise WorkflowError(
                 "该方向尚未绑定 Mission；请在概念探索页选择方向并提交生成 Mission"
             )
@@ -181,7 +182,7 @@ class ConceptDirectionService:
             ProjectPermission.EDIT,
             actor_id=actor_id,
         )
-        mission = self._require_mission(direction.mission_id)
+        mission = self._require_mission(mission_id)
         critique_gate = self._run_design_critique(
             direction,
             design_intent=mission.design_intent,
@@ -198,14 +199,14 @@ class ConceptDirectionService:
             return ConceptDirectionSelectionResult(
                 direction=direction,
                 mission=mission,
-                directions=self._directions.list_by_mission(direction.mission_id),
+                directions=self._directions.list_by_mission(mission_id),
                 critique_warnings=critique_warnings,
                 critique_report=critique_gate.report if critique_gate else None,
                 selection_completed=False,
                 pending_revise=pending,
             )
 
-        siblings = self._directions.list_by_mission(direction.mission_id)
+        siblings = self._directions.list_by_mission(mission_id)
         previous_theme = (
             (mission.design_intent.theme if mission.design_intent else "") or ""
         ).strip()
@@ -324,7 +325,7 @@ class ConceptDirectionService:
         return ConceptDirectionSelectionResult(
             direction=refreshed,
             mission=mission,
-            directions=self._directions.list_by_mission(direction.mission_id),
+            directions=self._directions.list_by_mission(mission_id),
             critique_warnings=critique_warnings,
             critique_report=critique_gate.report,
             selection_completed=True,

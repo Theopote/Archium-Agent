@@ -2,9 +2,18 @@
 
 from __future__ import annotations
 
-from collections.abc import MutableMapping
-from typing import Any
+from typing import Any, Protocol
 from uuid import UUID
+
+
+class SessionStateLike(Protocol):
+    """Streamlit session_state and plain dicts both satisfy this."""
+
+    def __getitem__(self, key: str) -> Any: ...
+
+    def __setitem__(self, key: str, value: Any) -> None: ...
+
+    def get(self, key: str, default: Any = None) -> Any: ...
 
 
 def _id(value: UUID | str) -> str:
@@ -12,7 +21,7 @@ def _id(value: UUID | str) -> str:
 
 
 def select_project_context(
-    state: MutableMapping[str, Any],
+    state: SessionStateLike,
     project_id: UUID | str,
     *,
     presentation_id: UUID | str | None = None,
@@ -38,7 +47,7 @@ def select_project_context(
 
 
 def select_presentation_context(
-    state: MutableMapping[str, Any],
+    state: SessionStateLike,
     presentation_id: UUID | str,
 ) -> bool:
     """Select a presentation and reset slide/element state when it changes."""

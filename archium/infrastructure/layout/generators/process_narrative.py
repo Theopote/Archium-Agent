@@ -120,6 +120,25 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
                 ]
             else:
                 cells = grid_cells(board, rows=1, cols=step_count, gap_x=spacing.md, gap_y=0)
+            if step_count > 1:
+                first_center = cells[0].x + cells[0].width * 0.5
+                last_center = cells[-1].x + cells[-1].width * 0.5
+                elements.append(
+                    LayoutElement(
+                        id="process_axis",
+                        role=LayoutElementRole.DECORATION,
+                        content_type=LayoutContentType.SHAPE,
+                        x=first_center,
+                        y=board.y + board.height * 0.12,
+                        width=max(0.1, last_center - first_center),
+                        height=0.035,
+                        fill_color=context.design_system.colors.border,
+                        stroke_color=context.design_system.colors.border,
+                        stroke_width=0,
+                        opacity=0.8,
+                        z_index=0,
+                    )
+                )
             for index, (cell, step) in enumerate(zip(cells, steps, strict=True)):
                 if stage_assets and index < len(stage_assets):
                     image_area, text_area = split_vertical(cell, top_ratio=0.55, gap=spacing.xs)
@@ -142,7 +161,50 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
                     )
                     text_box = text_area
                 else:
-                    text_box = cell
+                    panel_id = f"stage_panel_{index}"
+                    elements.append(
+                        LayoutElement(
+                            id=panel_id,
+                            role=LayoutElementRole.DECORATION,
+                            content_type=LayoutContentType.SHAPE,
+                            x=cell.x,
+                            y=cell.y,
+                            width=cell.width,
+                            height=cell.height,
+                            fill_color=context.design_system.colors.surface,
+                            stroke_color=(
+                                context.design_system.colors.accent
+                                if index == 0
+                                else context.design_system.colors.border
+                            ),
+                            stroke_width=1.4 if index == 0 else 0.8,
+                            opacity=0.96 if index == 0 else 0.82,
+                            z_index=0,
+                        )
+                    )
+                    node_size = min(0.22, max(0.14, cell.width * 0.05))
+                    elements.append(
+                        LayoutElement(
+                            id=f"stage_node_{index}",
+                            role=LayoutElementRole.DECORATION,
+                            content_type=LayoutContentType.SHAPE,
+                            x=cell.x + spacing.sm,
+                            y=cell.y + spacing.sm,
+                            width=node_size,
+                            height=node_size,
+                            fill_color=context.design_system.colors.accent,
+                            stroke_color=context.design_system.colors.accent,
+                            stroke_width=0,
+                            z_index=2,
+                        )
+                    )
+                    inset_x = spacing.lg
+                    text_box = Rect(
+                        cell.x + inset_x,
+                        cell.y + cell.height * 0.34,
+                        max(0.4, cell.width - inset_x - spacing.sm),
+                        max(0.48, cell.height * 0.28),
+                    )
 
                 sid = f"step_{index}"
                 step_ids.append(sid)
@@ -157,6 +219,7 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
                         width=text_box.width,
                         height=text_box.height,
                         style_token="body",
+                        z_index=3,
                     )
                 )
 

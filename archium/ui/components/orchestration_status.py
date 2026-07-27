@@ -7,6 +7,7 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.config.settings import Settings
 from archium.domain.orchestration import (
     HumanGate,
     OrchestrationPlan,
@@ -185,7 +186,7 @@ def _render_compact_gate(
     *,
     stage_status: OrchestrationStageStatus,
     key_prefix: str,
-    settings: object,
+    settings: Settings,
     current_page_key: str | None,
 ) -> None:
     gate = parse_human_gate(run.state)
@@ -218,7 +219,7 @@ def _render_advance_replan_buttons(
     run: WorkflowRun,
     *,
     key_prefix: str,
-    settings: object,
+    settings: Settings,
 ) -> None:
     from archium.application.orchestration import WorkflowOrchestrationService
     from archium.infrastructure.llm.factory import create_llm_provider
