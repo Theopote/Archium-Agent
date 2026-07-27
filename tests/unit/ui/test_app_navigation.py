@@ -111,9 +111,9 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
 
 
 def test_home_exposes_contextual_project_tools_hidden_from_sidebar() -> None:
-    home = (
-        Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "home.py"
-    ).read_text(encoding="utf-8")
+    home = (Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "home.py").read_text(
+        encoding="utf-8"
+    )
     assert "项目动作" in home
     assert 'get_app_page("project-mission")' in home
     assert 'get_app_page("concept-exploration")' in home
@@ -136,7 +136,9 @@ def test_edit_is_product_studio_key_studio_is_legacy_hidden_only() -> None:
     }
     assert id(app_navigation.get_app_page(PRODUCT_STUDIO_PAGE_KEY)) in make_visible_ids
     assert id(app_navigation.get_app_page(LEGACY_STUDIO_PAGE_KEY)) not in make_visible_ids
-    assert getattr(app_navigation.get_app_page(LEGACY_STUDIO_PAGE_KEY), "visibility", None) == "hidden"
+    assert (
+        getattr(app_navigation.get_app_page(LEGACY_STUDIO_PAGE_KEY), "visibility", None) == "hidden"
+    )
 
     # Legacy URL must redirect, not re-mount the workbench as a second product surface.
     nav_src = (
@@ -175,9 +177,7 @@ def test_product_ui_does_not_navigate_to_legacy_studio_page_key() -> None:
 
 
 def test_home_is_project_cockpit_not_welcome_wall() -> None:
-    home_src = (
-        Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "home.py"
-    )
+    home_src = Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "home.py"
     text = home_src.read_text(encoding="utf-8")
     assert "9 步" not in text
     assert "欢迎使用 Archium" not in text
@@ -200,9 +200,7 @@ def test_home_is_project_cockpit_not_welcome_wall() -> None:
 
 def test_sidebar_uses_project_progress_not_module_status() -> None:
     boot_src = Path(__file__).resolve().parents[3] / "archium" / "bootstrap.py"
-    settings_src = (
-        Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "settings.py"
-    )
+    settings_src = Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "settings.py"
     boot_text = boot_src.read_text(encoding="utf-8")
     settings_text = settings_src.read_text(encoding="utf-8")
     assert "render_project_progress_card" in boot_text
@@ -245,12 +243,7 @@ def test_materials_stage_uses_four_tabs() -> None:
 
 def test_outline_default_does_not_embed_mission_unconditionally() -> None:
     outline_src = (
-        Path(__file__).resolve().parents[3]
-        / "archium"
-        / "ui"
-        / "pages"
-        / "flow"
-        / "outline.py"
+        Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "flow" / "outline.py"
     )
     text = outline_src.read_text(encoding="utf-8")
     assert "高级任务规划" in text
@@ -270,6 +263,10 @@ def test_outline_default_does_not_embed_mission_unconditionally() -> None:
     assert "outline_sec_toggle_" in text
     assert "outline_narrow_layout" in text
     assert "page_picker" in text
+    assert 'on_change="rerun"' in text
+    assert "if tab_intent.open:" in text
+    assert "if tab_brief.open:" in text
+    assert 'st.container(horizontal=True, horizontal_alignment="distribute")' in text
     # Wide layout uses the tree; selectbox is gated behind narrow / no-tree.
     assert 'key="outline_card_select"' in text
     assert "page_picker:" in text or "page_picker =" in text or "if page_picker" in text
@@ -277,12 +274,7 @@ def test_outline_default_does_not_embed_mission_unconditionally() -> None:
 
 def test_generate_stage_shows_page_queue() -> None:
     generate_src = (
-        Path(__file__).resolve().parents[3]
-        / "archium"
-        / "ui"
-        / "pages"
-        / "flow"
-        / "generate.py"
+        Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "flow" / "generate.py"
     )
     text = generate_src.read_text(encoding="utf-8")
     assert "逐页队列" in text
@@ -295,12 +287,7 @@ def test_generate_stage_shows_page_queue() -> None:
 
 def test_deliver_stage_is_export_focused() -> None:
     deliver_src = (
-        Path(__file__).resolve().parents[3]
-        / "archium"
-        / "ui"
-        / "pages"
-        / "flow"
-        / "deliver.py"
+        Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "flow" / "deliver.py"
     )
     text = deliver_src.read_text(encoding="utf-8")
     assert "准备度" in text
@@ -313,21 +300,8 @@ def test_deliver_stage_is_export_focused() -> None:
 
 
 def test_edit_stage_embeds_studio_without_inner_header() -> None:
-    edit_src = (
-        Path(__file__).resolve().parents[3]
-        / "archium"
-        / "ui"
-        / "pages"
-        / "flow"
-        / "edit.py"
-    )
-    studio_src = (
-        Path(__file__).resolve().parents[3]
-        / "archium"
-        / "ui"
-        / "pages"
-        / "studio.py"
-    )
+    edit_src = Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "flow" / "edit.py"
+    studio_src = Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "studio.py"
     edit_text = edit_src.read_text(encoding="utf-8")
     studio_text = studio_src.read_text(encoding="utf-8")
     assert "studio.render(" in edit_text
@@ -347,19 +321,9 @@ def test_edit_stage_embeds_studio_without_inner_header() -> None:
 
 
 def test_studio_export_is_popover_not_top_panel() -> None:
-    studio_src = (
-        Path(__file__).resolve().parents[3]
-        / "archium"
-        / "ui"
-        / "pages"
-        / "studio.py"
-    )
+    studio_src = Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "studio.py"
     export_src = (
-        Path(__file__).resolve().parents[3]
-        / "archium"
-        / "ui"
-        / "studio"
-        / "export_panel.py"
+        Path(__file__).resolve().parents[3] / "archium" / "ui" / "studio" / "export_panel.py"
     )
     studio_text = studio_src.read_text(encoding="utf-8")
     export_text = export_src.read_text(encoding="utf-8")
@@ -371,13 +335,7 @@ def test_studio_export_is_popover_not_top_panel() -> None:
 
 
 def test_studio_inspector_uses_lazy_tabs_with_ai_workspace() -> None:
-    studio_src = (
-        Path(__file__).resolve().parents[3]
-        / "archium"
-        / "ui"
-        / "pages"
-        / "studio.py"
-    )
+    studio_src = Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "studio.py"
     text = studio_src.read_text(encoding="utf-8")
     assert "_INSPECTOR_TABS" in text
     assert '("属性", "布局", "内容", "修改", "评论", "风格", "检查")' in text

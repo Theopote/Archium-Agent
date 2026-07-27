@@ -314,8 +314,8 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stText, .stCaption {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.35rem 0;
+    gap: 0.5rem;
+    padding: 0.15rem 0;
     border-bottom: 1px solid #eceae4;
     font-size: 0.84rem;
 }
@@ -323,6 +323,12 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stText, .stCaption {
     color: var(--archium-muted);
     font-size: 0.78rem;
     text-align: right;
+}
+
+/* Compact horizontal gap between sibling controls */
+[data-testid="stHorizontalBlock"] {
+    gap: 0.4rem !important;
+    row-gap: 0.35rem !important;
 }
 
 .first-run-steps {
@@ -452,7 +458,7 @@ div[data-testid="stChatInput"] textarea {
     background: var(--archium-surface);
     border: 1px solid var(--archium-line);
     border-radius: var(--archium-radius);
-    padding: 0.55rem 0.75rem;
+    padding: 0.35rem 0.55rem;
 }
 [data-testid="stExpander"] {
     border-color: var(--archium-line) !important;

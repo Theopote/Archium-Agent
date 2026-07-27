@@ -231,7 +231,9 @@ def _intent_cards_from_sources(
 
     if outline is not None and outline.page_intents:
         for intent in outline.page_intents:
-            cards.append(_card_from_slide_intent(intent, title_fallback=f"第 {intent.order + 1} 页"))
+            cards.append(
+                _card_from_slide_intent(intent, title_fallback=f"第 {intent.order + 1} 页")
+            )
         return cards
 
     if outline is not None and outline.sections:
@@ -259,7 +261,9 @@ def _intent_cards_from_sources(
     if request is not None and request.page_instructions:
         intents = slide_intents_from_page_instructions(list(request.page_instructions))
         for intent in intents:
-            cards.append(_card_from_slide_intent(intent, title_fallback=f"第 {intent.order + 1} 页"))
+            cards.append(
+                _card_from_slide_intent(intent, title_fallback=f"第 {intent.order + 1} 页")
+            )
         if cards:
             return cards
 
@@ -551,8 +555,8 @@ def _render_intent_cards(
         else:
             st.caption("自动识别：生成时根据标题与证据文案判定原型。")
 
-    actions = st.columns(4)
-    with actions[0]:
+    actions = st.container(horizontal=True, horizontal_alignment="distribute")
+    with actions:
         if st.button("保存当前页", type="primary", width="stretch", key="outline_intent_save"):
             evidence_items = merge_grammar_evidence(
                 _split_items(evidence),
@@ -574,7 +578,6 @@ def _render_intent_cards(
             _persist_intents(outline, updated)
             st.success("已保存当前页意图（生成 Outline Revision）。")
             st.rerun()
-    with actions[1]:
         if st.button("复制意图", width="stretch", key="outline_intent_copy"):
             cloned = deepcopy(intent)
             cloned.order = len(intents)
@@ -582,7 +585,6 @@ def _render_intent_cards(
             _persist_intents(outline, [*intents, cloned])
             st.session_state.outline_selected_card = len(intents)
             st.rerun()
-    with actions[2]:
         if st.button(
             "删除页面",
             width="stretch",
@@ -593,7 +595,6 @@ def _render_intent_cards(
             _persist_intents(outline, remaining)
             st.session_state.outline_selected_card = max(0, int(choice) - 1)
             st.rerun()
-    with actions[3]:
         if st.button("插入下一页", width="stretch", key="outline_intent_insert"):
             insert_at = int(choice) + 1
             blank = SlideIntent(
@@ -676,37 +677,21 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
     page_picker = narrow or not has_tree
 
     if narrow:
-        tab_intent, tab_brief = st.tabs(["页面意图", "页面设计摘要"])
+        tab_intent, tab_brief = st.tabs(
+            ["页面意图", "页面设计摘要"],
+            on_change="rerun",
+        )
         intents = _ensure_editable_intents(outline) if outline is not None else []
         selected = int(st.session_state.get("outline_selected_card", 0) or 0)
-        with tab_intent:
-            _render_intent_cards(cards, outline=outline, page_picker=True)
-        with tab_brief:
-            if outline is not None:
-                from archium.ui.outline.design_brief_panel import render_design_brief_panel
-
-                render_design_brief_panel(
-                    outline=outline,
-                    intents=intents,
-                    selected_page=max(0, min(selected, max(len(intents) - 1, 0))),
-                )
-            else:
-                st.caption("生成大纲后可编辑页面设计摘要。")
-        with st.expander("汇报任务", expanded=False):
-            _render_task_meta(snapshot=snapshot, outline=outline, storyline=storyline)
-    else:
-        left, mid, right = st.columns([1.05, 1.6, 1.1], gap="medium")
-        with left:
-            _render_chapter_tree(outline=outline, storyline=storyline, cards=cards)
-        with mid:
-            tab_intent, tab_brief = st.tabs(["页面意图", "页面设计摘要"])
-            intents = _ensure_editable_intents(outline) if outline is not None else []
-            selected = int(st.session_state.get("outline_selected_card", 0) or 0)
+        if tab_intent.open:
             with tab_intent:
-                _render_intent_cards(cards, outline=outline, page_picker=page_picker)
+                _render_intent_cards(cards, outline=outline, page_picker=True)
+        if tab_brief.open:
             with tab_brief:
                 if outline is not None:
-                    from archium.ui.outline.design_brief_panel import render_design_brief_panel
+                    from archium.ui.outline.design_brief_panel import (
+                        render_design_brief_panel,
+                    )
 
                     render_design_brief_panel(
                         outline=outline,
@@ -715,6 +700,36 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
                     )
                 else:
                     st.caption("生成大纲后可编辑页面设计摘要。")
+        with st.expander("汇报任务", expanded=False):
+            _render_task_meta(snapshot=snapshot, outline=outline, storyline=storyline)
+    else:
+        left, mid, right = st.columns([1.05, 1.6, 1.1], gap="medium")
+        with left:
+            _render_chapter_tree(outline=outline, storyline=storyline, cards=cards)
+        with mid:
+            tab_intent, tab_brief = st.tabs(
+                ["页面意图", "页面设计摘要"],
+                on_change="rerun",
+            )
+            intents = _ensure_editable_intents(outline) if outline is not None else []
+            selected = int(st.session_state.get("outline_selected_card", 0) or 0)
+            if tab_intent.open:
+                with tab_intent:
+                    _render_intent_cards(cards, outline=outline, page_picker=page_picker)
+            if tab_brief.open:
+                with tab_brief:
+                    if outline is not None:
+                        from archium.ui.outline.design_brief_panel import (
+                            render_design_brief_panel,
+                        )
+
+                        render_design_brief_panel(
+                            outline=outline,
+                            intents=intents,
+                            selected_page=max(0, min(selected, max(len(intents) - 1, 0))),
+                        )
+                    else:
+                        st.caption("生成大纲后可编辑页面设计摘要。")
         with right:
             _render_task_meta(snapshot=snapshot, outline=outline, storyline=storyline)
             st.divider()
@@ -760,19 +775,13 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
                             presentation_id = _UUID(str(selected))
                         except (TypeError, ValueError):
                             presentation_id = None
-                    presentations = PresentationRepository(session).list_by_project(
-                        project_id
-                    )
+                    presentations = PresentationRepository(session).list_by_project(project_id)
                     if presentation_id is not None:
                         presentations = [
-                            item
-                            for item in presentations
-                            if item.id == presentation_id
+                            item for item in presentations if item.id == presentation_id
                         ] or presentations
                     if presentations:
-                        slides = PresentationRepository(session).list_slides(
-                            presentations[0].id
-                        )
+                        slides = PresentationRepository(session).list_slides(presentations[0].id)
                         slides_generated = bool(slides) and all(
                             slide.layout_plan_id is not None for slide in slides
                         )
@@ -901,11 +910,7 @@ def _render_outline_draft_banner(outline: OutlinePlan | None, *, slide_count: in
     intent_count = len(outline.page_intents) or len(outline.sections)
     st.success(
         f"Genesis 已生成 {intent_count} 页大纲草稿。"
-        + (
-            f" {slide_count}/{intent_count} 页内容占位已写入 SlideSpec。"
-            if slide_count > 0
-            else ""
-        )
+        + (f" {slide_count}/{intent_count} 页内容占位已写入 SlideSpec。" if slide_count > 0 else "")
         + " 请逐页确认意图，或在工作室「全稿鸟瞰」浏览整套故事。"
     )
 

@@ -424,13 +424,13 @@ def _render_quick_export_popover(
         presentation_id=context.presentation.id,
     )
     export_disabled = not verdict.allows_formal_export
-    with st.popover("导出", use_container_width=True):
+    with st.popover("导出", width="stretch"):
         st.caption(verdict.partner_summary())
         for line in verdict.partner_lines(limit=4)[1:]:
             st.caption(line)
         if st.button(
             "导出 PPTX",
-            use_container_width=True,
+            width="stretch",
             disabled=export_disabled,
             key=f"{key_prefix}_export_pptx",
         ):
@@ -442,7 +442,7 @@ def _render_quick_export_popover(
         if export_disabled and verdict.pptx_ready:
             if st.button(
                 "导出工作稿",
-                use_container_width=True,
+                width="stretch",
                 key=f"{key_prefix}_export_pptx_draft",
                 help="版式已齐但正式门禁未通过时，可先导出工作稿（非正式交付）。",
             ):
@@ -454,7 +454,7 @@ def _render_quick_export_popover(
                 )
         if st.button(
             "导出 PDF",
-            use_container_width=True,
+            width="stretch",
             disabled=export_disabled,
             key=f"{key_prefix}_export_pdf",
         ):
@@ -481,23 +481,13 @@ def render_studio_toolbar(
     preferences = _render_scene_preset_row()
 
     ready_label = "可导出" if context.ready_for_export else "版式未齐"
-    (
-        col_title,
-        col_generate,
-        col_replan,
-        col_check,
-        col_export,
-    ) = st.columns([2.6, 1, 1, 1, 1])
-
-    with col_title:
-        st.markdown(f"**{context.project.name}** · {context.presentation.title}")
-        st.caption(f"状态：{ready_label}")
-
-    with col_generate:
+    st.markdown(f"**{context.project.name}** · {context.presentation.title}")
+    st.caption(f"状态：{ready_label}")
+    with st.container(horizontal=True, gap="small"):
         if st.button(
             LAYOUT_GENERATION_ACTION,
             type="primary",
-            use_container_width=True,
+            width="content",
             key="studio_generate_layouts",
         ):
             _run_generate_layouts(
@@ -506,22 +496,19 @@ def render_studio_toolbar(
                 settings=settings,
                 preferences=preferences,
             )
-
-    with col_replan:
         replan_disabled = slide_snapshot is None
-        if st.button(
-            "重新排版",
-            use_container_width=True,
-            disabled=replan_disabled,
-            key="studio_top_replan",
-        ) and slide_snapshot is not None:
+        if (
+            st.button(
+                "重新排版",
+                width="content",
+                disabled=replan_disabled,
+                key="studio_top_replan",
+            )
+            and slide_snapshot is not None
+        ):
             run_studio_replan(slide_snapshot.slide.id)
-
-    with col_check:
-        if st.button("检查问题", use_container_width=True, key="studio_top_check_issues"):
+        if st.button("检查问题", width="content", key="studio_top_check_issues"):
             show_studio_validation_feedback(slide_snapshot)
-
-    with col_export:
         if show_export:
             _render_quick_export_popover(context=context, settings=settings)
         else:
@@ -543,24 +530,13 @@ def render_export_panel(
     export_disabled = not verdict.allows_formal_export
     preferences = _render_scene_preset_row()
 
-    (
-        col_title,
-        col_generate,
-        col_replan,
-        col_check,
-        col_pptx,
-        col_pdf,
-    ) = st.columns([2.4, 1, 1, 1, 1, 1])
-
-    with col_title:
-        st.markdown("#### 导出与版式")
-        st.caption(f"{context.project.name} · {context.presentation.title}")
-
-    with col_generate:
+    st.caption(f"{context.project.name} · {context.presentation.title}")
+    # Content-width buttons in a tight row — avoid equal stretch columns on wide screens.
+    with st.container(horizontal=True, gap="small"):
         if st.button(
             LAYOUT_GENERATION_ACTION,
             type="primary",
-            use_container_width=True,
+            width="content",
             key="deliver_generate_layouts",
         ):
             _run_generate_layouts(
@@ -569,25 +545,22 @@ def render_export_panel(
                 settings=settings,
                 preferences=preferences,
             )
-
-    with col_replan:
         replan_disabled = slide_snapshot is None
-        if st.button(
-            "重新排版",
-            use_container_width=True,
-            disabled=replan_disabled,
-            key="deliver_top_replan",
-        ) and slide_snapshot is not None:
+        if (
+            st.button(
+                "重新排版",
+                width="content",
+                disabled=replan_disabled,
+                key="deliver_top_replan",
+            )
+            and slide_snapshot is not None
+        ):
             run_studio_replan(slide_snapshot.slide.id)
-
-    with col_check:
-        if st.button("检查问题", use_container_width=True, key="deliver_top_check_issues"):
+        if st.button("检查问题", width="content", key="deliver_top_check_issues"):
             show_studio_validation_feedback(slide_snapshot)
-
-    with col_pptx:
         if st.button(
             "导出 PPTX",
-            use_container_width=True,
+            width="content",
             disabled=export_disabled,
             key="deliver_export_pptx",
         ):
@@ -596,11 +569,9 @@ def render_export_panel(
                 presentation_id=presentation_id,
                 settings=settings,
             )
-
-    with col_pdf:
         if st.button(
             "导出 PDF",
-            use_container_width=True,
+            width="content",
             disabled=export_disabled,
             key="deliver_export_pdf",
         ):
@@ -609,24 +580,25 @@ def render_export_panel(
                 presentation_id=presentation_id,
                 settings=settings,
             )
+        if export_disabled and verdict.pptx_ready:
+            if st.button(
+                "导出工作稿（非正式）",
+                width="content",
+                key="deliver_export_pptx_draft",
+                help="版式已齐但正式门禁未通过时，可先导出工作稿。",
+            ):
+                _export_pptx(
+                    project_id=project_id,
+                    presentation_id=presentation_id,
+                    settings=settings,
+                    require_formal_gate=False,
+                )
 
     st.caption(verdict.partner_summary())
     for line in verdict.partner_lines(limit=4)[1:]:
         st.caption(line)
     if verdict.evidence_stacks:
         st.caption("门禁证据栈：" + " · ".join(verdict.evidence_stacks))
-    if export_disabled and verdict.pptx_ready:
-        if st.button(
-            "导出工作稿（非正式）",
-            key="deliver_export_pptx_draft",
-            help="版式已齐但正式门禁未通过时，可先导出工作稿。",
-        ):
-            _export_pptx(
-                project_id=project_id,
-                presentation_id=presentation_id,
-                settings=settings,
-                require_formal_gate=False,
-            )
 
     from archium.ui.delivery.export_policy_panel import render_export_policy_panel
     from archium.ui.delivery.fidelity_report_panel import render_fidelity_report_panel

@@ -312,31 +312,28 @@ def _render_delivery_record_actions(
     display_name = _export_display_name(file_uri)
     st.markdown(f"**{fmt}** · {when} · QA {qa_status}{hash_note}")
     path = Path(file_uri) if file_uri else None
-    cols = st.columns([2.2, 1, 1])
-    with cols[0]:
+    with st.container(horizontal=True, gap="small"):
         st.caption(display_name)
-        if file_uri:
-            with st.expander("文件路径", expanded=False):
-                st.code(file_uri, language=None)
-    with cols[1]:
         if path is not None and path.is_file():
             st.download_button(
                 "下载",
                 data=path.read_bytes(),
                 file_name=path.name,
-                width="stretch",
+                width="content",
                 key=f"deliver_dl_{key_suffix}",
             )
         else:
             st.button(
                 "下载",
                 disabled=True,
-                width="stretch",
+                width="content",
                 key=f"deliver_dl_{key_suffix}",
             )
-    with cols[2]:
-        if st.button("打开目录", width="stretch", key=f"deliver_open_{key_suffix}"):
+        if st.button("打开目录", width="content", key=f"deliver_open_{key_suffix}"):
             _open_containing_folder(file_uri)
+    if file_uri:
+        with st.expander("文件路径", expanded=False):
+            st.code(file_uri, language=None)
 
 
 def _open_containing_folder(file_uri: str) -> None:
@@ -381,7 +378,6 @@ def render() -> None:
     from archium.ui.delivery.delivery_review_panel import render_delivery_review_panel
 
     render_delivery_review_panel(context=context)
-    st.divider()
 
     selected_index = int(st.session_state.get("studio_selected_slide_index", 0))
     slide_snapshot = get_selected_slide_snapshot(context, selected_index)
@@ -392,8 +388,5 @@ def render() -> None:
     from archium.ui.delivery.fidelity_report_panel import render_fidelity_report_panel
 
     render_fidelity_report_panel(key_prefix="deliver_post_export")
-
-    st.divider()
     _render_delivery_records(context.presentation.id)
-    st.divider()
     render_stage_nav("deliver")
