@@ -456,10 +456,12 @@ def render_flow_stepper(current_stage_id: str) -> None:
 def render_design_context_strip(project_id: UUID) -> None:
     """Persistent design identity line for product-flow chrome (Topic 07 / UI-008)."""
     try:
+        from archium.domain.access import LOCAL_ACTOR_ID
         from archium.ui.session_actor import get_current_actor_id
 
         actor = get_current_actor_id()
-        st.caption(f"当前身份：`{actor}`")
+        if actor and actor != LOCAL_ACTOR_ID:
+            st.caption(f"当前身份：{actor}")
     except Exception:
         actor = None
     try:

@@ -569,8 +569,12 @@ def _render_image_search_settings() -> None:
         st.warning("尚未配置搜图 API Key。可在此页面配置，或在 `.env` 中设置 `PEXELS_API_KEY` / `UNSPLASH_ACCESS_KEY`。")
 
     st.divider()
-    with st.expander("开发者与验收", expanded=False):
-        st.caption("Benchmark、视觉语料与深层工作台用于产品研发验收，不属于日常项目交付。")
+    with st.expander("开发者与验收（研发专用）", expanded=False):
+        st.warning(
+            "以下工具会绕过产品五阶段门禁，仅供研发验收与调试。"
+            "日常项目请使用侧栏「制作」流程。"
+        )
+        st.caption("Benchmark、视觉语料与深层工作台不属于日常项目交付。")
         from archium.ui import icons
         from archium.ui.app_navigation import get_app_page
 

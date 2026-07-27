@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 import streamlit as st
 
@@ -187,11 +188,11 @@ def _render_recent_versions(snapshot: ProjectProgressSnapshot) -> None:
         for record in export_records[:4]:
             if isinstance(record, DeliveryRecord):
                 when = record.exported_at.astimezone().strftime("%Y-%m-%d %H:%M")
-                st.caption(f"{record.format} · {when} · `{record.file_uri}`")
+                st.caption(f"{record.format} · {when} · {Path(record.file_uri).name}")
             else:
+                path_label = Path(str(record.get("path", ""))).name or "导出文件"
                 st.caption(
-                    f"{record.get('format', '导出')} · {record.get('when', '')} · "
-                    f"`{record.get('path', '')}`"
+                    f"{record.get('format', '导出')} · {record.get('when', '')} · {path_label}"
                 )
     if not presentations and not export_records:
         st.caption("尚无汇报版本。完成生成或导出后会显示在此。")

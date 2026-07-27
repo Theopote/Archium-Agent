@@ -92,7 +92,11 @@ def render_fidelity_report_panel(
             st.caption(detail)
 
     if resolved.file_uri:
-        st.caption(f"文件：{resolved.file_uri}")
+        from pathlib import Path
+
+        st.caption(f"文件：{Path(resolved.file_uri).name}")
+        with st.expander("完整路径", expanded=False):
+            st.code(resolved.file_uri, language=None)
     if resolved.file_hash:
         st.caption(f"哈希：{resolved.file_hash}")
 

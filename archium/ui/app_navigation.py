@@ -106,6 +106,18 @@ def build_app_pages() -> dict[str, list[Any]]:
         icon=icons.PROJECT,
         url_path="project-genesis",
     )
+    concept_exploration_page = st.Page(
+        concept_exploration.render,
+        title="概念探索",
+        icon=icons.CONCEPT_EXPLORATION,
+        url_path="concept-exploration",
+    )
+    project_mission_page = st.Page(
+        project_mission.render,
+        title="项目任务",
+        icon=icons.PROJECT_MISSION,
+        url_path="project-mission",
+    )
     template_library_page = st.Page(
         template_library.render,
         title="模板库",
@@ -122,24 +134,7 @@ def build_app_pages() -> dict[str, list[Any]]:
         settings.render, title="设置", icon=icons.SETTINGS, url_path="settings"
     )
 
-    # Hidden from sidebar but kept for deep links / st.page_link / st.switch_page.
-    # Must still be passed to st.navigation (visibility=hidden) or routes 404.
-    # LEGACY_STUDIO_PAGE_KEY only redirects to edit — workbench lives in pages.studio.
     hidden_pages = {
-        "concept-exploration": st.Page(
-            concept_exploration.render,
-            title="概念探索",
-            icon=icons.PROJECT_MISSION,
-            url_path="concept-exploration",
-            visibility="hidden",
-        ),
-        "project-mission": st.Page(
-            project_mission.render,
-            title="项目任务",
-            icon=icons.PROJECT_MISSION,
-            url_path="project-mission",
-            visibility="hidden",
-        ),
         LEGACY_STUDIO_PAGE_KEY: st.Page(
             _redirect_legacy_studio_to_edit,
             title="工作室",
@@ -173,12 +168,14 @@ def build_app_pages() -> dict[str, list[Any]]:
     _PAGES.clear()
     _PAGES.update({"home": home_page})
     _PAGES.update({"project-management": project_page})
+    _PAGES.update({"project-genesis": genesis_page})
+    _PAGES.update({"concept-exploration": concept_exploration_page})
+    _PAGES.update({"project-mission": project_mission_page})
     _PAGES.update(stage_pages)
     _PAGES.update({"template-library": template_library_page})
     _PAGES.update({"slide-recovery": slide_recovery_page})
     _PAGES.update({"settings": settings_page})
     _PAGES.update(hidden_pages)
-    _PAGES["project-genesis"] = genesis_page
     # Keep legacy deep-link key resolvable; do not put it in sidebar sections.
     _PAGES[LEGACY_STUDIO_PAGE_KEY] = hidden_pages[LEGACY_STUDIO_PAGE_KEY]
     _PAGES.setdefault(PRODUCT_STUDIO_PAGE_KEY, stage_pages[PRODUCT_STUDIO_PAGE_KEY])
@@ -188,9 +185,8 @@ def build_app_pages() -> dict[str, list[Any]]:
             home_page,
             genesis_page,
             project_page,
-            hidden_pages["concept-exploration"],
-            hidden_pages["project-mission"],
-            hidden_pages["workspace"],
+            concept_exploration_page,
+            project_mission_page,
         ],
         MAKE_SECTION: [
             stage_pages["materials"],
@@ -206,7 +202,7 @@ def build_app_pages() -> dict[str, list[Any]]:
             hidden_pages["template-studio"],
             hidden_pages["template-induction"],
         ],
-        SYSTEM_SECTION: [settings_page],
+        SYSTEM_SECTION: [settings_page, hidden_pages["workspace"]],
     }
 
 

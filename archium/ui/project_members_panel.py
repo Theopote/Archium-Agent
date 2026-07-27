@@ -39,10 +39,11 @@ def render_project_members_panel(
     with st.expander("项目成员与角色", expanded=expanded):
         from archium.ui.session_actor import get_current_actor_id
 
-        st.caption(
-            f"当前身份：`{get_current_actor_id()}` · "
-            "Owner / Architect / Reviewer / Client — 本地单用户默认已是负责人。"
-        )
+        actor = get_current_actor_id()
+        if actor == LOCAL_ACTOR_ID:
+            st.caption("当前为本地单用户模式，默认拥有负责人权限。")
+        else:
+            st.caption(f"当前身份：{actor}")
         if not members:
             st.info("暂无成员记录。")
         else:

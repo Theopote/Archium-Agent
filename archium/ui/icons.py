@@ -18,6 +18,7 @@ TEMPLATE_LIBRARY = ":material/dashboard_customize:"
 SETTINGS = ":material/settings:"
 
 # —— Hidden / deep-link tools ——
+CONCEPT_EXPLORATION = ":material/lightbulb:"
 PROJECT_MISSION = ":material/flag:"
 TEMPLATE_STUDIO = ":material/view_quilt:"
 TEMPLATE_INDUCTION = ":material/science:"

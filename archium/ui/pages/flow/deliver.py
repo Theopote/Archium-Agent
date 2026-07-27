@@ -247,6 +247,15 @@ def _render_delivery_records(presentation_id: UUID) -> None:
         )
 
 
+def _export_display_name(file_uri: str) -> str:
+    from pathlib import Path
+
+    if not file_uri:
+        return "（无文件）"
+    path = Path(file_uri)
+    return path.name or file_uri
+
+
 def _render_delivery_record_actions(
     *,
     key_suffix: str,
@@ -258,12 +267,16 @@ def _render_delivery_record_actions(
 ) -> None:
     from pathlib import Path
 
-    hash_note = f" · `{file_hash}`" if file_hash else ""
+    hash_note = f" · {file_hash[:12]}" if file_hash else ""
+    display_name = _export_display_name(file_uri)
     st.markdown(f"**{fmt}** · {when} · QA {qa_status}{hash_note}")
     path = Path(file_uri) if file_uri else None
-    cols = st.columns([2.4, 1, 1, 1])
+    cols = st.columns([2.2, 1, 1])
     with cols[0]:
-        st.caption(file_uri or "（无路径）")
+        st.caption(display_name)
+        if file_uri:
+            with st.expander("文件路径", expanded=False):
+                st.code(file_uri, language=None)
     with cols[1]:
         if path is not None and path.is_file():
             st.download_button(
@@ -283,11 +296,6 @@ def _render_delivery_record_actions(
     with cols[2]:
         if st.button("打开目录", use_container_width=True, key=f"deliver_open_{key_suffix}"):
             _open_containing_folder(file_uri)
-    with cols[3]:
-        if st.button("复制路径", use_container_width=True, key=f"deliver_copy_{key_suffix}"):
-            st.session_state[f"deliver_copied_path_{key_suffix}"] = file_uri
-            st.code(file_uri, language=None)
-            st.caption("路径已显示，可手动复制。")
 
 
 def _open_containing_folder(file_uri: str) -> None:

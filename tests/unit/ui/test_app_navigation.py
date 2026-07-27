@@ -59,10 +59,10 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
         RESOURCE_SECTION,
         SYSTEM_SECTION,
     }
-    assert len(sections[PROJECT_SECTION]) == 6  # 3 visible + 3 hidden deep-links
+    assert len(sections[PROJECT_SECTION]) == 5
     assert len(sections[MAKE_SECTION]) == 6  # 5 stages + legacy studio redirect
     assert len(sections[RESOURCE_SECTION]) == 4  # 2 visible + 2 hidden template tools
-    assert len(sections[SYSTEM_SECTION]) == 1
+    assert len(sections[SYSTEM_SECTION]) == 2  # settings + hidden workspace
 
     # Stage titles come from product_flow (st.Page.title needs ScriptRunContext).
     assert [get_stage(key).title for key in primary_page_keys()] == [
@@ -85,7 +85,9 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
     assert app_navigation.get_app_page("project-management") is not None
     assert app_navigation.get_app_page("project-genesis") is not None
     assert app_navigation.get_app_page("concept-exploration") is not None
-    assert "concept-exploration" in hidden_page_keys()
+    assert app_navigation.get_app_page("project-mission") is not None
+    assert "concept-exploration" not in hidden_page_keys()
+    assert "project-mission" not in hidden_page_keys()
     assert "visual-design" not in hidden_page_keys()
     assert "command-center" not in hidden_page_keys()
     for retired in ("visual-design", "command-center"):
@@ -104,6 +106,8 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
     }
     for key in hidden_page_keys():
         assert id(app_navigation.get_app_page(key)) not in visible_pages
+    assert id(app_navigation.get_app_page("concept-exploration")) in visible_pages
+    assert id(app_navigation.get_app_page("project-mission")) in visible_pages
 
 
 def test_edit_is_product_studio_key_studio_is_legacy_hidden_only() -> None:
