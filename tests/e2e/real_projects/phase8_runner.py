@@ -64,6 +64,7 @@ def run_phase8_project(
         session,
         manifest_path,
         scratch_dir=scratch_dir,
+        settings=settings,  # type: ignore[arg-type]
     )
     service = ProjectAcceptanceService(
         session,
@@ -263,9 +264,7 @@ def _write_placeholder_reviews(project_id: str, outputs: Path, *, slide_count: i
         "passed": False,
         "slide_count": slide_count,
         "pages": [],
-        "reviewer_notes": (
-            "Phase 8 占位：须基于 presentation.pptx 真实打开后填写可编辑性评审。"
-        ),
+        "reviewer_notes": ("Phase 8 占位：须基于 presentation.pptx 真实打开后填写可编辑性评审。"),
     }
     write_json(outputs / "visual_review.json", visual)
     write_json(outputs / "editability_review.json", editability)
@@ -287,9 +286,7 @@ def _write_render_manifest(
     unresolved = 0
     for result in scene_results:
         unresolved += sum(
-            1
-            for node in result.scene.nodes
-            if getattr(node, "asset_unresolved", False)
+            1 for node in result.scene.nodes if getattr(node, "asset_unresolved", False)
         )
     pptx_ok = pptx_path is not None and pptx_path.is_file()
     render_valid = pptx_ok and scene_count == slide_count and unresolved == 0

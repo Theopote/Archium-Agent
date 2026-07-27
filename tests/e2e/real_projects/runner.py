@@ -36,7 +36,12 @@ def run_acceptance_case(
     scratch_dir: Path,
     update: bool = False,
 ) -> AcceptanceRunSummary:
-    loaded, project, _paths = seed_real_project_case(session, manifest_path, scratch_dir=scratch_dir)
+    loaded, project, _paths = seed_real_project_case(
+        session,
+        manifest_path,
+        scratch_dir=scratch_dir,
+        settings=settings,
+    )
     record = _build_record(session, settings, loaded.manifest, project, loaded.request)
     if update:
         path = write_acceptance_record(record)
@@ -61,7 +66,12 @@ def run_all_acceptance_cases(
 ) -> list[RealProjectAcceptanceRecord]:
     records: list[RealProjectAcceptanceRecord] = []
     for manifest_path in list_manifest_paths():
-        loaded, project, _paths = seed_real_project_case(session, manifest_path, scratch_dir=scratch_dir)
+        loaded, project, _paths = seed_real_project_case(
+            session,
+            manifest_path,
+            scratch_dir=scratch_dir,
+            settings=settings,
+        )
         record = _build_record(session, settings, loaded.manifest, project, loaded.request)
         if update:
             write_acceptance_record(record)

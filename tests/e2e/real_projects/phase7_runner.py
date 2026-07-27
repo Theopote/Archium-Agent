@@ -44,7 +44,12 @@ def run_phase7_acceptance_case(
 ) -> Phase7AcceptanceRunSummary:
     bundle = load_phase7_project(project_id)
     manifest_path = resolve_input_manifest_path(bundle)
-    loaded, project, _paths = seed_real_project_case(session, manifest_path, scratch_dir=scratch_dir)
+    loaded, project, _paths = seed_real_project_case(
+        session,
+        manifest_path,
+        scratch_dir=scratch_dir,
+        settings=settings,  # type: ignore[arg-type]
+    )
     record = _build_record(session, settings, loaded.manifest, project, loaded.request)
     record = record.model_copy(
         update={

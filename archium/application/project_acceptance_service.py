@@ -141,9 +141,7 @@ class ProjectAcceptanceService:
         )
         critical_count, error_count, crop_count = _summarize_layout_issues(validation_reports)
         asset_utilization = _asset_utilization_rate(slides, assets)
-        input_document_count = len(
-            DocumentRepository(self._session).list_by_project(project.id)
-        )
+        input_document_count = len(DocumentRepository(self._session).list_by_project(project.id))
         fact_errors, citation_errors, image_errors = _count_review_issue_buckets(
             self._session,
             presentation.id,
@@ -193,9 +191,7 @@ class ProjectAcceptanceService:
             notes_suffix = "human metrics from Studio manual reviews"
         else:
             human_metrics_source = HumanMetricsSource.LAYOUT_QA_DERIVED
-            notes_suffix = (
-                "automated pipeline only; human rehearsal fields pending live session"
-            )
+            notes_suffix = "automated pipeline only; human rehearsal fields pending live session"
 
         metrics = RealProjectAcceptanceMetrics(
             first_generation_seconds=elapsed,
@@ -206,14 +202,18 @@ class ProjectAcceptanceService:
             critical_layout_page_count=critical_count,
             error_layout_page_count=error_count,
             drawing_crop_issue_count=crop_count,
-            export_acceptable=critical_count == 0,
+            export_acceptable=critical_count == 0 and error_count == 0,
             real_asset_utilization_rate=asset_utilization,
             input_document_count=input_document_count,
             fact_error_count=fact_errors,
             citation_error_count=citation_errors,
             image_usage_error_count=image_errors,
             deliverable_ready=(
-                content_ok and visual_ok and critical_count == 0 and crop_count == 0
+                content_ok
+                and visual_ok
+                and critical_count == 0
+                and error_count == 0
+                and crop_count == 0
             ),
             major_edit_page_ratio=major_edit_page_ratio,
             minor_edit_page_ratio=minor_edit_page_ratio,
@@ -277,9 +277,12 @@ def _count_review_issue_buckets(
         code = issue.rule_code.upper()
         if code.startswith("CONTENT.") or code.startswith("ARCH."):
             fact_errors += 1
-        elif code.startswith("EVIDENCE.") or "CITATION" in code or code.startswith(
-            "SEMANTIC.EXTERNAL_FACT"
-        ) or code.startswith("SEMANTIC.ISSUE_WITHOUT_EVIDENCE"):
+        elif (
+            code.startswith("EVIDENCE.")
+            or "CITATION" in code
+            or code.startswith("SEMANTIC.EXTERNAL_FACT")
+            or code.startswith("SEMANTIC.ISSUE_WITHOUT_EVIDENCE")
+        ):
             citation_errors += 1
         elif (
             code.startswith("VISUAL.")

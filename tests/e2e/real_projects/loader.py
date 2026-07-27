@@ -10,6 +10,7 @@ from typing import Any
 from archium.application.ingestion_service import IngestionService
 from archium.application.presentation_models import PresentationRequest
 from archium.application.project_acceptance_service import RealProjectManifest
+from archium.config.settings import Settings
 from archium.domain.enums import ProjectType, VisualType
 from archium.domain.fact import ProjectFact
 from archium.domain.project import Project
@@ -129,6 +130,7 @@ def seed_real_project_case(
     path: Path,
     *,
     scratch_dir: Path,
+    settings: Settings | None = None,
 ) -> tuple[LoadedRealProjectCase, Project, list[Path]]:
     """Import documents/assets and facts for one acceptance scenario."""
     payload = json.loads(path.read_text(encoding="utf-8"))
@@ -155,7 +157,7 @@ def seed_real_project_case(
         )
         raise RuntimeError(msg)
 
-    ingestion = IngestionService(session)
+    ingestion = IngestionService(session, settings=settings)
     for source_path in imported_paths:
         result = ingestion.import_file(project.id, source_path)
         if result.error:

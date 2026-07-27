@@ -2,12 +2,25 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from archium.application.project_acceptance_metrics import (
     derive_acceptance_human_metrics,
     derive_acceptance_human_metrics_from_reviews,
     derive_acceptance_slide_review,
 )
 from archium.domain.visual.benchmark import HumanVisualReview
+
+
+def test_acceptance_service_does_not_mark_error_pages_deliverable() -> None:
+    source = (
+        Path(__file__).resolve().parents[2]
+        / "archium"
+        / "application"
+        / "project_acceptance_service.py"
+    ).read_text(encoding="utf-8")
+    assert "export_acceptable=critical_count == 0 and error_count == 0" in source
+    assert "and error_count == 0" in source
 
 
 def test_derive_metrics_from_clean_deck() -> None:
