@@ -99,3 +99,13 @@ def test_studio_style_tab_surfaces_art_direction() -> None:
     assert "视觉预算" in props
     assert "页语法" in props
     assert "page_grammar" in props
+
+
+def test_collapsed_studio_inspector_is_lazy() -> None:
+    studio = Path("archium/ui/pages/studio.py").read_text(encoding="utf-8")
+    block = studio.split("def _render_partner_right_rail", 1)[1].split(
+        "def render(", 1
+    )[0]
+    assert 'on_change="rerun"' in block
+    assert "if inspector.open:" in block
+    assert "with inspector:" in block
