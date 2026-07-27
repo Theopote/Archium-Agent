@@ -284,7 +284,9 @@ class PageDirectionService:
                 direction, mode, prefer_mode_lock=False
             )
             return self._attach_visual_concept(
-                slide, direction, style_preset=_resolve_preset(style_preset, art_direction)
+                slide, direction,
+                style_preset=_resolve_preset(style_preset, art_direction),
+                art_direction=art_direction,
             )
 
         if mode is not None:
@@ -300,7 +302,9 @@ class PageDirectionService:
                 direction, mode, prefer_mode_lock=True
             )
             return self._attach_visual_concept(
-                slide, direction, style_preset=_resolve_preset(style_preset, art_direction)
+                slide, direction,
+                style_preset=_resolve_preset(style_preset, art_direction),
+                art_direction=art_direction,
             )
 
         # No situation / mode hit — archetype recipe (or generic defaults).
@@ -329,6 +333,7 @@ class PageDirectionService:
         direction: PageDirection,
         *,
         style_preset: StylePreset | None = None,
+        art_direction: "ArtDirection | None" = None,
     ) -> PageDirection:
         from archium.application.visual.visual_concept_service import VisualConceptService
         from archium.application.visual.visual_language_service import VisualLanguageService
@@ -338,7 +343,8 @@ class PageDirectionService:
         direction = concept_service.apply(direction, concept)
         language_service = VisualLanguageService()
         language = language_service.compose(
-            slide, direction, concept=concept, style_preset=style_preset
+            slide, direction, concept=concept, style_preset=style_preset,
+            art_direction=art_direction,
         )
         return language_service.apply(
             direction,

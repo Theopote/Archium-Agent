@@ -30,6 +30,11 @@ class VisualLanguageSpec(DomainModel):
     decoration: DecorationRecipe = Field(default_factory=DecorationRecipe)
     symbols: list[ArchitecturalSymbolId] = Field(default_factory=list, max_length=6)
     primitive_ids: list[str] = Field(default_factory=list, max_length=12)
+    asset_ids: list[str] = Field(
+        default_factory=list,
+        max_length=8,
+        description="ArchitecturalAsset ids suggested for this page.",
+    )
     image_behavior: ImageBehavior = ImageBehavior.INHERIT
     image_mask: ImageMaskSpec = Field(default_factory=ImageMaskSpec)
     atmosphere: AtmosphereSpec = Field(default_factory=AtmosphereSpec)
@@ -43,6 +48,7 @@ class VisualLanguageSpec(DomainModel):
             "decoration": self.decoration.as_dict(),
             "symbols": [item.value for item in self.symbols],
             "primitive_ids": list(self.primitive_ids),
+            "asset_ids": list(self.asset_ids),
             "image_behavior": self.image_behavior.value,
             "image_mask": self.image_mask.as_dict(),
             "atmosphere": self.atmosphere.as_dict(),
@@ -63,6 +69,8 @@ class VisualLanguageSpec(DomainModel):
             bits.append("符 " + ",".join(s.value for s in self.symbols[:2]))
         if self.primitive_ids:
             bits.append("件 " + ",".join(self.primitive_ids[:3]))
+        if self.asset_ids:
+            bits.append("资 " + ",".join(self.asset_ids[:3]))
         if self.image_mask.kind.value != "none":
             bits.append(f"罩 `{self.image_mask.kind.value}`")
         if self.atmosphere.kind.value != "none":

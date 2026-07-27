@@ -75,6 +75,7 @@ class VisualLanguageService:
         *,
         concept: VisualConcept | None = None,
         style_preset: StylePreset | None = None,
+        art_direction: "ArtDirection | None" = None,
     ) -> VisualLanguageSpec:
         concept = concept if concept is not None else direction.visual_concept
         formula = self._formula_for(slide, direction, concept)
@@ -107,12 +108,14 @@ class VisualLanguageService:
             ),
             emotion=direction.narrative_emotion.value,
         )
+        asset_ids = self._assets_for(slide, formula)
         spec = VisualLanguageSpec(
             typography=typography,
             color_story=color_story,
             decoration=decoration,
             symbols=symbols,
             primitive_ids=primitives,
+            asset_ids=asset_ids,
             image_behavior=image_behavior,
             image_mask=image_mask,
             atmosphere=atmosphere,
@@ -122,10 +125,22 @@ class VisualLanguageService:
         if style_preset is not None:
             from archium.domain.visual.art_direction_profile import (
                 apply_profile_to_language,
+                enhance_from_art_direction,
                 profile_for_style_preset,
             )
 
             profile = profile_for_style_preset(style_preset)
+            if art_direction is not None:
+                profile = enhance_from_art_direction(profile, art_direction)
+            spec, _budget = apply_profile_to_language(spec, budget, profile)
+            spec = spec.model_copy(update={"source": f"ad:{profile.style_preset_id}"})
+        elif art_direction is not None and art_direction.style_preset_id:
+            from archium.domain.visual.art_direction_profile import (
+                apply_profile_to_language,
+                profile_from_art_direction,
+            )
+
+            profile = profile_from_art_direction(art_direction)
             spec, _budget = apply_profile_to_language(spec, budget, profile)
             spec = spec.model_copy(update={"source": f"ad:{profile.style_preset_id}"})
         return spec
@@ -497,3 +512,30 @@ class VisualLanguageService:
         cap = max(1, budget.accent_elements + budget.icons)
         resolved = resolve_primitives(ids)
         return [p.id for p in resolved[:cap]]
+
+    @staticmethod
+    def _assets_for(
+        slide: SlideSpec,
+        formula: PageVisualFormula | None,
+    ) -> list[str]:
+        from archium.domain.visual.architectural_assets import (
+            assets_for_formula,
+            assets_for_slide_context,
+        )
+
+        out: list[str] = []
+        if formula is not None:
+            out.extend(a.id for a in assets_for_formula(formula.id.value))
+        title = slide.title or ""
+        has_drawing = formula is not None and "drawing" in formula.id.value
+        has_site = "区位" in title or "总图" in title or "site" in title.lower()
+        has_section = "剖" in title or "section" in title.lower()
+        for a in assets_for_slide_context(
+            title=title,
+            has_drawing=has_drawing,
+            has_site_plan=has_site,
+            has_section=has_section,
+        ):
+            if a.id not in out:
+                out.append(a.id)
+        return out[:8]
