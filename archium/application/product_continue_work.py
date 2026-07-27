@@ -81,12 +81,35 @@ def page_for_active_design_orchestration(
     return None
 
 
+def page_for_starter_draft(
+    session: Session,
+    project_id: UUID,
+    *,
+    slide_count: int,
+    layout_ready_count: int,
+) -> str | None:
+    """When genesis seeded slides exist, prefer studio/outline over open exploration."""
+    if slide_count <= 0:
+        return None
+    from archium.application.genesis_starter_service import get_genesis_starter_state
+
+    starter = get_genesis_starter_state(session, project_id)
+    if starter is None:
+        return None
+    if layout_ready_count < slide_count:
+        return "edit"
+    if starter.page_count > 0:
+        return "outline"
+    return None
+
+
 def resolve_continue_work_page_key(
     session: Session,
     project_id: UUID,
     *,
     presentation_stage_id: str,
     slide_count: int = 0,
+    layout_ready_count: int = 0,
     actor_id: str | None = None,
 ) -> str:
     """Single continue-work truth: Ask → design → role → orchestration → NBA → stage.
@@ -129,6 +152,15 @@ def resolve_continue_work_page_key(
         except Exception:
             pass
         return "concept-exploration"
+
+    draft_page = page_for_starter_draft(
+        session,
+        project_id,
+        slide_count=slide_count,
+        layout_ready_count=layout_ready_count,
+    )
+    if draft_page is not None:
+        return draft_page
 
     pointer = build_design_pointer(session, project_id)
     design_page = page_for_unresolved_design(session, pointer)

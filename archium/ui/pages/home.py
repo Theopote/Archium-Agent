@@ -243,6 +243,33 @@ def _render_partner_next_steps(snapshot: ProjectProgressSnapshot) -> None:
         st.caption(f"建议进入：{snapshot.current_stage_label}")
 
 
+def _render_home_starter_preview(snapshot: ProjectProgressSnapshot) -> None:
+    """Show cover draft preview when genesis starter exists but layout is not ready."""
+    if snapshot.slide_count <= 0 or snapshot.layout_ready_count >= snapshot.slide_count:
+        return
+    try:
+        from archium.application.genesis_starter_service import get_genesis_starter_state
+        from archium.ui.components.genesis_draft_card import render_genesis_draft_card
+
+        with get_session() as session:
+            starter = get_genesis_starter_state(session, snapshot.project_id)
+        if starter is None or not starter.has_first_slide:
+            return
+        if snapshot.presentation_id is not None:
+            st.session_state.selected_presentation_id = str(snapshot.presentation_id)
+        render_genesis_draft_card(starter, compact=True)
+        if st.button(
+            "预览封面页",
+            key=f"home_studio_preview_{snapshot.project_id}",
+            use_container_width=False,
+        ):
+            if snapshot.presentation_id is not None:
+                st.session_state.selected_presentation_id = str(snapshot.presentation_id)
+            st.switch_page(get_app_page("edit"))
+    except Exception:
+        logger.exception("Failed to render home starter preview")
+
+
 def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
     header_l, header_r = st.columns([3.2, 1])
     with header_l:
@@ -277,6 +304,8 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
         logger.exception("Failed to render project LLM tier selector")
 
     st.markdown(f"**汇报任务**  \n{_task_statement_for(snapshot)}")
+
+    _render_home_starter_preview(snapshot)
 
     if snapshot.outline_changes_pending:
         st.warning("大纲已编辑 · 待重新确认后再进入生成。")

@@ -150,7 +150,20 @@ def _render_entry_form() -> None:
                             "exploration_seed_warnings", []
                         ).append(warning)
 
+                from archium.application.genesis_starter_service import (
+                    ensure_genesis_starter_draft,
+                )
+
+                starter = ensure_genesis_starter_draft(
+                    session,
+                    project.id,
+                    prompt=prompt.strip(),
+                    project_name=project.name,
+                    understanding_summary=assessment.understanding_summary or "",
+                )
+
             st.session_state.selected_project_id = str(project.id)
+            st.session_state.selected_presentation_id = str(starter.presentation_id)
             st.session_state.genesis_task_description = prompt.strip()
             st.session_state[_PROJECT_KEY] = str(project.id)
             st.session_state[_ASSESSMENT_KEY] = {
@@ -165,6 +178,14 @@ def _render_entry_form() -> None:
                     if assessment.project_context is not None
                     else None
                 ),
+                "starter_draft": {
+                    "created": starter.created,
+                    "presentation_id": str(starter.presentation_id),
+                    "outline_id": str(starter.outline_id) if starter.outline_id else None,
+                    "page_count": starter.page_count,
+                    "has_first_slide": starter.has_first_slide,
+                    "summary": starter.summary,
+                },
             }
             st.rerun()
         except ValidationError as exc:
@@ -225,6 +246,40 @@ def _render_intent_evidence_summary(project_id: str) -> None:
         st.caption(f"[{entry.source_label()} {conf}%] {entry.statement}{materials}")
 
 
+def _starter_from_payload(payload: dict, project_id: str) -> object | None:
+    from uuid import UUID
+
+    from archium.application.genesis_starter_service import (
+        GenesisStarterResult,
+        ensure_genesis_starter_draft,
+    )
+
+    raw = payload.get("starter_draft")
+    if isinstance(raw, dict) and raw.get("presentation_id"):
+        return GenesisStarterResult(
+            created=bool(raw.get("created")),
+            presentation_id=UUID(str(raw["presentation_id"])),
+            outline_id=UUID(str(raw["outline_id"])) if raw.get("outline_id") else None,
+            page_count=int(raw.get("page_count") or 0),
+            has_first_slide=bool(raw.get("has_first_slide")),
+            summary=str(raw.get("summary") or ""),
+        )
+    prompt = st.session_state.get("genesis_task_description") or ""
+    understanding = str(payload.get("understanding_summary") or "")
+    with get_session() as session:
+        from archium.infrastructure.database.repositories import ProjectRepository
+
+        project = ProjectRepository(session).get_by_id(UUID(project_id))
+        name = project.name if project is not None else "新汇报"
+        return ensure_genesis_starter_draft(
+            session,
+            UUID(project_id),
+            prompt=prompt,
+            project_name=name,
+            understanding_summary=understanding,
+        )
+
+
 def _render_assessment_card(project_id: str, payload: dict) -> None:
     from archium.domain.context.project_context import ProjectContext
     from archium.domain.intent.knowledge_state import KnowledgeState
@@ -251,6 +306,14 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
     if payload.get("understanding_summary"):
         st.markdown(payload["understanding_summary"])
 
+    starter = _starter_from_payload(payload, project_id)
+    if starter is not None:
+        from archium.ui.components.genesis_draft_card import render_genesis_draft_card
+
+        render_genesis_draft_card(starter)
+        st.session_state.selected_presentation_id = str(starter.presentation_id)
+        st.divider()
+
     known = state.known or {}
     if known:
         st.markdown("**目前了解到**")
@@ -275,7 +338,10 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
     _render_assessment_reasons(payload, knowledge_state=state)
     from archium.ui.components.first_run_guide import render_genesis_next_steps
 
-    render_genesis_next_steps(project_id=project_id)
+    render_genesis_next_steps(
+        project_id=project_id,
+        has_draft=bool(starter is not None and starter.has_first_slide),
+    )
     st.divider()
     if not actions:
         st.caption("暂无行动，可继续描述项目或补充资料。")
@@ -313,6 +379,19 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
                         user_text=st.session_state.get("genesis_task_description"),
                         settings=settings,
                     )
+                    from archium.application.genesis_starter_service import (
+                        ensure_genesis_starter_draft,
+                    )
+                    from archium.infrastructure.database.repositories import ProjectRepository
+
+                    project = ProjectRepository(session).get_by_id(UUID(project_id))
+                    starter = ensure_genesis_starter_draft(
+                        session,
+                        UUID(project_id),
+                        prompt=st.session_state.get("genesis_task_description") or "",
+                        project_name=project.name if project is not None else "新汇报",
+                        understanding_summary=assessment.understanding_summary or "",
+                    )
                 st.session_state[_ASSESSMENT_KEY] = {
                     "understanding_summary": assessment.understanding_summary,
                     "knowledge_state": assessment.knowledge_state.model_dump(mode="json"),
@@ -325,7 +404,16 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
                         if assessment.project_context is not None
                         else None
                     ),
+                    "starter_draft": {
+                        "created": starter.created,
+                        "presentation_id": str(starter.presentation_id),
+                        "outline_id": str(starter.outline_id) if starter.outline_id else None,
+                        "page_count": starter.page_count,
+                        "has_first_slide": starter.has_first_slide,
+                        "summary": starter.summary,
+                    },
                 }
+                st.session_state.selected_presentation_id = str(starter.presentation_id)
                 st.rerun()
             except WorkflowError as exc:
                 st.error(str(exc))

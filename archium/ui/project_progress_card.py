@@ -492,6 +492,7 @@ def continue_work_page_key(snapshot: ProjectProgressSnapshot) -> str:
                 snapshot.project_id,
                 presentation_stage_id=snapshot.current_stage_id,
                 slide_count=snapshot.slide_count,
+                layout_ready_count=snapshot.layout_ready_count,
                 actor_id=get_current_actor_id(),
             )
     except Exception:

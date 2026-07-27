@@ -844,6 +844,20 @@ def _confirm_outline(project_id: UUID, *, outline: OutlinePlan | None) -> None:
         st.error(format_user_error(exc))
 
 
+def _render_outline_draft_banner(outline: OutlinePlan | None, *, slide_count: int) -> None:
+    from archium.domain.enums import ApprovalStatus
+
+    if outline is None or outline.approval_status != ApprovalStatus.DRAFT:
+        return
+    if not outline.sections:
+        return
+    st.success(
+        f"Genesis 已生成 {len(outline.page_intents) or len(outline.sections)} 页大纲草稿。"
+        + (f" 封面内容已就绪，共 {slide_count} 页 SlideSpec。" if slide_count else "")
+        + " 请逐页确认意图，或在工作室预览封面。"
+    )
+
+
 def render() -> None:
     render_stage_header("outline")
     st.caption("确认章节、页面意图与汇报任务。高级六步规划可按需打开。")
@@ -852,6 +866,9 @@ def render() -> None:
     if project_id is None:
         render_stage_nav("outline", include_next=False)
         return
+
+    outline, _, slides = _load_outline_storyline(project_id)
+    _render_outline_draft_banner(outline, slide_count=len(slides))
 
     from archium.ui.components.critique_summary_panel import render_design_critique_card
 

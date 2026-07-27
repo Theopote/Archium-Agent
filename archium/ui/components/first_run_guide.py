@@ -36,10 +36,40 @@ def render_first_run_steps(*, current_step: int = 1, compact: bool = False) -> N
         st.caption(f"推荐路径：{product_flow_chain()}")
 
 
-def render_genesis_next_steps(*, project_id: str) -> None:
+def render_genesis_next_steps(*, project_id: str, has_draft: bool = False) -> None:
     """After genesis assessment — show step 2/3 CTAs."""
-    render_first_run_steps(current_step=2, compact=True)
+    render_first_run_steps(current_step=3 if has_draft else 2, compact=True)
     st.markdown("**从这里继续**")
+    if has_draft:
+        project_id_str = str(st.session_state.get("selected_project_id") or project_id)
+        cols = st.columns(3)
+        with cols[0]:
+            if st.button(
+                "进入工作室",
+                key=f"first_run_studio_{project_id}",
+                use_container_width=True,
+                type="primary",
+            ):
+                st.session_state.selected_project_id = project_id_str
+                st.switch_page(get_app_page("edit"))
+        with cols[1]:
+            if st.button(
+                "查看大纲",
+                key=f"first_run_outline_{project_id}",
+                use_container_width=True,
+            ):
+                st.session_state.selected_project_id = project_id_str
+                st.switch_page(get_app_page("outline"))
+        with cols[2]:
+            if st.button(
+                "探索设计方向",
+                key=f"first_run_explore_{project_id}",
+                use_container_width=True,
+            ):
+                st.session_state.selected_project_id = project_id_str
+                st.switch_page(get_app_page("concept-exploration"))
+        return
+
     cols = st.columns(2)
     with cols[0]:
         if st.button(
@@ -48,6 +78,9 @@ def render_genesis_next_steps(*, project_id: str) -> None:
             use_container_width=True,
             type="primary",
         ):
+            st.session_state.selected_project_id = str(
+                st.session_state.get("selected_project_id") or project_id
+            )
             st.switch_page(get_app_page("concept-exploration"))
     with cols[1]:
         if st.button(
