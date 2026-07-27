@@ -86,8 +86,8 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
     assert app_navigation.get_app_page("project-genesis") is not None
     assert app_navigation.get_app_page("concept-exploration") is not None
     assert app_navigation.get_app_page("project-mission") is not None
-    assert "concept-exploration" not in hidden_page_keys()
-    assert "project-mission" not in hidden_page_keys()
+    assert "concept-exploration" in hidden_page_keys()
+    assert "project-mission" in hidden_page_keys()
     assert "visual-design" not in hidden_page_keys()
     assert "command-center" not in hidden_page_keys()
     for retired in ("visual-design", "command-center"):
@@ -106,8 +106,18 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
     }
     for key in hidden_page_keys():
         assert id(app_navigation.get_app_page(key)) not in visible_pages
-    assert id(app_navigation.get_app_page("concept-exploration")) in visible_pages
-    assert id(app_navigation.get_app_page("project-mission")) in visible_pages
+    assert id(app_navigation.get_app_page("concept-exploration")) not in visible_pages
+    assert id(app_navigation.get_app_page("project-mission")) not in visible_pages
+
+
+def test_home_exposes_contextual_project_tools_hidden_from_sidebar() -> None:
+    home = (
+        Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "home.py"
+    ).read_text(encoding="utf-8")
+    assert "项目动作" in home
+    assert 'get_app_page("project-mission")' in home
+    assert 'get_app_page("concept-exploration")' in home
+    assert 'get_app_page("project-management")' in home
 
 
 def test_edit_is_product_studio_key_studio_is_legacy_hidden_only() -> None:

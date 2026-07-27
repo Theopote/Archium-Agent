@@ -77,6 +77,8 @@ HIDDEN_PAGE_KEYS: tuple[str, ...] = (
     LEGACY_STUDIO_PAGE_KEY,
     "template-studio",
     "template-induction",
+    "concept-exploration",
+    "project-mission",
 )
 
 # Backward-compatible alias used by older tests/imports.

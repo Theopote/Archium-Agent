@@ -375,6 +375,26 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
 
     st.markdown(f"**汇报任务**  \n{_task_statement_for(snapshot)}")
 
+    with st.container(border=True):
+        st.markdown("**项目动作**")
+        st.caption("按当前项目上下文打开任务理解、概念方向或项目设置。")
+        with st.container(horizontal=True):
+            st.page_link(
+                get_app_page("project-mission"),
+                label="项目任务",
+                icon=":material/assignment:",
+            )
+            st.page_link(
+                get_app_page("concept-exploration"),
+                label="概念探索",
+                icon=":material/lightbulb:",
+            )
+            st.page_link(
+                get_app_page("project-management"),
+                label="项目管理",
+                icon=":material/folder_managed:",
+            )
+
     _render_home_starter_preview(snapshot)
 
     if snapshot.outline_changes_pending:

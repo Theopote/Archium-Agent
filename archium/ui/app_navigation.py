@@ -111,12 +111,14 @@ def build_app_pages() -> dict[str, list[Any]]:
         title="概念探索",
         icon=icons.CONCEPT_EXPLORATION,
         url_path="concept-exploration",
+        visibility="hidden",
     )
     project_mission_page = st.Page(
         project_mission.render,
         title="项目任务",
         icon=icons.PROJECT_MISSION,
         url_path="project-mission",
+        visibility="hidden",
     )
     template_library_page = st.Page(
         template_library.render,

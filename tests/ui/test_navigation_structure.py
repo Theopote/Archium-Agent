@@ -54,6 +54,20 @@ def test_product_flow_pages_exist() -> None:
         assert app_navigation.get_app_page(key) is not None
 
 
+def test_project_tools_are_contextual_not_sidebar_destinations() -> None:
+    sections = app_navigation.build_app_pages()
+    visible_ids = {
+        id(page)
+        for pages in sections.values()
+        for page in pages
+        if getattr(page, "visibility", "visible") != "hidden"
+    }
+    for key in ("concept-exploration", "project-mission"):
+        page = app_navigation.get_app_page(key)
+        assert getattr(page, "visibility", None) == "hidden"
+        assert id(page) not in visible_ids
+
+
 def test_resource_section_includes_slide_recovery() -> None:
     sections = app_navigation.build_app_pages()
     assert len(sections[RESOURCE_SECTION]) >= 2

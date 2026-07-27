@@ -4,6 +4,11 @@
 .venv-*/
 venv/
 
+# Local scratch / patch probes (never commit)
+.tmp*
+.tmp_*
+*.patch
+
 # Local security-audit scratch (never commit)
 .tmp-pip-audit*.json
 pip-audit-enforce.json
@@ -57,6 +62,7 @@ data/outputs/
 data/projects/
 data/chroma/
 data/tmp/
+data/trash/
 data/database/*.db
 data/database/*.db-wal
 data/database/*.db-shm
@@ -76,9 +82,17 @@ alerts.log
 .vscode/
 *.swp
 
-# Local dev notes — CI screenshot imports (never commit)
+# Local dev notes — CI / tool scratch (never commit)
 .dev-notes/ci-screenshot*
 .dev-notes/_ci_candidates_import*
+.dev-notes/_ci_fail*
+.dev-notes/_mypy*
+.dev-notes/_screenshot*
+.dev-notes/phase5-*.txt
+.dev-notes/extract_phase5.py
+
+# Rehearsal runtime copies (fixtures stay; app storage dumps do not)
+docs/rehearsal/sessions/*/storage/
 
 # Showcase Case packs — large binaries only (manifests / text fixtures stay tracked)
 scripts/showcase/**/outputs/
