@@ -190,6 +190,7 @@ def _render_entry_form() -> None:
                     "page_count": starter.page_count,
                     "has_first_slide": starter.has_first_slide,
                     "slides_ready_count": starter.slides_ready_count,
+                    "layout_ready_count": starter.layout_ready_count,
                     "has_cover_layout": starter.has_cover_layout,
                     "cover_preview_path": starter.cover_preview_path,
                     "summary": starter.summary,
@@ -197,6 +198,8 @@ def _render_entry_form() -> None:
             }
             if go_studio_after and starter.has_first_slide:
                 st.session_state.studio_selected_slide_index = 0
+                if starter.layout_ready_count >= max(1, starter.page_count):
+                    st.session_state.studio_center_mode = "overview"
                 st.session_state.studio_genesis_welcome = starter.summary
                 st.switch_page(get_app_page("edit"))
             st.rerun()
@@ -275,6 +278,7 @@ def _starter_from_payload(payload: dict, project_id: str) -> object | None:
             page_count=int(raw.get("page_count") or 0),
             has_first_slide=bool(raw.get("has_first_slide")),
             slides_ready_count=int(raw.get("slides_ready_count") or 0),
+            layout_ready_count=int(raw.get("layout_ready_count") or 0),
             has_cover_layout=bool(raw.get("has_cover_layout")),
             cover_preview_path=str(raw["cover_preview_path"])
             if raw.get("cover_preview_path")
@@ -410,29 +414,6 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
                         project_name=project.name if project is not None else "新汇报",
                         understanding_summary=assessment.understanding_summary or "",
                     )
-                    if not starter.has_cover_layout:
-                        from archium.application.genesis_cover_layout_service import (
-                            ensure_cover_wireframe_layout,
-                        )
-
-                        cover = ensure_cover_wireframe_layout(
-                            session,
-                            project_id=UUID(project_id),
-                            presentation_id=starter.presentation_id,
-                            settings=settings,
-                        )
-                        if cover.preview_path or cover.layout_plan_id:
-                            starter = GenesisStarterResult(
-                                created=starter.created,
-                                presentation_id=starter.presentation_id,
-                                outline_id=starter.outline_id,
-                                page_count=starter.page_count,
-                                has_first_slide=starter.has_first_slide,
-                                slides_ready_count=starter.slides_ready_count,
-                                has_cover_layout=True,
-                                cover_preview_path=cover.preview_path,
-                                summary=starter.summary + " · " + cover.summary,
-                            )
                 st.session_state[_ASSESSMENT_KEY] = {
                     "understanding_summary": assessment.understanding_summary,
                     "knowledge_state": assessment.knowledge_state.model_dump(mode="json"),
@@ -451,6 +432,8 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
                         "outline_id": str(starter.outline_id) if starter.outline_id else None,
                         "page_count": starter.page_count,
                         "has_first_slide": starter.has_first_slide,
+                        "slides_ready_count": starter.slides_ready_count,
+                        "layout_ready_count": starter.layout_ready_count,
                         "has_cover_layout": starter.has_cover_layout,
                         "cover_preview_path": starter.cover_preview_path,
                         "summary": starter.summary,

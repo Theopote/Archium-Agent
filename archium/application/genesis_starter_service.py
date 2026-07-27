@@ -26,6 +26,7 @@ class GenesisStarterResult:
     page_count: int
     has_first_slide: bool
     slides_ready_count: int = 0
+    layout_ready_count: int = 0
     has_cover_layout: bool = False
     cover_preview_path: str | None = None
     summary: str = ""
@@ -157,6 +158,7 @@ def _starter_summary(
     *,
     page_count: int,
     slides_ready_count: int,
+    layout_ready_count: int,
     has_cover_layout: bool,
     created: bool,
 ) -> str:
@@ -168,7 +170,11 @@ def _starter_summary(
         lead += f"，{slides_ready_count} 页内容占位已就绪"
     elif slides_ready_count > 0:
         lead += f"，{slides_ready_count}/{page_count} 页内容占位已就绪"
-    if has_cover_layout:
+    if layout_ready_count >= page_count and layout_ready_count > 0:
+        lead += f"，全稿 {layout_ready_count} 页版式线框已就绪"
+    elif layout_ready_count > 0:
+        lead += f"，{layout_ready_count}/{page_count} 页版式线框已就绪"
+    elif has_cover_layout:
         lead += "，封面版式线框已就绪"
     elif slides_ready_count > 0:
         lead += "，封面页可预览"
@@ -242,7 +248,11 @@ def _existing_starter(session: Session, project_id: UUID) -> GenesisStarterResul
         return None
     page_count = len(outline.page_intents) or len(outline.sections)
     slides_ready_count = len(slides)
-    from archium.application.genesis_cover_layout_service import cover_wireframe_preview_path
+    layout_ready_count = sum(1 for item in slides if item.layout_plan_id is not None)
+    from archium.application.genesis_cover_layout_service import (
+        cover_wireframe_preview_path,
+        ensure_deck_wireframe_layouts,
+    )
 
     preview_path = cover_wireframe_preview_path(session, presentation.id)
     has_cover = preview_path is not None or (
@@ -260,9 +270,23 @@ def _existing_starter(session: Session, project_id: UUID) -> GenesisStarterResul
             session.commit()
             slides = PresentationRepository(session).list_slides(presentation.id)
             slides_ready_count = len(slides)
+            layout_ready_count = sum(
+                1 for item in slides if item.layout_plan_id is not None
+            )
+    if layout_ready_count < slides_ready_count:
+        deck = ensure_deck_wireframe_layouts(
+            session,
+            project_id=project_id,
+            presentation_id=presentation.id,
+        )
+        slides = PresentationRepository(session).list_slides(presentation.id)
+        layout_ready_count = deck.layout_ready_count
+        preview_path = deck.cover_preview_path or preview_path
+        has_cover = has_cover or layout_ready_count > 0
     summary = _starter_summary(
         page_count=page_count,
         slides_ready_count=slides_ready_count,
+        layout_ready_count=layout_ready_count,
         has_cover_layout=has_cover,
         created=False,
     )
@@ -273,6 +297,7 @@ def _existing_starter(session: Session, project_id: UUID) -> GenesisStarterResul
         page_count=page_count,
         has_first_slide=bool(slides),
         slides_ready_count=slides_ready_count,
+        layout_ready_count=layout_ready_count,
         has_cover_layout=has_cover,
         cover_preview_path=preview_path,
         summary=summary,
@@ -301,31 +326,6 @@ def ensure_genesis_starter_draft(
     """
     existing = _existing_starter(session, project_id)
     if existing is not None:
-        if not existing.has_cover_layout:
-            from archium.application.genesis_cover_layout_service import (
-                ensure_cover_wireframe_layout,
-            )
-
-            cover = ensure_cover_wireframe_layout(
-                session,
-                project_id=project_id,
-                presentation_id=existing.presentation_id,
-            )
-            if cover.preview_path or cover.layout_plan_id:
-                summary = existing.summary
-                if cover.summary and cover.summary not in summary:
-                    summary = f"{summary} · {cover.summary}"
-                return GenesisStarterResult(
-                    created=False,
-                    presentation_id=existing.presentation_id,
-                    outline_id=existing.outline_id,
-                    page_count=existing.page_count,
-                    has_first_slide=existing.has_first_slide,
-                    slides_ready_count=existing.slides_ready_count,
-                    has_cover_layout=True,
-                    cover_preview_path=cover.preview_path or existing.cover_preview_path,
-                    summary=summary,
-                )
         return existing
 
     project = ProjectRepository(session).get_by_id(project_id)
@@ -378,9 +378,9 @@ def ensure_genesis_starter_draft(
         cover_message_override=cover_message,
     )
 
-    from archium.application.genesis_cover_layout_service import ensure_cover_wireframe_layout
+    from archium.application.genesis_cover_layout_service import ensure_deck_wireframe_layouts
 
-    cover = ensure_cover_wireframe_layout(
+    deck = ensure_deck_wireframe_layouts(
         session,
         project_id=project_id,
         presentation_id=presentation.id,
@@ -388,10 +388,12 @@ def ensure_genesis_starter_draft(
 
     slides_ready_count = len(presentations.list_slides(presentation.id))
     page_count = len(page_intents)
-    has_cover_layout = bool(cover.preview_path or cover.layout_plan_id)
+    layout_ready_count = deck.layout_ready_count
+    has_cover_layout = bool(deck.cover_preview_path or layout_ready_count > 0)
     summary = _starter_summary(
         page_count=page_count,
         slides_ready_count=slides_ready_count,
+        layout_ready_count=layout_ready_count,
         has_cover_layout=has_cover_layout,
         created=True,
     )
@@ -402,7 +404,8 @@ def ensure_genesis_starter_draft(
         page_count=page_count,
         has_first_slide=slides_ready_count > 0,
         slides_ready_count=slides_ready_count,
+        layout_ready_count=layout_ready_count,
         has_cover_layout=has_cover_layout,
-        cover_preview_path=cover.preview_path,
+        cover_preview_path=deck.cover_preview_path,
         summary=summary,
     )

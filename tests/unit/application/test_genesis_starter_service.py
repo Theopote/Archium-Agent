@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from archium.application.genesis_starter_service import (
     ensure_genesis_starter_draft,
     get_genesis_starter_state,
@@ -29,11 +31,14 @@ def test_ensure_genesis_starter_creates_outline_and_cover_slide(db_session) -> N
     assert first.has_first_slide is True
     assert first.page_count >= 6
     assert first.slides_ready_count >= 6
+    assert first.layout_ready_count >= 6
+    assert first.layout_ready_count == first.page_count
 
     slides = PresentationRepository(db_session).list_slides(first.presentation_id)
     assert len(slides) == first.page_count
     assert slides[0].order == 0
     assert all(slide.message.strip() for slide in slides)
+    assert all(slide.layout_plan_id is not None for slide in slides)
     assert {slide.order for slide in slides} == set(range(first.page_count))
 
     second = ensure_genesis_starter_draft(
@@ -44,6 +49,7 @@ def test_ensure_genesis_starter_creates_outline_and_cover_slide(db_session) -> N
     )
     assert second.created is False
     assert second.presentation_id == first.presentation_id
+    assert second.layout_ready_count == first.page_count
 
 
 def test_get_genesis_starter_state_after_seed(db_session) -> None:
@@ -58,6 +64,7 @@ def test_get_genesis_starter_state_after_seed(db_session) -> None:
     state = get_genesis_starter_state(db_session, project.id)
     assert state is not None
     assert state.page_count >= 6
+    assert state.layout_ready_count == state.page_count
 
 
 def test_ensure_genesis_starter_creates_cover_wireframe(db_session) -> None:
@@ -75,6 +82,7 @@ def test_ensure_genesis_starter_creates_cover_wireframe(db_session) -> None:
     assert slides
     assert slides[0].layout_plan_id is not None
     assert result.has_cover_layout or slides[0].layout_plan_id is not None
+    assert result.cover_preview_path is None or Path(result.cover_preview_path).is_file()
 
 
 def test_page_for_starter_draft_prefers_studio_before_layout(db_session) -> None:
@@ -114,4 +122,32 @@ def test_existing_starter_backfills_missing_placeholder_slides(db_session) -> No
     state = get_genesis_starter_state(db_session, project.id)
     assert state is not None
     assert state.slides_ready_count == state.page_count
+    assert state.layout_ready_count == state.page_count
     assert state.page_count >= 6
+
+
+def test_ensure_deck_wireframe_layouts_is_idempotent(db_session) -> None:
+    from archium.application.genesis_cover_layout_service import ensure_deck_wireframe_layouts
+
+    project = ProjectRepository(db_session).create(Project(name="线框幂等"))
+    db_session.commit()
+    starter = ensure_genesis_starter_draft(
+        db_session,
+        project.id,
+        prompt="幂等测试",
+        project_name=project.name,
+    )
+    first = ensure_deck_wireframe_layouts(
+        db_session,
+        project_id=project.id,
+        presentation_id=starter.presentation_id,
+    )
+    second = ensure_deck_wireframe_layouts(
+        db_session,
+        project_id=project.id,
+        presentation_id=starter.presentation_id,
+    )
+    assert first.layout_ready_count == starter.page_count
+    assert second.applied_count == 0
+    assert second.layout_ready_count == starter.page_count
+    assert second.skipped_count == starter.page_count

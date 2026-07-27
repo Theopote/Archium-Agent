@@ -179,12 +179,23 @@ def _render_starter_content_banner(project_id: UUID) -> None:
     if starter.slides_ready_count < starter.page_count:
         return
     snapshot = load_project_progress_snapshot()
-    if snapshot is None or snapshot.layout_ready_count >= snapshot.slide_count:
+    if snapshot is None:
         return
-    st.info(
-        f"Genesis 已为全稿生成 {starter.slides_ready_count} 页内容占位（封面含版式线框）。"
-        "运行下方「汇报管线」生成其余页版式，或到工作室切换「全稿鸟瞰」浏览故事结构。"
-    )
+
+    if starter.layout_ready_count >= starter.page_count:
+        st.success(
+            f"Genesis 已为全稿生成 {starter.layout_ready_count} 页版式线框。"
+            "可在工作室「全稿鸟瞰」浏览；运行下方管线可升级为正式版式与截图。"
+        )
+    elif snapshot.layout_ready_count >= snapshot.slide_count:
+        return
+    else:
+        st.info(
+            f"Genesis 已生成 {starter.slides_ready_count} 页内容占位"
+            f"（{starter.layout_ready_count}/{starter.page_count} 页线框）。"
+            "运行下方「汇报管线」补齐正式版式，或到工作室浏览故事结构。"
+        )
+
     cols = st.columns(2)
     with cols[0]:
         if st.button(
