@@ -1,6 +1,6 @@
 # 当前系统架构
 
-> 本文描述 v0.2.0a5 代码库的当前结构。历史阶段文档中的 Stage、Round 或 Phase 编号不是运行时架构版本。
+> 本文描述 `v0.2.x-alpha` 软件发布线下的当前代码结构，并同步承载 `Presentation Engine v0.3` 的能力增量。历史 Stage、Round、Phase 编号不是运行时架构版本，也不等同产品里程碑（如 Showcase Candidate）。
 
 ## 产品入口
 

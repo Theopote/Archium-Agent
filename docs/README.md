@@ -2,6 +2,16 @@
 
 本目录同时保存**现行文档**与**历史工程记录**。使用、部署或开发 Archium 时，应优先阅读本页列出的现行文档；`analysis/`、`delivery/`、`implementation/`、`review/`、`sessions/` 中的材料只描述某次检查或交付时点，不能替代当前代码与现行文档。
 
+## 版本语义（避免混用）
+
+请区分三条并行语义线：
+
+- **Software version**：`v0.2.x-alpha`（软件发布线；对应安装包/发布标签状态）。
+- **Presentation Engine version**：`v0.3`（视觉引擎能力线；对应 Grammar / Concept / Language / Composition 演进）。
+- **Product milestone**：`Showcase Candidate 1`（产品里程碑线；对应对内展示与真实项目闭环目标）。
+
+历史 Stage / Round / Phase 编号仅用于过程记录，不作为当前产品版本或架构版本。
+
 ## 从这里开始
 
 | 读者 | 首选文档 |

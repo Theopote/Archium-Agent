@@ -8,6 +8,22 @@ Last updated: 2026-07-28
 
 This document states what is **proven by automation** vs what still requires **human rehearsal** or **real project delivery**.
 
+## 三轨状态总览（当前对齐口径）
+
+> 本节用于避免“软件版本 / 视觉引擎版本 / 产品里程碑”混用；详细定义见 `README.md` 与 `docs/README.md`。
+
+| 语义线 | 当前标识 | Gate owner 文档 | 当前结论 |
+|--------|----------|-----------------|----------|
+| **Software version** | `v0.2.x-alpha` | `docs/v0.2-beta-release-decision.md` | **未达 Beta**：B10（非开发用户真实闭环）未完成 |
+| **Presentation Engine version** | `v0.3` | `docs/roadmap/presentation-engine-v0.3.md` | **现行能力演进线**：Grammar / Concept / Visual Language / Composition 持续推进 |
+| **Product milestone** | Showcase Candidate 1 | 本文 + `docs/release-capability-matrix.md` | **候选收敛中**：工程门大量通过，人工交付门仍需闭环 |
+
+**判读规则：**
+
+- `v0.2-beta` 标签只由 **Software version gate** 决定，不能由 v0.3 功能进展直接替代。
+- `Presentation Engine v0.3` 的实现进度不自动等于“可发布 Beta”。
+- Showcase 结论必须同时参考自动化证据与人工复核，不以单一测试通过代替。
+
 ## P0 portability / provenance (2026-07-21)
 
 | Gate | Status | Evidence |

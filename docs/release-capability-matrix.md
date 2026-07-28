@@ -1,7 +1,9 @@
 # 发布等级与能力矩阵
 
 > **目的：** 区分「有代码 / 有测试」与「真实用户可稳定使用」。  
-> **更新：** 2026-07-23 · 与 [用户任务剧本](user-task-playbooks.md) 一起作为发版门槛。
+> **更新：** 2026-07-28 · 与 [用户任务剧本](user-task-playbooks.md) 一起作为发版门槛。
+
+本矩阵按 **Software version** 能力评定发布等级（`Preview` / `Beta` 等）。**Showcase Candidate 1** 为产品里程碑目标，需结合 [Presentation Engine v0.3](roadmap/presentation-engine-v0.3.md) 与人工视觉验收；三者语义见 [文档中心](README.md#版本语义避免混用)。
 
 ## 发布等级
 

@@ -4,6 +4,20 @@
 
 出现冲突时按以下顺序判断：运行中的代码与测试、自动生成文档、现行手写文档、带日期的发布/验收文档、历史分析与会话记录。历史总结不能证明当前功能仍存在，也不能定义当前 API。
 
+## 版本语义（对外表述）
+
+对外与对内沟通时，固定使用三条并行线，**不要混用**：
+
+| 语义线 | 示例 | 说明 |
+|--------|------|------|
+| Software version | `v0.2.x-alpha` / `v0.2-beta` | 安装包与 git 标签；门禁见 [Beta 发布决策](v0.2-beta-release-decision.md) |
+| Presentation Engine version | `v0.3` | 视觉引擎能力演进；计划见 [presentation-engine-v0.3.md](roadmap/presentation-engine-v0.3.md) |
+| Product milestone | Showcase Candidate 1 | 对内展示与真实项目闭环目标 |
+
+历史 **Stage / Round / Phase** 编号只写入 roadmap、review、session 文档，不得写入 README 顶部版本表或替代上述三条线。
+
+修改版本表述时，至少同步：`README.md`、`docs/README.md`、`docs/architecture/current-system.md`，以及涉及发版或 Showcase 的决策文档。
+
 ## 代码变更对应文档
 
 | 变更 | 至少检查 |
@@ -14,7 +28,7 @@
 | 视觉/画布/渲染 | `docs/visual/`、Studio 指南 |
 | `Settings` 字段 | 运行 `python scripts/generate_config_docs.py`，不要手改生成文件 |
 | 平台或外部工具支持 | 支持矩阵、跨平台验证、Quickstart |
-| 发布门禁 | 发布决策、rehearsal 与质量状态文档 |
+| 发布门禁、版本表述 | 发布决策、rehearsal、README/`docs/README` 版本表、文档维护指南本节 |
 
 ## 写作约定
 

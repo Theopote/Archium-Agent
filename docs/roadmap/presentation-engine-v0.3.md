@@ -5,6 +5,9 @@
 > **原则**：暂停扩展 Agent / 复杂规划 / 知识库广度；把算力与工程投入收束到 **视觉输出质量闭环**。  
 > **席位约束**：不新增 Agent。本文所有「导演 / Critic / Style」能力挂在既有 **Visual** 与 **Critic** 席位的 Service + Domain 上。
 
+> **版本语义：** 本文描述 **Presentation Engine v0.3** 能力线，服务于产品里程碑 **Showcase Candidate 1**。  
+> 与 **Software version**（`v0.2.x-alpha` / `v0.2-beta` 标签）分开管理；见 [文档中心](../README.md#版本语义避免混用) 与 [Beta 发布决策](../v0.2-beta-release-decision.md#版本语义本文范围)。
+
 **状态**：现行计划（2026-07-26）  
 **前置**：[`docs/visual/README.md`](../visual/README.md)、[`docs/architecture/pipeline-roles.md`](../architecture/pipeline-roles.md)、[`docs/roadmap/visual-quality-and-editing-sprint.md`](visual-quality-and-editing-sprint.md)（历史冲刺；编辑与图片衍生基础设施可复用）
 

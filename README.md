@@ -15,9 +15,11 @@ Archium（阿基姆）是一款面向建筑师、规划师、设计院和建筑�
 
 | 项 | 值 |
 |----|-----|
-| **Current version** | v0.2-alpha.5 |
-| **Architecture stage** | v0.2 主链 + Studio 场景编辑（见[当前系统架构](docs/architecture/current-system.md)） |
-| **Current focus** | [v0.2 Beta Rehearsal](docs/v0.2-beta-rehearsal.md) 与真实项目闭环 |
+| **Software version** | v0.2.x-alpha（当前代码线仍为 Alpha 发布序列） |
+| **Presentation Engine version** | v0.3（Grammar / Concept / Visual Language / Style Preset / Deck Composition） |
+| **Product milestone** | Showcase Candidate 1（对内展示候选里程碑） |
+| **Architecture stage** | v0.2 主链 + Studio 场景编辑 + 视觉迭代闭环（见[当前系统架构](docs/architecture/current-system.md)） |
+| **Current focus** | Showcase Candidate 1 收敛 + [v0.2 Beta Rehearsal](docs/v0.2-beta-rehearsal.md) 关卡闭环 |
 | **Stability status** | Alpha（**尚未**打 Beta 标签 — 见发布决策） |
 | **Production readiness** | Not ready |
 
@@ -506,7 +508,11 @@ Copyright (c) 2026 Theopote and Archium contributors
 
 ## 当前发布重点
 
-当前工作重点是 [v0.2 Beta Rehearsal](docs/v0.2-beta-rehearsal.md)、[真实项目验证](docs/real-project-validation-preparation.md)和关闭[发布决策](docs/v0.2-beta-release-decision.md)中的剩余 blocker。历史 Stage、Round 与 Alpha sprint 记录保留在 roadmap/session 文档中，不再作为当前架构或进度依据。
+当前工作重点分为三条并行主线：  
+（1）**软件发布线**：维持 v0.2.x-alpha 的质量收敛与 Beta blocker 清理；  
+（2）**视觉引擎线**：按 [Presentation Engine v0.3](docs/roadmap/presentation-engine-v0.3.md) 持续推进 Grammar / Concept / Language / Composition 能力；  
+（3）**产品里程碑线**：以 Showcase Candidate 1 为对内展示与真实项目闭环目标。  
+历史 Stage、Round、Phase 与 Alpha sprint 记录保留在 roadmap/session 文档中，不再与当前产品版本或架构版本混用。
 
 > 汇报主流程使用 `PresentationWorkflowService.run()`；历史 `PresentationService.run_pipeline()` 已移除。
 
