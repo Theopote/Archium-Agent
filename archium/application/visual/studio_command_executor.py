@@ -29,6 +29,8 @@ from archium.domain.visual.page_quality import (
 from archium.domain.visual.reference_slide import REFERENCE_TEMPLATE_ASSET_ORIGIN
 from archium.domain.visual.render_scene import (
     BaseRenderNode,
+    ConnectorEndpoint,
+    ConnectorNode,
     DrawingNode,
     GroupNode,
     ImageNode,
@@ -41,6 +43,8 @@ from archium.domain.visual.render_scene import (
     compute_group_bounds,
     compute_scene_hash,
     group_children,
+    refresh_connector_geometry,
+    refresh_connectors_for_nodes,
     replace_text_node_content,
     set_text_node_runs,
 )
@@ -48,6 +52,7 @@ from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 from archium.domain.visual.scene_repair import SceneRepairAction, SceneRepairApplyMode
 from archium.domain.visual.studio_command import (
     AlignNodesCommand,
+    ConnectNodesCommand,
     DeleteNodeCommand,
     DuplicateNodesCommand,
     FixOverflowCommand,
@@ -174,6 +179,8 @@ class StudioCommandExecutor:
             return self._execute_update_node_style(scene, command, base_hash)
         if isinstance(command, SetTextRunsCommand):
             return self._execute_set_text_runs(scene, command, base_hash)
+        if isinstance(command, ConnectNodesCommand):
+            return self._execute_connect_nodes(scene, command, base_hash)
         if isinstance(command, GroupNodesCommand):
             return self._execute_group_nodes(scene, command, base_hash)
         if isinstance(command, UngroupNodesCommand):
@@ -672,6 +679,26 @@ class StudioCommandExecutor:
                         reason=command.reason or "move group child",
                     )
                 )
+        moved_ids = {command.node_id}
+        if isinstance(target, GroupNode):
+            moved_ids.update(child.id for child in group_children(patched, target))
+        for connector_id in refresh_connectors_for_nodes(patched, moved_ids):
+            connector = patched.node_by_id(connector_id)
+            if connector is None:
+                continue
+            actions.append(
+                build_patch_action(
+                    scene,
+                    base_scene_hash=base_hash,
+                    command_id=command.command_id,
+                    node_id=connector_id,
+                    action_type="refresh_connector",
+                    property_name="geometry",
+                    before_value=None,
+                    after_value=geometry_token(connector),
+                    reason=command.reason or "refresh connector after move",
+                )
+            )
         return CommandExecutionResult(
             success=True,
             base_scene_hash=base_hash,
@@ -687,6 +714,7 @@ class StudioCommandExecutor:
     ) -> CommandExecutionResult:
         patched = scene.model_copy(deep=True)
         actions: list[ScenePatchAction] = []
+        moved_ids: set[str] = set()
         for move in command.moves:
             node = patched.node_by_id(move.node_id)
             if node is None:
@@ -701,6 +729,7 @@ class StudioCommandExecutor:
             before_token = geometry_token(node)
             node.x = move.x
             node.y = move.y
+            moved_ids.add(move.node_id)
             actions.append(
                 build_patch_action(
                     scene,
@@ -712,6 +741,23 @@ class StudioCommandExecutor:
                     before_value=before_token,
                     after_value=geometry_token(node),
                     reason=command.reason or "move nodes",
+                )
+            )
+        for connector_id in refresh_connectors_for_nodes(patched, moved_ids):
+            connector = patched.node_by_id(connector_id)
+            if connector is None:
+                continue
+            actions.append(
+                build_patch_action(
+                    scene,
+                    base_scene_hash=base_hash,
+                    command_id=command.command_id,
+                    node_id=connector_id,
+                    action_type="refresh_connector",
+                    property_name="geometry",
+                    before_value=None,
+                    after_value=geometry_token(connector),
+                    reason=command.reason or "refresh connector after move",
                 )
             )
         return CommandExecutionResult(
@@ -811,6 +857,26 @@ class StudioCommandExecutor:
                 reason=command.reason or "resize node",
             ),
         )
+        resized_ids = {command.node_id}
+        if isinstance(target, GroupNode):
+            resized_ids.update(child.id for child in group_children(patched, target))
+        for connector_id in refresh_connectors_for_nodes(patched, resized_ids):
+            connector = patched.node_by_id(connector_id)
+            if connector is None:
+                continue
+            actions.append(
+                build_patch_action(
+                    scene,
+                    base_scene_hash=base_hash,
+                    command_id=command.command_id,
+                    node_id=connector_id,
+                    action_type="refresh_connector",
+                    property_name="geometry",
+                    before_value=None,
+                    after_value=geometry_token(connector),
+                    reason=command.reason or "refresh connector after resize",
+                )
+            )
         return CommandExecutionResult(
             success=True,
             base_scene_hash=base_hash,
@@ -1296,6 +1362,120 @@ class StudioCommandExecutor:
             before_payload=before_payload,
             after_payload=after_payload,
             reason=command.reason or "set text runs",
+        )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=(action,),
+        )
+
+    def _execute_connect_nodes(
+        self,
+        scene: RenderScene,
+        command: ConnectNodesCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        from uuid import uuid4
+
+        if command.start_node_id == command.end_node_id:
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.CONNECTOR_SAME_ENDPOINT",
+                        message="connect_nodes requires two distinct nodes",
+                        evidence=[command.start_node_id],
+                    ),
+                ),
+            )
+        start = scene.node_by_id(command.start_node_id)
+        end = scene.node_by_id(command.end_node_id)
+        if start is None:
+            return _node_not_found(base_hash, command.start_node_id)
+        if end is None:
+            return _node_not_found(base_hash, command.end_node_id)
+        if isinstance(start, ConnectorNode) or isinstance(end, ConnectorNode):
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.CONNECTOR_TARGET_CONNECTOR",
+                        message="cannot connect to another connector",
+                        evidence=[command.start_node_id, command.end_node_id],
+                    ),
+                ),
+            )
+
+        explicit = (command.connector_id or "").strip()
+        connector_id = explicit or f"cxn_{uuid4().hex[:10]}"
+        if scene.node_by_id(connector_id) is not None:
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.CONNECTOR_ID_COLLISION",
+                        message=f"connector id already exists: {connector_id}",
+                        evidence=[connector_id],
+                    ),
+                ),
+            )
+
+        patched = scene.model_copy(deep=True)
+        max_z = max((node.z_index for node in patched.nodes), default=0)
+        connector = ConnectorNode(
+            id=connector_id,
+            x=0.05,
+            y=0.05,
+            width=0.05,
+            height=0.05,
+            z_index=max_z + 1,
+            start=ConnectorEndpoint(
+                node_id=command.start_node_id,
+                anchor=command.start_anchor,
+            ),
+            end=ConnectorEndpoint(
+                node_id=command.end_node_id,
+                anchor=command.end_anchor,
+            ),
+            routing=command.routing,
+            stroke_color=command.stroke_color,
+            stroke_width=command.stroke_width,
+            arrow_start=command.arrow_start,
+            arrow_end=command.arrow_end,
+            label=command.label,
+            semantic_role="connector",
+            source_layout_element_id=connector_id,
+        )
+        patched.nodes = list(patched.nodes) + [connector]
+        if not refresh_connector_geometry(patched, connector):
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.CONNECTOR_UNRESOLVED",
+                        message="could not resolve connector endpoints",
+                        evidence=[command.start_node_id, command.end_node_id],
+                    ),
+                ),
+            )
+        # Re-assign after geometry refresh so validation sees final bbox.
+        patched.nodes = [n for n in patched.nodes if n.id != connector_id] + [connector]
+        action = build_patch_action(
+            scene,
+            base_scene_hash=base_hash,
+            command_id=command.command_id,
+            node_id=connector_id,
+            action_type="insert_node",
+            property_name="nodes",
+            before_value=None,
+            after_value=connector_id,
+            after_payload=connector.model_dump(mode="json"),
+            reason=command.reason or "connect nodes",
         )
         return CommandExecutionResult(
             success=True,

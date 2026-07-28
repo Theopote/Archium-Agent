@@ -16,6 +16,7 @@ from archium.domain.visual.pptx_structure import (
 )
 from archium.domain.visual.render_scene import (
     ChartNode,
+    ConnectorNode,
     DrawingNode,
     GroupNode,
     ImageNode,
@@ -23,6 +24,7 @@ from archium.domain.visual.render_scene import (
     ShapeNode,
     TableNode,
     TextNode,
+    connector_path_points,
 )
 from archium.domain.visual.scene_fonts import (
     text_has_cjk,
@@ -163,6 +165,8 @@ class RenderScenePptxAdapter:
             instruction = self._drawing_instruction(node)
         elif isinstance(node, ShapeNode):
             instruction = self._shape_instruction(node)
+        elif isinstance(node, ConnectorNode):
+            instruction = self._connector_instruction(node, scene)
         elif isinstance(node, GroupNode):
             instruction = self._group_instruction(node)
         elif isinstance(node, ChartNode):
@@ -344,6 +348,33 @@ class RenderScenePptxAdapter:
         if node.corner_radius:
             instruction["corner_radius"] = node.corner_radius
         return instruction
+
+    def _connector_instruction(self, node: ConnectorNode, scene: RenderScene) -> dict[str, Any]:
+        points = connector_path_points(scene, node)
+        if len(points) < 2:
+            points = [
+                (node.x, node.y),
+                (node.x + node.width, node.y + node.height),
+            ]
+        return {
+            "id": node.id,
+            "role": node.semantic_role or "connector",
+            "content_type": "connector",
+            "x": node.x,
+            "y": node.y,
+            "w": node.width,
+            "h": node.height,
+            "z_index": node.z_index,
+            "routing": node.routing,
+            "stroke_color": node.stroke_color.lstrip("#"),
+            "stroke_width": node.stroke_width,
+            "arrow_start": node.arrow_start,
+            "arrow_end": node.arrow_end,
+            "label": node.label,
+            "start_node_id": node.start.node_id,
+            "end_node_id": node.end.node_id,
+            "points": [{"x": x, "y": y} for x, y in points],
+        }
 
     def _group_instruction(self, node: GroupNode) -> dict[str, Any]:
         return {

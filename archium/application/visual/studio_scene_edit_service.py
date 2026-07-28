@@ -25,6 +25,7 @@ from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.studio_command import (
     AlignNodesCommand,
+    ConnectNodesCommand,
     DeleteNodeCommand,
     DuplicateNodesCommand,
     GroupNodesCommand,
@@ -294,6 +295,29 @@ class StudioSceneEditService:
             target_node_ids=list(node_ids),
             node_ids=list(node_ids),
             reason="group elements",
+        )
+        return self.apply_command(slide.id, command)
+
+    def connect_layout_elements(
+        self,
+        slide_id: UUID,
+        *,
+        start_element_id: str,
+        end_element_id: str,
+        routing: str = "straight",
+    ) -> SceneEditResult:
+        """Create a ConnectorNode between two layout/scene elements."""
+        start_id = self._resolve_node_id(slide_id, start_element_id)
+        end_id = self._resolve_node_id(slide_id, end_element_id)
+        slide = self._require_slide(slide_id)
+        command = ConnectNodesCommand(
+            presentation_id=slide.presentation_id,
+            slide_id=slide.id,
+            target_node_ids=[start_id, end_id],
+            start_node_id=start_id,
+            end_node_id=end_id,
+            routing=routing,  # type: ignore[arg-type]
+            reason="connect elements",
         )
         return self.apply_command(slide.id, command)
 
@@ -662,6 +686,7 @@ def _layout_element_from_scene_node(node: object, element_id: str) -> LayoutElem
     from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
     from archium.domain.visual.render_scene import (
         ChartNode,
+        ConnectorNode,
         DrawingNode,
         GroupNode,
         ImageNode,
@@ -710,6 +735,10 @@ def _layout_element_from_scene_node(node: object, element_id: str) -> LayoutElem
         content_type = LayoutContentType.GROUP
         if not semantic:
             role = LayoutElementRole.DECORATION
+    elif isinstance(node, ConnectorNode):
+        content_type = LayoutContentType.CONNECTOR
+        if not semantic:
+            role = LayoutElementRole.ANNOTATION
 
     return LayoutElement(
         id=element_id[:100],

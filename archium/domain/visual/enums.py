@@ -114,6 +114,7 @@ class LayoutContentType(StrEnum):
     TABLE = "table"
     SHAPE = "shape"
     GROUP = "group"
+    CONNECTOR = "connector"
 
 
 class OverflowPolicy(StrEnum):

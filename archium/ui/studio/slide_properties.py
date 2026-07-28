@@ -1000,6 +1000,32 @@ def _render_element_properties(
                     st.rerun()
                 except Exception as exc:
                     st.error(format_user_error(exc))
+            if len(multi_ids) == 2 and st.button(
+                "连接",
+                use_container_width=True,
+                key=f"studio_multi_connect_{slide_snapshot.slide.id}",
+                help="在两个选中元素之间创建分析连接线",
+            ):
+                try:
+                    with get_session() as session:
+                        from archium.ui.studio_service import apply_slide_element_connect
+
+                        result = apply_slide_element_connect(
+                            session,
+                            slide_snapshot.slide.id,
+                            start_element_id=multi_ids[0],
+                            end_element_id=multi_ids[1],
+                        )
+                    cxn_ids = [
+                        action.node_id
+                        for action in getattr(result, "applied_actions", ())
+                        if getattr(action, "action_type", "") == "insert_node"
+                    ]
+                    set_studio_selection(cxn_ids or multi_ids)
+                    st.success("已创建连接线。")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(format_user_error(exc))
 
         if element.content_type == LayoutContentType.GROUP:
             if st.button(

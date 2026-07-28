@@ -18,6 +18,7 @@ from archium.domain._base import DomainModel
 from archium.domain.visual.render_scene import (
     BaseRenderNode,
     ChartNode,
+    ConnectorNode,
     GroupNode,
     ImageNode,
     ShapeNode,
@@ -164,6 +165,17 @@ RENDER_SCENE_V1_CAPABILITIES: dict[str, PowerPointCapabilityMapping] = {
         ],
         validation_rules=["node_identity_preserved", "group_children_consistent"],
     ),
+    "connector": PowerPointCapabilityMapping(
+        scene_node_type="connector",
+        pptx_object_type="p:cxnSp (approx line)",
+        fidelity=PowerPointFidelity.APPROXIMATE,
+        limitations=[
+            "V1 exports straight/elbow as PptxGenJS line shapes with arrow heads.",
+            "True p:cxnSp connection sites are a stretch goal.",
+            "Curve routing falls back to straight.",
+        ],
+        validation_rules=["node_identity_preserved", "connector_endpoints_resolved"],
+    ),
 }
 
 
@@ -230,8 +242,12 @@ POWERPOINT_NATIVE_DEPTH_INVENTORY: tuple[PowerPointDepthEntry, ...] = (
     PowerPointDepthEntry(
         id="connector",
         label="Connector",
-        status=PowerPointDepthStatus.NOT_IMPLEMENTED,
-        pptx_object_hint="p:cxnSp",
+        status=PowerPointDepthStatus.PARTIAL,
+        pptx_object_hint="p:cxnSp / line approx",
+        notes=(
+            "ConnectorNode + Studio connect; PPTX emits line/elbow with arrows "
+            "(APPROXIMATE) until native cxnSp."
+        ),
     ),
     PowerPointDepthEntry(
         id="preset_shape",
@@ -383,6 +399,12 @@ def capability_for_scene_node(
         if len(node.children) < 1:
             limitations.append("GroupNode has no children.")
 
+    if isinstance(node, ConnectorNode):
+        fidelity = PowerPointFidelity.APPROXIMATE
+        if node.routing == "curve":
+            limitations.append("Curve routing falls back to straight line export.")
+        pptx_object_type = "p:sp (line)"
+
     return cast(
         PowerPointCapabilityMapping,
         baseline.model_copy(
@@ -422,6 +444,12 @@ def assess_scene_node(
             features.append("clip_children")
     if isinstance(node, TextNode) and node.runs:
         features.append(f"runs:{len(node.runs)}")
+    if isinstance(node, ConnectorNode):
+        features.append(f"routing:{node.routing}")
+        if node.arrow_end:
+            features.append("arrow_end")
+        if node.arrow_start:
+            features.append("arrow_start")
     return PowerPointNodeAssessment(
         node_id=node.id,
         node_type=node.node_type,

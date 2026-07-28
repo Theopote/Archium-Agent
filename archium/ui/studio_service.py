@@ -971,6 +971,29 @@ def apply_slide_element_group(
     ).group_layout_elements(slide_id, element_ids=element_ids)
 
 
+def apply_slide_element_connect(
+    session: Session,
+    slide_id: UUID,
+    *,
+    start_element_id: str,
+    end_element_id: str,
+    routing: str = "straight",
+) -> object:
+    """Connect two layout elements with a ConnectorNode."""
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    clear_visual_redo_stack(slide_id)
+    return StudioSceneEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).connect_layout_elements(
+        slide_id,
+        start_element_id=start_element_id,
+        end_element_id=end_element_id,
+        routing=routing,
+    )
+
+
 def apply_slide_element_ungroup(
     session: Session,
     slide_id: UUID,

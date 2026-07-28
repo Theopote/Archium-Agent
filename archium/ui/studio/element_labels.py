@@ -29,6 +29,7 @@ CONTENT_TYPE_LABELS: dict[LayoutContentType, str] = {
     LayoutContentType.TABLE: "表格",
     LayoutContentType.SHAPE: "形状",
     LayoutContentType.GROUP: "组合",
+    LayoutContentType.CONNECTOR: "连接线",
 }
 
 

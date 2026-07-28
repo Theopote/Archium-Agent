@@ -80,7 +80,7 @@ Executable source: `POWERPOINT_NATIVE_DEPTH_INVENTORY` in
 | Slide Master / Layout | Partial (STRUCTURED emit) |
 | Placeholder | Partial |
 | Speaker Notes | Implemented |
-| Connector | **Not implemented** |
+| Connector | **Partial** (ConnectorNode + line/elbow export; not true cxnSp) |
 | Preset Shape library | **Not implemented** |
 | Freeform Path | **Not implemented** |
 | Group | **Partial** (GroupNode + Studio; PPTX flat until grpSp) |

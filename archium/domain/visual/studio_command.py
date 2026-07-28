@@ -205,6 +205,24 @@ class SetTextRunsCommand(StudioCommandBase):
     runs: list[dict[str, object]] = Field(min_length=1)
 
 
+class ConnectNodesCommand(StudioCommandBase):
+    """Create a ConnectorNode between two scene nodes."""
+
+    command_type: Literal["connect_nodes"] = "connect_nodes"
+    start_node_id: str = Field(min_length=1)
+    end_node_id: str = Field(min_length=1)
+    start_anchor: Literal["center", "top", "bottom", "left", "right"] = "center"
+    end_anchor: Literal["center", "top", "bottom", "left", "right"] = "center"
+    routing: Literal["straight", "elbow", "curve"] = "straight"
+    stroke_color: str = "#333333"
+    stroke_width: float = Field(default=1.5, ge=0)
+    arrow_start: bool = False
+    arrow_end: bool = True
+    label: str = ""
+    # Optional deterministic id (tests); otherwise executor allocates ``cxn_{hex}``.
+    connector_id: str = ""
+
+
 class GroupNodesCommand(StudioCommandBase):
     """Create a GroupNode from two or more existing scene nodes."""
 
@@ -238,6 +256,7 @@ StudioCommand = Annotated[
     | ReorderNodeCommand
     | UpdateNodeStyleCommand
     | SetTextRunsCommand
+    | ConnectNodesCommand
     | GroupNodesCommand
     | UngroupNodesCommand,
     Field(discriminator="command_type"),

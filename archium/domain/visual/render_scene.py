@@ -1,9 +1,10 @@
 """RenderScene — unified final visual scene for all renderers.
 
-Supports Text / Image / Drawing / Shape / Group plus optional Chart / Table
-nodes for dual chart-export strategy (``ChartExportMode``). Chart/Table nodes
-carry structured data so exporters can choose cross-app stable shapes/images or
-native PowerPoint Chart/Table objects with embedded workbooks.
+    Supports Text / Image / Drawing / Shape / Group / Connector plus optional
+    Chart / Table nodes for dual chart-export strategy (``ChartExportMode``).
+    Chart/Table nodes carry structured data so exporters can choose cross-app
+    stable shapes/images or native PowerPoint Chart/Table objects with embedded
+    workbooks.
 """
 
 from __future__ import annotations
@@ -366,6 +367,37 @@ class ShapeNode(BaseRenderNode):
     corner_radius: float = Field(default=0, ge=0)
 
 
+ConnectorAnchor = Literal["center", "top", "bottom", "left", "right"]
+ConnectorRouting = Literal["straight", "elbow", "curve"]
+
+
+class ConnectorEndpoint(DomainModel):
+    """Anchor attachment on a target scene node."""
+
+    node_id: str = Field(min_length=1)
+    anchor: ConnectorAnchor = "center"
+    offset_x: float = 0
+    offset_y: float = 0
+
+
+class ConnectorNode(BaseRenderNode):
+    """Analysis / flow link between two nodes (V1: approximate line export).
+
+    ``x/y/width/height`` are the axis-aligned hit box derived from endpoints.
+    True PowerPoint ``p:cxnSp`` connection sites are a stretch goal.
+    """
+
+    node_type: Literal["connector"] = "connector"
+    start: ConnectorEndpoint
+    end: ConnectorEndpoint
+    routing: ConnectorRouting = "straight"
+    stroke_color: str = "#333333"
+    stroke_width: float = Field(default=1.5, ge=0)
+    arrow_start: bool = False
+    arrow_end: bool = True
+    label: str = ""
+
+
 MAX_GROUP_DEPTH = 4
 
 
@@ -421,6 +453,7 @@ RenderNode = Annotated[
     | ImageNode
     | DrawingNode
     | ShapeNode
+    | ConnectorNode
     | GroupNode
     | ChartNode
     | TableNode,
@@ -472,6 +505,7 @@ class RenderScene(IdentifiedModel, VersionedModel, TimestampedModel):
         if len(ids) != len(set(ids)):
             raise ValueError("duplicate render node IDs are not allowed")
         _validate_group_structure(self.nodes)
+        _validate_connector_structure(self.nodes)
         return self
 
     def sorted_nodes(self) -> list[RenderNode]:
@@ -588,6 +622,115 @@ def compute_group_bounds(nodes: list[BaseRenderNode]) -> tuple[float, float, flo
     right = max(node.x + node.width for node in nodes)
     bottom = max(node.y + node.height for node in nodes)
     return left, top, max(right - left, 0.05), max(bottom - top, 0.05)
+
+
+def _validate_connector_structure(nodes: list[RenderNode]) -> None:
+    """Fail closed on missing / self / connector-to-connector endpoints."""
+    by_id = {node.id: node for node in nodes}
+    for node in nodes:
+        if not isinstance(node, ConnectorNode):
+            continue
+        if node.start.node_id == node.end.node_id:
+            raise ValueError(f"connector `{node.id}` start and end must differ")
+        for endpoint, label in ((node.start, "start"), (node.end, "end")):
+            target = by_id.get(endpoint.node_id)
+            if target is None:
+                raise ValueError(
+                    f"connector `{node.id}` {label} references missing node "
+                    f"`{endpoint.node_id}`"
+                )
+            if isinstance(target, ConnectorNode):
+                raise ValueError(
+                    f"connector `{node.id}` {label} cannot target another connector"
+                )
+            if target.id == node.id:
+                raise ValueError(f"connector `{node.id}` cannot attach to itself")
+
+
+def resolve_anchor_point(
+    node: BaseRenderNode,
+    endpoint: ConnectorEndpoint,
+) -> tuple[float, float]:
+    """Return absolute page coordinates for an endpoint anchor."""
+    if endpoint.anchor == "top":
+        x = node.x + node.width / 2
+        y = node.y
+    elif endpoint.anchor == "bottom":
+        x = node.x + node.width / 2
+        y = node.y + node.height
+    elif endpoint.anchor == "left":
+        x = node.x
+        y = node.y + node.height / 2
+    elif endpoint.anchor == "right":
+        x = node.x + node.width
+        y = node.y + node.height / 2
+    else:
+        x = node.x + node.width / 2
+        y = node.y + node.height / 2
+    return x + endpoint.offset_x, y + endpoint.offset_y
+
+
+def connector_endpoint_points(
+    scene: RenderScene,
+    connector: ConnectorNode,
+) -> tuple[tuple[float, float], tuple[float, float]] | None:
+    """Resolve start/end points, or None if either endpoint is missing."""
+    start_node = scene.node_by_id(connector.start.node_id)
+    end_node = scene.node_by_id(connector.end.node_id)
+    if start_node is None or end_node is None:
+        return None
+    return (
+        resolve_anchor_point(start_node, connector.start),
+        resolve_anchor_point(end_node, connector.end),
+    )
+
+
+def refresh_connector_geometry(scene: RenderScene, connector: ConnectorNode) -> bool:
+    """Update connector bbox from current endpoint node positions. Returns False if unresolved."""
+    points = connector_endpoint_points(scene, connector)
+    if points is None:
+        return False
+    (x1, y1), (x2, y2) = points
+    left = min(x1, x2)
+    top = min(y1, y2)
+    connector.x = left
+    connector.y = top
+    connector.width = max(abs(x2 - x1), 0.05)
+    connector.height = max(abs(y2 - y1), 0.05)
+    return True
+
+
+def refresh_connectors_for_nodes(scene: RenderScene, node_ids: set[str]) -> list[str]:
+    """Refresh geometry for connectors attached to any of ``node_ids``. Returns connector ids."""
+    updated: list[str] = []
+    if not node_ids:
+        return updated
+    for node in scene.nodes:
+        if not isinstance(node, ConnectorNode):
+            continue
+        if node.start.node_id in node_ids or node.end.node_id in node_ids:
+            if refresh_connector_geometry(scene, node):
+                updated.append(node.id)
+    return updated
+
+
+def connector_path_points(
+    scene: RenderScene,
+    connector: ConnectorNode,
+) -> list[tuple[float, float]]:
+    """Return polyline points for export (straight / elbow; curve ≈ straight)."""
+    points = connector_endpoint_points(scene, connector)
+    if points is None:
+        return []
+    (x1, y1), (x2, y2) = points
+    if connector.routing == "elbow":
+        # Prefer mid-X elbow when horizontal span dominates; else mid-Y.
+        if abs(x2 - x1) >= abs(y2 - y1):
+            mid_x = (x1 + x2) / 2
+            return [(x1, y1), (mid_x, y1), (mid_x, y2), (x2, y2)]
+        mid_y = (y1 + y2) / 2
+        return [(x1, y1), (x1, mid_y), (x2, mid_y), (x2, y2)]
+    return [(x1, y1), (x2, y2)]
 
 
 def compute_scene_hash(scene: RenderScene) -> str:

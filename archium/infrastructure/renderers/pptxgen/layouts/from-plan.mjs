@@ -114,6 +114,10 @@ function renderElement(pres, page, element, slideInstruction, deckTheme, placeho
     // siblings carrying group_id until native p:grpSp post-pass lands.
     return;
   }
+  if (contentType === "connector") {
+    renderConnectorElement(pres, page, element);
+    return;
+  }
   if (contentType === "image" || contentType === "drawing") {
     renderImageElement(pres, page, element, slideInstruction, deckTheme, placeholderName);
     return;
@@ -560,6 +564,64 @@ function renderImageElement(pres, page, element, slideInstruction, deckTheme, pl
     textOpts.h = 0.4;
   }
   page.addText(label, textOpts);
+}
+
+/**
+ * @param {import('pptxgenjs').default} pres
+ * @param {object} page
+ * @param {object} element
+ */
+function renderConnectorElement(pres, page, element) {
+  const rawPoints = Array.isArray(element.points) ? element.points : [];
+  /** @type {{x:number,y:number}[]} */
+  const points = rawPoints
+    .map((pt) => ({ x: Number(pt?.x) || 0, y: Number(pt?.y) || 0 }))
+    .filter((pt) => Number.isFinite(pt.x) && Number.isFinite(pt.y));
+  if (points.length < 2) {
+    const x = Number(element.x) || 0;
+    const y = Number(element.y) || 0;
+    points.push({ x, y }, { x: x + (Number(element.w) || 1), y: y + (Number(element.h) || 0) });
+  }
+  const color = _stripHash(element.stroke_color || "333333");
+  const width = Math.max(Number(element.stroke_width) || 1.5, 0.5);
+  const beginArrow = element.arrow_start ? "triangle" : "none";
+  const endArrow = element.arrow_end ? "triangle" : "none";
+  if (!pres.shapes?.LINE) {
+    return;
+  }
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const start = points[index];
+    const end = points[index + 1];
+    const isLast = index === points.length - 2;
+    /** @type {Record<string, unknown>} */
+    const lineOpts = {
+      x: start.x,
+      y: start.y,
+      w: end.x - start.x,
+      h: end.y - start.y,
+      line: {
+        color,
+        width,
+        beginArrowType: index === 0 ? beginArrow : "none",
+        endArrowType: isLast ? endArrow : "none",
+      },
+    };
+    page.addShape(pres.shapes.LINE, lineOpts);
+  }
+  const label = String(element.label || "").trim();
+  if (label) {
+    const mid = points[Math.floor(points.length / 2)] || points[0];
+    page.addText(label, {
+      x: mid.x,
+      y: mid.y - 0.18,
+      w: 1.5,
+      h: 0.25,
+      fontSize: 10,
+      color,
+      fontFace: element.font_family_cjk || element.font_family || "Microsoft YaHei",
+      align: "center",
+    });
+  }
 }
 
 /**

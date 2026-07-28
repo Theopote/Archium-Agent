@@ -23,7 +23,7 @@ This document sequences five primitives by **visual ROI × structural leverage �
 |------|-------|-----|
 | `BaseRenderNode.group_id` | Field exists on every node | **A1 landed (PARTIAL):** `GroupNode` + Studio group/ungroup; export still flat siblings with `group_id` until `p:grpSp` |
 | `TextNode` | Single-style `text` + optional `paragraphs` + **`runs` (A2)** | Per-run font/weight/color within one box when `runs` populated; empty `runs` keeps single-style fallback |
-| Connectors | `ShapeNode` line only | No anchor-to-anchor routing (`p:cxnSp`) |
+| Connectors | `ShapeNode` line only | **A3 landed (PARTIAL):** `ConnectorNode` + Studio connect; PPTX line/elbow arrows (approx until `p:cxnSp`) |
 | Gradient | `image_mask=gradient_fade` approximated as solid rect overlay in `from-plan.mjs` | No `a:gradFill` on shape/image |
 | Freeform | Circle mask via `OVAL` + image fill | No `a:custGeom` / polygon path |
 | Export path | `RenderScene` → layout instructions → `render-plan.mjs` / PptxGenJS | New nodes must thread domain → adapter → JS renderer → closure manifest |
