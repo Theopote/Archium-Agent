@@ -1,13 +1,14 @@
 {
   "communication_goal": "让受众理解：急救、门诊与后勤流线分层组织，避免地面层交叉混行。",
-  "dominant_content_type": "analytical_diagram",
-  "density_level": "spacious",
-  "continuity_role": "explanation",
+  "dominant_content_type": "mixed",
+  "density_level": "balanced",
+  "continuity_role": "opening",
   "preferred_layout_families": [
     "analytical_diagram",
-    "drawing_focus"
+    "evidence_board",
+    "hybrid_canvas"
   ],
-  "composition_strategy": "以 analytical_diagram 表达主信息",
+  "composition_strategy": "page_claim:site_traffic_conflict; emotion=problem; expression_mode=analytical_diagram; bias=photo_left+diagram_center+conclusion_bar; copy≤1pts/72chars; evidence=site_photo,circulation_diagram,problem_conclusion",
   "has_hero_asset": true,
   "supporting_asset_count": 0
 }

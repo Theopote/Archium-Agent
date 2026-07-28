@@ -1,12 +1,13 @@
 {
   "communication_goal": "让受众理解：门诊公共带沿内院展开，科室成组布置并共享候诊空间。",
   "dominant_content_type": "floor_plan",
-  "density_level": "spacious",
+  "density_level": "compact",
   "continuity_role": "explanation",
   "preferred_layout_families": [
-    "drawing_focus"
+    "drawing_focus",
+    "analytical_diagram"
   ],
-  "composition_strategy": "以 drawing_focus 表达主信息",
+  "composition_strategy": "page_claim:expression_mode; emotion=calm; expression_mode=drawing_story; bias=drawing_dominant; copy≤3pts/80chars; evidence=primary_drawing,keyed_annotations,north_or_scale",
   "has_hero_asset": true,
   "supporting_asset_count": 0
 }

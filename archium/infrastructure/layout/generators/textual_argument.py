@@ -42,6 +42,14 @@ class TextualArgumentLayoutGenerator(LayoutGenerator):
 
         if context.variant == "quote_argument":
             lead_w = body.width * 0.62
+            lead_h = self._text_band_height(
+                context,
+                context.content.message,
+                "title",
+                box_width_in=lead_w,
+                min_height=body.height * 0.35,
+            )
+            lead_h = min(lead_h, body.height * 0.85)
             elements.append(
                 LayoutElement(
                     id="lead",
@@ -51,7 +59,7 @@ class TextualArgumentLayoutGenerator(LayoutGenerator):
                     x=body.x,
                     y=body.y + body.height * 0.08,
                     width=lead_w,
-                    height=body.height * 0.68,
+                    height=lead_h,
                     style_token="title",
                 )
             )

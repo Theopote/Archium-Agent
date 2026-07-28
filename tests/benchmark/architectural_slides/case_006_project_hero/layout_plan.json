@@ -11,15 +11,15 @@
     "source"
   ],
   "balance_strategy": "image_dominant",
-  "whitespace_ratio": 0.4571,
+  "whitespace_ratio": 0.4222,
   "elements": [
     {
       "id": "hero",
       "role": "hero_visual",
       "content_type": "image",
-      "x": 4.409,
+      "x": 3.228,
       "y": 1.232,
-      "w": 4.891,
+      "w": 6.072,
       "h": 3.509,
       "fit_mode": "cover",
       "crop_policy": "cover_crop"
@@ -30,7 +30,7 @@
       "content_type": "text",
       "x": 0.7,
       "y": 1.232,
-      "w": 3.542,
+      "w": 2.361,
       "h": 1.755,
       "fit_mode": null,
       "crop_policy": null
@@ -40,9 +40,9 @@
       "role": "source",
       "content_type": "text",
       "x": 0.7,
-      "y": 4.925,
+      "y": 4.943,
       "w": 6.02,
-      "h": 0.25,
+      "h": 0.232,
       "fit_mode": null,
       "crop_policy": null
     },

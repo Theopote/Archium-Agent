@@ -6,7 +6,7 @@
   "preferred_layout_families": [
     "comparative_matrix"
   ],
-  "composition_strategy": "以 comparative_matrix 表达主信息",
+  "composition_strategy": "page_claim:expression_mode; emotion=strategy; expression_mode=before_after; bias=before_after; copy≤2pts/72chars; evidence=before_state,after_state,change_insight",
   "has_hero_asset": true,
   "supporting_asset_count": 1
 }

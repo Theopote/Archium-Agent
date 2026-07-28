@@ -19,6 +19,8 @@ class VariantLayoutTokens:
 
     # Hero / primary visual dominance (share of body rect area after title band).
     hero_min_body_area_ratio: float = 0.58
+    # Delivery-grade hero floor as share of safe-area (used by LayoutValidationService).
+    hero_min_safe_area_ratio: float | None = None
     # Split layouts: max width share of the text / side panel within body.
     text_panel_max_width_ratio: float = 0.35
     # Drawing-focus split: primary visual width share within body (left panel).
@@ -36,14 +38,15 @@ class VariantLayoutTokens:
     overlay_lead_width_ratio: float = 0.45
     overlay_lead_height_ratio: float = 0.35
 
-    title_band_min_height: float = 0.68
+    title_band_min_height: float = 0.65
 
 
 def _merge_tokens(base: VariantLayoutTokens, override: VariantLayoutTokens) -> VariantLayoutTokens:
+    defaults = VariantLayoutTokens()
     updates = {
         field.name: getattr(override, field.name)
         for field in fields(VariantLayoutTokens)
-        if getattr(override, field.name) != getattr(base, field.name)
+        if getattr(override, field.name) != getattr(defaults, field.name)
     }
     return replace(base, **updates) if updates else base
 
@@ -52,6 +55,7 @@ _FAMILY_DEFAULTS: dict[LayoutFamily, VariantLayoutTokens] = {
     LayoutFamily.HERO: VariantLayoutTokens(
         text_panel_max_width_ratio=0.35,
         hero_min_body_area_ratio=0.58,
+        hero_min_safe_area_ratio=0.50,
         caption_max_height_ratio=0.0,
         source_max_height_ratio=0.053,
         source_width_ratio=0.70,
@@ -71,10 +75,12 @@ _VARIANT_OVERRIDES: dict[tuple[LayoutFamily, str], VariantLayoutTokens] = {
     ),
     (LayoutFamily.HERO, "full_bleed"): VariantLayoutTokens(
         hero_min_body_area_ratio=1.0,
+        hero_min_safe_area_ratio=0.65,
         text_panel_max_width_ratio=0.0,
     ),
     (LayoutFamily.HERO, "overlay"): VariantLayoutTokens(
         hero_min_body_area_ratio=1.0,
+        hero_min_safe_area_ratio=0.55,
         text_panel_max_width_ratio=0.0,
     ),
     (LayoutFamily.DRAWING_FOCUS, "full_canvas"): VariantLayoutTokens(
@@ -91,6 +97,19 @@ def resolve_layout_tokens(family: LayoutFamily, variant: str) -> VariantLayoutTo
     if override is None:
         return base
     return _merge_tokens(base, override)
+
+
+def effective_min_hero_area_ratio(
+    family: LayoutFamily,
+    variant: str,
+    *,
+    design_fallback: float,
+) -> float:
+    """Hero dominance floor for validation — variant token overrides design system."""
+    tokens = resolve_layout_tokens(family, variant)
+    if tokens.hero_min_safe_area_ratio is not None:
+        return tokens.hero_min_safe_area_ratio
+    return design_fallback
 
 
 def compute_hero_split_text_ratio(

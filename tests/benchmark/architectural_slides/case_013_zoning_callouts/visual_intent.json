@@ -1,13 +1,14 @@
 {
   "communication_goal": "让受众理解：公共界面沿内院展开，后勤与科研布置于外围安静界面。",
-  "dominant_content_type": "analytical_diagram",
+  "dominant_content_type": "text_argument",
   "density_level": "balanced",
   "continuity_role": "explanation",
   "preferred_layout_families": [
-    "analytical_diagram",
-    "drawing_focus"
+    "strategy_cards",
+    "hybrid_canvas",
+    "analytical_diagram"
   ],
-  "composition_strategy": "以 analytical_diagram 表达主信息",
+  "composition_strategy": "page_claim:expression_mode; emotion=strategy; expression_mode=strategy_cards; bias=strategy_cards; copy≤4pts/64chars; evidence=strategy_cards,one_line_thesis",
   "has_hero_asset": true,
   "supporting_asset_count": 0
 }

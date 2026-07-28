@@ -1,12 +1,13 @@
 {
-  "created_at": "2026-07-20T16:43:20.212399Z",
-  "updated_at": "2026-07-20T16:43:20.212399Z",
+  "created_at": "2026-07-28T06:53:39.673870Z",
+  "updated_at": "2026-07-28T06:53:39.673870Z",
   "version": 1,
-  "id": "63d5450d-9182-4084-b147-45b603982607",
-  "schema_version": 1,
-  "slide_id": "03c97abb-666f-4620-89f1-1347b44f84d2",
+  "id": "a22b038f-0b02-4c5b-89dd-1c8ec817f9bd",
+  "schema_version": 2,
+  "slide_id": "d7ca9fee-b2a9-4aef-ac46-8080c25babc7",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "076e705c-f43d-42f1-8859-a5e9770804e1",
+  "layout_plan_id": "618722ea-ee49-4404-9b1e-b657ac9bbf41",
+  "design_system_id": "ff6749e0-3b47-42b3-b9a1-ec00c0aca727",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -22,7 +23,7 @@
       "x": 0.7,
       "y": 0.45,
       "width": 8.600000000000001,
-      "height": 0.6575,
+      "height": 0.68,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -44,6 +45,8 @@
       "font_weight": 700,
       "font_style": "normal",
       "color": "#1A1A1A",
+      "color_token": "primary_text",
+      "typography_token": "title",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 45.9,
@@ -54,18 +57,18 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
       "id": "hero",
       "node_type": "drawing",
-      "semantic_role": "hero_visual",
+      "semantic_role": "diagram",
       "source_layout_element_id": "hero",
       "x": 0.7,
-      "y": 1.1908333333333332,
+      "y": 1.2133333333333334,
       "width": 8.600000000000001,
-      "height": 3.354166666666667,
+      "height": 3.331666666666667,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -75,7 +78,6 @@
       "group_id": null,
       "asset_id": null,
       "storage_uri": "benchmark://case_014_structure_concept/assets/c0140001-0001-4001-8001-000000000001.png",
-      "asset_path": "benchmark://case_014_structure_concept/assets/c0140001-0001-4001-8001-000000000001.png",
       "drawing_type": "diagram",
       "fit_mode": "contain",
       "crop_allowed": false,
@@ -90,7 +92,7 @@
     {
       "id": "source",
       "node_type": "text",
-      "semantic_role": "source",
+      "semantic_role": "citation",
       "source_layout_element_id": "source",
       "x": 0.7,
       "y": 4.955,
@@ -117,6 +119,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#777777",
+      "color_token": "muted_text",
+      "typography_token": "source",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 10.8,
@@ -127,7 +131,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     }
   ],
@@ -421,7 +425,6 @@
     {
       "asset_id": null,
       "storage_uri": "benchmark://case_014_structure_concept/assets/c0140001-0001-4001-8001-000000000001.png",
-      "asset_path": "benchmark://case_014_structure_concept/assets/c0140001-0001-4001-8001-000000000001.png",
       "origin": "project_upload",
       "content_ref": "c0140001-0001-4001-8001-000000000001"
     }

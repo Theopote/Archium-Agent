@@ -1,13 +1,14 @@
 {
   "communication_goal": "让受众理解：方案在保持运营连续的前提下，重建公共性与可达性。",
-  "dominant_content_type": "hero_image",
-  "density_level": "balanced",
+  "dominant_content_type": "text_argument",
+  "density_level": "spacious",
   "continuity_role": "explanation",
   "preferred_layout_families": [
-    "hero",
-    "hybrid_canvas"
+    "hybrid_canvas",
+    "strategy_cards",
+    "analytical_diagram"
   ],
-  "composition_strategy": "以 hero 表达主信息",
+  "composition_strategy": "page_claim:expression_mode; emotion=climax; expression_mode=hybrid_climax; bias=photo_left+conclusion_bar; copy≤2pts/64chars; evidence=climax_visual,single_thesis,supporting_proof",
   "has_hero_asset": true,
   "supporting_asset_count": 1
 }

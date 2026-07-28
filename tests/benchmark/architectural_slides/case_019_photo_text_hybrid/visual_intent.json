@@ -1,13 +1,14 @@
 {
   "communication_goal": "让受众理解：针对入口混行与导向缺失，提出分层到达与清晰标识系统。",
   "dominant_content_type": "photo_evidence",
-  "density_level": "balanced",
+  "density_level": "compact",
   "continuity_role": "evidence",
   "preferred_layout_families": [
     "evidence_board",
+    "hybrid_canvas",
     "analytical_diagram"
   ],
-  "composition_strategy": "以 evidence_board 表达主信息",
+  "composition_strategy": "page_claim:site_problem_evidence; emotion=problem; expression_mode=problem_to_solution; bias=evidence_grid+conclusion_bar; copy≤4pts/90chars; evidence=photo_evidence_grid,issue_labels,problem_conclusion",
   "has_hero_asset": true,
   "supporting_asset_count": 1
 }

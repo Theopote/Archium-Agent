@@ -45,6 +45,7 @@ from archium.domain.visual.validation import (
 )
 from archium.infrastructure.layout.geometry import Rect, safe_area
 from archium.infrastructure.layout.text_measurement import TextMeasurementService
+from archium.infrastructure.layout.variant_layout_tokens import effective_min_hero_area_ratio
 
 _ASSET_CONTENT_TYPES = frozenset(
     {
@@ -88,7 +89,12 @@ class LayoutValidationService:
             )
         )
         issues.extend(self._check_image_rules(layout_plan, drawing_hero=drawing_hero))
-        issues.extend(self._check_hero_dominance(layout_plan, safe, thresholds.min_hero_area_ratio))
+        hero_min_ratio = effective_min_hero_area_ratio(
+            layout_plan.layout_family,
+            layout_plan.layout_variant,
+            design_fallback=thresholds.min_hero_area_ratio,
+        )
+        issues.extend(self._check_hero_dominance(layout_plan, safe, hero_min_ratio))
         issues.extend(
             self._check_whitespace(
                 layout_plan,

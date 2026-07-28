@@ -13,27 +13,38 @@
     "source"
   ],
   "balance_strategy": "hybrid_split",
-  "whitespace_ratio": 0.4065,
+  "whitespace_ratio": 0.1829,
   "elements": [
     {
       "id": "body",
       "role": "body_text",
       "content_type": "text",
-      "x": 5.252,
-      "y": 3.285,
-      "w": 4.048,
+      "x": 5.589,
+      "y": 3.299,
+      "w": 3.711,
       "h": 0.92,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "canvas_panel",
+      "role": "decoration",
+      "content_type": "shape",
+      "x": 5.589,
+      "y": 1.213,
+      "w": 3.711,
+      "h": 3.332,
       "fit_mode": null,
       "crop_policy": null
     },
     {
       "id": "hero",
       "role": "hero_visual",
-      "content_type": "drawing",
+      "content_type": "image",
       "x": 0.7,
-      "y": 1.191,
-      "w": 4.385,
-      "h": 3.354,
+      "y": 1.213,
+      "w": 4.723,
+      "h": 3.332,
       "fit_mode": "contain",
       "crop_policy": "forbidden"
     },
@@ -41,9 +52,9 @@
       "id": "lead",
       "role": "lead_statement",
       "content_type": "text",
-      "x": 5.252,
-      "y": 2.549,
-      "w": 4.048,
+      "x": 5.589,
+      "y": 2.563,
+      "w": 3.711,
       "h": 0.695,
       "fit_mode": null,
       "crop_policy": null
@@ -63,10 +74,10 @@
       "id": "support_0",
       "role": "supporting_visual",
       "content_type": "image",
-      "x": 5.252,
-      "y": 1.191,
-      "w": 4.048,
-      "h": 1.275,
+      "x": 5.589,
+      "y": 1.213,
+      "w": 3.711,
+      "h": 1.266,
       "fit_mode": "cover",
       "crop_policy": "safe_trim"
     },
@@ -77,7 +88,7 @@
       "x": 0.7,
       "y": 0.45,
       "w": 8.6,
-      "h": 0.657,
+      "h": 0.68,
       "fit_mode": null,
       "crop_policy": null
     }

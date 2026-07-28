@@ -17,9 +17,9 @@
       "role": "hero_visual",
       "content_type": "drawing",
       "x": 0.7,
-      "y": 1.191,
+      "y": 1.213,
       "w": 8.6,
-      "h": 3.354,
+      "h": 3.332,
       "fit_mode": "contain",
       "crop_policy": "forbidden"
     },
@@ -41,7 +41,7 @@
       "x": 0.7,
       "y": 0.45,
       "w": 8.6,
-      "h": 0.657,
+      "h": 0.68,
       "fit_mode": null,
       "crop_policy": null
     }

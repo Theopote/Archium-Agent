@@ -15,25 +15,25 @@
     "source"
   ],
   "balance_strategy": "metric_grid",
-  "whitespace_ratio": 0.4991,
+  "whitespace_ratio": 0.4984,
   "elements": [
     {
       "id": "chart",
-      "role": "body_text",
+      "role": "supporting_visual",
       "content_type": "chart",
       "x": 0.7,
-      "y": 3.46,
+      "y": 3.468,
       "w": 8.6,
-      "h": 1.043,
-      "fit_mode": null,
-      "crop_policy": null
+      "h": 1.035,
+      "fit_mode": "contain",
+      "crop_policy": "forbidden"
     },
     {
       "id": "lead",
       "role": "lead_statement",
       "content_type": "text",
       "x": 0.7,
-      "y": 1.149,
+      "y": 1.172,
       "w": 8.6,
       "h": 0.4,
       "fit_mode": null,
@@ -44,9 +44,9 @@
       "role": "metric",
       "content_type": "metric",
       "x": 0.7,
-      "y": 1.632,
+      "y": 1.655,
       "w": 2.783,
-      "h": 0.789,
+      "h": 0.782,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -55,9 +55,9 @@
       "role": "metric",
       "content_type": "metric",
       "x": 3.608,
-      "y": 1.632,
+      "y": 1.655,
       "w": 2.783,
-      "h": 0.789,
+      "h": 0.782,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -66,9 +66,9 @@
       "role": "metric",
       "content_type": "metric",
       "x": 6.517,
-      "y": 1.632,
+      "y": 1.655,
       "w": 2.783,
-      "h": 0.789,
+      "h": 0.782,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -77,9 +77,9 @@
       "role": "metric",
       "content_type": "metric",
       "x": 0.7,
-      "y": 2.546,
+      "y": 2.562,
       "w": 2.783,
-      "h": 0.789,
+      "h": 0.782,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -101,7 +101,7 @@
       "x": 0.7,
       "y": 0.45,
       "w": 8.6,
-      "h": 0.657,
+      "h": 0.68,
       "fit_mode": null,
       "crop_policy": null
     }

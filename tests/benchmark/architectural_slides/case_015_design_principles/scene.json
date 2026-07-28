@@ -1,12 +1,13 @@
 {
-  "created_at": "2026-07-20T16:43:20.425560Z",
-  "updated_at": "2026-07-20T16:43:20.425560Z",
+  "created_at": "2026-07-28T06:53:47.786779Z",
+  "updated_at": "2026-07-28T06:53:47.786779Z",
   "version": 1,
-  "id": "bc17c6ca-a44e-474e-869f-8a7a9c709f16",
-  "schema_version": 1,
-  "slide_id": "9ee6ee39-4a18-413f-ae42-406460f88f85",
+  "id": "7856ce7e-39ef-4d92-afa0-05f0d8cd8d86",
+  "schema_version": 2,
+  "slide_id": "c72af0f0-7654-4226-83c0-ebe83ab31f89",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "7859a5a5-505b-4396-b236-a085ac21fde7",
+  "layout_plan_id": "93a2d994-d2e6-49f2-be72-0e85b20c827d",
+  "design_system_id": "1748bee5-4197-44be-9e0b-d83d67868493",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -22,7 +23,7 @@
       "x": 0.7,
       "y": 0.45,
       "width": 8.600000000000001,
-      "height": 0.6575,
+      "height": 0.68,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -44,6 +45,8 @@
       "font_weight": 700,
       "font_style": "normal",
       "color": "#1A1A1A",
+      "color_token": "primary_text",
+      "typography_token": "title",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 45.9,
@@ -54,7 +57,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
@@ -63,9 +66,9 @@
       "semantic_role": "body_text",
       "source_layout_element_id": "card_0",
       "x": 0.7,
-      "y": 1.2325,
+      "y": 1.2550000000000001,
       "width": 2.7833333333333337,
-      "height": 3.5091666666666668,
+      "height": 3.186666666666667,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -87,6 +90,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#1A1A1A",
+      "color_token": "primary_text",
+      "typography_token": "body",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 21.6,
@@ -97,7 +102,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
@@ -106,9 +111,9 @@
       "semantic_role": "body_text",
       "source_layout_element_id": "card_1",
       "x": 3.6083333333333334,
-      "y": 1.2325,
+      "y": 1.2550000000000001,
       "width": 2.7833333333333337,
-      "height": 3.5091666666666668,
+      "height": 3.186666666666667,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -130,6 +135,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#1A1A1A",
+      "color_token": "primary_text",
+      "typography_token": "body",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 21.6,
@@ -140,7 +147,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
@@ -149,9 +156,9 @@
       "semantic_role": "body_text",
       "source_layout_element_id": "card_2",
       "x": 6.5166666666666675,
-      "y": 1.2325,
+      "y": 1.2550000000000001,
       "width": 2.7833333333333337,
-      "height": 3.5091666666666668,
+      "height": 3.186666666666667,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -173,6 +180,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#1A1A1A",
+      "color_token": "primary_text",
+      "typography_token": "body",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 21.6,
@@ -183,13 +192,13 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
       "id": "source",
       "node_type": "text",
-      "semantic_role": "source",
+      "semantic_role": "citation",
       "source_layout_element_id": "source",
       "x": 0.7,
       "y": 4.955,
@@ -216,6 +225,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#777777",
+      "color_token": "muted_text",
+      "typography_token": "source",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 10.8,
@@ -226,7 +237,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     }
   ],

@@ -1,13 +1,13 @@
 {
   "communication_goal": "让受众理解：一期保障急诊不停运，二期完成门诊更新，三期整合科研与后勤。",
-  "dominant_content_type": "photo_evidence",
+  "dominant_content_type": "mixed",
   "density_level": "balanced",
-  "continuity_role": "evidence",
+  "continuity_role": "opening",
   "preferred_layout_families": [
-    "evidence_board",
-    "analytical_diagram"
+    "process_narrative",
+    "hybrid_canvas"
   ],
-  "composition_strategy": "以 evidence_board 表达主信息",
+  "composition_strategy": "page_claim:expression_mode; emotion=strategy; expression_mode=process_narrative; bias=text_lead; copy≤5pts/80chars; evidence=process_steps,phase_labels",
   "has_hero_asset": true,
   "supporting_asset_count": 3
 }

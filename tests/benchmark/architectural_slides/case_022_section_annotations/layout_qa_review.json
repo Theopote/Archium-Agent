@@ -9,8 +9,21 @@
   "architectural_expression": 5,
   "aesthetic_finish": 4,
   "editability": 5,
+  "scoring_mode": "experimental",
+  "selected_issue_codes": [],
+  "quality_issues": [],
+  "page_quality_status": null,
+  "worst_problem": "",
+  "system_missed": "",
+  "reporting_ready": "unspecified",
   "major_problems": [],
   "minor_problems": [],
+  "review_completed": false,
+  "accepted_for_delivery": false,
+  "validity": "valid",
   "accepted": true,
-  "reviewer_notes": "AUTO: layout QA rehearsal baseline (score 1.00); replace with manual human review."
+  "reviewer": "",
+  "reviewed_at": null,
+  "reviewer_notes": "AUTO: layout QA rehearsal baseline (score 1.00); replace with manual human review.",
+  "invalidation_reason": ""
 }

@@ -1,12 +1,13 @@
 {
-  "created_at": "2026-07-20T17:01:02.320078Z",
-  "updated_at": "2026-07-20T17:01:02.320078Z",
+  "created_at": "2026-07-28T06:54:59.060614Z",
+  "updated_at": "2026-07-28T06:54:59.060614Z",
   "version": 1,
-  "id": "67d45cd7-8676-4dfe-9d07-1396aeef1d22",
-  "schema_version": 1,
-  "slide_id": "cba8f6e1-76aa-4e13-8dbf-9b22b9f01306",
+  "id": "799f19c0-2263-4f67-99a2-b8bc12399586",
+  "schema_version": 2,
+  "slide_id": "a06ea2d2-8186-4dda-a5fa-f797b8370ef0",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "cab93850-6b30-42ed-934b-84fa7c398e92",
+  "layout_plan_id": "4afd1c0e-0835-47cf-9adb-0e8e58477bc1",
+  "design_system_id": "fbcf0acd-0bfa-42b1-9e2c-7bf0f3f0afde",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -22,7 +23,7 @@
       "x": 0.7,
       "y": 0.45,
       "width": 8.600000000000001,
-      "height": 0.6575,
+      "height": 0.68,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -44,6 +45,8 @@
       "font_weight": 700,
       "font_style": "normal",
       "color": "#1A1A1A",
+      "color_token": "primary_text",
+      "typography_token": "title",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 45.9,
@@ -54,7 +57,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
@@ -63,9 +66,9 @@
       "semantic_role": "supporting_visual",
       "source_layout_element_id": "case_image_0",
       "x": 0.7,
-      "y": 1.1908333333333332,
+      "y": 1.2133333333333334,
       "width": 4.237500000000001,
-      "height": 1.6046250000000006,
+      "height": 1.5922500000000002,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -75,7 +78,6 @@
       "group_id": null,
       "asset_id": null,
       "storage_uri": "benchmark://case_025_scheme_columns/assets/c0250001-0001-4001-8001-000000000001.png",
-      "asset_path": "benchmark://case_025_scheme_columns/assets/c0250001-0001-4001-8001-000000000001.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -84,7 +86,9 @@
       "border": null,
       "shadow": null,
       "caption_node_id": null,
-      "asset_unresolved": false
+      "asset_unresolved": false,
+      "icon_stroke_color": null,
+      "icon_stroke_token": ""
     },
     {
       "id": "case_text_0",
@@ -92,9 +96,9 @@
       "semantic_role": "body_text",
       "source_layout_element_id": "case_text_0",
       "x": 0.7,
-      "y": 2.8371250000000003,
+      "y": 2.8472500000000003,
       "width": 4.237500000000001,
-      "height": 1.3128750000000002,
+      "height": 1.3027499999999999,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -116,6 +120,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#1A1A1A",
+      "color_token": "primary_text",
+      "typography_token": "body",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 21.6,
@@ -126,7 +132,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
@@ -135,9 +141,9 @@
       "semantic_role": "supporting_visual",
       "source_layout_element_id": "case_image_1",
       "x": 5.062500000000001,
-      "y": 1.1908333333333332,
+      "y": 1.2133333333333334,
       "width": 4.237500000000001,
-      "height": 1.6046250000000006,
+      "height": 1.5922500000000002,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -147,7 +153,6 @@
       "group_id": null,
       "asset_id": null,
       "storage_uri": "benchmark://case_025_scheme_columns/assets/c0250002-0001-4001-8001-000000000002.png",
-      "asset_path": "benchmark://case_025_scheme_columns/assets/c0250002-0001-4001-8001-000000000002.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -156,7 +161,9 @@
       "border": null,
       "shadow": null,
       "caption_node_id": null,
-      "asset_unresolved": false
+      "asset_unresolved": false,
+      "icon_stroke_color": null,
+      "icon_stroke_token": ""
     },
     {
       "id": "case_text_1",
@@ -164,9 +171,9 @@
       "semantic_role": "body_text",
       "source_layout_element_id": "case_text_1",
       "x": 5.062500000000001,
-      "y": 2.8371250000000003,
+      "y": 2.8472500000000003,
       "width": 4.237500000000001,
-      "height": 1.3128750000000002,
+      "height": 1.3027499999999999,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -188,6 +195,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#1A1A1A",
+      "color_token": "primary_text",
+      "typography_token": "body",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 21.6,
@@ -198,7 +207,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
@@ -231,6 +240,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#4A4A4A",
+      "color_token": "secondary_text",
+      "typography_token": "heading",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 24.3,
@@ -241,13 +252,13 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
       "id": "source",
       "node_type": "text",
-      "semantic_role": "source",
+      "semantic_role": "citation",
       "source_layout_element_id": "source",
       "x": 0.7,
       "y": 4.955,
@@ -274,6 +285,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#777777",
+      "color_token": "muted_text",
+      "typography_token": "source",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 10.8,
@@ -284,7 +297,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     }
   ],
@@ -578,14 +591,12 @@
     {
       "asset_id": null,
       "storage_uri": "benchmark://case_025_scheme_columns/assets/c0250001-0001-4001-8001-000000000001.png",
-      "asset_path": "benchmark://case_025_scheme_columns/assets/c0250001-0001-4001-8001-000000000001.png",
       "origin": "project_upload",
       "content_ref": "c0250001-0001-4001-8001-000000000001"
     },
     {
       "asset_id": null,
       "storage_uri": "benchmark://case_025_scheme_columns/assets/c0250002-0001-4001-8001-000000000002.png",
-      "asset_path": "benchmark://case_025_scheme_columns/assets/c0250002-0001-4001-8001-000000000002.png",
       "origin": "project_upload",
       "content_ref": "c0250002-0001-4001-8001-000000000002"
     }

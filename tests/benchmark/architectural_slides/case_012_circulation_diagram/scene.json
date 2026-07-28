@@ -1,12 +1,13 @@
 {
-  "created_at": "2026-07-20T16:43:19.726521Z",
-  "updated_at": "2026-07-20T16:43:19.726521Z",
+  "created_at": "2026-07-28T06:53:23.814996Z",
+  "updated_at": "2026-07-28T06:53:23.814996Z",
   "version": 1,
-  "id": "39d4745f-e190-4f1b-8695-16bd76830d36",
-  "schema_version": 1,
-  "slide_id": "081b77f3-6231-439a-b521-ba560aa9d446",
+  "id": "56209fc2-9a0d-4fe4-8a87-2549672d0398",
+  "schema_version": 2,
+  "slide_id": "017d07fd-1429-40f8-a638-8976637af19a",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "506d5d5a-2ab2-4961-994d-ba934f9e7c09",
+  "layout_plan_id": "f6fcfae2-2e0f-4f3c-a56d-d7adb893b22b",
+  "design_system_id": "fc571d1f-57a3-450c-8aae-5fbb21a6a591",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -22,7 +23,7 @@
       "x": 0.7,
       "y": 0.45,
       "width": 8.600000000000001,
-      "height": 0.6575,
+      "height": 0.68,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -44,6 +45,8 @@
       "font_weight": 700,
       "font_style": "normal",
       "color": "#1A1A1A",
+      "color_token": "primary_text",
+      "typography_token": "title",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 45.9,
@@ -54,18 +57,18 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
       "id": "hero",
       "node_type": "drawing",
-      "semantic_role": "hero_visual",
+      "semantic_role": "diagram",
       "source_layout_element_id": "hero",
       "x": 0.7,
-      "y": 1.1908333333333332,
+      "y": 1.2133333333333334,
       "width": 8.600000000000001,
-      "height": 3.354166666666667,
+      "height": 3.331666666666667,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -75,7 +78,6 @@
       "group_id": null,
       "asset_id": null,
       "storage_uri": "benchmark://case_012_circulation_diagram/assets/c0120001-0001-4001-8001-000000000001.png",
-      "asset_path": "benchmark://case_012_circulation_diagram/assets/c0120001-0001-4001-8001-000000000001.png",
       "drawing_type": "diagram",
       "fit_mode": "contain",
       "crop_allowed": false,
@@ -90,7 +92,7 @@
     {
       "id": "source",
       "node_type": "text",
-      "semantic_role": "source",
+      "semantic_role": "citation",
       "source_layout_element_id": "source",
       "x": 0.7,
       "y": 4.955,
@@ -117,6 +119,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#777777",
+      "color_token": "muted_text",
+      "typography_token": "source",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 10.8,
@@ -127,7 +131,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     }
   ],
@@ -421,7 +425,6 @@
     {
       "asset_id": null,
       "storage_uri": "benchmark://case_012_circulation_diagram/assets/c0120001-0001-4001-8001-000000000001.png",
-      "asset_path": "benchmark://case_012_circulation_diagram/assets/c0120001-0001-4001-8001-000000000001.png",
       "origin": "project_upload",
       "content_ref": "c0120001-0001-4001-8001-000000000001"
     }

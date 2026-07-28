@@ -11,16 +11,16 @@
     "source"
   ],
   "balance_strategy": "image_dominant",
-  "whitespace_ratio": 0.2517,
+  "whitespace_ratio": 0.2542,
   "elements": [
     {
       "id": "hero",
       "role": "hero_visual",
       "content_type": "image",
       "x": 0.7,
-      "y": 1.232,
+      "y": 1.255,
       "w": 8.6,
-      "h": 3.509,
+      "h": 3.487,
       "fit_mode": "cover",
       "crop_policy": "cover_crop"
     },
@@ -29,9 +29,9 @@
       "role": "lead_statement",
       "content_type": "text",
       "x": 0.867,
-      "y": 3.163,
+      "y": 3.173,
       "w": 3.87,
-      "h": 1.228,
+      "h": 1.22,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -40,9 +40,9 @@
       "role": "source",
       "content_type": "text",
       "x": 0.7,
-      "y": 4.925,
+      "y": 4.943,
       "w": 6.02,
-      "h": 0.25,
+      "h": 0.232,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -53,7 +53,7 @@
       "x": 0.7,
       "y": 0.45,
       "w": 8.6,
-      "h": 0.657,
+      "h": 0.68,
       "fit_mode": null,
       "crop_policy": null
     }

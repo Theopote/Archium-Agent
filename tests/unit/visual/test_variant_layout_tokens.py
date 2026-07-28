@@ -10,9 +10,11 @@ from archium.domain.visual import LayoutFamily, VisualContentType, VisualIntent,
 from archium.infrastructure.layout.generators.base import LayoutGeneratorContext, content_from_slide
 from archium.infrastructure.layout.geometry import Rect, safe_area
 from archium.infrastructure.layout.layout_solver import LayoutSolver
+from archium.domain.visual.validation import LAYOUT_HERO_NOT_DOMINANT
 from archium.infrastructure.layout.variant_layout_tokens import (
     VariantLayoutTokens,
     compute_hero_split_text_ratio,
+    effective_min_hero_area_ratio,
     resolve_layout_tokens,
 )
 
@@ -101,3 +103,19 @@ class TestVariantLayoutTokens:
         source_h = safe.height * tokens.source_max_height_ratio
         assert abs(caption_h - 0.28) < 0.03
         assert abs(source_h - 0.22) < 0.03
+
+    def test_effective_min_hero_area_ratio_uses_variant_token(self) -> None:
+        ratio = effective_min_hero_area_ratio(
+            LayoutFamily.HERO,
+            "split",
+            design_fallback=0.45,
+        )
+        assert ratio == 0.50
+
+    def test_hero_split_passes_delivery_grade_validation(self) -> None:
+        from archium.application.visual.layout_validation_service import LayoutValidationService
+
+        ctx = _hero_context(variant="split")
+        plan = LayoutSolver().generate(LayoutFamily.HERO, ctx)
+        report = LayoutValidationService().validate(plan, ctx.design_system)
+        assert not report.issues_for(LAYOUT_HERO_NOT_DOMINANT)
