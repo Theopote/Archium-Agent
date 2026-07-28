@@ -220,6 +220,8 @@ class RenderScenePptxAdapter:
         }
 
     def _text_instruction(self, node: TextNode, scene: RenderScene) -> dict[str, Any]:
+        from archium.domain.visual.render_scene import effective_run_style
+
         content_type = "metric" if node.semantic_role == "metric" else "text"
         cjk = node.font_family_cjk or self._cjk_font(node, scene)
         latin = node.font_family_latin or node.font_family
@@ -227,7 +229,7 @@ class RenderScenePptxAdapter:
         primary = node.font_family
         if text_has_cjk(node.text):
             primary = cjk
-        return {
+        instruction: dict[str, Any] = {
             "id": node.id,
             "role": node.semantic_role or "body_text",
             "content_type": content_type,
@@ -244,6 +246,32 @@ class RenderScenePptxAdapter:
             "font_weight": node.font_weight,
             "color": node.color.lstrip("#"),
         }
+        if node.runs:
+            runs_payload: list[dict[str, Any]] = []
+            for index, run in enumerate(node.runs):
+                style = effective_run_style(node, run)
+                run_cjk = str(style["font_family_cjk"] or cjk or DEFAULT_CJK_FONT)
+                run_latin = str(style["font_family_latin"] or latin)
+                run_text = run.text
+                run_primary = (
+                    run_cjk if text_has_cjk(run_text) else (run_latin or str(style["font_family"]))
+                )
+                weight = int(style["font_weight"] or node.font_weight)
+                runs_payload.append(
+                    {
+                        "text": run_text,
+                        "font_family": run_primary,
+                        "font_family_cjk": run_cjk,
+                        "font_size": float(style["font_size"] or node.font_size),
+                        "font_weight": weight,
+                        "font_style": str(style["font_style"] or "normal"),
+                        "color": str(style["color"] or node.color).lstrip("#"),
+                        "break_line": run_text.endswith("\n")
+                        or (index < len(node.runs) - 1 and "\n" in run_text),
+                    }
+                )
+            instruction["runs"] = runs_payload
+        return instruction
 
     def _image_instruction(self, node: ImageNode) -> dict[str, Any]:
         instruction: dict[str, Any] = {

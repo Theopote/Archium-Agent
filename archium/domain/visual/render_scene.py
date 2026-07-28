@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Annotated, Any, Literal, Self
 from uuid import UUID
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import ConfigDict, Field, field_validator, model_validator
 
 from archium.domain._base import DomainModel, IdentifiedModel, TimestampedModel, VersionedModel
 from archium.domain.visual.enums import LayoutFamily, OverflowPolicy, coerce_overflow_policy
@@ -53,6 +53,29 @@ class ShadowStyle(DomainModel):
 class TextParagraph(DomainModel):
     text: str
     alignment: str = "left"
+
+
+class TextRun(DomainModel):
+    """Inline styled span within a TextNode (empty style fields inherit node defaults)."""
+
+    # Preserve leading/trailing spaces between runs (e.g. " Title").
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+        str_strip_whitespace=False,
+        validate_assignment=True,
+        extra="forbid",
+    )
+
+    text: str
+    font_family: str = ""
+    font_family_cjk: str = ""
+    font_family_latin: str = ""
+    font_size: float | None = Field(default=None, gt=0)
+    font_weight: int | None = Field(default=None, ge=100, le=900)
+    font_style: str = "normal"
+    color: str = ""
+    color_token: str = ""
 
 
 class BackgroundStyle(DomainModel):
@@ -142,6 +165,8 @@ class TextNode(BaseRenderNode):
     node_type: Literal["text"] = "text"
     text: str
     paragraphs: list[TextParagraph] = Field(default_factory=list)
+    # When non-empty, per-run styling is authoritative; ``text`` is derived.
+    runs: list[TextRun] = Field(default_factory=list)
     font_family: str
     font_family_cjk: str = ""
     font_family_latin: str = ""
@@ -165,12 +190,62 @@ class TextNode(BaseRenderNode):
     def _coerce_overflow_policy(cls, value: object) -> object:
         return coerce_overflow_policy(value, default=OverflowPolicy.SHRINK)
 
+    @model_validator(mode="after")
+    def _sync_text_from_runs(self) -> Self:
+        if self.runs:
+            derived = "".join(run.text for run in self.runs)
+            if self.text != derived:
+                object.__setattr__(self, "text", derived)
+        return self
+
 
 def replace_text_node_content(node: TextNode, new_text: str) -> None:
-    """Replace TextNode.text and collapse paragraphs to one consistent source."""
+    """Replace TextNode.text and collapse paragraphs/runs to one consistent source."""
     node.text = new_text
     alignment = node.paragraphs[0].alignment if node.paragraphs else node.alignment
     node.paragraphs = [TextParagraph(text=new_text, alignment=alignment)]
+    if node.runs:
+        first = node.runs[0]
+        node.runs = [
+            TextRun(
+                text=new_text,
+                font_family=first.font_family,
+                font_family_cjk=first.font_family_cjk,
+                font_family_latin=first.font_family_latin,
+                font_size=first.font_size,
+                font_weight=first.font_weight,
+                font_style=first.font_style,
+                color=first.color,
+                color_token=first.color_token,
+            )
+        ]
+    else:
+        node.runs = []
+
+
+def set_text_node_runs(node: TextNode, runs: list[TextRun]) -> None:
+    """Replace inline runs and derive ``text`` / paragraphs from them."""
+    if not runs:
+        raise ValueError("set_text_node_runs requires at least one run")
+    node.runs = list(runs)
+    derived = "".join(run.text for run in node.runs)
+    node.text = derived
+    alignment = node.paragraphs[0].alignment if node.paragraphs else node.alignment
+    node.paragraphs = [TextParagraph(text=derived, alignment=alignment)]
+
+
+def effective_run_style(node: TextNode, run: TextRun) -> dict[str, object]:
+    """Resolve a run's visual style with TextNode fallbacks."""
+    return {
+        "font_family": run.font_family or node.font_family,
+        "font_family_cjk": run.font_family_cjk or node.font_family_cjk,
+        "font_family_latin": run.font_family_latin or node.font_family_latin,
+        "font_size": run.font_size if run.font_size is not None else node.font_size,
+        "font_weight": run.font_weight if run.font_weight is not None else node.font_weight,
+        "font_style": run.font_style or node.font_style,
+        "color": run.color or node.color,
+        "color_token": run.color_token or node.color_token,
+    }
 
 
 class ImageNode(BaseRenderNode):

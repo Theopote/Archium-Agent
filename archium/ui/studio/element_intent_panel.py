@@ -8,8 +8,8 @@ import streamlit as st
 
 from archium.domain.visual.enums import LayoutContentType, LayoutElementRole
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
-from archium.ui.studio.design_assistant_panel import open_modify_with_prompt
 from archium.ui.studio.element_labels import CONTENT_TYPE_LABELS, ROLE_LABELS
+from archium.ui.studio.studio_pending_state import open_modify_with_prompt
 from archium.ui.visual_service import SlideVisualSnapshot
 
 

@@ -355,7 +355,8 @@ function renderTableAsTextGrid(page, element, slideInstruction) {
 /** @param {object} page @param {object} element @param {string | null} placeholderName */
 function renderTextElement(page, element, placeholderName = null) {
   const text = element.text;
-  if (text == null || String(text).trim() === "") {
+  const runs = Array.isArray(element.runs) ? element.runs : [];
+  if ((!text || String(text).trim() === "") && runs.length === 0) {
     return;
   }
   const fontSize = Number(element.font_size) || 16;
@@ -387,6 +388,42 @@ function renderTextElement(page, element, placeholderName = null) {
     opts.y = Number(element.y) || 0;
     opts.w = Number(element.w) || 1;
     opts.h = Number(element.h) || 0.3;
+  }
+  if (runs.length > 0) {
+    const payload = runs.map((run, index) => {
+      const runText = String(run?.text ?? "");
+      const weight = Number(run?.font_weight);
+      const runBold =
+        run?.font_weight === "bold" ||
+        (!Number.isNaN(weight) && weight >= 600) ||
+        (run?.font_weight == null && bold);
+      /** @type {Record<string, unknown>} */
+      const runOpts = {
+        bold: runBold,
+        color: _stripHash(run?.color || element.color || "1A1A1A"),
+        fontFace:
+          run?.font_family_cjk ||
+          run?.font_family ||
+          element.font_family_cjk ||
+          element.font_family ||
+          "Microsoft YaHei",
+        fontSize: Number(run?.font_size) || fontSize,
+      };
+      if (run?.font_style === "italic") {
+        runOpts.italic = true;
+      }
+      // Break after run when explicit, or when text ends with newline (strip trailing \n).
+      let displayText = runText;
+      if (displayText.endsWith("\n")) {
+        displayText = displayText.slice(0, -1);
+        runOpts.breakLine = true;
+      } else if (run?.break_line && index < runs.length - 1) {
+        runOpts.breakLine = true;
+      }
+      return { text: displayText, options: runOpts };
+    });
+    page.addText(payload, opts);
+    return;
   }
   page.addText(String(text), opts);
 }

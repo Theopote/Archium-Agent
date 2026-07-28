@@ -40,6 +40,7 @@ from archium.domain.visual.studio_command import (
     ScenePatchAction,
     SetNodeLockCommand,
     SetNodeVisibilityCommand,
+    SetTextRunsCommand,
     StudioCommand,
     UngroupNodesCommand,
     UpdateNodeStyleCommand,
@@ -383,6 +384,26 @@ class StudioSceneEditService:
             font_size=font_size,
             fill_color=fill_color,
             reason="update node style",
+        )
+        return self.apply_command(slide.id, command)
+
+    def set_layout_element_text_runs(
+        self,
+        slide_id: UUID,
+        *,
+        element_id: str,
+        runs: list[dict[str, object]],
+    ) -> SceneEditResult:
+        """Replace TextNode inline runs (mixed weight/color) via SetTextRunsCommand."""
+        node_id = self._resolve_node_id(slide_id, element_id)
+        slide = self._require_slide(slide_id)
+        command = SetTextRunsCommand(
+            presentation_id=slide.presentation_id,
+            slide_id=slide.id,
+            target_node_ids=[node_id],
+            node_id=node_id,
+            runs=list(runs),
+            reason="set text runs",
         )
         return self.apply_command(slide.id, command)
 

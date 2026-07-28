@@ -22,6 +22,7 @@ from archium.domain.visual.render_scene import (
     ImageNode,
     ShapeNode,
     TableNode,
+    TextNode,
 )
 
 
@@ -92,7 +93,11 @@ RENDER_SCENE_V1_CAPABILITIES: dict[str, PowerPointCapabilityMapping] = {
         scene_node_type="text",
         pptx_object_type="p:sp + p:txBody",
         fidelity=PowerPointFidelity.NATIVE_STABLE,
-        limitations=["Host font substitution may change line wrapping."],
+        limitations=[
+            "Host font substitution may change line wrapping.",
+            "Single-style fallback when TextNode.runs is empty; "
+            "multi-run native weight/color/font when runs are populated.",
+        ],
         validation_rules=["node_identity_preserved", "text_content_preserved"],
     ),
     "shape": PowerPointCapabilityMapping(
@@ -168,7 +173,10 @@ POWERPOINT_NATIVE_DEPTH_INVENTORY: tuple[PowerPointDepthEntry, ...] = (
         label="Text body",
         status=PowerPointDepthStatus.IMPLEMENTED,
         pptx_object_hint="p:sp + p:txBody",
-        notes="Basic editable text frames; advanced typography/effects limited.",
+        notes=(
+            "Basic editable text frames; multi-run weight/color when TextNode.runs "
+            "is populated. Advanced typography/effects still limited."
+        ),
     ),
     PowerPointDepthEntry(
         id="basic_shape",
@@ -412,6 +420,8 @@ def assess_scene_node(
         features.append(f"children:{len(node.children)}")
         if node.clip_children:
             features.append("clip_children")
+    if isinstance(node, TextNode) and node.runs:
+        features.append(f"runs:{len(node.runs)}")
     return PowerPointNodeAssessment(
         node_id=node.id,
         node_type=node.node_type,

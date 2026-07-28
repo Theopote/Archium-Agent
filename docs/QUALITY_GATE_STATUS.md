@@ -60,6 +60,7 @@ Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolve
 | Claim | Status |
 |------|--------|
 | RenderScene V1 最小节点闭环（Text / Image / Drawing / Shape） | **Done** (Phase 0–2 requirement) |
+| TextNode 同框混排（`runs` 粗细/颜色） | **Partial** — domain + PPTX array export + Studio 两段混排编辑；非完整富文本工具栏 |
 | ChartNode / TableNode + dual export mode | **Partial** — nodes + `ChartExportMode` exist; not full chart/table effect depth |
 | 完整 RenderScene / Presenton 式全节点模型 | **Not done** — GroupNode V1 partial; no ContainerNode / Connector / Freeform |
 | 深度原生 PowerPoint / ppt-master 级对象模型 | **Not done** — capability *map* exists; most depth inventory rows are empty |

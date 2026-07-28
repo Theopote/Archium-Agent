@@ -850,6 +850,27 @@ def apply_slide_element_style(
     )
 
 
+def apply_slide_element_text_runs(
+    session: Session,
+    slide_id: UUID,
+    *,
+    element_id: str,
+    runs: list[dict[str, object]],
+) -> object:
+    """Replace TextNode runs via SetTextRunsCommand."""
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    clear_visual_redo_stack(slide_id)
+    return StudioSceneEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).set_layout_element_text_runs(
+        slide_id,
+        element_id=element_id,
+        runs=runs,
+    )
+
+
 def apply_slide_element_resize(
     session: Session,
     slide_id: UUID,

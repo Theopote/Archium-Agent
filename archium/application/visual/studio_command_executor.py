@@ -37,10 +37,12 @@ from archium.domain.visual.render_scene import (
     SceneAssetReference,
     ShapeNode,
     TextNode,
+    TextRun,
     compute_group_bounds,
     compute_scene_hash,
     group_children,
     replace_text_node_content,
+    set_text_node_runs,
 )
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 from archium.domain.visual.scene_repair import SceneRepairAction, SceneRepairApplyMode
@@ -61,6 +63,7 @@ from archium.domain.visual.studio_command import (
     ScenePatchAction,
     SetNodeLockCommand,
     SetNodeVisibilityCommand,
+    SetTextRunsCommand,
     StudioCommand,
     UngroupNodesCommand,
     UpdateNodeStyleCommand,
@@ -169,6 +172,8 @@ class StudioCommandExecutor:
             return self._execute_reorder_node(scene, command, base_hash)
         if isinstance(command, UpdateNodeStyleCommand):
             return self._execute_update_node_style(scene, command, base_hash)
+        if isinstance(command, SetTextRunsCommand):
+            return self._execute_set_text_runs(scene, command, base_hash)
         if isinstance(command, GroupNodesCommand):
             return self._execute_group_nodes(scene, command, base_hash)
         if isinstance(command, UngroupNodesCommand):
@@ -1145,10 +1150,14 @@ class StudioCommandExecutor:
                 before["color"] = target.color
                 target.color = command.color
                 after["color"] = target.color
+                for run in target.runs:
+                    run.color = command.color
             if command.font_size is not None:
                 before["font_size"] = target.font_size
                 target.font_size = command.font_size
                 after["font_size"] = target.font_size
+                for run in target.runs:
+                    run.font_size = command.font_size
         elif isinstance(target, ShapeNode):
             if command.fill_color is not None or command.color is not None:
                 fill = command.fill_color or command.color
@@ -1193,6 +1202,100 @@ class StudioCommandExecutor:
             before_payload=before,
             after_payload=after,
             reason=command.reason or "update node style",
+        )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=(action,),
+        )
+
+    def _execute_set_text_runs(
+        self,
+        scene: RenderScene,
+        command: SetTextRunsCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        node = scene.node_by_id(command.node_id)
+        if node is None:
+            return _node_not_found(base_hash, command.node_id)
+        if not isinstance(node, TextNode):
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.TEXT_RUNS_NOT_TEXT",
+                        message=f"node `{command.node_id}` is not a TextNode",
+                        evidence=[command.node_id],
+                    ),
+                ),
+            )
+        if node_content_locked(node):
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.CONTENT_LOCKED",
+                        message=f"node `{command.node_id}` content is locked",
+                        evidence=[command.node_id],
+                    ),
+                ),
+                skipped_actions=(f"set_text_runs:{command.node_id}:locked",),
+            )
+
+        try:
+            parsed = [TextRun.model_validate(item) for item in command.runs]
+        except Exception as exc:  # noqa: BLE001 — surface as studio issue
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.TEXT_RUNS_INVALID",
+                        message=f"invalid text runs: {exc}",
+                        evidence=[command.node_id],
+                    ),
+                ),
+            )
+        if not any(run.text for run in parsed):
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.TEXT_RUNS_EMPTY",
+                        message="set_text_runs requires at least one non-empty run text",
+                        evidence=[command.node_id],
+                    ),
+                ),
+            )
+
+        patched = scene.model_copy(deep=True)
+        target = patched.node_by_id(command.node_id)
+        assert isinstance(target, TextNode)
+        before_payload = {
+            "text": target.text,
+            "runs": [run.model_dump(mode="json") for run in target.runs],
+        }
+        set_text_node_runs(target, parsed)
+        after_payload = {
+            "text": target.text,
+            "runs": [run.model_dump(mode="json") for run in target.runs],
+        }
+        action = build_patch_action(
+            scene,
+            base_scene_hash=base_hash,
+            command_id=command.command_id,
+            node_id=command.node_id,
+            action_type="set_text_runs",
+            property_name="runs",
+            before_value=before_payload["text"],
+            after_value=after_payload["text"],
+            before_payload=before_payload,
+            after_payload=after_payload,
+            reason=command.reason or "set text runs",
         )
         return CommandExecutionResult(
             success=True,

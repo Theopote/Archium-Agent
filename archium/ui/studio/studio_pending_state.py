@@ -41,22 +41,27 @@ def apply_pending_studio_chrome() -> None:
         st.session_state.studio_center_mode = st.session_state.pop(PENDING_CENTER_MODE)
 
 
+def open_modify_with_prompt(slide_id: UUID, prompt: str) -> None:
+    """Open the modify inspector and pre-fill the AI edit prompt."""
+    request_open_modify(slide_id=slide_id, prompt=prompt)
+
+
 def request_open_modify(*, slide_id: UUID | None = None, prompt: str | None = None) -> None:
     """Open the modify inspector. Safe: logical keys are not widget-bound."""
-    st.session_state.studio_show_inspector = True
-    st.session_state.studio_inspector_expanded = True
-    st.session_state.studio_inspector_tab = "修改"
+    st.session_state[PENDING_SHOW_INSPECTOR] = True
+    st.session_state[PENDING_INSPECTOR_EXPANDED] = True
+    st.session_state[PENDING_INSPECTOR_TAB] = "修改"
     if slide_id is not None and prompt is not None and str(prompt).strip():
         st.session_state[ai_edit_pending_key(slide_id)] = str(prompt).strip()
 
 
 def request_show_inspector(*, show: bool) -> None:
-    st.session_state.studio_show_inspector = bool(show)
+    st.session_state[PENDING_SHOW_INSPECTOR] = bool(show)
 
 
 def request_show_nav(*, show: bool) -> None:
-    st.session_state.studio_show_nav = bool(show)
+    st.session_state[PENDING_SHOW_NAV] = bool(show)
 
 
 def request_center_mode(mode: str) -> None:
-    st.session_state.studio_center_mode = mode
+    st.session_state[PENDING_CENTER_MODE] = mode

@@ -22,7 +22,7 @@ This document sequences five primitives by **visual ROI Ã— structural leverage Ã
 | Area | Today | Gap |
 |------|-------|-----|
 | `BaseRenderNode.group_id` | Field exists on every node | **A1 landed (PARTIAL):** `GroupNode` + Studio group/ungroup; export still flat siblings with `group_id` until `p:grpSp` |
-| `TextNode` | Single-style `text` + optional `paragraphs` | No per-run font/weight/color within one box |
+| `TextNode` | Single-style `text` + optional `paragraphs` + **`runs` (A2)** | Per-run font/weight/color within one box when `runs` populated; empty `runs` keeps single-style fallback |
 | Connectors | `ShapeNode` line only | No anchor-to-anchor routing (`p:cxnSp`) |
 | Gradient | `image_mask=gradient_fade` approximated as solid rect overlay in `from-plan.mjs` | No `a:gradFill` on shape/image |
 | Freeform | Circle mask via `OVAL` + image fill | No `a:custGeom` / polygon path |

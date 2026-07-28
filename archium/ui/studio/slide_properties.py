@@ -686,6 +686,110 @@ def _render_element_properties(
                 st.rerun()
             except Exception as exc:
                 st.error(format_user_error(exc))
+
+        with st.expander("混排样式（同框粗细/颜色）", expanded=False):
+            existing_runs = []
+            if scene_node is not None and getattr(scene_node, "runs", None):
+                existing_runs = list(getattr(scene_node, "runs") or [])
+            default_a = existing_runs[0].text if existing_runs else (element.text_content or "")
+            default_b = existing_runs[1].text if len(existing_runs) > 1 else ""
+            weight_a = (
+                int(existing_runs[0].font_weight)
+                if existing_runs and existing_runs[0].font_weight is not None
+                else 700
+            )
+            weight_b = (
+                int(existing_runs[1].font_weight)
+                if len(existing_runs) > 1 and existing_runs[1].font_weight is not None
+                else 400
+            )
+            color_a = (
+                existing_runs[0].color
+                if existing_runs and existing_runs[0].color
+                else current_color
+            )
+            color_b = (
+                existing_runs[1].color
+                if len(existing_runs) > 1 and existing_runs[1].color
+                else current_color
+            )
+            st.caption("V1：两段混排（例如粗体中文 + 常规英文）。保存后写入 TextNode.runs。")
+            run_a_text = st.text_input(
+                "片段 A 文字",
+                value=default_a,
+                key=f"studio_run_a_text_{slide_snapshot.slide.id}_{element.id}",
+            )
+            run_cols_a = st.columns(2)
+            with run_cols_a[0]:
+                run_a_weight = st.selectbox(
+                    "片段 A 字重",
+                    options=[400, 500, 600, 700],
+                    index=[400, 500, 600, 700].index(weight_a)
+                    if weight_a in (400, 500, 600, 700)
+                    else 3,
+                    key=f"studio_run_a_weight_{slide_snapshot.slide.id}_{element.id}",
+                )
+            with run_cols_a[1]:
+                run_a_color = st.color_picker(
+                    "片段 A 颜色",
+                    value=color_a if str(color_a).startswith("#") else "#111111",
+                    key=f"studio_run_a_color_{slide_snapshot.slide.id}_{element.id}",
+                )
+            run_b_text = st.text_input(
+                "片段 B 文字（可空）",
+                value=default_b,
+                key=f"studio_run_b_text_{slide_snapshot.slide.id}_{element.id}",
+            )
+            run_cols_b = st.columns(2)
+            with run_cols_b[0]:
+                run_b_weight = st.selectbox(
+                    "片段 B 字重",
+                    options=[400, 500, 600, 700],
+                    index=[400, 500, 600, 700].index(weight_b)
+                    if weight_b in (400, 500, 600, 700)
+                    else 0,
+                    key=f"studio_run_b_weight_{slide_snapshot.slide.id}_{element.id}",
+                )
+            with run_cols_b[1]:
+                run_b_color = st.color_picker(
+                    "片段 B 颜色",
+                    value=color_b if str(color_b).startswith("#") else "#111111",
+                    key=f"studio_run_b_color_{slide_snapshot.slide.id}_{element.id}",
+                )
+            if st.button(
+                "保存混排",
+                use_container_width=True,
+                key=f"studio_save_text_runs_{slide_snapshot.slide.id}_{element.id}",
+            ):
+                runs_payload: list[dict[str, object]] = [
+                    {
+                        "text": run_a_text,
+                        "font_weight": int(run_a_weight),
+                        "color": run_a_color,
+                    }
+                ]
+                if str(run_b_text or "").strip():
+                    runs_payload.append(
+                        {
+                            "text": run_b_text,
+                            "font_weight": int(run_b_weight),
+                            "color": run_b_color,
+                        }
+                    )
+                try:
+                    with get_session() as session:
+                        from archium.ui.studio_service import apply_slide_element_text_runs
+
+                        apply_slide_element_text_runs(
+                            session,
+                            slide_snapshot.slide.id,
+                            element_id=element.id,
+                            runs=runs_payload,
+                        )
+                    st.success("已保存混排样式。")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(format_user_error(exc))
     elif element.content_type in {LayoutContentType.IMAGE, LayoutContentType.DRAWING}:
         if element.content_ref:
             st.write(f"当前素材：`{element.content_ref}`")

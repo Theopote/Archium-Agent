@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from uuid import UUID
 
 import streamlit as st
 
 from archium.ui.studio.page_ai_suggestions import page_partner_suggestions
+from archium.ui.studio.studio_pending_state import open_modify_with_prompt
 from archium.ui.visual_service import SlideVisualSnapshot
 
 
@@ -126,12 +126,6 @@ def _page_score(slide_snapshot: SlideVisualSnapshot | None) -> int | None:
 
     intel = build_page_intelligence(slide_snapshot)
     return intel.score if intel is not None else None
-
-
-def open_modify_with_prompt(slide_id: UUID, prompt: str) -> None:
-    from archium.ui.studio.studio_pending_state import request_open_modify
-
-    request_open_modify(slide_id=slide_id, prompt=prompt)
 
 
 def render_design_assistant_panel(

@@ -104,6 +104,8 @@ class HtmlRenderer:
         )
 
     def _render_text(self, node: TextNode) -> str:
+        from archium.domain.visual.render_scene import effective_run_style
+
         size_px = max(1, int(round(node.font_size * self._dpi / 72)))
         line_px = max(1, int(round(node.line_height * self._dpi / 72)))
         align = html.escape(node.alignment)
@@ -115,18 +117,39 @@ class HtmlRenderer:
             latin=node.font_family_latin or node.font_family,
         )
         family = html.escape(stack)
-        text = html.escape(node.text)
         pad = node.padding
         padding = (
             f"padding:{self._px(pad.top)}px {self._px(pad.right)}px "
             f"{self._px(pad.bottom)}px {self._px(pad.left)}px;"
         )
+        if node.runs:
+            spans: list[str] = []
+            for run in node.runs:
+                style = effective_run_style(node, run)
+                run_size = max(1, int(round(float(style["font_size"]) * self._dpi / 72)))
+                run_weight = int(style["font_weight"])
+                run_color = html.escape(str(style["color"]))
+                run_stack = css_font_stack(
+                    primary=str(style["font_family"]),
+                    cjk=str(style["font_family_cjk"] or DEFAULT_CJK_FONT),
+                    latin=str(style["font_family_latin"] or style["font_family"]),
+                )
+                run_family = html.escape(run_stack)
+                italic = "font-style:italic;" if style["font_style"] == "italic" else ""
+                spans.append(
+                    f'<span style="font-family:{run_family};font-size:{run_size}px;'
+                    f'font-weight:{run_weight};color:{run_color};{italic}">'
+                    f"{html.escape(run.text)}</span>"
+                )
+            inner = "".join(spans)
+        else:
+            inner = html.escape(node.text)
         return (
             f'<div class="node text-node" id="{html.escape(node.id)}" '
             f'style="{self._box_style(node)}{padding}'
             f"font-family:{family};font-size:{size_px}px;"
             f"font-weight:{weight};line-height:{line_px}px;color:{color};"
-            f'text-align:{align};">{text}</div>'
+            f'text-align:{align};">{inner}</div>'
         )
 
     def _render_image(self, node: ImageNode) -> str:

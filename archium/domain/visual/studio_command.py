@@ -197,6 +197,14 @@ class UpdateNodeStyleCommand(StudioCommandBase):
     fill_color: str | None = None
 
 
+class SetTextRunsCommand(StudioCommandBase):
+    """Replace inline TextRun styling on a TextNode (mixed weight/color in one box)."""
+
+    command_type: Literal["set_text_runs"] = "set_text_runs"
+    node_id: str = Field(min_length=1)
+    runs: list[dict[str, object]] = Field(min_length=1)
+
+
 class GroupNodesCommand(StudioCommandBase):
     """Create a GroupNode from two or more existing scene nodes."""
 
@@ -229,6 +237,7 @@ StudioCommand = Annotated[
     | AlignNodesCommand
     | ReorderNodeCommand
     | UpdateNodeStyleCommand
+    | SetTextRunsCommand
     | GroupNodesCommand
     | UngroupNodesCommand,
     Field(discriminator="command_type"),
