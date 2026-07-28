@@ -17,6 +17,7 @@ from tests.benchmark.architectural_slides.fixtures import ensure_case_assets
 from tests.benchmark.architectural_slides.render_pipeline import (
     build_slide_content_bundle,
     compile_and_render_scene,
+    export_benchmark_pptx_from_scene,
 )
 
 
@@ -41,13 +42,13 @@ def test_renderer_conformance_scene_html_pptx(case_id: str, tmp_path: Path) -> N
     scene_render = compile_and_render_scene(result, case_dir)
 
     pptx_path = case_dir / "output.pptx"
-    PptxRenderer(Settings(_env_file=None)).export_pptx(
+    exported, _fallbacks = export_benchmark_pptx_from_scene(
         scene_render.scene,
-        pptx_path,
+        case_dir,
         title=result.slide.title,
     )
-    assert pptx_path.is_file()
-    assert pptx_path.stat().st_size > 500
+    assert exported is not None and exported.is_file()
+    assert exported.stat().st_size > 500
 
     report = assert_renderer_conformance(scene_render.scene, pptx_path=pptx_path)
     assert report.passed, report.issues
@@ -71,6 +72,10 @@ def test_pptx_contains_editable_text_not_flattened(tmp_path: Path) -> None:
     case_dir.mkdir()
     ensure_case_assets("case_001_site_plan", case_dir / "assets")
     build = build_slide_content_bundle(result.plan, case_dir / "assets", result.slide)
+    from archium.application.visual.asset_path_resolver import (
+        AssetPathResolveContext,
+        AssetPathResolver,
+    )
     from archium.application.visual.render_scene_compiler import RenderSceneCompiler
 
     scene = RenderSceneCompiler().compile(
@@ -80,9 +85,15 @@ def test_pptx_contains_editable_text_not_flattened(tmp_path: Path) -> None:
         content_bundle=build.bundle,
         visual_intent=result.intent,
     )
+    resolve_ctx = AssetPathResolveContext(
+        case_dir=case_dir,
+        case_id=case_dir.name,
+        assets_dir=case_dir / "assets",
+    )
+    render_scene = AssetPathResolver().resolve_scene(scene, resolve_ctx)
     pptx_path = case_dir / "output.pptx"
     PptxRenderer(Settings(_env_file=None)).export_pptx(
-        scene,
+        render_scene,
         pptx_path,
         title=result.slide.title,
     )
