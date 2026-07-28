@@ -85,6 +85,7 @@ FIELD_DOMAINS: dict[str, ConfigDomain] = {
     "llm_repair_attempts": ConfigDomain.LLM,
     "llm_timeout_seconds": ConfigDomain.LLM,
     "llm_trace_persist_enabled": ConfigDomain.LLM,
+    "llm_usage_soft_budget_tokens": ConfigDomain.LLM,
     "embedding_provider": ConfigDomain.EMBEDDING,
     "embedding_api_key": ConfigDomain.EMBEDDING,
     "embedding_base_url": ConfigDomain.EMBEDDING,

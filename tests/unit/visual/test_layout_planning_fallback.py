@@ -60,6 +60,7 @@ def _intent() -> VisualIntent:
         dominant_content_type=VisualContentType.SITE_PLAN,
         preferred_layout_families=[LayoutFamily.DRAWING_FOCUS],
         density_level=DensityLevel.BALANCED,
+        hero_asset_id=uuid4(),
     )
 
 

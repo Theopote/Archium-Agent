@@ -164,7 +164,7 @@ def test_approve_mission_triggers_reassess(monkeypatch) -> None:
     monkeypatch.setattr(
         ProjectMissionService,
         "_append_mission_approved_evolution",
-        lambda self, _mission, note="": None,
+        lambda self, _mission, note="", actor_id=None: None,
     )
 
     service = ProjectMissionService(MagicMock(), MagicMock())

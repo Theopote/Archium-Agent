@@ -54,6 +54,7 @@ Do not edit them manually.
 | `LLM_TIMEOUT_SECONDS` | `60.0` | No | LLM request timeout in seconds. |
 | `LLM_MAX_CONCURRENT_REQUESTS` | `5` | No | Maximum concurrent LLM API requests to prevent rate limiting and resource exhaustion. |
 | `LLM_TRACE_PERSIST_ENABLED` | `true` | No | Persist LLMTrace rows to the database (tokens/latency/capability only; never prompts or API keys). |
+| `LLM_USAGE_SOFT_BUDGET_TOKENS` | `500000` | No | Soft monthly-ish token budget per project for UI warnings (BILL-002). 0 disables the soft quota warning. |
 | `SLIDE_PER_PAGE_GENERATION` | `true` | No | When true, SlidePlanService invokes the LLM once per page with SlideGenerationContext instead of one batch SlidePlan call. |
 
 ## Embedding {#embedding}

@@ -24,6 +24,10 @@ _APPLICATION_COMMIT_ALLOWLIST = frozenset(
         "archium/application/context/knowledge_claim_index.py",
         "archium/application/context/nba_action_executor.py",
         "archium/application/visual/vision/visual_concept_brief_service.py",
+        "archium/application/genesis_starter_service.py",
+        "archium/application/genesis_cover_layout_service.py",
+        "archium/application/visual_idea_seed.py",
+        "archium/application/organization_service.py",
     }
 )
 

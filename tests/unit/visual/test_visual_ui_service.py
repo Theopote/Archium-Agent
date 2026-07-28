@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -155,8 +156,13 @@ def test_replan_slide_drawing_preset(
     test_settings: object,
     presentation_with_slides: tuple[Project, Presentation],
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
+    from archium.domain.asset import Asset
+    from archium.domain.enums import AssetType
     from archium.domain.visual.validation import LayoutValidationReport
+    from archium.infrastructure.database.repositories import AssetRepository
+    from archium.infrastructure.database.visual_repositories import VisualIntentRepository
 
     def _always_valid(self, layout_plan, design_system, **kwargs):  # noqa: ANN001
         return LayoutValidationReport(issues=[], score=0.95)
@@ -177,6 +183,21 @@ def test_replan_slide_drawing_preset(
     )
     snapshot = get_presentation_visual_snapshot(db_session, presentation.id)
     slide_id = snapshot.slides[0].slide.id
+    asset_path = tmp_path / "site_plan.png"
+    asset_path.write_bytes(b"png")
+    asset = AssetRepository(db_session).create(
+        Asset(
+            project_id=project.id,
+            filename="site_plan.png",
+            path=str(asset_path),
+            asset_type=AssetType.DRAWING,
+        )
+    )
+    intents = VisualIntentRepository(db_session)
+    intent = intents.get_by_slide(slide_id)
+    assert intent is not None
+    intents.save(intent.model_copy(update={"hero_asset_id": asset.id}))
+    db_session.flush()
     updated = replan_slide(
         db_session,
         slide_id=slide_id,
@@ -187,3 +208,4 @@ def test_replan_slide_drawing_preset(
     assert updated.visual_intent.density_level in set(DensityLevel)
     assert updated.layout_plan is not None
     assert updated.layout_plan.layout_family == LayoutFamily.DRAWING_FOCUS
+    assert updated.visual_intent.preferred_layout_families[0] == LayoutFamily.DRAWING_FOCUS

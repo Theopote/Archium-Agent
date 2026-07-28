@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 from archium.application.ingestion_service import ImportItemResult
+from archium.config.settings import Settings
 from archium.domain.enums import PresentationType, ProjectType
 from archium.ui.workspace_service import (
     build_presentation_request,
@@ -88,7 +89,9 @@ def test_resolve_generation_form_defaults_from_genesis_outline(db_session: Sessi
     assert "背景" in defaults.sections or "封面" in defaults.sections
 
 
-def test_import_uploaded_file_triggers_reassess(db_session: Session) -> None:
+def test_import_uploaded_file_triggers_reassess(
+    db_session: Session, test_settings: Settings
+) -> None:
     from pathlib import Path
 
     project = create_project(db_session, name="上传后刷新", project_type=ProjectType.HEALTHCARE)
@@ -112,13 +115,16 @@ def test_import_uploaded_file_triggers_reassess(db_session: Session) -> None:
             project.id,
             filename="brief.pdf",
             data=b"%PDF-1.4 fake",
+            settings=test_settings,
         )
     assert result is fake_result
     assert reassess.call_count == 1
     assert reassess.call_args.args[1] == project.id
 
 
-def test_import_uploaded_file_can_skip_reassess(db_session: Session) -> None:
+def test_import_uploaded_file_can_skip_reassess(
+    db_session: Session, test_settings: Settings
+) -> None:
     from pathlib import Path
 
     project = create_project(db_session, name="批量跳过", project_type=ProjectType.HEALTHCARE)
@@ -139,11 +145,14 @@ def test_import_uploaded_file_can_skip_reassess(db_session: Session) -> None:
             filename="a.pdf",
             data=b"%PDF",
             reassess=False,
+            settings=test_settings,
         )
     reassess.assert_not_called()
 
 
-def test_reassess_knowledge_after_upload_builds_tip(db_session: Session) -> None:
+def test_reassess_knowledge_after_upload_builds_tip(
+    db_session: Session, test_settings: Settings
+) -> None:
     from archium.application.context_intelligence_service import ContextAssessment
     from archium.domain.intent.knowledge_state import KnowledgeState
     from archium.domain.intent.next_best_action import NextBestAction, NextBestActionType
@@ -182,7 +191,9 @@ def test_reassess_knowledge_after_upload_builds_tip(db_session: Session) -> None
             return_value=MagicMock(),
         ),
     ):
-        tip = reassess_knowledge_after_upload(db_session, project.id)
+        tip = reassess_knowledge_after_upload(
+            db_session, project.id, settings=test_settings
+        )
 
     assert tip is not None
     assert "30%" in tip.summary_line  # evidence_ratio via summary_line bits
@@ -192,7 +203,9 @@ def test_reassess_knowledge_after_upload_builds_tip(db_session: Session) -> None
     assert any("推演" in label for label in tip.next_action_labels)
 
 
-def test_import_uploaded_file_survives_reassess_failure(db_session: Session) -> None:
+def test_import_uploaded_file_survives_reassess_failure(
+    db_session: Session, test_settings: Settings
+) -> None:
     from pathlib import Path
 
     project = create_project(db_session, name="上传容错", project_type=ProjectType.HEALTHCARE)
@@ -217,5 +230,6 @@ def test_import_uploaded_file_survives_reassess_failure(db_session: Session) -> 
             project.id,
             filename="site.jpg",
             data=b"fake-image",
+            settings=test_settings,
         )
     assert result.error is None

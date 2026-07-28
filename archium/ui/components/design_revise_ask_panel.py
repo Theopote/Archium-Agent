@@ -53,7 +53,6 @@ def clear_pending_revise_state(project_id: UUID | None = None) -> None:
 
         with get_session() as session:
             clear_pending_design_revise(session, project_id)
-            session.commit()
     except Exception:
         return
 
@@ -172,7 +171,6 @@ def store_pending_revise_from_selection(selection: object) -> bool:
 
         with get_session() as session:
             persist_pending_design_revise(session, project_id, payload)
-            session.commit()
     except Exception:
         pass
     return True

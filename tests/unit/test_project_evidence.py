@@ -68,7 +68,7 @@ def test_studio_and_deliver_both_fail_closed_on_unknown() -> None:
         / "deliver.py"
     ).read_text(encoding="utf-8")
     assert "_project_has_documents" not in export
-    assert "resolve_project_evidence_safe" in export
+    assert "resolve_export_verdict_safe" in export
     assert "allows_formal_export" in export
     assert "resolve_export_verdict_safe" in deliver
     flow_chrome = (
