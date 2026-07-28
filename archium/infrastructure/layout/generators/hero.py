@@ -14,6 +14,7 @@ from archium.domain.visual.enums import (
 from archium.domain.visual.layout import LayoutConstraint, LayoutElement, LayoutPlan
 from archium.infrastructure.layout.generators.base import LayoutGenerator, LayoutGeneratorContext
 from archium.infrastructure.layout.geometry import Rect, split_horizontal
+from archium.infrastructure.layout.variant_layout_tokens import compute_hero_split_text_ratio
 
 
 class HeroLayoutGenerator(LayoutGenerator):
@@ -23,6 +24,7 @@ class HeroLayoutGenerator(LayoutGenerator):
         safe = self._safe(context.design_system)
         spacing = context.design_system.spacing
         variant = context.variant
+        tokens = self._layout_tokens(context)
         elements: list[LayoutElement] = []
 
         title_h = self._title_band_height(context)
@@ -59,14 +61,15 @@ class HeroLayoutGenerator(LayoutGenerator):
                 content_type=LayoutContentType.TEXT,
                 text_content=context.content.message,
                 x=body.x + spacing.lg,
-                y=body.y + body.height * 0.55,
-                width=body.width * 0.45,
-                height=body.height * 0.35,
+                y=body.y + body.height * tokens.overlay_lead_y_ratio,
+                width=body.width * tokens.overlay_lead_width_ratio,
+                height=body.height * tokens.overlay_lead_height_ratio,
                 style_token="subtitle",
                 z_index=3,
             )
         else:
-            left, right = split_horizontal(body, left_ratio=0.42, gap=spacing.lg)
+            text_ratio = compute_hero_split_text_ratio(body, tokens, gap=spacing.lg)
+            left, right = split_horizontal(body, left_ratio=text_ratio, gap=spacing.lg)
             lead = LayoutElement(
                 id="lead",
                 role=LayoutElementRole.LEAD_STATEMENT,
@@ -75,7 +78,7 @@ class HeroLayoutGenerator(LayoutGenerator):
                 x=left.x,
                 y=left.y,
                 width=left.width,
-                height=left.height * 0.5,
+                height=left.height * tokens.lead_height_ratio,
                 style_token="body",
                 z_index=2,
             )
@@ -102,6 +105,7 @@ class HeroLayoutGenerator(LayoutGenerator):
 
         if context.content.source_text:
             page = context.design_system.page
+            source_h = safe.height * tokens.source_max_height_ratio
             elements.append(
                 LayoutElement(
                     id="source",
@@ -109,9 +113,9 @@ class HeroLayoutGenerator(LayoutGenerator):
                     content_type=LayoutContentType.TEXT,
                     text_content=context.content.source_text,
                     x=safe.x,
-                    y=page.height - page.margin_bottom - 0.25,
-                    width=safe.width * 0.7,
-                    height=0.25,
+                    y=page.height - page.margin_bottom - source_h,
+                    width=safe.width * tokens.source_width_ratio,
+                    height=source_h,
                     style_token="source",
                     z_index=2,
                 )

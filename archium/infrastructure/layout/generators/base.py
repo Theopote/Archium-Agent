@@ -18,6 +18,10 @@ from archium.domain.visual.enums import (
 from archium.domain.visual.layout import LayoutConstraint, LayoutElement, LayoutPlan
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.layout.geometry import Rect, occupied_area, safe_area, whitespace_ratio
+from archium.infrastructure.layout.variant_layout_tokens import (
+    VariantLayoutTokens,
+    resolve_layout_tokens,
+)
 
 
 @dataclass
@@ -61,6 +65,9 @@ class LayoutGenerator(ABC):
 
     def _safe(self, design_system: DesignSystem) -> Rect:
         return safe_area(design_system)
+
+    def _layout_tokens(self, context: LayoutGeneratorContext) -> VariantLayoutTokens:
+        return resolve_layout_tokens(self.family, context.variant)
 
     @staticmethod
     def _hero_content_type(context: LayoutGeneratorContext) -> LayoutContentType:
@@ -147,7 +154,7 @@ class LayoutGenerator(ABC):
             # The validator and renderer use slightly different line-height
             # rounding. Reserve a stable title rail up front so validation does
             # not expand the title later and collide with the body below.
-            min_height=0.68,
+            min_height=self._layout_tokens(context).title_band_min_height,
         )
 
 

@@ -14,6 +14,7 @@ from archium.domain.visual.enums import (
 from archium.domain.visual.layout import LayoutConstraint, LayoutElement, LayoutPlan
 from archium.infrastructure.layout.generators.base import LayoutGenerator, LayoutGeneratorContext
 from archium.infrastructure.layout.geometry import Rect, split_horizontal
+from archium.infrastructure.layout.variant_layout_tokens import footer_band_heights
 
 
 class DrawingFocusLayoutGenerator(LayoutGenerator):
@@ -23,6 +24,7 @@ class DrawingFocusLayoutGenerator(LayoutGenerator):
         safe = self._safe(context.design_system)
         spacing = context.design_system.spacing
         variant = context.variant
+        tokens = self._layout_tokens(context)
         elements: list[LayoutElement] = []
 
         title_h = self._title_band_height(context)
@@ -40,8 +42,7 @@ class DrawingFocusLayoutGenerator(LayoutGenerator):
             )
         )
 
-        caption_h = 0.28
-        source_h = 0.22
+        caption_h, source_h = footer_band_heights(safe, tokens)
         footer_reserve = caption_h + source_h + spacing.sm
         body_top = safe.y + title_h + spacing.sm
         body_h = max(1.0, safe.bottom - body_top - footer_reserve)
@@ -55,13 +56,14 @@ class DrawingFocusLayoutGenerator(LayoutGenerator):
             else []
         )
 
+        body = Rect(safe.x, body_top, safe.width, body_h)
         if variant == "full_canvas" or (not metrics and not annotations):
-            drawing = Rect(safe.x, body_top, safe.width, body_h)
+            drawing = body
             side: Rect | None = None
         else:
             drawing, side = split_horizontal(
-                Rect(safe.x, body_top, safe.width, body_h),
-                left_ratio=0.72,
+                body,
+                left_ratio=tokens.primary_visual_width_ratio,
                 gap=spacing.lg,
             )
 
@@ -138,7 +140,7 @@ class DrawingFocusLayoutGenerator(LayoutGenerator):
                 text_content=caption_text,
                 x=safe.x,
                 y=safe.bottom - footer_reserve + spacing.xs,
-                width=safe.width * 0.65,
+                width=safe.width * tokens.caption_width_ratio,
                 height=caption_h,
                 style_token="caption",
             )
@@ -152,7 +154,7 @@ class DrawingFocusLayoutGenerator(LayoutGenerator):
                 text_content=source,
                 x=safe.x,
                 y=safe.bottom - source_h,
-                width=safe.width * 0.65,
+                width=safe.width * tokens.source_width_ratio,
                 height=source_h,
                 style_token="source",
             )
