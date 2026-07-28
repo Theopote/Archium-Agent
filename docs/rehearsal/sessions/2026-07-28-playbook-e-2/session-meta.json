@@ -8,9 +8,9 @@
   "operator_is_non_developer": true,
   "llm_configured": null,
   "pptx_export_ready": true,
-  "project_id": "",
-  "project_name": "",
-  "deck_page_count": null,
+  "project_id": "28a03e0d-37b1-4ab0-844d-aea7cc63c315",
+  "project_name": "Playbook E · Architectural Benchmark",
+  "deck_page_count": 20,
   "worst_slide_id": "",
   "worst_slide_reason": "",
   "total_session_seconds": null,
@@ -29,14 +29,39 @@
     "prior_session_blocker": "2026-07-27-playbook-e-1 E3/E5 e_blocker (Studio text not in PPTX) — re-verify on human run"
   },
   "steps": {
-    "E0": { "pass": null, "waived": false, "waive_reason": "" },
-    "E1": { "pass": null, "waived": false, "waive_reason": "" },
-    "E2": { "pass": null, "waived": false, "waive_reason": "" },
-    "E3": { "pass": null, "waived": false, "waive_reason": "" },
-    "E4": { "pass": null, "waived": false, "waive_reason": "" },
-    "E5": { "pass": null, "waived": false, "waive_reason": "" }
+    "E0": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    },
+    "E1": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    },
+    "E2": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    },
+    "E3": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    },
+    "E4": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    },
+    "E5": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    }
   },
   "overall_pass": false,
   "blockers": [],
-  "notes": "Automated gate green; service-layer text→PPTX smoke passed. Awaiting human operator E0–E5."
+  "notes": "Automated gate green; service-layer text→PPTX smoke passed. Awaiting human operator E0–E5. Seeded from architectural_slides case_001–case_020.",
+  "presentation_id": "9e84eb16-98c1-4d76-9e15-2f79bb58141c"
 }

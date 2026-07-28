@@ -69,6 +69,18 @@ _REWRITE_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"将标题改(?:成|为)[：:\s]*(.+)$", "title_text"),
     (r"convert title to[:\s]+(.+)$", "title_text"),
     (r"rewrite title to[:\s]+(.+)$", "title_text"),
+    # Bound-selection shortcuts (require bound_node_id / selected object).
+    (r"^(?:请)?(?:把)?(?:它|这个|选中|当前)?(?:的)?(?:文字|标题|正文)?改(?:成|为)[：:\s]*(.+)$", "bound_text"),
+    (r"^改(?:成|为)[：:\s]*(.+)$", "bound_text"),
+)
+
+_BOUND_SHORTEN_KEYWORDS: tuple[str, ...] = (
+    "再短一点",
+    "短一点",
+    "精简一下",
+    "精简标题",
+    "标题再短",
+    "少几个字",
 )
 
 
@@ -125,6 +137,19 @@ class StudioNLCommandPlanner:
         if rewrite_plan is not None:
             return self._stamp_partial_edit_rule(rewrite_plan)
 
+        if bound_node_id and any(keyword in normalized for keyword in _BOUND_SHORTEN_KEYWORDS):
+            return self._stamp_partial_edit_rule(
+                self._overflow_plan(
+                    scene=scene,
+                    presentation_id=presentation_id,
+                    slide_id=slide_id,
+                    reason="精简选中文字",
+                    node_ids=[bound_node_id],
+                    parsed_intent=VisualEditIntent.REDUCE_TEXT,
+                    confidence=0.9,
+                )
+            )
+
         if any(keyword in normalized.lower() for keyword in _OVERFLOW_KEYWORDS):
             node_ids = [bound_node_id] if bound_node_id else None
             return self._stamp_partial_edit_rule(
@@ -151,13 +176,15 @@ class StudioNLCommandPlanner:
         if parsed is None:
             intent, params = parse_natural_language(normalized)
             if intent is None:
+                hint = (
+                    "已选中对象时，可写：「改为：新标题」或「标题再短一点」。"
+                    if bound_node_id
+                    else "可尝试：「标题改为…」「把正文改成…」「修复文字溢出」「减少文字」。"
+                )
                 return StudioCommandPlan(
                     commands=(),
                     reasons=(),
-                    unsupported_reason=(
-                        "无法识别 Scene 级修改意图。"
-                        "可尝试：「标题改为…」「把正文改成…」「修复文字溢出」「减少文字」。"
-                    ),
+                    unsupported_reason=f"无法识别 Scene 级修改意图。{hint}",
                 )
             return self._stamp_partial_edit_rule(
                 self._plan_intent(
@@ -246,7 +273,15 @@ class StudioNLCommandPlanner:
             match = re.search(pattern, lowered if kind == "title_text" else text, re.IGNORECASE)
             if not match:
                 continue
-            if kind == "title_text":
+            if kind == "bound_text":
+                if not bound_node_id:
+                    continue
+                node = scene.node_by_id(bound_node_id)
+                if not isinstance(node, TextNode):
+                    continue
+                new_text = match.group(1).strip().strip("「」\"'")
+                node_id = bound_node_id
+            elif kind == "title_text":
                 new_text = match.group(1).strip()
                 node_id = _resolve_target_node_id(scene, "title", bound_node_id=bound_node_id)
             else:

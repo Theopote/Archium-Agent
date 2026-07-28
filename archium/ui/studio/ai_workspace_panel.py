@@ -66,7 +66,7 @@ def render_ai_workspace(
     )
     text = st.text_area(
         "输入修改要求",
-        placeholder="例如：标题改为「结论：…」、放大总平面图、修复文字溢出…",
+        placeholder="例如：标题改为「结论：…」、改为：新标题、标题再短一点、修复文字溢出…",
         height=100,
         key=f"studio_ai_edit_input_{slide_id}",
     )

@@ -200,6 +200,36 @@ def test_plan_element_specific_rewrite() -> None:
     assert command.new_text == "更新后的说明"
 
 
+def test_bound_selection_rewrite_shortcut() -> None:
+    scene = _title_scene()
+    plan = StudioNLCommandPlanner().plan_text(
+        "改为：院区交通分层组织",
+        scene=scene,
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        bound_node_id="title",
+    )
+    assert len(plan.commands) == 1
+    command = plan.commands[0]
+    assert isinstance(command, RewriteTextCommand)
+    assert command.node_id == "title"
+    assert "院区交通" in command.new_text
+
+
+def test_bound_selection_shorten_keyword() -> None:
+    scene = _title_scene()
+    plan = StudioNLCommandPlanner().plan_text(
+        "标题再短一点",
+        scene=scene,
+        presentation_id=uuid4(),
+        slide_id=scene.slide_id,
+        bound_node_id="title",
+    )
+    assert len(plan.commands) == 1
+    assert isinstance(plan.commands[0], FixOverflowCommand)
+    assert plan.commands[0].node_ids == ["title"]
+
+
 def test_resolve_missing_node_raises() -> None:
     scene = _title_scene()
     with pytest.raises(ValueError):

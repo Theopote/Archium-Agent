@@ -18,15 +18,16 @@
 
 ## 选项目要求
 
-- 自动生成的汇报，**约 20 页**（非 toy case）
-- 侧栏 **制作 → 工作室** 可打开，画布有内容
-- 建议：已有真实验证项目（如清凉寺 / 医院 Demo）
+- **已预置：** `Playbook E · Architectural Benchmark`（20 页，来自 `tests/benchmark/architectural_slides` case_001–020）
+  - `project_id`: `2acb622a-e869-4899-a4cd-2e482ff29226`
+  - `presentation_id`: `58d98cb9-106f-4c30-8234-ef5cecad8347`
+- 侧栏 **切换项目** → 选上述项目 → **制作 → 工作室**
+- 重新灌入：`python scripts/seed_playbook_e_benchmark_deck.py --count 20 --session 2026-07-28-playbook-e-2`
 
-记录到 `session-meta.json`：
+记录到 `session-meta.json`（已部分预填）：
 
-- `project_id` / `project_name`
-- `deck_page_count`
-- `worst_slide_id` / `worst_slide_reason`
+- `project_id` / `project_name` / `deck_page_count` ✅
+- `worst_slide_id` / `worst_slide_reason`（操作者口述后填写）
 
 ---
 
