@@ -115,6 +115,7 @@ class LayoutContentType(StrEnum):
     SHAPE = "shape"
     GROUP = "group"
     CONNECTOR = "connector"
+    FREEFORM = "freeform"
 
 
 class OverflowPolicy(StrEnum):

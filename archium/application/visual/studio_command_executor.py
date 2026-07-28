@@ -32,6 +32,8 @@ from archium.domain.visual.render_scene import (
     ConnectorEndpoint,
     ConnectorNode,
     DrawingNode,
+    FreeformNode,
+    GradientFill,
     GroupNode,
     ImageNode,
     RenderNode,
@@ -40,19 +42,27 @@ from archium.domain.visual.render_scene import (
     ShapeNode,
     TextNode,
     TextRun,
+    bottom_fade_gradient,
     compute_group_bounds,
     compute_scene_hash,
+    freeform_preset_points,
     group_children,
+    move_freeform_to,
     refresh_connector_geometry,
     refresh_connectors_for_nodes,
+    refresh_freeform_geometry,
+    remap_freeform_points_to_bbox,
     replace_text_node_content,
+    resize_freeform_to,
     set_text_node_runs,
+    translate_freeform_points,
 )
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 from archium.domain.visual.scene_repair import SceneRepairAction, SceneRepairApplyMode
 from archium.domain.visual.studio_command import (
     AlignNodesCommand,
     ConnectNodesCommand,
+    CreateFreeformCommand,
     DeleteNodeCommand,
     DuplicateNodesCommand,
     FixOverflowCommand,
@@ -66,6 +76,7 @@ from archium.domain.visual.studio_command import (
     ResizeNodeCommand,
     RewriteTextCommand,
     ScenePatchAction,
+    SetGradientFillCommand,
     SetNodeLockCommand,
     SetNodeVisibilityCommand,
     SetTextRunsCommand,
@@ -179,8 +190,12 @@ class StudioCommandExecutor:
             return self._execute_update_node_style(scene, command, base_hash)
         if isinstance(command, SetTextRunsCommand):
             return self._execute_set_text_runs(scene, command, base_hash)
+        if isinstance(command, SetGradientFillCommand):
+            return self._execute_set_gradient_fill(scene, command, base_hash)
         if isinstance(command, ConnectNodesCommand):
             return self._execute_connect_nodes(scene, command, base_hash)
+        if isinstance(command, CreateFreeformCommand):
+            return self._execute_create_freeform(scene, command, base_hash)
         if isinstance(command, GroupNodesCommand):
             return self._execute_group_nodes(scene, command, base_hash)
         if isinstance(command, UngroupNodesCommand):
@@ -639,8 +654,11 @@ class StudioCommandExecutor:
         before_token = geometry_token(target)
         dx = command.x - target.x
         dy = command.y - target.y
-        target.x = command.x
-        target.y = command.y
+        if isinstance(target, FreeformNode):
+            move_freeform_to(target, x=command.x, y=command.y)
+        else:
+            target.x = command.x
+            target.y = command.y
         actions: list[ScenePatchAction] = [
             build_patch_action(
                 scene,
@@ -664,8 +682,11 @@ class StudioCommandExecutor:
                         lock_kind="geometry",
                     )
                 child_before = geometry_token(child)
-                child.x += dx
-                child.y += dy
+                if isinstance(child, FreeformNode):
+                    translate_freeform_points(child, dx=dx, dy=dy)
+                else:
+                    child.x += dx
+                    child.y += dy
                 actions.append(
                     build_patch_action(
                         scene,
@@ -727,8 +748,11 @@ class StudioCommandExecutor:
                     lock_kind="geometry",
                 )
             before_token = geometry_token(node)
-            node.x = move.x
-            node.y = move.y
+            if isinstance(node, FreeformNode):
+                move_freeform_to(node, x=move.x, y=move.y)
+            else:
+                node.x = move.x
+                node.y = move.y
             moved_ids.add(move.node_id)
             actions.append(
                 build_patch_action(
@@ -814,12 +838,23 @@ class StudioCommandExecutor:
                         lock_kind="geometry",
                     )
                 child_before = geometry_token(child)
-                rel_x = child.x - origin_x
-                rel_y = child.y - origin_y
-                child.x = command.x + rel_x * scale
-                child.y = command.y + rel_y * scale
-                child.width = max(child.width * scale, 0.05)
-                child.height = max(child.height * scale, 0.05)
+                if isinstance(child, FreeformNode):
+                    rel_x = child.x - origin_x
+                    rel_y = child.y - origin_y
+                    resize_freeform_to(
+                        child,
+                        x=command.x + rel_x * scale,
+                        y=command.y + rel_y * scale,
+                        width=max(child.width * scale, 0.05),
+                        height=max(child.height * scale, 0.05),
+                    )
+                else:
+                    rel_x = child.x - origin_x
+                    rel_y = child.y - origin_y
+                    child.x = command.x + rel_x * scale
+                    child.y = command.y + rel_y * scale
+                    child.width = max(child.width * scale, 0.05)
+                    child.height = max(child.height * scale, 0.05)
                 actions.append(
                     build_patch_action(
                         scene,
@@ -837,6 +872,14 @@ class StudioCommandExecutor:
             target.y = command.y
             target.width = max(old_w * scale, 0.05)
             target.height = max(old_h * scale, 0.05)
+        elif isinstance(target, FreeformNode):
+            resize_freeform_to(
+                target,
+                x=command.x,
+                y=command.y,
+                width=width,
+                height=height,
+            )
         else:
             target.x = command.x
             target.y = command.y
@@ -1035,6 +1078,11 @@ class StudioCommandExecutor:
             )
 
         before_tokens = {node.id: geometry_token(node) for node in resolved}
+        before_bboxes = {
+            node.id: (node.x, node.y, node.width, node.height)
+            for node in resolved
+            if isinstance(node, FreeformNode)
+        }
         align_reference: BaseRenderNode | _Box | None = None
         if command.reference_node_id:
             align_reference = patched.node_by_id(command.reference_node_id)
@@ -1054,6 +1102,17 @@ class StudioCommandExecutor:
 
         actions: list[ScenePatchAction] = []
         for node_id, after_token in updates.items():
+            node = patched.node_by_id(node_id)
+            if isinstance(node, FreeformNode) and node_id in before_bboxes:
+                old_x, old_y, old_w, old_h = before_bboxes[node_id]
+                remap_freeform_points_to_bbox(
+                    node,
+                    old_x=old_x,
+                    old_y=old_y,
+                    old_width=old_w,
+                    old_height=old_h,
+                )
+                after_token = geometry_token(node)
             actions.append(
                 build_patch_action(
                     scene,
@@ -1370,6 +1429,75 @@ class StudioCommandExecutor:
             applied_actions=(action,),
         )
 
+    def _execute_set_gradient_fill(
+        self,
+        scene: RenderScene,
+        command: SetGradientFillCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        node = scene.node_by_id(command.node_id)
+        if node is None:
+            return _node_not_found(base_hash, command.node_id)
+        if not isinstance(node, (ShapeNode, ImageNode)):
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.GRADIENT_UNSUPPORTED_NODE",
+                        message=f"node `{command.node_id}` does not support gradient fill",
+                        evidence=[command.node_id],
+                    ),
+                ),
+            )
+
+        next_fill: GradientFill | None = None
+        if command.bottom_fade and command.fill is None:
+            next_fill = bottom_fade_gradient()
+        elif command.fill is not None:
+            try:
+                next_fill = GradientFill.model_validate(command.fill)
+            except Exception as exc:  # noqa: BLE001
+                return CommandExecutionResult(
+                    success=False,
+                    base_scene_hash=base_hash,
+                    issues=(
+                        _issue(
+                            code="STUDIO.GRADIENT_INVALID",
+                            message=f"invalid gradient fill: {exc}",
+                            evidence=[command.node_id],
+                        ),
+                    ),
+                )
+
+        patched = scene.model_copy(deep=True)
+        target = patched.node_by_id(command.node_id)
+        assert isinstance(target, (ShapeNode, ImageNode))
+        before_payload = target.fill.model_dump(mode="json") if target.fill else None
+        target.fill = next_fill
+        if isinstance(target, ImageNode) and next_fill is not None and not target.image_mask:
+            target.image_mask = "gradient_fade"
+        after_payload = next_fill.model_dump(mode="json") if next_fill else None
+        action = build_patch_action(
+            scene,
+            base_scene_hash=base_hash,
+            command_id=command.command_id,
+            node_id=command.node_id,
+            action_type="set_gradient_fill",
+            property_name="fill",
+            before_value=str(before_payload),
+            after_value=str(after_payload),
+            before_payload=before_payload or {},
+            after_payload=after_payload or {},
+            reason=command.reason or "set gradient fill",
+        )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=(action,),
+        )
+
     def _execute_connect_nodes(
         self,
         scene: RenderScene,
@@ -1476,6 +1604,74 @@ class StudioCommandExecutor:
             after_value=connector_id,
             after_payload=connector.model_dump(mode="json"),
             reason=command.reason or "connect nodes",
+        )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=(action,),
+        )
+
+    def _execute_create_freeform(
+        self,
+        scene: RenderScene,
+        command: CreateFreeformCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        from uuid import uuid4
+
+        explicit = (command.freeform_id or "").strip()
+        freeform_id = explicit or f"ff_{uuid4().hex[:10]}"
+        if scene.node_by_id(freeform_id) is not None:
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.FREEFORM_ID_COLLISION",
+                        message=f"freeform id already exists: {freeform_id}",
+                        evidence=[freeform_id],
+                    ),
+                ),
+            )
+
+        points = freeform_preset_points(
+            command.preset,
+            x=command.x,
+            y=command.y,
+            width=command.width,
+            height=command.height,
+        )
+        patched = scene.model_copy(deep=True)
+        max_z = max((node.z_index for node in patched.nodes), default=0)
+        freeform = FreeformNode(
+            id=freeform_id,
+            x=command.x,
+            y=command.y,
+            width=command.width,
+            height=command.height,
+            z_index=max_z + 1,
+            points=points,
+            closed=command.closed,
+            fill_color=command.fill_color,
+            stroke_color=command.stroke_color,
+            stroke_width=command.stroke_width,
+            semantic_role="annotation",
+            source_layout_element_id=freeform_id,
+        )
+        refresh_freeform_geometry(freeform)
+        patched.nodes = list(patched.nodes) + [freeform]
+        action = build_patch_action(
+            scene,
+            base_scene_hash=base_hash,
+            command_id=command.command_id,
+            node_id=freeform_id,
+            action_type="insert_node",
+            property_name="nodes",
+            before_value=None,
+            after_value=freeform_id,
+            after_payload=freeform.model_dump(mode="json"),
+            reason=command.reason or f"create freeform ({command.preset})",
         )
         return CommandExecutionResult(
             success=True,
@@ -1792,7 +1988,13 @@ def _clone_render_node(
     max_y = max(page_height - height, 0.0)
     updates["x"] = min(max(float(source.x) + offset_x, 0.0), max_x)
     updates["y"] = min(max(float(source.y) + offset_y, 0.0), max_y)
-    return cloned.model_copy(update=updates)
+    cloned = cloned.model_copy(update=updates)
+    if isinstance(cloned, FreeformNode):
+        dx = float(cloned.x) - float(source.x)
+        dy = float(cloned.y) - float(source.y)
+        # model_copy kept source absolute points; shift to the new bbox origin.
+        translate_freeform_points(cloned, dx=dx, dy=dy)
+    return cloned
 
 
 def _node_not_found(base_hash: str, node_id: str) -> CommandExecutionResult:

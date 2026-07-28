@@ -1871,6 +1871,13 @@ class LLMTraceRepository:
     def create_from_trace(self, trace: LLMTrace) -> None:
         try:
             orm = mappers.llm_trace_to_orm(trace)
+            # Guard against cross-session / uncommitted projects: the FK would fail
+            # if the project is not visible in this recorder's session. Drop the
+            # project association rather than losing the entire trace.
+            if orm.project_id is not None:
+                project = self._session.get(ProjectORM, orm.project_id)
+                if project is None:
+                    orm.project_id = None
             self._session.add(orm)
             self._session.flush()
         except SQLAlchemyError as exc:

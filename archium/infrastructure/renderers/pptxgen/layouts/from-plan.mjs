@@ -14,6 +14,106 @@ import {
 import { addCitationBlock } from "../components/citation.mjs";
 
 /**
+ * Approximate a linear gradient with stacked translucent rectangles (pptxgen 3.12).
+ * @param {import('pptxgenjs').default} pres
+ * @param {object} page
+ * @param {{x:number,y:number,w:number,h:number}} rect
+ * @param {object} fill
+ * @param {number} [bandCount]
+ */
+function _applyGradientApprox(pres, page, rect, fill, bandCount = 8) {
+  if (!pres.shapes?.RECTANGLE || !fill || !Array.isArray(fill.stops) || fill.stops.length < 2) {
+    return;
+  }
+  const stops = [...fill.stops]
+    .map((stop) => ({
+      position: Math.max(0, Math.min(1, Number(stop.position) || 0)),
+      color: _stripHash(stop.color || "1A1A1A"),
+      transparency: Math.max(0, Math.min(1, Number(stop.transparency) || 0)),
+    }))
+    .sort((a, b) => a.position - b.position);
+  const angle = ((Number(fill.angle_deg) || 0) % 360 + 360) % 360;
+  const vertical = angle >= 45 && angle < 135;
+  const reverse = angle >= 135 && angle < 315;
+  const bands = Math.max(3, Math.min(bandCount, 16));
+
+  /** @param {number} t */
+  function sample(t) {
+    if (t <= stops[0].position) {
+      return stops[0];
+    }
+    if (t >= stops[stops.length - 1].position) {
+      return stops[stops.length - 1];
+    }
+    for (let i = 0; i < stops.length - 1; i += 1) {
+      const a = stops[i];
+      const b = stops[i + 1];
+      if (t >= a.position && t <= b.position) {
+        const span = Math.max(b.position - a.position, 1e-6);
+        const u = (t - a.position) / span;
+        return {
+          position: t,
+          color: u < 0.5 ? a.color : b.color,
+          transparency: a.transparency * (1 - u) + b.transparency * u,
+        };
+      }
+    }
+    return stops[stops.length - 1];
+  }
+
+  for (let i = 0; i < bands; i += 1) {
+    const t0 = i / bands;
+    const t1 = (i + 1) / bands;
+    const mid = (t0 + t1) / 2;
+    const sampleT = reverse ? 1 - mid : mid;
+    const stop = sample(sampleT);
+    const transparency = Math.round(stop.transparency * 100);
+    if (transparency >= 99) {
+      continue;
+    }
+    /** @type {Record<string, unknown>} */
+    const opts = {
+      fill: { color: stop.color },
+      line: { color: stop.color, width: 0 },
+      transparency,
+    };
+    if (vertical) {
+      opts.x = rect.x;
+      opts.y = rect.y + rect.h * t0;
+      opts.w = rect.w;
+      opts.h = Math.max(rect.h / bands, 0.01);
+    } else {
+      opts.x = rect.x + rect.w * t0;
+      opts.y = rect.y;
+      opts.w = Math.max(rect.w / bands, 0.01);
+      opts.h = rect.h;
+    }
+    page.addShape(pres.shapes.RECTANGLE, opts);
+  }
+}
+
+/**
+ * Apply fill to a shape. PptxGenJS 3.12 has no reliable a:gradFill — use band approx.
+ * @param {import('pptxgenjs').default} pres
+ * @param {object} page
+ * @param {object} shapeOpts base shape options (mutated fill)
+ * @param {object | null | undefined} fill
+ * @param {string | null | undefined} solidFallback
+ * @returns {"native"|"solid"|"approx"|"none"}
+ */
+function _assignShapeFill(pres, page, shapeOpts, fill, solidFallback) {
+  if (fill && Array.isArray(fill.stops) && fill.stops.length >= 2) {
+    // Transparent base; bands drawn after the shape.
+    shapeOpts.fill = { type: "none" };
+    return "approx";
+  }
+  if (solidFallback) {
+    shapeOpts.fill = { color: _stripHash(solidFallback) };
+    return "solid";
+  }
+  return "none";
+}
+/**
  * @param {import('pptxgenjs').default} pres
  * @param {object} tokens theme_tokens from RenderedSlideInstruction
  * @param {object | null} [structure] PresentationStructureSpec payload
@@ -116,6 +216,10 @@ function renderElement(pres, page, element, slideInstruction, deckTheme, placeho
   }
   if (contentType === "connector") {
     renderConnectorElement(pres, page, element);
+    return;
+  }
+  if (contentType === "freeform") {
+    renderFreeformElement(pres, page, element);
     return;
   }
   if (contentType === "image" || contentType === "drawing") {
@@ -484,22 +588,21 @@ function renderImageElement(pres, page, element, slideInstruction, deckTheme, pl
       }
     }
     page.addImage(opts);
-    // Soft fade / silhouette: translucent panel over the lower edge.
-    if (
-      !placeholderName &&
-      (mask === "gradient_fade" || mask === "silhouette") &&
-      pres.shapes?.RECTANGLE
-    ) {
-      const fadeH = Math.max(0.2, rect.h * 0.28);
-      page.addShape(pres.shapes.RECTANGLE, {
-        x: rect.x,
-        y: rect.y + rect.h - fadeH,
-        w: rect.w,
-        h: fadeH,
-        fill: { color: "1A1A1A" },
-        line: { color: "1A1A1A", width: 0 },
-        transparency: mask === "silhouette" ? 45 : 55,
-      });
+    // Soft fade: prefer GradientFill bands; legacy gradient_fade / silhouette fallback.
+    if (!placeholderName && pres.shapes?.RECTANGLE) {
+      if (element.fill && Array.isArray(element.fill.stops) && element.fill.stops.length >= 2) {
+        _applyGradientApprox(pres, page, rect, element.fill);
+      } else if (mask === "gradient_fade" || mask === "silhouette") {
+        _applyGradientApprox(pres, page, rect, {
+          kind: "linear",
+          angle_deg: 90,
+          stops: [
+            { position: 0, color: "1A1A1A", transparency: 1 },
+            { position: 0.55, color: "1A1A1A", transparency: 0.85 },
+            { position: 1, color: "1A1A1A", transparency: mask === "silhouette" ? 0.45 : 0.35 },
+          ],
+        });
+      }
     }
     return;
   }
@@ -571,6 +674,39 @@ function renderImageElement(pres, page, element, slideInstruction, deckTheme, pl
  * @param {object} page
  * @param {object} element
  */
+function renderFreeformElement(pres, page, element) {
+  const rawPoints = Array.isArray(element.points) ? element.points : [];
+  /** @type {{x:number,y:number}[]} */
+  const points = rawPoints
+    .map((pt) => ({ x: Number(pt?.x) || 0, y: Number(pt?.y) || 0 }))
+    .filter((pt) => Number.isFinite(pt.x) && Number.isFinite(pt.y));
+  if (points.length < 3 || !pres.shapes?.LINE) {
+    return;
+  }
+  // V1: stroked polyline ring only (not true a:custGeom). Fill is authored
+  // on FreeformNode but intentionally not faked as a bounding rect.
+  const color = _stripHash(element.stroke_color || element.fill_color || "333333");
+  const width = Math.max(Number(element.stroke_width) || 1.0, 0.5);
+  const closed = element.closed !== false;
+  const segments = closed ? points.length : points.length - 1;
+  for (let index = 0; index < segments; index += 1) {
+    const start = points[index];
+    const end = points[(index + 1) % points.length];
+    page.addShape(pres.shapes.LINE, {
+      x: start.x,
+      y: start.y,
+      w: end.x - start.x,
+      h: end.y - start.y,
+      line: { color, width },
+    });
+  }
+}
+
+/**
+ * @param {import('pptxgenjs').default} pres
+ * @param {object} page
+ * @param {object} element
+ */
 function renderConnectorElement(pres, page, element) {
   const rawPoints = Array.isArray(element.points) ? element.points : [];
   /** @type {{x:number,y:number}[]} */
@@ -632,11 +768,11 @@ function renderConnectorElement(pres, page, element) {
  */
 function renderShapeElement(pres, page, element, slideInstruction) {
   const colors = slideInstruction.theme_tokens?.colors ?? {};
-  const hasFill = Boolean(element.fill_color);
+  const hasFill = Boolean(element.fill_color) || Boolean(element.fill);
   const lineWidth = Number(element.stroke_width) || 0;
   // Stroke-only shapes (e.g. Atmosphere contour rings) must not fall back to a surface fill.
   const strokeOnly = !hasFill && lineWidth > 0;
-  const fill = strokeOnly
+  const solidFallback = strokeOnly
     ? null
     : _stripHash(
         element.fill_color || colors.surface || colors.light || "F4F6F8",
@@ -645,7 +781,9 @@ function renderShapeElement(pres, page, element, slideInstruction) {
     element.stroke_color || colors.border || colors.muted_text || "D9D5CF",
   );
   const useOval =
-    (element.image_mask === "circle" || element.shape_kind === "oval") &&
+    (element.image_mask === "circle" ||
+      element.shape_kind === "oval" ||
+      element.shape_kind === "ellipse") &&
     pres.shapes?.OVAL;
   /** @type {Record<string, unknown>} */
   const shapeOpts = {
@@ -653,7 +791,7 @@ function renderShapeElement(pres, page, element, slideInstruction) {
     y: Number(element.y) || 0,
     w: Number(element.w) || 1,
     h: Number(element.h) || 0.3,
-    fill: strokeOnly ? { type: "none" } : { color: fill },
+    fill: strokeOnly ? { type: "none" } : { color: solidFallback || "F4F6F8" },
     line: {
       color: lineColor,
       width: lineWidth > 0 ? lineWidth : 0,
@@ -662,7 +800,19 @@ function renderShapeElement(pres, page, element, slideInstruction) {
   if (element.opacity != null && Number(element.opacity) < 1) {
     shapeOpts.transparency = Math.round((1 - Number(element.opacity)) * 100);
   }
+  let fillMode = "solid";
+  if (!strokeOnly && element.fill) {
+    fillMode = _assignShapeFill(pres, page, shapeOpts, element.fill, solidFallback);
+  }
   page.addShape(useOval ? pres.shapes.OVAL : pres.shapes.RECTANGLE, shapeOpts);
+  if (fillMode === "approx" && element.fill) {
+    _applyGradientApprox(pres, page, {
+      x: Number(element.x) || 0,
+      y: Number(element.y) || 0,
+      w: Number(element.w) || 1,
+      h: Number(element.h) || 0.3,
+    }, element.fill);
+  }
 }
 
 /**

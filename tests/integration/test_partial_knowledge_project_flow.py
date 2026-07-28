@@ -45,6 +45,10 @@ from archium.infrastructure.llm.context_intelligence_schemas import (
     ContextAssessmentDraft,
     NextBestActionDraft,
 )
+from archium.infrastructure.llm.design_critique_schemas import (
+    DesignCritiqueDraft,
+    DesignCritiqueItemDraft,
+)
 from archium.infrastructure.llm.idea_seed_schemas import IdeaSeedDraft
 from archium.infrastructure.llm.mission_schemas import (
     DesignIntentDraft,
@@ -243,6 +247,7 @@ def test_partial_knowledge_exploration_to_mission_with_structured_directions(
     )
 
     explore_llm = MagicMock()
+
     def _ks() -> ContextAssessmentDraft:
         return ContextAssessmentDraft(
             completeness_score=0.35,
@@ -313,6 +318,23 @@ def test_partial_knowledge_exploration_to_mission_with_structured_directions(
                     risks=["拆迁范围未定"],
                 ),
             ]
+        ),
+        DesignCritiqueDraft(
+            verdict="proceed",
+            summary="方向可行，资料有限但策略清晰",
+            strengths=[
+                DesignCritiqueItemDraft(
+                    text="最小干预策略符合老院区改造常识", severity="strength"
+                ),
+            ],
+            weaknesses=[
+                DesignCritiqueItemDraft(text="功能分区尚未明确", severity="warning"),
+            ],
+            missing_evidence=[
+                DesignCritiqueItemDraft(text="结构鉴定与市政退线", severity="caution"),
+            ],
+            alternative_directions=[],
+            form_only_risk=False,
         ),
         _ks(),
         MissionGenerationDraft(

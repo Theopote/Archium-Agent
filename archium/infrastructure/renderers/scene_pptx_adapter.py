@@ -18,6 +18,7 @@ from archium.domain.visual.render_scene import (
     ChartNode,
     ConnectorNode,
     DrawingNode,
+    FreeformNode,
     GroupNode,
     ImageNode,
     RenderScene,
@@ -167,6 +168,8 @@ class RenderScenePptxAdapter:
             instruction = self._shape_instruction(node)
         elif isinstance(node, ConnectorNode):
             instruction = self._connector_instruction(node, scene)
+        elif isinstance(node, FreeformNode):
+            instruction = self._freeform_instruction(node)
         elif isinstance(node, GroupNode):
             instruction = self._group_instruction(node)
         elif isinstance(node, ChartNode):
@@ -278,6 +281,11 @@ class RenderScenePptxAdapter:
         return instruction
 
     def _image_instruction(self, node: ImageNode) -> dict[str, Any]:
+        from archium.domain.visual.render_scene import (
+            bottom_fade_gradient,
+            gradient_fill_to_payload,
+        )
+
         instruction: dict[str, Any] = {
             "id": node.id,
             "role": node.semantic_role or "supporting_visual",
@@ -289,6 +297,13 @@ class RenderScenePptxAdapter:
             "z_index": node.z_index,
             "fit_mode": node.fit_mode,
         }
+        if node.image_mask:
+            instruction["image_mask"] = node.image_mask
+        fill = node.fill
+        if fill is None and (node.image_mask or "") == "gradient_fade":
+            fill = bottom_fade_gradient()
+        if fill is not None:
+            instruction["fill"] = gradient_fill_to_payload(fill)
         path = _filesystem_export_path(
             node.resolved_path, node.asset_path, node.storage_uri
         )
@@ -329,6 +344,8 @@ class RenderScenePptxAdapter:
         return instruction
 
     def _shape_instruction(self, node: ShapeNode) -> dict[str, Any]:
+        from archium.domain.visual.render_scene import gradient_fill_to_payload
+
         instruction: dict[str, Any] = {
             "id": node.id,
             "role": node.semantic_role or "decoration",
@@ -338,9 +355,12 @@ class RenderScenePptxAdapter:
             "w": node.width,
             "h": node.height,
             "z_index": node.z_index,
+            "shape_kind": node.shape_kind,
         }
         if node.fill_color:
             instruction["fill_color"] = node.fill_color
+        if node.fill is not None:
+            instruction["fill"] = gradient_fill_to_payload(node.fill)
         if node.stroke_color:
             instruction["stroke_color"] = node.stroke_color
         if node.stroke_width:
@@ -375,6 +395,26 @@ class RenderScenePptxAdapter:
             "end_node_id": node.end.node_id,
             "points": [{"x": x, "y": y} for x, y in points],
         }
+
+    def _freeform_instruction(self, node: FreeformNode) -> dict[str, Any]:
+        instruction: dict[str, Any] = {
+            "id": node.id,
+            "role": node.semantic_role or "annotation",
+            "content_type": "freeform",
+            "x": node.x,
+            "y": node.y,
+            "w": node.width,
+            "h": node.height,
+            "z_index": node.z_index,
+            "closed": node.closed,
+            "points": [{"x": point.x, "y": point.y} for point in node.points],
+            "stroke_width": node.stroke_width,
+        }
+        if node.fill_color:
+            instruction["fill_color"] = node.fill_color.lstrip("#")
+        if node.stroke_color:
+            instruction["stroke_color"] = node.stroke_color.lstrip("#")
+        return instruction
 
     def _group_instruction(self, node: GroupNode) -> dict[str, Any]:
         return {

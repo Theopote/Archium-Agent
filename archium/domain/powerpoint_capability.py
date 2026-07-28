@@ -19,11 +19,13 @@ from archium.domain.visual.render_scene import (
     BaseRenderNode,
     ChartNode,
     ConnectorNode,
+    FreeformNode,
     GroupNode,
     ImageNode,
     ShapeNode,
     TableNode,
     TextNode,
+    is_polygon_convex,
 )
 
 
@@ -107,8 +109,9 @@ RENDER_SCENE_V1_CAPABILITIES: dict[str, PowerPointCapabilityMapping] = {
         fidelity=PowerPointFidelity.NATIVE_NORMALIZED,
         limitations=[
             "V1 supports rectangle, ellipse, line, and card only.",
-            "No connector, preset geometry library, freeform path, "
-            "gradient, pattern, glow, or full effect model.",
+            "Connector / freeform / gradient live on dedicated node or fill "
+            "models; no preset geometry library, pattern, glow, or full "
+            "effect model on ShapeNode.",
         ],
         validation_rules=["node_identity_preserved", "geometry_within_tolerance"],
     ),
@@ -175,6 +178,17 @@ RENDER_SCENE_V1_CAPABILITIES: dict[str, PowerPointCapabilityMapping] = {
             "Curve routing falls back to straight.",
         ],
         validation_rules=["node_identity_preserved", "connector_endpoints_resolved"],
+    ),
+    "freeform": PowerPointCapabilityMapping(
+        scene_node_type="freeform",
+        pptx_object_type="a:custGeom (approx line ring)",
+        fidelity=PowerPointFidelity.APPROXIMATE,
+        limitations=[
+            "V1 exports polygon outline as PptxGenJS line segments.",
+            "Fill is authored but not a single native freeform fill until custGeom lands.",
+            "Concave polygons remain APPROXIMATE.",
+        ],
+        validation_rules=["node_identity_preserved", "freeform_points_valid"],
     ),
 }
 
@@ -258,8 +272,12 @@ POWERPOINT_NATIVE_DEPTH_INVENTORY: tuple[PowerPointDepthEntry, ...] = (
     PowerPointDepthEntry(
         id="freeform_path",
         label="Freeform Path",
-        status=PowerPointDepthStatus.NOT_IMPLEMENTED,
-        pptx_object_hint="a:custGeom / path",
+        status=PowerPointDepthStatus.PARTIAL,
+        pptx_object_hint="a:custGeom / FreeformNode",
+        notes=(
+            "FreeformNode polygon + Studio presets; PPTX stroked line ring "
+            "(APPROXIMATE) until native custGeom."
+        ),
     ),
     PowerPointDepthEntry(
         id="group",
@@ -274,8 +292,12 @@ POWERPOINT_NATIVE_DEPTH_INVENTORY: tuple[PowerPointDepthEntry, ...] = (
     PowerPointDepthEntry(
         id="gradient_fill",
         label="Gradient fill",
-        status=PowerPointDepthStatus.NOT_IMPLEMENTED,
-        pptx_object_hint="a:gradFill",
+        status=PowerPointDepthStatus.PARTIAL,
+        pptx_object_hint="a:gradFill (approx bands)",
+        notes=(
+            "GradientFill on Shape/Image; PptxGenJS 3.12 exports layered "
+            "translucent rect bands (APPROXIMATE) until native gradFill."
+        ),
     ),
     PowerPointDepthEntry(
         id="pattern_fill",
@@ -341,6 +363,12 @@ def capability_for_scene_node(
         limitations.append("V1 PPTX instructions do not preserve node rotation or opacity.")
 
     if isinstance(node, ShapeNode):
+        if node.fill is not None:
+            fidelity = PowerPointFidelity.APPROXIMATE
+            limitations.append(
+                "GradientFill exports as layered translucent rect bands "
+                "(PptxGenJS 3.12 has no reliable a:gradFill)."
+            )
         if node.shape_kind == "rectangle" and node.corner_radius == 0 and fidelity != PowerPointFidelity.APPROXIMATE:
             fidelity = PowerPointFidelity.NATIVE_STABLE
         elif node.shape_kind != "rectangle" or node.corner_radius > 0:
@@ -405,6 +433,16 @@ def capability_for_scene_node(
             limitations.append("Curve routing falls back to straight line export.")
         pptx_object_type = "p:sp (line)"
 
+    if isinstance(node, FreeformNode):
+        fidelity = PowerPointFidelity.APPROXIMATE
+        pptx_object_type = "p:sp (line ring)"
+        if node.fill_color:
+            limitations.append(
+                "Freeform fill is authored but V1 PPTX only strokes the outline."
+            )
+        if not is_polygon_convex(node.points):
+            limitations.append("Concave freeform polygons are APPROXIMATE in V1.")
+
     return cast(
         PowerPointCapabilityMapping,
         baseline.model_copy(
@@ -436,6 +474,10 @@ def assess_scene_node(
             features.append("shadow")
         if node.border:
             features.append("border")
+        if node.fill is not None:
+            features.append(f"gradient_stops:{len(node.fill.stops)}")
+    if isinstance(node, ShapeNode) and node.fill is not None:
+        features.append(f"gradient_stops:{len(node.fill.stops)}")
     if isinstance(node, ChartNode) and chart_export_mode:
         features.append(f"chart_export_mode:{chart_export_mode}")
     if isinstance(node, GroupNode):
@@ -450,6 +492,12 @@ def assess_scene_node(
             features.append("arrow_end")
         if node.arrow_start:
             features.append("arrow_start")
+    if isinstance(node, FreeformNode):
+        features.append(f"points:{len(node.points)}")
+        if node.closed:
+            features.append("closed")
+        if is_polygon_convex(node.points):
+            features.append("convex")
     return PowerPointNodeAssessment(
         node_id=node.id,
         node_type=node.node_type,

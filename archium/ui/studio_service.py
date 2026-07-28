@@ -871,6 +871,29 @@ def apply_slide_element_text_runs(
     )
 
 
+def apply_slide_element_gradient_fill(
+    session: Session,
+    slide_id: UUID,
+    *,
+    element_id: str,
+    fill: dict[str, object] | None = None,
+    bottom_fade: bool = False,
+) -> object:
+    """Set GradientFill on a shape/image via SetGradientFillCommand."""
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    clear_visual_redo_stack(slide_id)
+    return StudioSceneEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).set_layout_element_gradient_fill(
+        slide_id,
+        element_id=element_id,
+        fill=fill,
+        bottom_fade=bottom_fade,
+    )
+
+
 def apply_slide_element_resize(
     session: Session,
     slide_id: UUID,
@@ -991,6 +1014,33 @@ def apply_slide_element_connect(
         start_element_id=start_element_id,
         end_element_id=end_element_id,
         routing=routing,
+    )
+
+
+def apply_slide_create_freeform(
+    session: Session,
+    slide_id: UUID,
+    *,
+    preset: str = "triangle",
+    x: float = 3.0,
+    y: float = 1.5,
+    width: float = 3.0,
+    height: float = 2.5,
+) -> object:
+    """Create a FreeformNode analysis zone on the slide."""
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    clear_visual_redo_stack(slide_id)
+    return StudioSceneEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).create_freeform_element(
+        slide_id,
+        preset=preset,
+        x=x,
+        y=y,
+        width=width,
+        height=height,
     )
 
 

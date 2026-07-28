@@ -26,6 +26,7 @@ from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.studio_command import (
     AlignNodesCommand,
     ConnectNodesCommand,
+    CreateFreeformCommand,
     DeleteNodeCommand,
     DuplicateNodesCommand,
     GroupNodesCommand,
@@ -39,6 +40,7 @@ from archium.domain.visual.studio_command import (
     ResizeNodeCommand,
     RewriteTextCommand,
     ScenePatchAction,
+    SetGradientFillCommand,
     SetNodeLockCommand,
     SetNodeVisibilityCommand,
     SetTextRunsCommand,
@@ -321,6 +323,34 @@ class StudioSceneEditService:
         )
         return self.apply_command(slide.id, command)
 
+    def create_freeform_element(
+        self,
+        slide_id: UUID,
+        *,
+        preset: str = "triangle",
+        x: float = 3.0,
+        y: float = 1.5,
+        width: float = 3.0,
+        height: float = 2.5,
+        fill_color: str | None = "#E8F0FE",
+        stroke_color: str | None = "#1A73E8",
+    ) -> SceneEditResult:
+        """Create a FreeformNode analysis-zone polygon on the slide."""
+        slide = self._require_slide(slide_id)
+        command = CreateFreeformCommand(
+            presentation_id=slide.presentation_id,
+            slide_id=slide.id,
+            preset=preset,  # type: ignore[arg-type]
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            fill_color=fill_color,
+            stroke_color=stroke_color,
+            reason="create freeform",
+        )
+        return self.apply_command(slide.id, command)
+
     def ungroup_layout_element(
         self,
         slide_id: UUID,
@@ -428,6 +458,28 @@ class StudioSceneEditService:
             node_id=node_id,
             runs=list(runs),
             reason="set text runs",
+        )
+        return self.apply_command(slide.id, command)
+
+    def set_layout_element_gradient_fill(
+        self,
+        slide_id: UUID,
+        *,
+        element_id: str,
+        fill: dict[str, object] | None = None,
+        bottom_fade: bool = False,
+    ) -> SceneEditResult:
+        """Set or clear GradientFill on a shape/image element."""
+        node_id = self._resolve_node_id(slide_id, element_id)
+        slide = self._require_slide(slide_id)
+        command = SetGradientFillCommand(
+            presentation_id=slide.presentation_id,
+            slide_id=slide.id,
+            target_node_ids=[node_id],
+            node_id=node_id,
+            fill=fill,
+            bottom_fade=bottom_fade,
+            reason="set gradient fill",
         )
         return self.apply_command(slide.id, command)
 
@@ -688,6 +740,7 @@ def _layout_element_from_scene_node(node: object, element_id: str) -> LayoutElem
         ChartNode,
         ConnectorNode,
         DrawingNode,
+        FreeformNode,
         GroupNode,
         ImageNode,
         ShapeNode,
@@ -737,6 +790,10 @@ def _layout_element_from_scene_node(node: object, element_id: str) -> LayoutElem
             role = LayoutElementRole.DECORATION
     elif isinstance(node, ConnectorNode):
         content_type = LayoutContentType.CONNECTOR
+        if not semantic:
+            role = LayoutElementRole.ANNOTATION
+    elif isinstance(node, FreeformNode):
+        content_type = LayoutContentType.FREEFORM
         if not semantic:
             role = LayoutElementRole.ANNOTATION
 

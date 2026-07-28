@@ -205,6 +205,17 @@ class SetTextRunsCommand(StudioCommandBase):
     runs: list[dict[str, object]] = Field(min_length=1)
 
 
+class SetGradientFillCommand(StudioCommandBase):
+    """Set or clear GradientFill on a ShapeNode / ImageNode."""
+
+    command_type: Literal["set_gradient_fill"] = "set_gradient_fill"
+    node_id: str = Field(min_length=1)
+    # None / empty clears fill. Otherwise GradientFill payload.
+    fill: dict[str, object] | None = None
+    # Convenience: apply bottom_fade_gradient() when True and fill is None.
+    bottom_fade: bool = False
+
+
 class ConnectNodesCommand(StudioCommandBase):
     """Create a ConnectorNode between two scene nodes."""
 
@@ -221,6 +232,23 @@ class ConnectNodesCommand(StudioCommandBase):
     label: str = ""
     # Optional deterministic id (tests); otherwise executor allocates ``cxn_{hex}``.
     connector_id: str = ""
+
+
+class CreateFreeformCommand(StudioCommandBase):
+    """Create a FreeformNode polygon (analysis zone / silhouette V1)."""
+
+    command_type: Literal["create_freeform"] = "create_freeform"
+    preset: Literal["triangle", "diamond", "rect_zone"] = "triangle"
+    x: float = Field(ge=0)
+    y: float = Field(ge=0)
+    width: float = Field(gt=0)
+    height: float = Field(gt=0)
+    fill_color: str | None = "#E8F0FE"
+    stroke_color: str | None = "#1A73E8"
+    stroke_width: float = Field(default=1.5, ge=0)
+    closed: bool = True
+    # Optional deterministic id (tests); otherwise executor allocates ``ff_{hex}``.
+    freeform_id: str = ""
 
 
 class GroupNodesCommand(StudioCommandBase):
@@ -256,7 +284,9 @@ StudioCommand = Annotated[
     | ReorderNodeCommand
     | UpdateNodeStyleCommand
     | SetTextRunsCommand
+    | SetGradientFillCommand
     | ConnectNodesCommand
+    | CreateFreeformCommand
     | GroupNodesCommand
     | UngroupNodesCommand,
     Field(discriminator="command_type"),

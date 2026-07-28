@@ -62,11 +62,13 @@ Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolve
 | RenderScene V1 最小节点闭环（Text / Image / Drawing / Shape） | **Done** (Phase 0–2 requirement) |
 | TextNode 同框混排（`runs` 粗细/颜色） | **Partial** — domain + PPTX array export + Studio 两段混排编辑；非完整富文本工具栏 |
 | ChartNode / TableNode + dual export mode | **Partial** — nodes + `ChartExportMode` exist; not full chart/table effect depth |
-| 完整 RenderScene / Presenton 式全节点模型 | **Not done** — Group/Connector V1 partial; no ContainerNode / Freeform |
+| 完整 RenderScene / Presenton 式全节点模型 | **Not done** — Group/Connector/Freeform V1 partial; no ContainerNode |
 | 深度原生 PowerPoint / ppt-master 级对象模型 | **Not done** — capability *map* exists; most depth inventory rows are empty |
-| Connector / Preset Shape / Freeform / Gradient / Pattern / Glow / Transition | **Not implemented** except Connector **Partial** (see inventory) |
+| Connector / Preset Shape / Freeform / Gradient / Pattern / Glow / Transition | **Partial** for Connector / Freeform / Gradient; Preset / Pattern / Glow / Transition **Not implemented** |
 | GroupNode（组合 / 整体拖动 / 均匀缩放） | **Partial** — domain + Studio group/ungroup; PPTX still flat siblings (`group_id`) until `p:grpSp` |
 | ConnectorNode（分析连接线） | **Partial** — domain + Studio connect + move refresh; PPTX line/elbow approx until `p:cxnSp` |
+| GradientFill（形状/图片渐变） | **Partial** — domain + Studio 两色/底部渐隐；PPTX 分段半透明条近似（非真 `a:gradFill`） |
+| FreeformNode（分析区多边形） | **Partial** — domain + Studio presets；PPTX 描边折线环近似（非真 `a:custGeom`）；填色已建模但 V1 不导出为单填充体 |
 | P0 Closure Cardinality (`one_to_one` / `one_to_many` / `many_to_one`) | **Done** — bake charts/tables plan multi-emissions; not treated as duplicate errors |
 | P0 Workflow Route dispatch + preservation | **Partial** — `execute_fill_native_template` + router wired; FILL fingerprints are template-derived (not in-place OOXML yet) |
 | P0 Capability Contract → export / manifest | **Done** — pre-export gate + closure + object-type → `DeckExportManifest` |

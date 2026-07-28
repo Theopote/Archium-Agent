@@ -9,7 +9,7 @@
 
 ## 0. Why this plan exists
 
-RenderScene V1 closes the minimal loop (`Text` / `Image` / `Drawing` / `Shape`). Chart/Table are partial. Group, Connector, Gradient, Freeform, Pattern, Glow, and Transition are **not implemented**.
+RenderScene V1 closes the minimal loop (`Text` / `Image` / `Drawing` / `Shape`). Chart/Table are partial. Group, Connector, Gradient, Freeform are **PARTIAL** V1; Pattern, Glow, and Transition remain **not implemented**.
 
 That gap limits visual polish (nested components, mixed-type text, analysis diagrams, soft fades, silhouettes) but **does not justify** a one-shot “implement all of PowerPoint” effort.
 
@@ -24,8 +24,8 @@ This document sequences five primitives by **visual ROI × structural leverage �
 | `BaseRenderNode.group_id` | Field exists on every node | **A1 landed (PARTIAL):** `GroupNode` + Studio group/ungroup; export still flat siblings with `group_id` until `p:grpSp` |
 | `TextNode` | Single-style `text` + optional `paragraphs` + **`runs` (A2)** | Per-run font/weight/color within one box when `runs` populated; empty `runs` keeps single-style fallback |
 | Connectors | `ShapeNode` line only | **A3 landed (PARTIAL):** `ConnectorNode` + Studio connect; PPTX line/elbow arrows (approx until `p:cxnSp`) |
-| Gradient | `image_mask=gradient_fade` approximated as solid rect overlay in `from-plan.mjs` | No `a:gradFill` on shape/image |
-| Freeform | Circle mask via `OVAL` + image fill | No `a:custGeom` / polygon path |
+| Gradient | `image_mask=gradient_fade` approximated as solid rect overlay in `from-plan.mjs` | **B1 landed (PARTIAL):** `GradientFill` on Shape/Image; export uses translucent band approx (pptxgen 3.12) |
+| Freeform | Circle mask via `OVAL` + image fill | **B2 landed (PARTIAL):** `FreeformNode` + Studio presets; PPTX stroked line ring (approx until `a:custGeom`) |
 | Export path | `RenderScene` → layout instructions → `render-plan.mjs` / PptxGenJS | New nodes must thread domain → adapter → JS renderer → closure manifest |
 
 **Deferred (out of this plan):** Pattern fill, Glow, Shadow fidelity, Slide Transition, Preset Shape library, full Chart/Table styling depth.
@@ -295,9 +295,9 @@ class FreeformNode(BaseRenderNode):
 
 **Minimal acceptance:**
 
-- [ ] Create triangular analysis zone overlay
-- [ ] Use as image mask on one slide
-- [ ] Export; shape editable in PowerPoint (not flattened image)
+- [x] Create triangular analysis zone overlay (Studio preset + CreateFreeformCommand)
+- [ ] Use as image mask on one slide (deferred — silhouette clip migration)
+- [~] Export; outline editable as line segments in PowerPoint (not flattened image; not single custGeom)
 
 **Capability inventory:** `freeform_path` → `PARTIAL` (polygon only in V1).
 

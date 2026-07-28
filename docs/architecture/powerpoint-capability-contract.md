@@ -82,9 +82,9 @@ Executable source: `POWERPOINT_NATIVE_DEPTH_INVENTORY` in
 | Speaker Notes | Implemented |
 | Connector | **Partial** (ConnectorNode + line/elbow export; not true cxnSp) |
 | Preset Shape library | **Not implemented** |
-| Freeform Path | **Not implemented** |
+| Freeform Path | **Partial** (FreeformNode + line-ring export; not true custGeom) |
 | Group | **Partial** (GroupNode + Studio; PPTX flat until grpSp) |
-| Gradient fill | **Not implemented** |
+| Gradient fill | **Partial** (GradientFill + band approx; not true a:gradFill) |
 | Pattern fill | **Not implemented** |
 | Shadow effect | **Not implemented** |
 | Glow effect | **Not implemented** |

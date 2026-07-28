@@ -18,8 +18,6 @@ from archium.domain.powerpoint_capability import (
 def test_depth_inventory_marks_core_gaps_not_implemented() -> None:
     for construct_id in (
         "preset_shape",
-        "freeform_path",
-        "gradient_fill",
         "pattern_fill",
         "shadow_effect",
         "glow_effect",
@@ -29,13 +27,15 @@ def test_depth_inventory_marks_core_gaps_not_implemented() -> None:
         assert depth_entry(construct_id).status is PowerPointDepthStatus.NOT_IMPLEMENTED
 
 
-def test_depth_inventory_marks_partial_chart_table_master_group_connector() -> None:
+def test_depth_inventory_marks_partial_chart_table_master_group_connector_gradient() -> None:
     assert depth_entry("native_chart").status is PowerPointDepthStatus.PARTIAL
     assert depth_entry("native_table").status is PowerPointDepthStatus.PARTIAL
     assert depth_entry("master_layout").status is PowerPointDepthStatus.PARTIAL
     assert depth_entry("basic_shape").status is PowerPointDepthStatus.PARTIAL
     assert depth_entry("group").status is PowerPointDepthStatus.PARTIAL
     assert depth_entry("connector").status is PowerPointDepthStatus.PARTIAL
+    assert depth_entry("gradient_fill").status is PowerPointDepthStatus.PARTIAL
+    assert depth_entry("freeform_path").status is PowerPointDepthStatus.PARTIAL
 
 
 def test_native_depth_is_currently_shallow() -> None:

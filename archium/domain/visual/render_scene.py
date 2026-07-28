@@ -51,6 +51,22 @@ class ShadowStyle(DomainModel):
     blur: float = 4
 
 
+class GradientStop(DomainModel):
+    """One stop on a linear/radial fill (position 0–1; transparency 0=opaque)."""
+
+    position: float = Field(ge=0, le=1)
+    color: str
+    transparency: float = Field(default=0.0, ge=0, le=1)
+
+
+class GradientFill(DomainModel):
+    """Shape/image fill gradient (V1 export may approximate via layered rects)."""
+
+    kind: Literal["linear", "radial"] = "linear"
+    angle_deg: float = 0  # linear only; 0 = left→right, 90 = top→bottom
+    stops: list[GradientStop] = Field(min_length=2)
+
+
 class TextParagraph(DomainModel):
     text: str
     alignment: str = "left"
@@ -280,6 +296,9 @@ class ImageNode(BaseRenderNode):
     # Architectural icon pack: token-bound stroke for theme re-resolution.
     icon_stroke_color: str | None = None
     icon_stroke_token: str = ""
+    # Optional overlay / fade gradient (e.g. hero bottom fade). Does not replace the image.
+    fill: GradientFill | None = None
+    image_mask: str | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -362,6 +381,8 @@ class ShapeNode(BaseRenderNode):
     node_type: Literal["shape"] = "shape"
     shape_kind: Literal["rectangle", "ellipse", "line", "card"] = "rectangle"
     fill_color: str | None = None
+    # When set, preferred over solid fill_color for export.
+    fill: GradientFill | None = None
     stroke_color: str | None = None
     stroke_width: float = Field(default=0, ge=0)
     corner_radius: float = Field(default=0, ge=0)
@@ -396,6 +417,22 @@ class ConnectorNode(BaseRenderNode):
     arrow_start: bool = False
     arrow_end: bool = True
     label: str = ""
+
+
+class FreeformNode(BaseRenderNode):
+    """Polygon / analysis zone (V1: absolute page coordinates).
+
+    PPTX export uses stroked line segments (APPROXIMATE). Native ``a:custGeom``
+    is deferred until the renderer supports it. Fill is authored but may not
+    survive as a single editable fill in V1.
+    """
+
+    node_type: Literal["freeform"] = "freeform"
+    points: list[Point] = Field(min_length=3)
+    closed: bool = True
+    fill_color: str | None = None
+    stroke_color: str | None = "#333333"
+    stroke_width: float = Field(default=1.0, ge=0)
 
 
 MAX_GROUP_DEPTH = 4
@@ -454,6 +491,7 @@ RenderNode = Annotated[
     | DrawingNode
     | ShapeNode
     | ConnectorNode
+    | FreeformNode
     | GroupNode
     | ChartNode
     | TableNode,
@@ -506,6 +544,7 @@ class RenderScene(IdentifiedModel, VersionedModel, TimestampedModel):
             raise ValueError("duplicate render node IDs are not allowed")
         _validate_group_structure(self.nodes)
         _validate_connector_structure(self.nodes)
+        _validate_freeform_structure(self.nodes)
         return self
 
     def sorted_nodes(self) -> list[RenderNode]:
@@ -738,3 +777,198 @@ def compute_scene_hash(scene: RenderScene) -> str:
     import hashlib
 
     return hashlib.sha256(scene.scene_hash_input().encode("utf-8")).hexdigest()
+
+
+def bottom_fade_gradient(
+    *,
+    color: str = "#1A1A1A",
+    opaque_from: float = 0.55,
+) -> GradientFill:
+    """Common hero-image bottom fade (transparent → opaque downward)."""
+    start = max(0.0, min(opaque_from, 0.95))
+    return GradientFill(
+        kind="linear",
+        angle_deg=90,
+        stops=[
+            GradientStop(position=0.0, color=color, transparency=1.0),
+            GradientStop(position=start, color=color, transparency=0.85),
+            GradientStop(position=1.0, color=color, transparency=0.35),
+        ],
+    )
+
+
+def gradient_fill_to_payload(fill: GradientFill) -> dict[str, object]:
+    """Serialize GradientFill for PPTX / preview instructions."""
+    return {
+        "kind": fill.kind,
+        "angle_deg": fill.angle_deg,
+        "stops": [
+            {
+                "position": stop.position,
+                "color": stop.color.lstrip("#"),
+                "transparency": stop.transparency,
+            }
+            for stop in fill.stops
+        ],
+    }
+
+
+def _validate_freeform_structure(nodes: list[RenderNode]) -> None:
+    """Fail closed on freeform polygons with too few points."""
+    for node in nodes:
+        if not isinstance(node, FreeformNode):
+            continue
+        if len(node.points) < 3:
+            raise ValueError(f"freeform `{node.id}` requires at least 3 points")
+
+
+def compute_freeform_bounds(points: list[Point]) -> tuple[float, float, float, float]:
+    """Return (x, y, width, height) for absolute polygon points."""
+    if not points:
+        raise ValueError("cannot compute bounds for empty point list")
+    left = min(point.x for point in points)
+    top = min(point.y for point in points)
+    right = max(point.x for point in points)
+    bottom = max(point.y for point in points)
+    return left, top, max(right - left, 0.05), max(bottom - top, 0.05)
+
+
+def refresh_freeform_geometry(node: FreeformNode) -> None:
+    """Sync FreeformNode bbox from absolute ``points``."""
+    x, y, width, height = compute_freeform_bounds(node.points)
+    node.x = x
+    node.y = y
+    node.width = width
+    node.height = height
+
+
+def is_polygon_convex(points: list[Point]) -> bool:
+    """Return True when the polygon is convex (cross-product signs agree)."""
+    if len(points) < 3:
+        return False
+    sign = 0
+    count = len(points)
+    for index in range(count):
+        ax, ay = points[index].x, points[index].y
+        bx, by = points[(index + 1) % count].x, points[(index + 1) % count].y
+        cx, cy = points[(index + 2) % count].x, points[(index + 2) % count].y
+        cross = (bx - ax) * (cy - by) - (by - ay) * (cx - bx)
+        if cross == 0:
+            continue
+        current = 1 if cross > 0 else -1
+        if sign == 0:
+            sign = current
+        elif sign != current:
+            return False
+    return True
+
+
+FreeformPreset = Literal["triangle", "diamond", "rect_zone"]
+
+
+def freeform_preset_points(
+    preset: FreeformPreset,
+    *,
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+) -> list[Point]:
+    """Build absolute-coordinate presets inside the given box."""
+    w = max(width, 0.05)
+    h = max(height, 0.05)
+    if preset == "triangle":
+        return [
+            Point(x=x + w / 2, y=y),
+            Point(x=x + w, y=y + h),
+            Point(x=x, y=y + h),
+        ]
+    if preset == "diamond":
+        return [
+            Point(x=x + w / 2, y=y),
+            Point(x=x + w, y=y + h / 2),
+            Point(x=x + w / 2, y=y + h),
+            Point(x=x, y=y + h / 2),
+        ]
+    # rect_zone
+    return [
+        Point(x=x, y=y),
+        Point(x=x + w, y=y),
+        Point(x=x + w, y=y + h),
+        Point(x=x, y=y + h),
+    ]
+
+
+def translate_freeform_points(node: FreeformNode, *, dx: float, dy: float) -> None:
+    """Shift all freeform vertices and refresh bbox."""
+    node.points = [Point(x=point.x + dx, y=point.y + dy) for point in node.points]
+    refresh_freeform_geometry(node)
+
+
+def scale_freeform_points(
+    node: FreeformNode,
+    *,
+    origin_x: float,
+    origin_y: float,
+    scale: float,
+    new_origin_x: float,
+    new_origin_y: float,
+) -> None:
+    """Uniform-scale freeform vertices about an origin, then place at new origin."""
+    node.points = [
+        Point(
+            x=new_origin_x + (point.x - origin_x) * scale,
+            y=new_origin_y + (point.y - origin_y) * scale,
+        )
+        for point in node.points
+    ]
+    refresh_freeform_geometry(node)
+
+
+def remap_freeform_points_to_bbox(
+    node: FreeformNode,
+    *,
+    old_x: float,
+    old_y: float,
+    old_width: float,
+    old_height: float,
+) -> None:
+    """Remap absolute vertices from a previous bbox into the node's current bbox."""
+    sx = node.width / max(old_width, 1e-6)
+    sy = node.height / max(old_height, 1e-6)
+    node.points = [
+        Point(
+            x=node.x + (point.x - old_x) * sx,
+            y=node.y + (point.y - old_y) * sy,
+        )
+        for point in node.points
+    ]
+    refresh_freeform_geometry(node)
+
+
+def move_freeform_to(node: FreeformNode, *, x: float, y: float) -> None:
+    """Move freeform by translating vertices so bbox origin becomes (x, y)."""
+    translate_freeform_points(node, dx=x - node.x, dy=y - node.y)
+
+
+def resize_freeform_to(
+    node: FreeformNode,
+    *,
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+) -> None:
+    """Scale freeform vertices into a new absolute bbox."""
+    old_x, old_y, old_w, old_h = node.x, node.y, node.width, node.height
+    node.x = x
+    node.y = y
+    node.width = max(width, 0.05)
+    node.height = max(height, 0.05)
+    remap_freeform_points_to_bbox(
+        node,
+        old_x=old_x,
+        old_y=old_y,
+        old_width=old_w,
+        old_height=old_h,
+    )

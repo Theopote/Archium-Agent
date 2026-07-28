@@ -255,6 +255,44 @@ def render_slide_properties(
             project_id=project_id,
         )
 
+        if slide_snapshot.render_scene is not None:
+            with st.expander("插入分析区（Freeform）", expanded=False):
+                preset = st.selectbox(
+                    "预设形状",
+                    options=["triangle", "diamond", "rect_zone"],
+                    format_func=lambda value: {
+                        "triangle": "三角分析区",
+                        "diamond": "菱形",
+                        "rect_zone": "矩形区",
+                    }.get(value, value),
+                    key=f"studio_freeform_preset_{slide_snapshot.slide.id}",
+                )
+                if st.button(
+                    "插入分析区",
+                    use_container_width=True,
+                    key=f"studio_create_freeform_{slide_snapshot.slide.id}",
+                    help="在页面中心附近创建 FreeformNode 多边形（V1 导出为描边折线）",
+                ):
+                    try:
+                        with get_session() as session:
+                            from archium.ui.studio_service import apply_slide_create_freeform
+
+                            result = apply_slide_create_freeform(
+                                session,
+                                slide_snapshot.slide.id,
+                                preset=str(preset),
+                            )
+                        new_ids = [
+                            action.node_id
+                            for action in getattr(result, "applied_actions", ())
+                            if getattr(action, "action_type", "") == "insert_node"
+                        ]
+                        set_studio_selection(new_ids)
+                        st.success("已插入分析区。")
+                        st.rerun()
+                    except Exception as exc:
+                        st.error(format_user_error(exc))
+
         _render_element_properties(
             slide_snapshot=slide_snapshot,
             advanced=advanced,
@@ -836,6 +874,27 @@ def _render_element_properties(
                 st.caption("项目暂无可用素材，请先在资料阶段上传。")
         elif element.content_type == LayoutContentType.DRAWING:
             st.caption("图纸素材由版式生成绑定；最小可编辑阶段仅锁定几何，不支持直接换图。")
+        if element.content_type == LayoutContentType.IMAGE:
+            if st.button(
+                "应用底部渐隐",
+                use_container_width=True,
+                key=f"studio_image_bottom_fade_{slide_snapshot.slide.id}_{element.id}",
+                help="为图片叠加线性渐隐（GradientFill，导出为分段半透明近似）",
+            ):
+                try:
+                    with get_session() as session:
+                        from archium.ui.studio_service import apply_slide_element_gradient_fill
+
+                        apply_slide_element_gradient_fill(
+                            session,
+                            slide_snapshot.slide.id,
+                            element_id=element.id,
+                            bottom_fade=True,
+                        )
+                    st.success("已应用底部渐隐。")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(format_user_error(exc))
     elif element.content_ref:
         st.write(f"素材引用：`{element.content_ref}`")
         if element.fit_mode is not None:
@@ -877,6 +936,58 @@ def _render_element_properties(
                     st.rerun()
                 except Exception as exc:
                     st.error(format_user_error(exc))
+            with st.expander("线性渐变填充（两色）", expanded=False):
+                existing = shape_node.fill
+                stop0 = existing.stops[0].color if existing and existing.stops else fill_default
+                stop1 = (
+                    existing.stops[-1].color
+                    if existing and len(existing.stops) > 1
+                    else "#FFFFFF"
+                )
+                g0 = st.color_picker(
+                    "渐变色 A",
+                    value=stop0 if str(stop0).startswith("#") else f"#{stop0}",
+                    key=f"studio_grad0_{slide_snapshot.slide.id}_{element.id}",
+                )
+                g1 = st.color_picker(
+                    "渐变色 B",
+                    value=stop1 if str(stop1).startswith("#") else f"#{stop1}",
+                    key=f"studio_grad1_{slide_snapshot.slide.id}_{element.id}",
+                )
+                angle = st.selectbox(
+                    "方向",
+                    options=[0, 90],
+                    format_func=lambda v: "左→右" if v == 0 else "上→下",
+                    key=f"studio_grad_angle_{slide_snapshot.slide.id}_{element.id}",
+                )
+                if st.button(
+                    "应用渐变",
+                    use_container_width=True,
+                    key=f"studio_apply_grad_{slide_snapshot.slide.id}_{element.id}",
+                ):
+                    try:
+                        with get_session() as session:
+                            from archium.ui.studio_service import (
+                                apply_slide_element_gradient_fill,
+                            )
+
+                            apply_slide_element_gradient_fill(
+                                session,
+                                slide_snapshot.slide.id,
+                                element_id=element.id,
+                                fill={
+                                    "kind": "linear",
+                                    "angle_deg": float(angle),
+                                    "stops": [
+                                        {"position": 0.0, "color": g0, "transparency": 0.0},
+                                        {"position": 1.0, "color": g1, "transparency": 0.0},
+                                    ],
+                                },
+                            )
+                        st.success("已应用渐变填充。")
+                        st.rerun()
+                    except Exception as exc:
+                        st.error(format_user_error(exc))
 
     if not element_locked:
         multi_ids = [
@@ -1047,6 +1158,11 @@ def _render_element_properties(
                     st.rerun()
                 except Exception as exc:
                     st.error(format_user_error(exc))
+
+        if element.content_type == LayoutContentType.FREEFORM:
+            st.caption(
+                "分析区为 Freeform 多边形；V1 导出为描边折线环（非 PowerPoint 原生 custGeom）。"
+            )
 
         align_cols = st.columns(3)
         with align_cols[0]:
