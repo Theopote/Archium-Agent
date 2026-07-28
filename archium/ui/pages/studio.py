@@ -110,11 +110,22 @@ _INSPECTOR_TABS = ("属性", "布局", "内容", "修改", "评论", "风格", "
 
 def _select_inspector_tab() -> str:
     """Only the active inspector panel should run work on each rerun."""
+    # Widget key must differ from logical ``studio_inspector_tab`` so code can
+    # open the「修改」tab without StreamlitAPIException.
+    logical = "studio_inspector_tab"
+    widget = "studio_ui_inspector_tab"
+    if logical not in st.session_state:
+        st.session_state[logical] = _INSPECTOR_TABS[0]
+    desired = st.session_state[logical]
+    if desired not in _INSPECTOR_TABS:
+        desired = _INSPECTOR_TABS[0]
+        st.session_state[logical] = desired
+    st.session_state[widget] = desired
     if hasattr(st, "segmented_control"):
         active = st.segmented_control(
             "检查器",
             options=list(_INSPECTOR_TABS),
-            key="studio_inspector_tab",
+            key=widget,
             label_visibility="collapsed",
         )
     else:
@@ -122,11 +133,12 @@ def _select_inspector_tab() -> str:
             "检查器",
             options=list(_INSPECTOR_TABS),
             horizontal=True,
-            key="studio_inspector_tab",
+            key=widget,
             label_visibility="collapsed",
         )
     if active not in _INSPECTOR_TABS:
-        return _INSPECTOR_TABS[0]
+        active = _INSPECTOR_TABS[0]
+    st.session_state[logical] = str(active)
     return str(active)
 
 
@@ -212,21 +224,37 @@ def _render_view_controls(*, compact: bool = False) -> None:
     if "studio_center_mode" not in st.session_state:
         st.session_state.studio_center_mode = "edit"
 
-    show_nav = bool(st.session_state.studio_show_nav)
-    show_inspector = bool(st.session_state.studio_show_inspector)
-    center_mode = str(st.session_state.get("studio_center_mode", "edit"))
-    is_three = show_nav and show_inspector
+    # Widget keys ≠ logical flags so assistants can toggle panes safely.
+    st.session_state["studio_ui_center_mode"] = str(
+        st.session_state.get("studio_center_mode", "edit")
+    )
+    st.session_state["studio_ui_show_nav"] = bool(st.session_state.studio_show_nav)
+    st.session_state["studio_ui_show_inspector"] = bool(
+        st.session_state.studio_show_inspector
+    )
 
     with st.popover("视图", width="stretch"):
         st.radio(
             "中心区域",
             options=["edit", "overview"],
             format_func=lambda value: "单页编辑" if value == "edit" else "全稿鸟瞰",
-            key="studio_center_mode",
+            key="studio_ui_center_mode",
             horizontal=True,
         )
-        st.checkbox("页面列表", key="studio_show_nav")
-        st.checkbox("设计助理", key="studio_show_inspector")
+        st.checkbox("页面列表", key="studio_ui_show_nav")
+        st.checkbox("设计助理", key="studio_ui_show_inspector")
+        st.session_state.studio_center_mode = str(
+            st.session_state.get("studio_ui_center_mode", "edit")
+        )
+        st.session_state.studio_show_nav = bool(
+            st.session_state.get("studio_ui_show_nav", True)
+        )
+        st.session_state.studio_show_inspector = bool(
+            st.session_state.get("studio_ui_show_inspector", True)
+        )
+        show_nav = bool(st.session_state.studio_show_nav)
+        show_inspector = bool(st.session_state.studio_show_inspector)
+        is_three = show_nav and show_inspector
         if is_three:
             st.caption("当前：三栏")
             if st.button("画布专注", width="stretch", key="studio_canvas_focus"):
@@ -239,6 +267,10 @@ def _render_view_controls(*, compact: bool = False) -> None:
                 st.session_state.studio_show_nav = True
                 st.session_state.studio_show_inspector = True
                 st.rerun()
+
+    show_nav = bool(st.session_state.studio_show_nav)
+    show_inspector = bool(st.session_state.studio_show_inspector)
+    center_mode = str(st.session_state.get("studio_center_mode", "edit"))
     if not compact:
         bits = []
         if center_mode == "overview":
@@ -404,7 +436,9 @@ def _render_studio_partner_strip(context: StudioPresentationContext) -> None:
                     key=f"studio_partner_overview_{context.presentation.id}",
                     width="stretch",
                 ):
-                    st.session_state.studio_center_mode = "overview"
+                    from archium.ui.studio.studio_pending_state import request_center_mode
+
+                    request_center_mode("overview")
                     st.rerun()
             with action_cols[1]:
                 if st.button(
@@ -412,8 +446,13 @@ def _render_studio_partner_strip(context: StudioPresentationContext) -> None:
                     key=f"studio_open_ai_{context.presentation.id}",
                     width="stretch",
                 ):
-                    st.session_state.studio_show_inspector = True
-                    st.session_state.studio_show_nav = True
+                    from archium.ui.studio.studio_pending_state import (
+                        request_show_inspector,
+                        request_show_nav,
+                    )
+
+                    request_show_inspector(show=True)
+                    request_show_nav(show=True)
                     st.session_state.studio_inspector_expanded = False
                     st.rerun()
     except Exception:
@@ -464,7 +503,9 @@ def _render_wireframe_mode_banner(context: StudioPresentationContext) -> None:
             key=f"studio_wireframe_overview_{context.presentation.id}",
             width="stretch",
         ):
-            st.session_state.studio_center_mode = "overview"
+            from archium.ui.studio.studio_pending_state import request_center_mode
+
+            request_center_mode("overview")
             st.rerun()
 
 
@@ -528,6 +569,10 @@ def render(
     )
     if context is None:
         return
+
+    from archium.ui.studio.studio_pending_state import apply_pending_studio_chrome
+
+    apply_pending_studio_chrome()
 
     # Partner defaults: keep storyline + suggestions visible
     if "studio_show_nav" not in st.session_state:

@@ -129,10 +129,9 @@ def _page_score(slide_snapshot: SlideVisualSnapshot | None) -> int | None:
 
 
 def open_modify_with_prompt(slide_id: UUID, prompt: str) -> None:
-    st.session_state.studio_show_inspector = True
-    st.session_state.studio_inspector_expanded = True
-    st.session_state.studio_inspector_tab = "修改"
-    st.session_state[f"studio_ai_edit_input_{slide_id}"] = prompt
+    from archium.ui.studio.studio_pending_state import request_open_modify
+
+    request_open_modify(slide_id=slide_id, prompt=prompt)
 
 
 def render_design_assistant_panel(
@@ -190,7 +189,7 @@ def render_design_assistant_panel(
         key=f"studio_open_modify_{slide_id}",
         use_container_width=True,
     ):
-        st.session_state.studio_show_inspector = True
-        st.session_state.studio_inspector_expanded = True
-        st.session_state.studio_inspector_tab = "修改"
+        from archium.ui.studio.studio_pending_state import request_open_modify
+
+        request_open_modify()
         st.rerun()

@@ -153,7 +153,9 @@ class CommentToCommandPlanner:
                 presentation_id=presentation,
                 slide_id=slide,
             )
-            if plan.commands or plan.unsupported_reason:
+            # Prefer successful compile; otherwise fall through to NL rewrite patterns
+            # (LLM drafts often fail compile and previously blocked 「标题改为…」).
+            if plan.commands:
                 return self._enforce_bound_targets(plan, comment, scene=scene)
 
         # Wider scopes: do not force NL planner into single-node resolution.

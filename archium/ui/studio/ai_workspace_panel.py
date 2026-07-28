@@ -64,11 +64,19 @@ def render_ai_workspace(
         "有 Scene 时只经提案写入（ST-003）；画布拖拽/对齐走统一命令栈。"
         "评论会绑定当前 Scene Revision / hash / node_snapshot。"
     )
+    input_key = f"studio_ai_edit_input_{slide_id}"
+    pending_key = f"studio_ai_edit_pending_{slide_id}"
+    # Apply preset phrase before the widget is created (Streamlit forbids
+    # mutating a widget key after instantiation).
+    pending = st.session_state.pop(pending_key, None)
+    if isinstance(pending, str) and pending.strip():
+        st.session_state[input_key] = pending.strip()
+
     text = st.text_area(
         "输入修改要求",
         placeholder="例如：标题改为「结论：…」、改为：新标题、标题再短一点、修复文字溢出…",
         height=100,
-        key=f"studio_ai_edit_input_{slide_id}",
+        key=input_key,
     )
     scope = st.radio(
         "修改范围",
@@ -82,6 +90,29 @@ def render_ai_workspace(
         st.caption(f"当前选中节点：{labels}" + ("…" if len(bound_nodes) > 6 else ""))
     else:
         st.caption("未选中元素时，「选中对象 / 多选」不可用；请用「当前页面」。")
+
+    st.caption("常用说法（点一下直接生成提案）：")
+    preset_cols = st.columns(3)
+    presets = (
+        ("改短标题", "标题再短一点"),
+        ("改写标题", "标题改为：院区改造策略总览"),
+        ("修复溢出", "修复文字溢出"),
+    )
+    for col, (label, phrase) in zip(preset_cols, presets, strict=True):
+        with col:
+            if st.button(
+                label,
+                use_container_width=True,
+                key=f"studio_ai_preset_{label}_{slide_id}",
+            ):
+                st.session_state[pending_key] = phrase
+                _run_scoped_proposal(
+                    slide_id=slide_id,
+                    text=phrase,
+                    scope_label=scope,
+                    bound_nodes=bound_nodes,
+                    slide_snapshot=slide_snapshot,
+                )
 
     if st.button(
         "生成修改提案",
