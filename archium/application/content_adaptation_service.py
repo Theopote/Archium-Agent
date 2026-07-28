@@ -19,6 +19,7 @@ from archium.application.slide_repair_policy import (
 )
 from archium.application.slide_split_planner import build_split_plan
 from archium.application.visual.visual_edit_service import VisualEditService
+from archium.config.settings import Settings
 from archium.domain.content_adaptation import (
     ContentAdaptationAction,
     ContentAdaptationSuggestion,
@@ -62,11 +63,12 @@ class ContentAdaptationResult:
 class ContentAdaptationService:
     """Shorten, bulletize, split, or promote slide content with revision tracking."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, settings: Settings | None = None) -> None:
         self._session = session
+        self._settings = settings
         self._presentations = PresentationRepository(session)
         self._history = SlideHistoryService(session)
-        self._visual_edits = VisualEditService(session)
+        self._visual_edits = VisualEditService(session, settings=settings)
         self._warnings: list[AdaptationWarning] = []
 
     def estimate_capacity(self, slide_id: UUID) -> SlideCapacityBudget | None:

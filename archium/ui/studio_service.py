@@ -1044,6 +1044,27 @@ def apply_slide_create_freeform(
     )
 
 
+def apply_slide_element_silhouette(
+    session: Session,
+    slide_id: UUID,
+    *,
+    element_id: str,
+    preset: str = "diamond",
+) -> object:
+    """Apply silhouette mask + Freeform overlay on an image element."""
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    clear_visual_redo_stack(slide_id)
+    return StudioSceneEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).apply_silhouette_mask(
+        slide_id,
+        element_id=element_id,
+        preset=preset,
+    )
+
+
 def apply_slide_element_ungroup(
     session: Session,
     slide_id: UUID,

@@ -369,8 +369,10 @@ def _apply_image_masks(
         elif mask.kind in {ImageMaskKind.ROUNDED, ImageMaskKind.GRADIENT_FADE}:
             updates["corner_radius"] = mask.corner_radius
         elif mask.kind == ImageMaskKind.SILHOUETTE:
-            updates["opacity"] = max(0.55, 1.0 - mask.edge_softness * 0.35)
+            # Silhouette rhetoric is carried by a Freeform overlay at compile time;
+            # keep mild edge softening without darkening the whole image.
             updates["corner_radius"] = mask.corner_radius
+            updates["opacity"] = max(0.85, 1.0 - mask.edge_softness * 0.15)
         out.append(element.model_copy(update=updates))
     return out
 

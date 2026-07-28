@@ -895,6 +895,26 @@ def _render_element_properties(
                     st.rerun()
                 except Exception as exc:
                     st.error(format_user_error(exc))
+            if st.button(
+                "应用剪影分析框",
+                use_container_width=True,
+                key=f"studio_image_silhouette_{slide_snapshot.slide.id}_{element.id}",
+                help="标记 silhouette 并叠加 Freeform 菱形分析框（非真图片剪裁）",
+            ):
+                try:
+                    with get_session() as session:
+                        from archium.ui.studio_service import apply_slide_element_silhouette
+
+                        apply_slide_element_silhouette(
+                            session,
+                            slide_snapshot.slide.id,
+                            element_id=element.id,
+                            preset="diamond",
+                        )
+                    st.success("已应用剪影分析框。")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(format_user_error(exc))
     elif element.content_ref:
         st.write(f"素材引用：`{element.content_ref}`")
         if element.fit_mode is not None:

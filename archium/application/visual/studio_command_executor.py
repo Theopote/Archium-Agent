@@ -55,12 +55,14 @@ from archium.domain.visual.render_scene import (
     replace_text_node_content,
     resize_freeform_to,
     set_text_node_runs,
+    silhouette_overlay_frame,
     translate_freeform_points,
 )
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 from archium.domain.visual.scene_repair import SceneRepairAction, SceneRepairApplyMode
 from archium.domain.visual.studio_command import (
     AlignNodesCommand,
+    ApplySilhouetteMaskCommand,
     ConnectNodesCommand,
     CreateFreeformCommand,
     DeleteNodeCommand,
@@ -196,6 +198,8 @@ class StudioCommandExecutor:
             return self._execute_connect_nodes(scene, command, base_hash)
         if isinstance(command, CreateFreeformCommand):
             return self._execute_create_freeform(scene, command, base_hash)
+        if isinstance(command, ApplySilhouetteMaskCommand):
+            return self._execute_apply_silhouette_mask(scene, command, base_hash)
         if isinstance(command, GroupNodesCommand):
             return self._execute_group_nodes(scene, command, base_hash)
         if isinstance(command, UngroupNodesCommand):
@@ -1678,6 +1682,99 @@ class StudioCommandExecutor:
             base_scene_hash=base_hash,
             candidate_scene=patched,
             applied_actions=(action,),
+        )
+
+    def _execute_apply_silhouette_mask(
+        self,
+        scene: RenderScene,
+        command: ApplySilhouetteMaskCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        node = scene.node_by_id(command.node_id)
+        if node is None:
+            return _node_not_found(base_hash, command.node_id)
+        if not isinstance(node, ImageNode):
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.SILHOUETTE_NOT_IMAGE",
+                        message=f"node `{command.node_id}` is not an ImageNode",
+                        evidence=[command.node_id],
+                    ),
+                ),
+            )
+
+        explicit = (command.freeform_id or "").strip()
+        freeform_id = explicit or f"{command.node_id}__silhouette"[:100]
+
+        patched = scene.model_copy(deep=True)
+        target = patched.node_by_id(command.node_id)
+        assert isinstance(target, ImageNode)
+        actions: list[ScenePatchAction] = []
+        before_mask = target.image_mask
+        target.image_mask = "silhouette"
+        actions.append(
+            build_patch_action(
+                scene,
+                base_scene_hash=base_hash,
+                command_id=command.command_id,
+                node_id=command.node_id,
+                action_type="set_image_mask",
+                property_name="image_mask",
+                before_value=before_mask,
+                after_value="silhouette",
+                reason=command.reason or "apply silhouette mask",
+            )
+        )
+
+        # Drop prior silhouette overlay for this image if present.
+        patched.nodes = [n for n in patched.nodes if n.id != freeform_id]
+        fx, fy, fw, fh, points = silhouette_overlay_frame(
+            image_x=target.x,
+            image_y=target.y,
+            image_width=target.width,
+            image_height=target.height,
+            preset=command.preset,
+        )
+        max_z = max((n.z_index for n in patched.nodes), default=target.z_index)
+        freeform = FreeformNode(
+            id=freeform_id,
+            x=fx,
+            y=fy,
+            width=fw,
+            height=fh,
+            z_index=max(max_z, target.z_index) + 1,
+            points=points,
+            closed=True,
+            fill_color=None,
+            stroke_color="#FFFFFF",
+            stroke_width=1.5,
+            semantic_role="annotation",
+            source_layout_element_id=freeform_id,
+        )
+        refresh_freeform_geometry(freeform)
+        patched.nodes = list(patched.nodes) + [freeform]
+        actions.append(
+            build_patch_action(
+                scene,
+                base_scene_hash=base_hash,
+                command_id=command.command_id,
+                node_id=freeform_id,
+                action_type="insert_node",
+                property_name="nodes",
+                before_value=None,
+                after_value=freeform_id,
+                after_payload=freeform.model_dump(mode="json"),
+                reason=command.reason or "silhouette freeform overlay",
+            )
+        )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=tuple(actions),
         )
 
     def _execute_group_nodes(

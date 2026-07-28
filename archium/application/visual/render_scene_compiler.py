@@ -43,6 +43,7 @@ from archium.domain.visual.render_scene import (
     DrawingFitMode,
     DrawingNode,
     DrawingType,
+    FreeformNode,
     ImageNode,
     RenderScene,
     SceneAssetReference,
@@ -51,6 +52,9 @@ from archium.domain.visual.render_scene import (
     TextNode,
     TextParagraph,
     ThemeTokens,
+    bottom_fade_gradient,
+    refresh_freeform_geometry,
+    silhouette_overlay_frame,
 )
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import SlideContentBundle
@@ -226,8 +230,24 @@ class RenderSceneCompiler:
         asset_manifest: list[SceneAssetReference],
         warnings: list[str],
         overflow_policy: OverflowPolicy = OverflowPolicy.WARN,
-    ) -> list[TextNode | ImageNode | DrawingNode | ShapeNode | ChartNode | TableNode]:
-        nodes: list[TextNode | ImageNode | DrawingNode | ShapeNode | ChartNode | TableNode] = []
+    ) -> list[
+        TextNode
+        | ImageNode
+        | DrawingNode
+        | ShapeNode
+        | ChartNode
+        | TableNode
+        | FreeformNode
+    ]:
+        nodes: list[
+            TextNode
+            | ImageNode
+            | DrawingNode
+            | ShapeNode
+            | ChartNode
+            | TableNode
+            | FreeformNode
+        ] = []
         if element.content_type == LayoutContentType.DRAWING:
             nodes = list(self._compile_drawing(element, bundle, drawing_type, asset_manifest, warnings))
         elif element.content_type == LayoutContentType.CHART:
@@ -440,7 +460,7 @@ class RenderSceneCompiler:
         bundle: SlideContentBundle,
         asset_manifest: list[SceneAssetReference],
         warnings: list[str],
-    ) -> list[ImageNode]:
+    ) -> list[ImageNode | FreeformNode]:
         path, unresolved = self._resolve_asset_path(element, bundle, warnings)
         origin = self._resolve_asset_origin(element, bundle)
         fit = "cover"
@@ -460,28 +480,60 @@ class RenderSceneCompiler:
                     origin=origin,
                 )
             )
-        return [
-            ImageNode(
-                id=element.id,
-                semantic_role=self._image_semantic_role(element, origin),
-                source_layout_element_id=element.id,
-                x=element.x,
-                y=element.y,
-                width=element.width,
-                height=element.height,
-                z_index=element.z_index,
-                locked=element.locked,
-                opacity=element.opacity if element.opacity is not None else 1.0,
-                storage_uri=path or "",
-                asset_path=path or "",
-                asset_origin=origin,  # type: ignore[arg-type]
-                fit_mode=fit,  # type: ignore[arg-type]
-                corner_radius=element.corner_radius or 0.0,
-                asset_unresolved=unresolved,
-                icon_stroke_color=icon_stroke_color,
-                icon_stroke_token=icon_stroke_token,
+        image_mask = (element.image_mask or "").strip() or None
+        fill = None
+        if image_mask == "gradient_fade":
+            fill = bottom_fade_gradient()
+        image = ImageNode(
+            id=element.id,
+            semantic_role=self._image_semantic_role(element, origin),
+            source_layout_element_id=element.id,
+            x=element.x,
+            y=element.y,
+            width=element.width,
+            height=element.height,
+            z_index=element.z_index,
+            locked=element.locked,
+            opacity=element.opacity if element.opacity is not None else 1.0,
+            storage_uri=path or "",
+            asset_path=path or "",
+            asset_origin=origin,  # type: ignore[arg-type]
+            fit_mode=fit,  # type: ignore[arg-type]
+            corner_radius=element.corner_radius or 0.0,
+            asset_unresolved=unresolved,
+            icon_stroke_color=icon_stroke_color,
+            icon_stroke_token=icon_stroke_token,
+            image_mask=image_mask,
+            fill=fill,
+        )
+        nodes: list[ImageNode | FreeformNode] = [image]
+        if image_mask == "silhouette":
+            fx, fy, fw, fh, points = silhouette_overlay_frame(
+                image_x=element.x,
+                image_y=element.y,
+                image_width=element.width,
+                image_height=element.height,
+                preset="diamond",
             )
-        ]
+            freeform_id = f"{element.id}__silhouette"[:100]
+            freeform = FreeformNode(
+                id=freeform_id,
+                x=fx,
+                y=fy,
+                width=fw,
+                height=fh,
+                z_index=element.z_index + 1,
+                points=points,
+                closed=True,
+                fill_color=None,
+                stroke_color="#FFFFFF",
+                stroke_width=1.5,
+                semantic_role="annotation",
+                source_layout_element_id=freeform_id,
+            )
+            refresh_freeform_geometry(freeform)
+            nodes.append(freeform)
+        return nodes
 
     def _compile_drawing(
         self,

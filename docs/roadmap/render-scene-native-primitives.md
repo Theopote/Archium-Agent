@@ -277,6 +277,8 @@ class FreeformNode(BaseRenderNode):
 
 - V1: convex polygons + axis-aligned rects only; concave paths → `APPROXIMATE` or reject with manifest warning.
 - `image_mask=silhouette` migrates to Freeform clip when available.
+  **Landed (PARTIAL):** compile + Studio emit inset Freeform overlay; PPTX strokes
+  the frame (not true picture `custGeom` clip).
 
 **Export:**
 
@@ -296,7 +298,7 @@ class FreeformNode(BaseRenderNode):
 **Minimal acceptance:**
 
 - [x] Create triangular analysis zone overlay (Studio preset + CreateFreeformCommand)
-- [ ] Use as image mask on one slide (deferred — silhouette clip migration)
+- [x] Use as image mask on one slide (silhouette → Freeform diamond overlay; not true picture clip)
 - [~] Export; outline editable as line segments in PowerPoint (not flattened image; not single custGeom)
 
 **Capability inventory:** `freeform_path` → `PARTIAL` (polygon only in V1).

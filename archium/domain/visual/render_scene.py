@@ -899,6 +899,26 @@ def freeform_preset_points(
     ]
 
 
+def silhouette_overlay_frame(
+    *,
+    image_x: float,
+    image_y: float,
+    image_width: float,
+    image_height: float,
+    preset: FreeformPreset = "diamond",
+    inset_ratio: float = 0.08,
+) -> tuple[float, float, float, float, list[Point]]:
+    """Inset freeform frame over an image bbox for silhouette rhetoric."""
+    inset = max(min(image_width, image_height) * inset_ratio, 0.05)
+    x = image_x + inset
+    y = image_y + inset
+    width = max(image_width - 2 * inset, 0.05)
+    height = max(image_height - 2 * inset, 0.05)
+    return x, y, width, height, freeform_preset_points(
+        preset, x=x, y=y, width=width, height=height
+    )
+
+
 def translate_freeform_points(node: FreeformNode, *, dx: float, dy: float) -> None:
     """Shift all freeform vertices and refresh bbox."""
     node.points = [Point(x=point.x + dx, y=point.y + dy) for point in node.points]

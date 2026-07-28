@@ -10,6 +10,7 @@ from archium.application.content_adaptation_service import ContentAdaptationServ
 from archium.application.visual.layout_repair_service import LayoutRepairService
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.visual_edit_service import VisualEditService
+from archium.config.settings import Settings
 from archium.domain.content_adaptation import ContentAdaptationAction
 from archium.domain.enums import ApprovalStatus, SlideType
 from archium.domain.presentation import Presentation, PresentationBrief, Storyline
@@ -212,17 +213,18 @@ def locked_hero_slide(db_session: Session) -> tuple[Presentation, SlideSpec, Her
 def test_locked_hero_survives_studio_visual_workflow(
     db_session: Session,
     locked_hero_slide: tuple[Presentation, SlideSpec, HeroFingerprint],
+    test_settings: Settings,
 ) -> None:
     """Lock hero → change layout → content adaptation → repair → render keeps hero intact."""
     _presentation, slide, baseline = locked_hero_slide
-    visual = VisualEditService(db_session)
+    visual = VisualEditService(db_session, settings=test_settings)
 
     change_layout = visual.apply_text(slide.id, "换一种版式")
     assert change_layout.layout_plan is not None
     slide = _reload_slide(db_session, slide.id)
     assert _hero_fingerprint(_load_slide_plan(db_session, slide)) == baseline
 
-    content = ContentAdaptationService(db_session)
+    content = ContentAdaptationService(db_session, settings=test_settings)
     content.apply(slide.id, ContentAdaptationAction.SHORTEN, replan_visual=True)
     slide = _reload_slide(db_session, slide.id)
     plan = _load_slide_plan(db_session, slide)

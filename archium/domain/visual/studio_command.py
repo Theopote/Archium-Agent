@@ -251,6 +251,16 @@ class CreateFreeformCommand(StudioCommandBase):
     freeform_id: str = ""
 
 
+class ApplySilhouetteMaskCommand(StudioCommandBase):
+    """Mark an ImageNode as silhouette and overlay a Freeform analysis frame."""
+
+    command_type: Literal["apply_silhouette_mask"] = "apply_silhouette_mask"
+    node_id: str = Field(min_length=1)
+    preset: Literal["triangle", "diamond", "rect_zone"] = "diamond"
+    # Optional deterministic freeform id (tests).
+    freeform_id: str = ""
+
+
 class GroupNodesCommand(StudioCommandBase):
     """Create a GroupNode from two or more existing scene nodes."""
 
@@ -287,6 +297,7 @@ StudioCommand = Annotated[
     | SetGradientFillCommand
     | ConnectNodesCommand
     | CreateFreeformCommand
+    | ApplySilhouetteMaskCommand
     | GroupNodesCommand
     | UngroupNodesCommand,
     Field(discriminator="command_type"),

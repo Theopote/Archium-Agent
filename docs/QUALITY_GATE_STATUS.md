@@ -68,7 +68,7 @@ Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolve
 | GroupNode（组合 / 整体拖动 / 均匀缩放） | **Partial** — domain + Studio group/ungroup; PPTX still flat siblings (`group_id`) until `p:grpSp` |
 | ConnectorNode（分析连接线） | **Partial** — domain + Studio connect + move refresh; PPTX line/elbow approx until `p:cxnSp` |
 | GradientFill（形状/图片渐变） | **Partial** — domain + Studio 两色/底部渐隐；PPTX 分段半透明条近似（非真 `a:gradFill`） |
-| FreeformNode（分析区多边形） | **Partial** — domain + Studio presets；PPTX 描边折线环近似（非真 `a:custGeom`）；填色已建模但 V1 不导出为单填充体 |
+| FreeformNode（分析区多边形） | **Partial** — domain + Studio presets + silhouette 图片叠加框；PPTX 描边折线环近似（非真 `a:custGeom` / 图片剪裁） |
 | P0 Closure Cardinality (`one_to_one` / `one_to_many` / `many_to_one`) | **Done** — bake charts/tables plan multi-emissions; not treated as duplicate errors |
 | P0 Workflow Route dispatch + preservation | **Partial** — `execute_fill_native_template` + router wired; FILL fingerprints are template-derived (not in-place OOXML yet) |
 | P0 Capability Contract → export / manifest | **Done** — pre-export gate + closure + object-type → `DeckExportManifest` |

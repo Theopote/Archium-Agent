@@ -588,18 +588,37 @@ function renderImageElement(pres, page, element, slideInstruction, deckTheme, pl
       }
     }
     page.addImage(opts);
-    // Soft fade: prefer GradientFill bands; legacy gradient_fade / silhouette fallback.
+    // Soft fade: prefer GradientFill bands; legacy gradient_fade fallback.
+    // Silhouette no longer fakes a dark gradient — Freeform overlay owns the frame.
     if (!placeholderName && pres.shapes?.RECTANGLE) {
       if (element.fill && Array.isArray(element.fill.stops) && element.fill.stops.length >= 2) {
         _applyGradientApprox(pres, page, rect, element.fill);
-      } else if (mask === "gradient_fade" || mask === "silhouette") {
+      } else if (mask === "gradient_fade") {
         _applyGradientApprox(pres, page, rect, {
           kind: "linear",
           angle_deg: 90,
           stops: [
             { position: 0, color: "1A1A1A", transparency: 1 },
             { position: 0.55, color: "1A1A1A", transparency: 0.85 },
-            { position: 1, color: "1A1A1A", transparency: mask === "silhouette" ? 0.45 : 0.35 },
+            { position: 1, color: "1A1A1A", transparency: 0.35 },
+          ],
+        });
+      } else if (mask === "silhouette") {
+        // Fallback diamond outline when compiler/Studio did not emit a FreeformNode.
+        const inset = Math.max(Math.min(rect.w, rect.h) * 0.08, 0.05);
+        renderFreeformElement(pres, page, {
+          x: rect.x + inset,
+          y: rect.y + inset,
+          w: Math.max(rect.w - 2 * inset, 0.05),
+          h: Math.max(rect.h - 2 * inset, 0.05),
+          closed: true,
+          stroke_color: "FFFFFF",
+          stroke_width: 1.5,
+          points: [
+            { x: rect.x + rect.w / 2, y: rect.y + inset },
+            { x: rect.x + rect.w - inset, y: rect.y + rect.h / 2 },
+            { x: rect.x + rect.w / 2, y: rect.y + rect.h - inset },
+            { x: rect.x + inset, y: rect.y + rect.h / 2 },
           ],
         });
       }

@@ -25,6 +25,7 @@ from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.render_scene import RenderScene, compute_scene_hash
 from archium.domain.visual.studio_command import (
     AlignNodesCommand,
+    ApplySilhouetteMaskCommand,
     ConnectNodesCommand,
     CreateFreeformCommand,
     DeleteNodeCommand,
@@ -348,6 +349,26 @@ class StudioSceneEditService:
             fill_color=fill_color,
             stroke_color=stroke_color,
             reason="create freeform",
+        )
+        return self.apply_command(slide.id, command)
+
+    def apply_silhouette_mask(
+        self,
+        slide_id: UUID,
+        *,
+        element_id: str,
+        preset: str = "diamond",
+    ) -> SceneEditResult:
+        """Mark an image as silhouette and overlay a Freeform analysis frame."""
+        node_id = self._resolve_node_id(slide_id, element_id)
+        slide = self._require_slide(slide_id)
+        command = ApplySilhouetteMaskCommand(
+            presentation_id=slide.presentation_id,
+            slide_id=slide.id,
+            target_node_ids=[node_id],
+            node_id=node_id,
+            preset=preset,  # type: ignore[arg-type]
+            reason="apply silhouette mask",
         )
         return self.apply_command(slide.id, command)
 
