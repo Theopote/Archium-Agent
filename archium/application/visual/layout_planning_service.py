@@ -525,14 +525,28 @@ class LayoutPlanningService:
             )
 
         if previous_layout_plan is not None:
+            preferred_primary = (
+                style_preference.preferred_families[0]
+                if style_preference is not None and style_preference.preferred_families
+                else None
+            )
+            honor_explicit_preference = (
+                preferred_primary is not None and plan.layout_family == preferred_primary
+            )
             if plan.layout_family == previous_layout_plan.layout_family:
-                if deck_directive is not None and deck_directive.should_contrast_previous:
+                if honor_explicit_preference:
+                    # Studio/user preferred family outranks anti-repetition.
+                    pass
+                elif deck_directive is not None and deck_directive.should_contrast_previous:
                     composition_penalty += 0.12
                 elif deck_directive is not None and deck_directive.should_match_previous:
                     composition_bonus += 0.05
                 else:
                     composition_penalty += 0.04
-            if plan.layout_variant == previous_layout_plan.layout_variant:
+            if (
+                plan.layout_variant == previous_layout_plan.layout_variant
+                and not honor_explicit_preference
+            ):
                 composition_penalty += 0.06
 
         # Prevent an A-B-A wallpaper rhythm. The immediate predecessor already
