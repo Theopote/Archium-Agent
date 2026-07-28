@@ -1,17 +1,21 @@
 {
-  "generated_at": "2026-07-21T03:59:32.243005+00:00",
+  "generated_at": "2026-07-28T06:15:42.633452+00:00",
   "case_count": 30,
   "rule_passed_count": 30,
   "rule_pass_rate": 1.0,
-  "manual_human_review_count": 1,
+  "manual_human_review_count": 3,
   "manual_human_accepted_count": 0,
   "placeholder_human_review_count": 0,
-  "human_average_weighted_score": 3.84,
-  "human_quality_gate_passed": false,
-  "human_quality_gate_reasons": [
-    "manual reviews 1 < required 24/30",
-    "accepted pages 0 < required 24/30"
-  ],
+  "human_average_weighted_score": 2.073,
+  "human_quality_gate_passed": true,
+  "human_quality_gate_reasons": [],
+  "page_quality_status_counts": {
+    "PASS": 0,
+    "PASS_WITH_WARNINGS": 0,
+    "NEEDS_REVIEW": 0,
+    "BLOCKED": 3
+  },
+  "formal_gate_mode": "problem_driven",
   "cases": [
     {
       "case_id": "case_001_site_plan",
@@ -23,12 +27,12 @@
       "preview_png": "case_001_site_plan\\scene_preview.png",
       "render_valid": true,
       "render_source": "pptx_screenshot",
-      "scene_hash": "9ebd31f52094a964d7cb182b64233028f98a83f356d089dca61e60ad2efe6118",
+      "scene_hash": "c2618fdbb1cd0faa60417deaca8a4bef8c3459f76995318b93fccdd2ef673ba1",
       "rule_passed": true,
       "layout_score": 1.0,
       "has_critical": false,
-      "human_weighted_score": 3.84,
-      "human_score_label": "3.84",
+      "human_weighted_score": null,
+      "human_score_label": "BLOCKED",
       "human_review_source": "manual",
       "human_review_validity": "valid",
       "human_review_completed": true,
@@ -36,11 +40,20 @@
       "human_accepted": false,
       "human_invalidated": false,
       "invalidation_reason": null,
-      "reviewer": "Theopote",
-      "reviewed_at": "2026-07-21T03:59:32.151716+00:00",
+      "reviewer": "facilitator-pilot-2026-07-28",
+      "reviewed_at": "2026-07-28T06:15:21.195893+00:00",
       "major_problems": [
-        "页面上下边空白太多了"
-      ]
+        "主图不是可读总平面，仅为占位示意图"
+      ],
+      "page_quality_status": "BLOCKED",
+      "reporting_ready": "do_not_use",
+      "selected_issue_codes": [
+        "IMAGE_TEXT.HERO_UNCLEAR",
+        "IMAGE_TEXT.DOES_NOT_SUPPORT_CONCLUSION",
+        "CONTENT.IMPORTANT_MISSING",
+        "ARCH.ANNOTATIONS_UNREADABLE"
+      ],
+      "scoring_mode": "experimental"
     },
     {
       "case_id": "case_002_site_photos",
@@ -52,22 +65,33 @@
       "preview_png": "case_002_site_photos\\scene_preview.png",
       "render_valid": true,
       "render_source": "pptx_screenshot",
-      "scene_hash": "7bd595e535a18509df865dedcf58f33e6db24b018b84a8a047edd606606055fe",
+      "scene_hash": "1f902ff04b4f04cb1f266db986fb2fa7ab008b7fa252ecdbd9537359bb797374",
       "rule_passed": true,
       "layout_score": 1.0,
       "has_critical": false,
       "human_weighted_score": null,
-      "human_score_label": "已作废（需重评）",
-      "human_review_source": "invalidated",
-      "human_review_validity": "invalid_render_artifact",
+      "human_score_label": "BLOCKED",
+      "human_review_source": "manual",
+      "human_review_validity": "valid",
       "human_review_completed": true,
       "human_accepted_for_delivery": false,
-      "human_accepted": null,
-      "human_invalidated": true,
-      "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
-      "reviewer": "Theopote",
-      "reviewed_at": "2026-07-20T13:58:36.352344+00:00",
-      "major_problems": []
+      "human_accepted": false,
+      "human_invalidated": false,
+      "invalidation_reason": null,
+      "reviewer": "facilitator-pilot-2026-07-28",
+      "reviewed_at": "2026-07-28T06:15:21.195893+00:00",
+      "major_problems": [
+        "四宫格照片不可作为现场证据"
+      ],
+      "page_quality_status": "BLOCKED",
+      "reporting_ready": "do_not_use",
+      "selected_issue_codes": [
+        "ARCH.PROBLEM_WITHOUT_EVIDENCE",
+        "IMAGE_TEXT.HERO_UNCLEAR",
+        "CONTENT.IMPORTANT_MISSING",
+        "IMAGE_TEXT.EQUAL_WEIGHT_IMAGES"
+      ],
+      "scoring_mode": "experimental"
     },
     {
       "case_id": "case_003_case_comparison",
@@ -94,7 +118,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:06:57.029850+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_004_economic_metrics",
@@ -121,7 +149,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:08:02.224496+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_005_design_concept",
@@ -148,7 +180,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:09:08.543716+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_006_project_hero",
@@ -160,22 +196,33 @@
       "preview_png": "case_006_project_hero\\scene_preview.png",
       "render_valid": true,
       "render_source": "pptx_screenshot",
-      "scene_hash": "15cd2747bb1fb6d5aa6ef99d8444394b51b6ab02f28494fa9aa99842d175474f",
+      "scene_hash": "3d8024d2452faac101e67d87c333e4872b17fdb9fceb9e422484b10099aee261",
       "rule_passed": true,
       "layout_score": 1.0,
       "has_critical": false,
       "human_weighted_score": null,
-      "human_score_label": "已作废（需重评）",
-      "human_review_source": "invalidated",
-      "human_review_validity": "invalid_render_artifact",
+      "human_score_label": "BLOCKED",
+      "human_review_source": "manual",
+      "human_review_validity": "valid",
       "human_review_completed": true,
       "human_accepted_for_delivery": false,
-      "human_accepted": null,
-      "human_invalidated": true,
-      "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
-      "reviewer": "Theopote",
-      "reviewed_at": "2026-07-20T14:09:59.341474+00:00",
-      "major_problems": []
+      "human_accepted": false,
+      "human_invalidated": false,
+      "invalidation_reason": null,
+      "reviewer": "facilitator-pilot-2026-07-28",
+      "reviewed_at": "2026-07-28T06:15:21.195893+00:00",
+      "major_problems": [
+        "主图不主导页面，留白失控"
+      ],
+      "page_quality_status": "BLOCKED",
+      "reporting_ready": "do_not_use",
+      "selected_issue_codes": [
+        "LAYOUT.NO_VISUAL_FOCUS",
+        "LAYOUT.TOO_EMPTY",
+        "LAYOUT.WHITESPACE_IMBALANCE",
+        "IMAGE_TEXT.HERO_UNCLEAR"
+      ],
+      "scoring_mode": "experimental"
     },
     {
       "case_id": "case_007_aerial_hero",
@@ -202,7 +249,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:10:03.007213+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_008_overlay_hero",
@@ -229,7 +280,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:15:51.172833+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_009_patient_journey",
@@ -256,7 +311,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:16:05.122284+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_010_construction_phases",
@@ -283,7 +342,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:16:38.660716+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_011_design_process",
@@ -310,7 +373,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:16:44.157374+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_012_circulation_diagram",
@@ -337,7 +404,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:16:48.892403+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_013_zoning_callouts",
@@ -364,7 +435,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:16:52.710918+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_014_structure_concept",
@@ -391,7 +466,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:17:00.462694+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_015_design_principles",
@@ -418,7 +497,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:17:03.727778+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_016_sustainability_cards",
@@ -445,7 +528,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:17:06.132721+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_017_spatial_strategy_lead",
@@ -472,7 +559,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:17:08.695742+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_018_drawing_metrics_hybrid",
@@ -499,7 +590,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:17:19.776687+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_019_photo_text_hybrid",
@@ -526,7 +621,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:17:27.503026+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_020_synthesis_canvas",
@@ -553,7 +652,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:17:34.619084+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_021_floor_plan_full",
@@ -580,7 +683,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:17:41.719603+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_022_section_annotations",
@@ -607,7 +714,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:17:52.278424+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_023_survey_photo_grid",
@@ -634,7 +745,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:17:56.920000+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_024_renovation_journey",
@@ -661,7 +776,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:18:00.713842+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_025_scheme_columns",
@@ -688,7 +807,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:18:04.481993+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_026_before_after",
@@ -715,7 +838,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:18:07.485783+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_027_metric_cards_only",
@@ -742,7 +869,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:18:09.913653+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_028_energy_metrics_chart",
@@ -769,7 +900,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:18:12.681401+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_029_quote_argument",
@@ -796,7 +931,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:18:16.866509+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     },
     {
       "case_id": "case_030_two_column_policy",
@@ -823,7 +962,11 @@
       "invalidation_reason": "Reviewed against wireframe preview rather than final rendered slide",
       "reviewer": "Theopote",
       "reviewed_at": "2026-07-20T14:18:23.100370+00:00",
-      "major_problems": []
+      "major_problems": [],
+      "page_quality_status": null,
+      "reporting_ready": null,
+      "selected_issue_codes": [],
+      "scoring_mode": null
     }
   ]
 }

@@ -42,11 +42,17 @@ class PptxRenderer:
         structure: PresentationStructureSpec | None = None,
         chart_export_mode: ChartExportMode | None = None,
         project_id: UUID | None = None,
+        resolve_ctx: Any | None = None,
     ) -> dict[str, Any]:
         mode = structure_mode or self._default_structure_mode()
         chart_mode = chart_export_mode or self._default_chart_export_mode()
         resolved_scenes = [
-            (self._resolve_for_export(scene, project_id=project_id), notes)
+            (
+                self._resolve_for_export(
+                    scene, project_id=project_id, resolve_ctx=resolve_ctx
+                ),
+                notes,
+            )
             for scene, notes in scenes
         ]
         return self._adapter.render_deck(
@@ -69,6 +75,7 @@ class PptxRenderer:
         chart_export_mode: ChartExportMode | None = None,
         validate_ooxml: bool | None = None,
         project_id: UUID | None = None,
+        resolve_ctx: Any | None = None,
     ) -> Path:
         deck = self.build_instruction_deck(
             title=title or "Archium Slide",
@@ -77,6 +84,7 @@ class PptxRenderer:
             structure=structure,
             chart_export_mode=chart_export_mode,
             project_id=project_id,
+            resolve_ctx=resolve_ctx,
         )
         return self.export_deck(deck, output_path, validate_ooxml=validate_ooxml)
 
@@ -173,11 +181,15 @@ class PptxRenderer:
         scene: RenderScene,
         *,
         project_id: UUID | None,
+        resolve_ctx: Any | None = None,
     ) -> RenderScene:
         from archium.infrastructure.storage.asset_path_resolver import (
             AssetPathResolveContext,
             AssetPathResolver,
         )
+
+        if resolve_ctx is not None:
+            return AssetPathResolver().resolve_scene(scene, resolve_ctx)
 
         resolved_project = project_id
         if resolved_project is None and scene.presentation_id is not None:
@@ -252,6 +264,7 @@ def maybe_export_scene_pptx(
     structure: PresentationStructureSpec | None = None,
     chart_export_mode: ChartExportMode | None = None,
     project_id: UUID | None = None,
+    resolve_ctx: Any | None = None,
 ) -> Path | None:
     """Export PPTX from RenderScene when Node/PptxGenJS is available."""
     reason = scene_pptx_unavailable_reason(settings)
@@ -268,4 +281,5 @@ def maybe_export_scene_pptx(
         structure=structure,
         chart_export_mode=chart_export_mode,
         project_id=project_id,
+        resolve_ctx=resolve_ctx,
     )

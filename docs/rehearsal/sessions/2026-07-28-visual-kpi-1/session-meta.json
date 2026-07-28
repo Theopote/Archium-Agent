@@ -1,0 +1,33 @@
+{
+  "session_id": "2026-07-28-visual-kpi-1",
+  "date": "2026-07-28",
+  "facilitator": "Cursor agent + product facilitator desk review",
+  "project_label_redacted": "architectural_slides pilot trio (case_001/002/006)",
+  "participants": [
+    {
+      "participant_id": "P1",
+      "role": "建筑师视角 desk review（facilitator）",
+      "is_non_developer": true,
+      "notes": "基于新鲜 PPTX + pptx_render 的异常复核与修改成本估计；非外部客户建筑师整稿签收"
+    }
+  ],
+  "playbook": "A",
+  "status": "completed_pilot_sample",
+  "expected_deck_slides": 20,
+  "step3_decision": {
+    "pilot_reporting_ready": {
+      "case_001_site_plan": "do_not_use",
+      "case_002_site_photos": "do_not_use",
+      "case_006_project_hero": "do_not_use"
+    },
+    "accepted_for_delivery": 0,
+    "next": "stop_expand_layout_model; fix placeholder assets + hero dominance before 30-page expand",
+    "enter_edit_cost": "pilot_sample_only_3_of_20"
+  },
+  "b10_checklist": {
+    "import_generate_edit_export": false,
+    "edit_cost_coverage_gte_80pct": false,
+    "critical_high_triaged": true,
+    "summary_json_written": true
+  }
+}

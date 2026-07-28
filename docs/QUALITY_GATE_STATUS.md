@@ -4,7 +4,7 @@
 > **文档状态：历史快照。**
 > 本文记录特定阶段的分析、实施、验收或计划，可能包含已过时的路径、状态和结论。
 > 当前行为以代码、测试、`README.md`、`docs/README.md` 及现行专题文档为准。
-Last updated: 2026-07-21
+Last updated: 2026-07-28
 
 This document states what is **proven by automation** vs what still requires **human rehearsal** or **real project delivery**.
 
@@ -120,26 +120,26 @@ reviewers must use a **type-aware pass/review rubric** instead of aesthetic micr
 
 ### Next steps — only these three
 
-1. **Regenerate screenshots** with Windows PowerPoint COM (or CI LibreOffice) for Goldens  
-2. **Keep** formal quality gate on `pptx_screenshot_generated=true` (already enforced)  
-3. **Pilot human exception review on 3 pages** (checklist + reporting_ready), then expand to 30
+1. **Regenerate screenshots** with Windows PowerPoint COM (or CI LibreOffice) for Goldens — **pilot done 2026-07-28**
+2. **Keep** formal quality gate on `pptx_screenshot_generated=true` (already enforced)
+3. **Pilot human exception review on 3 pages** — **done 2026-07-28** (`source=manual`, all `reporting_ready=do_not_use`); **do not expand to 30** until placeholder assets + Hero dominance are fixed
 
 ### Pilot trio (do first)
 
-| Case | Covers | Fresh screenshot (this host) |
-|------|--------|------------------------------|
-| `case_001_site_plan` | 建筑图纸 | Regenerated via PowerPoint COM |
-| `case_002_site_photos` | 多张现场照片 | Regenerated via PowerPoint COM |
-| `case_006_project_hero` | 大图视觉页面 | Regenerated via PowerPoint COM |
+| Case | Covers | Fresh screenshot (this host) | Exception review (2026-07-28) |
+|------|--------|------------------------------|------------------------------|
+| `case_001_site_plan` | 建筑图纸 | Regenerated; `render_valid=true` | `do_not_use` — 主图为文件名占位栅格 |
+| `case_002_site_photos` | 多张现场照片 | Regenerated; `render_valid=true` | `do_not_use` — 四宫格证据不可读 |
+| `case_006_project_hero` | 大图视觉页面 | Regenerated; `render_valid=true` | `do_not_use` — Hero 过小 / 留白失控 |
 
 Each pilot page must simultaneously satisfy:
 
-- Fresh PPTX screenshot (`pptx_screenshot_generated=true`) — **done for pilot trio on this machine**
-- Scene / PPTX / screenshot hash consistency — **pilot trio eligible**
-- Human exception review (`source=manual`, problem checklist + reporting_ready) — **still required**
-- PPTX editability review passed — **still required (human)**
+- Fresh PPTX screenshot (`pptx_screenshot_generated=true`) — **done for pilot trio**
+- Scene / PPTX / screenshot hash consistency — **done** (`post_render_qa_passed=true`)
+- Human exception review (`source=manual`, problem checklist + reporting_ready) — **done; 0/3 delivery-accepted**
+- PPTX editability review passed — **done** (native text/images editable; content is the blocker)
 
-Only then expand exception review / screenshot regen to all 30 pages.
+**Step 3 decision (2026-07-28):** 3/3 不可汇报 → **停扩布局模型 / 停扩 30 页人工评分**。先修：(1) curated/e2e 占位素材换成可读建筑图；(2) Hero 主导面积；(3) 可选：自动 QA 识别「占位图当内容」。证据：`docs/rehearsal/sessions/2026-07-28-visual-kpi-1/`。
 
 ```bash
 # Regenerate pilot screenshots into Goldens (PowerPoint available on this host)
@@ -157,11 +157,11 @@ Then Settings →「建筑幻灯片基准 · 人工视觉评审」for those thre
 |------|--------|----------|
 | Layout rule quality | **Passed** | `rule_pass_rate = 1.0` (30/30) |
 | Provenance chain scene → PPTX → screenshot | **In place** | hashes + sidecars |
-| Manual human exception review | **Not started** | no score averages; checklist + reporting_ready |
+| Manual human exception review | **Pilot done (3)** | `manual_human_review_count = 3`; all `do_not_use` |
 | Manual delivery acceptance | **Not started** | `manual_human_accepted_count = 0` |
-| Placeholder reviews | 30 | `source=placeholder` in each `human_review.json` |
-| Fresh PPTX screenshot for formal review | **Partial** | pilot 3: `generated=true`; remaining 27 still typically `reused=true` |
-| Formal human gate (problem-driven) | **Failed** | needs ≥3 exception reviews; `human_quality_gate_passed = false` |
+| Placeholder reviews | 0 counted in summary | remaining cases lack fresh formal reviews |
+| Fresh PPTX screenshot for formal review | **Partial** | pilot 3: `generated=true` + `render_valid=true`; remaining 27 not re-reviewed |
+| Formal human gate (problem-driven) | **Passed (pilot floor)** | ≥3 exception reviews; `human_quality_gate_passed = true` — **does not mean deliverable** |
 | Formal 1–5 average ≥ 3.8 | **Retired** | experimental only |
 
 Report: `tests/benchmark/architectural_slides/reports/benchmark-summary.json`
@@ -181,10 +181,15 @@ Report: `tests/benchmark/architectural_slides/reports/benchmark-summary.json`
 | Phase 8 端到端自动生成两套 20 页项目 | **Runnable**（本地 / CI 产物） |
 | 产物落在 `.data/phase8`（运行时目录） | **Yes** — 不得当作仓库 Golden 或正式交付包 |
 | 本机路径 / 自动生成数据 / 运行时 DB | **仍存在** — 不可移植、不可作为验收证据 |
-| 有效人工视觉评分 | **Missing** |
-| 真实修改时间（live edit cost） | **Missing** |
+| 有效人工视觉评分 | **Partial** — 试点 3 页异常复核完成（全部 `do_not_use`）；交付接受仍为 0 |
+| 真实修改时间（live edit cost） | **Partial** — 试点 3 页 desk review：29 min / keep_rate=0；非整 20 页签收 |
+| 四项产品 KPI（keep_rate / avg 单页分钟 / 严重布局错误 / 20 页总修订） | **Failed (pilot sample)** — `docs/rehearsal/sessions/2026-07-28-visual-kpi-1/summary.json`：keep_rate=0，avg=9.67，severe_layout=1，coverage=0.15；`kpi_pass=false` |
 | 外部建筑师评价 | **Missing** |
 | 最终交付结论 / 签收 | **Missing** |
+
+**四项产品 KPI 目标（未跑完整 20 页 session 前不得宣称达标）：** keep_rate ≥ 50%；avg ≤ 3 min/页；严重布局错误 = 0；约 20 页整稿修订 ≤ 45 min（覆盖 ≥ 80% 页）。
+
+**2026-07-28 试点结论：** 工程门（截图新鲜 / hash）与问题驱动异常复核试点门已过；**产品交付门未过**。高频问题是占位素材与 Hero 不主导，不是「缺更多布局语法」。
 
 **对外口径：** Phase 8 本地跑通 ≠ 正式真实项目验收。不得宣称「真实项目验收已完成」或把 `.data/phase8` 输出当作签收交付物。
 
@@ -194,8 +199,9 @@ Report: `tests/benchmark/architectural_slides/reports/benchmark-summary.json`
 |------|--------|----------|
 | Automated pipeline (content + visual) | **Runnable** | `pytest tests/e2e/real_projects -m real_project_acceptance` |
 | Stored acceptance records | **Baseline only** | `tests/e2e/real_projects/records/*/acceptance_record.json` |
-| Manual human rehearsal | **Not completed** | `human_metrics_source != studio_manual` on all records |
-| Human rehearsal gate | **Failed** | `human_rehearsal_passed = false` |
+| Manual human rehearsal | **Partial (pilot)** | `docs/rehearsal/sessions/2026-07-28-visual-kpi-1/` — 3-page desk review only |
+| Human rehearsal gate | **Failed** | full B10 / 20-page coverage not met; `beta_ready_by_user_data = false` |
+| Product edit-cost KPIs (keep / avg / severe layout / deck minutes) | **Failed (pilot)** | keep_rate=0; avg=9.67; severe_layout=1; coverage=0.15; see session `summary.json` |
 | Verifiable real deliverables | **Not published** | no sanitized `files/<project_id>/` drop-ins; no signed-off PPTX/PDF bundle |
 | Phase 8 `.data/phase8` dumps as acceptance | **Not accepted** | runtime only; see section above |
 

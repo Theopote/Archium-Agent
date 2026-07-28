@@ -1,12 +1,13 @@
 {
-  "created_at": "2026-07-21T03:55:36.789939Z",
-  "updated_at": "2026-07-21T03:55:36.789939Z",
+  "created_at": "2026-07-28T06:10:37.609583Z",
+  "updated_at": "2026-07-28T06:10:37.609583Z",
   "version": 1,
-  "id": "a933b06f-f335-4e28-a22a-6c76e0bdb7da",
-  "schema_version": 1,
-  "slide_id": "85fdbfbe-fe38-41e3-8ff1-0db2140c4a5c",
+  "id": "945cafe5-4970-4ba1-b80e-c6758d0b65ad",
+  "schema_version": 2,
+  "slide_id": "63fe892c-a068-42b7-8e34-f4fdeabdb632",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "de1f468c-2cef-4926-aaa4-f96f133519d6",
+  "layout_plan_id": "bbd783fd-abe9-4841-ae20-0a2499d3e7fd",
+  "design_system_id": "67931e86-18d4-4080-ae72-72718674d773",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -20,9 +21,9 @@
       "semantic_role": "project_photo",
       "source_layout_element_id": "hero",
       "x": 4.408666666666668,
-      "y": 1.2325,
+      "y": 1.2550000000000001,
       "width": 4.891333333333335,
-      "height": 3.5091666666666668,
+      "height": 3.486666666666667,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 1,
@@ -32,7 +33,6 @@
       "group_id": null,
       "asset_id": null,
       "storage_uri": "benchmark://case_006_project_hero/assets/c0060001-0001-4001-8001-000000000001.png",
-      "asset_path": "benchmark://case_006_project_hero/assets/c0060001-0001-4001-8001-000000000001.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -41,7 +41,9 @@
       "border": null,
       "shadow": null,
       "caption_node_id": null,
-      "asset_unresolved": false
+      "asset_unresolved": false,
+      "icon_stroke_color": null,
+      "icon_stroke_token": ""
     },
     {
       "id": "title",
@@ -51,7 +53,7 @@
       "x": 0.7,
       "y": 0.45,
       "width": 8.600000000000001,
-      "height": 0.6575,
+      "height": 0.68,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 2,
@@ -73,6 +75,8 @@
       "font_weight": 700,
       "font_style": "normal",
       "color": "#1A1A1A",
+      "color_token": "primary_text",
+      "typography_token": "title",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 45.9,
@@ -83,7 +87,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
@@ -92,9 +96,9 @@
       "semantic_role": "lead_statement",
       "source_layout_element_id": "lead",
       "x": 0.7,
-      "y": 1.2325,
+      "y": 1.2550000000000001,
       "width": 3.5420000000000007,
-      "height": 1.7545833333333334,
+      "height": 1.7433333333333334,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 2,
@@ -116,6 +120,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#1A1A1A",
+      "color_token": "primary_text",
+      "typography_token": "heading",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 21.6,
@@ -126,7 +132,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
@@ -159,6 +165,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#777777",
+      "color_token": "muted_text",
+      "typography_token": "source",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 10.8,
@@ -169,7 +177,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     }
   ],
@@ -463,7 +471,6 @@
     {
       "asset_id": null,
       "storage_uri": "benchmark://case_006_project_hero/assets/c0060001-0001-4001-8001-000000000001.png",
-      "asset_path": "benchmark://case_006_project_hero/assets/c0060001-0001-4001-8001-000000000001.png",
       "origin": "project_upload",
       "content_ref": "c0060001-0001-4001-8001-000000000001"
     }

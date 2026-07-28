@@ -92,6 +92,49 @@ def test_adapter_prefers_resolved_path_over_portable_uri() -> None:
     assert "asset_unresolved" not in image
 
 
+def test_resolve_for_export_preserves_existing_resolved_path(tmp_path) -> None:
+    """PPTX export without benchmark_root must not wipe a prior resolved file."""
+    from archium.infrastructure.renderers.pptx_renderer import PptxRenderer
+    from archium.infrastructure.storage.asset_path_resolver import (
+        AssetPathResolveContext,
+        AssetPathResolver,
+    )
+
+    asset = tmp_path / "hero.png"
+    asset.write_bytes(b"\x89PNG\r\n\x1a\n" + b"0" * 32)
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[
+            DrawingNode(
+                id="plan",
+                x=1,
+                y=1,
+                width=4,
+                height=3,
+                storage_uri="benchmark://case_x/assets/hero.png",
+                asset_path="benchmark://case_x/assets/hero.png",
+                resolved_path=str(asset),
+                drawing_type="site_plan",
+                asset_unresolved=False,
+            )
+        ],
+    )
+    # Empty project-only context used to clear resolved_path before the fix.
+    wiped = AssetPathResolver().resolve_scene(scene, AssetPathResolveContext())
+    drawing = next(n for n in wiped.nodes if n.id == "plan")
+    assert drawing.resolved_path == str(asset)
+    assert drawing.asset_unresolved is False
+
+    export_resolved = PptxRenderer()._resolve_for_export(scene, project_id=None)
+    exported = next(n for n in export_resolved.nodes if n.id == "plan")
+    assert exported.resolved_path == str(asset)
+    assert exported.asset_unresolved is False
+
+
 def test_scene_pptx_unavailable_reason_is_string_or_none() -> None:
     reason = scene_pptx_unavailable_reason()
     assert reason is None or isinstance(reason, str)

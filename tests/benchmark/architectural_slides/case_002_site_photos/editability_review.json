@@ -6,14 +6,14 @@
   "layer_independence": 4,
   "chart_editable": 4,
   "font_usability": 5,
-  "not_flattened": 4,
-  "selection_ease": 5,
-  "modification_ease": 5,
+  "not_flattened": 5,
+  "selection_ease": 4,
+  "modification_ease": 4,
   "major_problems": [],
   "minor_problems": [],
   "review_completed": true,
   "passed": true,
-  "reviewer": "Theopote",
-  "reviewed_at": "2026-07-20T17:15:33.156726Z",
-  "reviewer_notes": ""
+  "reviewer": "facilitator-pilot-2026-07-28",
+  "reviewed_at": "2026-07-28T06:15:21.195893Z",
+  "reviewer_notes": "四图均可替换；文本可编辑"
 }

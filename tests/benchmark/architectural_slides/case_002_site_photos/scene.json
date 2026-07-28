@@ -1,12 +1,13 @@
 {
-  "created_at": "2026-07-21T03:55:30.430854Z",
-  "updated_at": "2026-07-21T03:55:30.430854Z",
+  "created_at": "2026-07-28T06:10:29.572758Z",
+  "updated_at": "2026-07-28T06:10:29.572758Z",
   "version": 1,
-  "id": "40881998-7c25-4593-a154-8d102dff5da5",
-  "schema_version": 1,
-  "slide_id": "1dae33d6-cee7-44bc-b585-21ba21ea888f",
+  "id": "6bbb30ca-2154-464d-a710-c3c0f46d066a",
+  "schema_version": 2,
+  "slide_id": "cef86b24-0127-4b2a-8b42-bcecbfbc5b71",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "a496aa30-b7e0-4ade-a6f2-8350001c6ac2",
+  "layout_plan_id": "afc17f97-b5ec-4c9a-9014-6e164309e906",
+  "design_system_id": "39444523-97e9-41a4-98fc-5e735fa66041",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -22,7 +23,7 @@
       "x": 0.7,
       "y": 0.45,
       "width": 8.600000000000001,
-      "height": 0.6575,
+      "height": 0.68,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -44,6 +45,8 @@
       "font_weight": 700,
       "font_style": "normal",
       "color": "#1A1A1A",
+      "color_token": "primary_text",
+      "typography_token": "title",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 45.9,
@@ -54,7 +57,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
@@ -63,7 +66,7 @@
       "semantic_role": "lead_statement",
       "source_layout_element_id": "lead",
       "x": 0.7,
-      "y": 1.1491666666666667,
+      "y": 1.1716666666666669,
       "width": 8.600000000000001,
       "height": 0.45,
       "rotation": 0.0,
@@ -87,6 +90,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#4A4A4A",
+      "color_token": "secondary_text",
+      "typography_token": "heading",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 24.3,
@@ -97,7 +102,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
@@ -106,9 +111,9 @@
       "semantic_role": "supporting_visual",
       "source_layout_element_id": "photo_0",
       "x": 0.7,
-      "y": 1.6824999999999999,
+      "y": 1.705,
       "width": 4.237500000000001,
-      "height": 1.1118249999999998,
+      "height": 1.1030499999999999,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -118,7 +123,6 @@
       "group_id": null,
       "asset_id": null,
       "storage_uri": "benchmark://case_002_site_photos/assets/c0020001-0001-4001-8001-000000000001.png",
-      "asset_path": "benchmark://case_002_site_photos/assets/c0020001-0001-4001-8001-000000000001.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -127,7 +131,9 @@
       "border": null,
       "shadow": null,
       "caption_node_id": null,
-      "asset_unresolved": false
+      "asset_unresolved": false,
+      "icon_stroke_color": null,
+      "icon_stroke_token": ""
     },
     {
       "id": "annotation_0",
@@ -135,9 +141,9 @@
       "semantic_role": "annotation",
       "source_layout_element_id": "annotation_0",
       "x": 0.7,
-      "y": 2.8359916666666662,
+      "y": 2.8497166666666662,
       "width": 4.237500000000001,
-      "height": 0.3135916666666667,
+      "height": 0.3111166666666667,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -159,6 +165,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#777777",
+      "color_token": "muted_text",
+      "typography_token": "caption",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 16.2,
@@ -169,7 +177,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
@@ -178,9 +186,9 @@
       "semantic_role": "supporting_visual",
       "source_layout_element_id": "photo_1",
       "x": 5.062500000000001,
-      "y": 1.6824999999999999,
+      "y": 1.705,
       "width": 4.237500000000001,
-      "height": 1.1118249999999998,
+      "height": 1.1030499999999999,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -190,7 +198,6 @@
       "group_id": null,
       "asset_id": null,
       "storage_uri": "benchmark://case_002_site_photos/assets/c0020002-0001-4001-8001-000000000002.png",
-      "asset_path": "benchmark://case_002_site_photos/assets/c0020002-0001-4001-8001-000000000002.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -199,7 +206,9 @@
       "border": null,
       "shadow": null,
       "caption_node_id": null,
-      "asset_unresolved": false
+      "asset_unresolved": false,
+      "icon_stroke_color": null,
+      "icon_stroke_token": ""
     },
     {
       "id": "annotation_1",
@@ -207,9 +216,9 @@
       "semantic_role": "annotation",
       "source_layout_element_id": "annotation_1",
       "x": 5.062500000000001,
-      "y": 2.8359916666666662,
+      "y": 2.8497166666666662,
       "width": 4.237500000000001,
-      "height": 0.3135916666666667,
+      "height": 0.3111166666666667,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -231,6 +240,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#777777",
+      "color_token": "muted_text",
+      "typography_token": "caption",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 16.2,
@@ -241,7 +252,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
@@ -250,9 +261,9 @@
       "semantic_role": "supporting_visual",
       "source_layout_element_id": "photo_2",
       "x": 0.7,
-      "y": 3.274583333333333,
+      "y": 3.2858333333333336,
       "width": 4.237500000000001,
-      "height": 1.1118249999999998,
+      "height": 1.1030499999999999,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -262,7 +273,6 @@
       "group_id": null,
       "asset_id": null,
       "storage_uri": "benchmark://case_002_site_photos/assets/c0020003-0001-4001-8001-000000000003.png",
-      "asset_path": "benchmark://case_002_site_photos/assets/c0020003-0001-4001-8001-000000000003.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -271,7 +281,9 @@
       "border": null,
       "shadow": null,
       "caption_node_id": null,
-      "asset_unresolved": false
+      "asset_unresolved": false,
+      "icon_stroke_color": null,
+      "icon_stroke_token": ""
     },
     {
       "id": "annotation_2",
@@ -279,9 +291,9 @@
       "semantic_role": "annotation",
       "source_layout_element_id": "annotation_2",
       "x": 0.7,
-      "y": 4.428075,
+      "y": 4.43055,
       "width": 4.237500000000001,
-      "height": 0.3135916666666667,
+      "height": 0.3111166666666667,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -303,6 +315,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#777777",
+      "color_token": "muted_text",
+      "typography_token": "caption",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 16.2,
@@ -313,7 +327,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
@@ -322,9 +336,9 @@
       "semantic_role": "supporting_visual",
       "source_layout_element_id": "photo_3",
       "x": 5.062500000000001,
-      "y": 3.274583333333333,
+      "y": 3.2858333333333336,
       "width": 4.237500000000001,
-      "height": 1.1118249999999998,
+      "height": 1.1030499999999999,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -334,7 +348,6 @@
       "group_id": null,
       "asset_id": null,
       "storage_uri": "benchmark://case_002_site_photos/assets/c0020004-0001-4001-8001-000000000004.png",
-      "asset_path": "benchmark://case_002_site_photos/assets/c0020004-0001-4001-8001-000000000004.png",
       "asset_origin": "project_upload",
       "fit_mode": "cover",
       "crop": null,
@@ -343,7 +356,9 @@
       "border": null,
       "shadow": null,
       "caption_node_id": null,
-      "asset_unresolved": false
+      "asset_unresolved": false,
+      "icon_stroke_color": null,
+      "icon_stroke_token": ""
     },
     {
       "id": "annotation_3",
@@ -351,9 +366,9 @@
       "semantic_role": "annotation",
       "source_layout_element_id": "annotation_3",
       "x": 5.062500000000001,
-      "y": 4.428075,
+      "y": 4.43055,
       "width": 4.237500000000001,
-      "height": 0.3135916666666667,
+      "height": 0.3111166666666667,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 0,
@@ -375,6 +390,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#777777",
+      "color_token": "muted_text",
+      "typography_token": "caption",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 16.2,
@@ -385,7 +402,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     },
     {
@@ -418,6 +435,8 @@
       "font_weight": 400,
       "font_style": "normal",
       "color": "#777777",
+      "color_token": "muted_text",
+      "typography_token": "source",
       "alignment": "left",
       "vertical_alignment": "top",
       "line_height": 10.8,
@@ -428,7 +447,7 @@
         "bottom": 0.020833333333333332,
         "left": 0.041666666666666664
       },
-      "overflow_policy": "shrink",
+      "overflow_policy": "warn",
       "minimum_font_size": 8.0
     }
   ],
@@ -722,28 +741,24 @@
     {
       "asset_id": null,
       "storage_uri": "benchmark://case_002_site_photos/assets/c0020001-0001-4001-8001-000000000001.png",
-      "asset_path": "benchmark://case_002_site_photos/assets/c0020001-0001-4001-8001-000000000001.png",
       "origin": "project_upload",
       "content_ref": "c0020001-0001-4001-8001-000000000001"
     },
     {
       "asset_id": null,
       "storage_uri": "benchmark://case_002_site_photos/assets/c0020002-0001-4001-8001-000000000002.png",
-      "asset_path": "benchmark://case_002_site_photos/assets/c0020002-0001-4001-8001-000000000002.png",
       "origin": "project_upload",
       "content_ref": "c0020002-0001-4001-8001-000000000002"
     },
     {
       "asset_id": null,
       "storage_uri": "benchmark://case_002_site_photos/assets/c0020003-0001-4001-8001-000000000003.png",
-      "asset_path": "benchmark://case_002_site_photos/assets/c0020003-0001-4001-8001-000000000003.png",
       "origin": "project_upload",
       "content_ref": "c0020003-0001-4001-8001-000000000003"
     },
     {
       "asset_id": null,
       "storage_uri": "benchmark://case_002_site_photos/assets/c0020004-0001-4001-8001-000000000004.png",
-      "asset_path": "benchmark://case_002_site_photos/assets/c0020004-0001-4001-8001-000000000004.png",
       "origin": "project_upload",
       "content_ref": "c0020004-0001-4001-8001-000000000004"
     }

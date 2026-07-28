@@ -83,7 +83,7 @@
 
 | 编号 | 模块 | 一句话 |
 |------|------|--------|
-| [QD-010](12-qa-delivery.md) | qa-delivery | 正式人工视觉门禁未过 |
+| [QD-010](12-qa-delivery.md) | qa-delivery | 试点门已过；交付接受仍为 0（占位素材/Hero） |
 | [TS-010](14-tests-security.md) | tests-security | 非开发者剧本 A + 修改成本（Beta B10；工具就绪，待真人） |
 
 P0 已关闭：`APP-003`；`QD-006`/`B8`；`WF-002`/`WF-008`；`DB-001`/`DB-002`/`DB-003`/`DB-005`/`DB-007`；`KN-001`/`KN-007`；`TS-008` chromadb CVE **mitigated**（allowlist → 2026-10-01）。

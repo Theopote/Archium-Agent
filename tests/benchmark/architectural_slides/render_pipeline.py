@@ -172,12 +172,14 @@ def export_benchmark_pptx_from_scene(
 ) -> tuple[Path | None, list[str]]:
     """Export editable PPTX from RenderScene (resolves portable URIs first)."""
     pptx_path = case_dir / PPTX_NAME
-    render_scene = AssetPathResolver().resolve_scene(scene, _resolve_ctx(case_dir))
+    ctx = _resolve_ctx(case_dir)
+    render_scene = AssetPathResolver().resolve_scene(scene, ctx)
     exported = maybe_export_scene_pptx(
         render_scene,
         pptx_path,
         title=title,
         speaker_notes=speaker_notes,
+        resolve_ctx=ctx,
     )
     fallbacks = PptxRenderer().font_fallbacks(render_scene) if exported else []
     return exported, fallbacks

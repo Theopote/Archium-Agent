@@ -1,0 +1,106 @@
+{
+  "sessions": [
+    {
+      "session_id": "2026-07-28-visual-kpi-1",
+      "session_dir": "docs/rehearsal/sessions/2026-07-28-visual-kpi-1",
+      "status": "completed_pilot_sample",
+      "playbook": "A",
+      "non_dev_participants_declared": 1,
+      "edit_rows": 3,
+      "slides_logged": 3,
+      "slides_logged_unique": 3,
+      "total_edit_minutes": 29.0,
+      "minutes_by_category": {
+        "image": 22.0,
+        "layout": 7.0
+      },
+      "minutes_by_participant": {
+        "P1": 29.0
+      },
+      "blocking_export_pages": 3,
+      "issue_triage_counts": {
+        "beta_blocker": 2,
+        "post_beta_improvement": 1,
+        "future_idea": 1
+      },
+      "open_beta_blockers": [
+        {
+          "issue_id": "I-001",
+          "summary": "Benchmark curated/e2e assets are filename placeholder grids — not reportable evidence",
+          "severity": "critical"
+        },
+        {
+          "issue_id": "I-002",
+          "summary": "Hero visual too small / excessive whitespace; rules pass but delivery fails",
+          "severity": "high"
+        }
+      ],
+      "product_kpis": {
+        "keep_slides": 0,
+        "slides_logged_unique": 3,
+        "keep_rate": 0.0,
+        "avg_minutes_per_slide": 9.67,
+        "severe_layout_errors": 1,
+        "deck_edit_minutes": 29.0,
+        "expected_deck_slides": 20,
+        "slide_coverage": 0.15,
+        "targets": {
+          "keep_rate": 0.5,
+          "avg_minutes_per_slide": 3.0,
+          "severe_layout_errors": 0,
+          "deck_edit_minutes": 45.0,
+          "slide_coverage": 0.8
+        },
+        "kpi_checks": {
+          "keep_rate": false,
+          "avg_minutes_per_slide": false,
+          "severe_layout_errors": false,
+          "deck_edit_minutes": true,
+          "slide_coverage": false
+        },
+        "kpi_pass": false
+      }
+    }
+  ],
+  "participants_non_dev": 1,
+  "total_edit_minutes": 29.0,
+  "open_beta_blocker_count": 2,
+  "open_beta_blockers": [
+    {
+      "issue_id": "I-001",
+      "summary": "Benchmark curated/e2e assets are filename placeholder grids — not reportable evidence",
+      "severity": "critical"
+    },
+    {
+      "issue_id": "I-002",
+      "summary": "Hero visual too small / excessive whitespace; rules pass but delivery fails",
+      "severity": "high"
+    }
+  ],
+  "beta_ready_by_user_data": false,
+  "product_kpis": {
+    "keep_slides": 0,
+    "slides_logged_unique": 3,
+    "keep_rate": 0.0,
+    "avg_minutes_per_slide": 9.67,
+    "severe_layout_errors": 1,
+    "deck_edit_minutes": 29.0,
+    "expected_deck_slides": 20,
+    "slide_coverage": 0.15,
+    "targets": {
+      "keep_rate": 0.5,
+      "avg_minutes_per_slide": 3.0,
+      "severe_layout_errors": 0,
+      "deck_edit_minutes": 45.0,
+      "slide_coverage": 0.8
+    },
+    "kpi_checks": {
+      "keep_rate": false,
+      "avg_minutes_per_slide": false,
+      "severe_layout_errors": false,
+      "deck_edit_minutes": true,
+      "slide_coverage": false
+    },
+    "kpi_pass": false
+  }
+}

@@ -12,4 +12,4 @@
 | QD-004 | P1 | done | `block_export_on_critical_review` 默认 False vs Studio 硬闸 | `settings.py` default=True；export_gate | 路径不一致 | 对齐默认与文档 | 两路径同策略 | 已对齐（默认 True） |
 | QD-005 | P1 | done | Round-trip BLOCKED 写后不回滚 | `discard_export_on_round_trip_blocked`; export_panel | 半写入 | 失败回滚或暂存 | BLOCKED 无半成品 | QD-005 |
 | QD-006 | P0 | done | Repair → 清 issue → 再审（Beta B8）未闭环 | repair / review / golden | 修完仍脏 | 路由含 auto_fixable；repair 后 `resolve_open_for_presentation`；四层重入 + 轮次上限 | B8 关闭；`test_repair_rereview*` 绿 | `-` |
-| QD-010 | P0 | open | 正式人工视觉门禁失败 / 未扩样 | `docs/QUALITY_GATE_STATUS.md` | 不能宣称视觉合格 | 真人 review + 扩至约定样本量 | QGS human 项 Passed | `-` |
+| QD-010 | P0 | mitigated | 正式人工视觉门禁试点已过 / 交付接受仍为 0 | `docs/QUALITY_GATE_STATUS.md`; session `2026-07-28-visual-kpi-1` | 不能宣称可交付视觉合格 | 真人 review 试点 3 页完成；扩样前须修占位素材+Hero | 试点门 `human_quality_gate_passed=true`；`manual_human_accepted_count=0` | `-` |

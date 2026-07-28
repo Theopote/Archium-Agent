@@ -1,0 +1,38 @@
+{
+  "case_id": "case_006_project_hero",
+  "source": "manual",
+  "information_hierarchy": 3,
+  "visual_focus": 1,
+  "reading_order": 3,
+  "image_text_relationship": 2,
+  "whitespace_density": 1,
+  "architectural_expression": 2,
+  "aesthetic_finish": 1,
+  "editability": 4,
+  "scoring_mode": "experimental",
+  "selected_issue_codes": [
+    "LAYOUT.NO_VISUAL_FOCUS",
+    "LAYOUT.TOO_EMPTY",
+    "LAYOUT.WHITESPACE_IMBALANCE",
+    "IMAGE_TEXT.HERO_UNCLEAR"
+  ],
+  "quality_issues": [],
+  "page_quality_status": "BLOCKED",
+  "worst_problem": "Hero 主图过小、页面大面积空白，无法形成封面级视觉冲击",
+  "system_missed": "布局规则通过，但未对 Hero 主导面积做交付级判定",
+  "reporting_ready": "do_not_use",
+  "major_problems": [
+    "主图不主导页面，留白失控"
+  ],
+  "minor_problems": [
+    "标题与副标题文案可用"
+  ],
+  "review_completed": true,
+  "accepted_for_delivery": false,
+  "validity": "valid",
+  "accepted": false,
+  "reviewer": "facilitator-pilot-2026-07-28",
+  "reviewed_at": "2026-07-28T06:15:21.195893Z",
+  "reviewer_notes": "PPTX 原生文字可编辑；视觉完成度不达标。估计放大/替换主图并重排约 5–8 分钟。",
+  "invalidation_reason": ""
+}

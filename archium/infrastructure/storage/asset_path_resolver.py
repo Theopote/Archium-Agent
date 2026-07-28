@@ -216,6 +216,13 @@ class AssetPathResolver:
             if isinstance(node, (ImageNode, DrawingNode)):
                 uri = node.storage_uri or node.asset_path
                 resolved = self.resolve(uri, ctx) if uri else None
+                # Preserve a caller-provided resolved_path when the new context
+                # cannot resolve the portable URI (e.g. PPTX export without
+                # benchmark_root after the pipeline already resolved assets).
+                if resolved is None and node.resolved_path:
+                    prior = Path(str(node.resolved_path))
+                    if prior.is_file():
+                        resolved = prior
                 absolute = str(resolved) if resolved is not None else None
                 update: dict[str, Any] = {"resolved_path": absolute}
                 # Align export gate + PPTX adapter: unresolved flag tracks renderability.

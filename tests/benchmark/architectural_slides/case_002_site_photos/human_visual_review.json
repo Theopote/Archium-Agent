@@ -1,5 +1,5 @@
 {
-  "case_id": "case_001_site_plan",
+  "case_id": "case_002_site_photos",
   "source": "manual",
   "information_hierarchy": 3,
   "visual_focus": 2,
@@ -11,21 +11,21 @@
   "editability": 4,
   "scoring_mode": "experimental",
   "selected_issue_codes": [
+    "ARCH.PROBLEM_WITHOUT_EVIDENCE",
     "IMAGE_TEXT.HERO_UNCLEAR",
-    "IMAGE_TEXT.DOES_NOT_SUPPORT_CONCLUSION",
     "CONTENT.IMPORTANT_MISSING",
-    "ARCH.ANNOTATIONS_UNREADABLE"
+    "IMAGE_TEXT.EQUAL_WEIGHT_IMAGES"
   ],
   "quality_issues": [],
   "page_quality_status": "BLOCKED",
-  "worst_problem": "主图为合成占位图（文件名栅格），无法作为总平面证据用于汇报",
-  "system_missed": "自动 QA 记 render_valid=true，但未识别主图仅为文件名占位而非可读图纸",
+  "worst_problem": "四宫格现场证据仅为占位条带，无法支撑「入口混行/停车占道」等问题陈述",
+  "system_missed": "规则通过但未拦截证据图不可读/过小",
   "reporting_ready": "do_not_use",
   "major_problems": [
-    "主图不是可读总平面，仅为占位示意图"
+    "四宫格照片不可作为现场证据"
   ],
   "minor_problems": [
-    "右侧指标卡版式可用，标题层级清晰"
+    "标题与四问题标签结构清楚"
   ],
   "review_completed": true,
   "accepted_for_delivery": false,
@@ -33,6 +33,6 @@
   "accepted": false,
   "reviewer": "facilitator-pilot-2026-07-28",
   "reviewed_at": "2026-07-28T06:15:21.195893Z",
-  "reviewer_notes": "对照 output.pptx + pptx_render.png（generated=true）。版式骨架（标题/主图区/三指标）可读，但主图内容不可交付。估计替换真实图纸并对齐约 8–12 分钟。",
+  "reviewer_notes": "PPTX 可打开；四图区几乎无辨认内容。估计替换四张真实现场照片并裁切约 10–15 分钟。",
   "invalidation_reason": ""
 }

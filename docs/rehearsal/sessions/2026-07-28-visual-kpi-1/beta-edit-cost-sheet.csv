@@ -1,0 +1,6 @@
+session_id,participant_id,role,project_label,slide_index,slide_title,edit_category,edit_summary,minutes_spent,blocking_export,notes
+# Pilot desk review from fresh PPTX + pptx_render (2026-07-28). Not a full 20-page architect session.
+# keep = minutes_spent 0 and blocking_export=no. All three pilots require content replacement → not keep.
+2026-07-28-visual-kpi-1,P1,建筑师（facilitator desk review）,benchmark-pilot-trio,1,院区总平面与改造范围,image,替换可读总平面图纸并对齐主图区,10,yes,case_001_site_plan; hero is filename placeholder grid
+2026-07-28-visual-kpi-1,P1,建筑师（facilitator desk review）,benchmark-pilot-trio,2,旧院区交通与环境问题,image,替换四宫格真实现场照片并裁切,12,yes,case_002_site_photos; evidence photos unreadable
+2026-07-28-visual-kpi-1,P1,建筑师（facilitator desk review）,benchmark-pilot-trio,3,城市更新医疗综合体方案,layout,放大主图并压缩留白使 Hero 主导,7,yes,case_006_project_hero; hero too small / page too empty

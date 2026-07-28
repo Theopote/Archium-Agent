@@ -1,0 +1,6 @@
+session_id,issue_id,severity,page_or_area,summary,triage_bucket,owner,status,linked_edit_rows
+# Pilot triage from 2026-07-28 exception review (3/3 do_not_use).
+2026-07-28-visual-kpi-1,I-001,critical,case_001/002/006 assets,Benchmark curated/e2e assets are filename placeholder grids — not reportable evidence,beta_blocker,eng,open,2026-07-28-visual-kpi-1:P1:1;2026-07-28-visual-kpi-1:P1:2
+2026-07-28-visual-kpi-1,I-002,high,case_006 Hero,Hero visual too small / excessive whitespace; rules pass but delivery fails,beta_blocker,visual,open,2026-07-28-visual-kpi-1:P1:3
+2026-07-28-visual-kpi-1,I-003,high,auto QA,render_valid=true does not catch placeholder-as-content delivery blockers,post_beta_improvement,eng,open,
+2026-07-28-visual-kpi-1,I-004,medium,expand strategy,Do not expand to 30-page human review until placeholder assets and hero dominance are fixed,future_idea,product,open,

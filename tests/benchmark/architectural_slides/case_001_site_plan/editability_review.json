@@ -3,19 +3,17 @@
   "source": "manual",
   "text_editable": 5,
   "image_replaceable": 5,
-  "layer_independence": 5,
+  "layer_independence": 4,
   "chart_editable": 4,
   "font_usability": 5,
-  "not_flattened": 4,
-  "selection_ease": 5,
+  "not_flattened": 5,
+  "selection_ease": 4,
   "modification_ease": 4,
-  "major_problems": [
-    "主要内容占比太矮了，标题占用高度太高了"
-  ],
+  "major_problems": [],
   "minor_problems": [],
   "review_completed": true,
-  "passed": false,
-  "reviewer": "Theopote",
-  "reviewed_at": "2026-07-20T17:12:10.792039Z",
-  "reviewer_notes": ""
+  "passed": true,
+  "reviewer": "facilitator-pilot-2026-07-28",
+  "reviewed_at": "2026-07-28T06:15:21.195893Z",
+  "reviewer_notes": "原生文本框可改；图片可替换；主问题是内容而非图层"
 }
