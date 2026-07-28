@@ -2,12 +2,12 @@
   "session_id": "2026-07-28-playbook-e-2",
   "date": "2026-07-28",
   "playbook": "E",
-  "status": "scheduled",
+  "status": "in_progress",
   "facilitator": "",
   "operator": "",
   "operator_is_non_developer": true,
   "llm_configured": null,
-  "pptx_export_ready": null,
+  "pptx_export_ready": true,
   "project_id": "",
   "project_name": "",
   "deck_page_count": null,
@@ -16,42 +16,27 @@
   "total_session_seconds": null,
   "automated_gate": {
     "command": "python scripts/run_playbook_e_gate.py -q",
-    "passed": false,
-    "run_date": "",
-    "commit": ""
+    "passed": true,
+    "run_date": "2026-07-28",
+    "commit": "ed09b05d"
+  },
+  "preflight": {
+    "service_text_export_smoke": {
+      "passed": true,
+      "run_date": "2026-07-28",
+      "notes": "StudioSceneEditService.rewrite_layout_element_text → FormalPptxExportService; marker found in slide1.xml"
+    },
+    "prior_session_blocker": "2026-07-27-playbook-e-1 E3/E5 e_blocker (Studio text not in PPTX) — re-verify on human run"
   },
   "steps": {
-    "E0": {
-      "pass": null,
-      "waived": false,
-      "waive_reason": ""
-    },
-    "E1": {
-      "pass": null,
-      "waived": false,
-      "waive_reason": ""
-    },
-    "E2": {
-      "pass": null,
-      "waived": false,
-      "waive_reason": ""
-    },
-    "E3": {
-      "pass": null,
-      "waived": false,
-      "waive_reason": ""
-    },
-    "E4": {
-      "pass": null,
-      "waived": false,
-      "waive_reason": ""
-    },
-    "E5": {
-      "pass": null,
-      "waived": false,
-      "waive_reason": ""
-    }
+    "E0": { "pass": null, "waived": false, "waive_reason": "" },
+    "E1": { "pass": null, "waived": false, "waive_reason": "" },
+    "E2": { "pass": null, "waived": false, "waive_reason": "" },
+    "E3": { "pass": null, "waived": false, "waive_reason": "" },
+    "E4": { "pass": null, "waived": false, "waive_reason": "" },
+    "E5": { "pass": null, "waived": false, "waive_reason": "" }
   },
   "overall_pass": false,
-  "blockers": []
+  "blockers": [],
+  "notes": "Automated gate green; service-layer text→PPTX smoke passed. Awaiting human operator E0–E5."
 }
