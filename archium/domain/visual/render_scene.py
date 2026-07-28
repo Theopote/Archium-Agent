@@ -747,9 +747,8 @@ def refresh_connectors_for_nodes(scene: RenderScene, node_ids: set[str]) -> list
     for node in scene.nodes:
         if not isinstance(node, ConnectorNode):
             continue
-        if node.start.node_id in node_ids or node.end.node_id in node_ids:
-            if refresh_connector_geometry(scene, node):
-                updated.append(node.id)
+        if (node.start.node_id in node_ids or node.end.node_id in node_ids) and refresh_connector_geometry(scene, node):
+            updated.append(node.id)
     return updated
 
 

@@ -728,7 +728,7 @@ def _render_element_properties(
         with st.expander("混排样式（同框粗细/颜色）", expanded=False):
             existing_runs = []
             if scene_node is not None and getattr(scene_node, "runs", None):
-                existing_runs = list(getattr(scene_node, "runs") or [])
+                existing_runs = list(scene_node.runs or [])
             default_a = existing_runs[0].text if existing_runs else (element.text_content or "")
             default_b = existing_runs[1].text if len(existing_runs) > 1 else ""
             weight_a = (
@@ -1158,12 +1158,11 @@ def _render_element_properties(
                 except Exception as exc:
                     st.error(format_user_error(exc))
 
-        if element.content_type == LayoutContentType.GROUP:
-            if st.button(
-                "取消组合",
-                use_container_width=True,
-                key=f"studio_ungroup_{slide_snapshot.slide.id}_{element.id}",
-            ):
+        if element.content_type == LayoutContentType.GROUP and st.button(
+            "取消组合",
+            use_container_width=True,
+            key=f"studio_ungroup_{slide_snapshot.slide.id}_{element.id}",
+        ):
                 try:
                     with get_session() as session:
                         from archium.ui.studio_service import apply_slide_element_ungroup

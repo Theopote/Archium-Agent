@@ -6,13 +6,17 @@ from uuid import uuid4
 
 from archium.domain.enums import VisualType
 from archium.domain.slide import SlideSpec, VisualRequirement
-from archium.domain.visual import LayoutFamily, VisualContentType, VisualIntent, default_presentation_design_system
+from archium.domain.visual import (
+    LayoutFamily,
+    VisualContentType,
+    VisualIntent,
+    default_presentation_design_system,
+)
+from archium.domain.visual.validation import LAYOUT_HERO_NOT_DOMINANT
 from archium.infrastructure.layout.generators.base import LayoutGeneratorContext, content_from_slide
 from archium.infrastructure.layout.geometry import Rect, safe_area
 from archium.infrastructure.layout.layout_solver import LayoutSolver
-from archium.domain.visual.validation import LAYOUT_HERO_NOT_DOMINANT
 from archium.infrastructure.layout.variant_layout_tokens import (
-    VariantLayoutTokens,
     compute_hero_split_text_ratio,
     effective_min_hero_area_ratio,
     resolve_layout_tokens,

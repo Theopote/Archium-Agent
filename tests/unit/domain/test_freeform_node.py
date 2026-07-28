@@ -17,6 +17,7 @@ from archium.domain.visual.render_scene import (
     refresh_freeform_geometry,
     resize_freeform_to,
 )
+from pydantic import ValidationError
 
 
 def _scene(*nodes: object) -> RenderScene:
@@ -31,7 +32,7 @@ def _scene(*nodes: object) -> RenderScene:
 
 
 def test_freeform_requires_three_points() -> None:
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         FreeformNode(
             id="ff1",
             x=0,

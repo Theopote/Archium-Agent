@@ -9,8 +9,9 @@ Does **not** assert pixel-level screenshot regression; Pipeline Gate only checks
 
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
+
+import pytest
 from archium.application.visual.e2e_benchmark_service import E2EBenchmarkService
 from archium.infrastructure.llm import MockLLMProvider
 from tests.integration.visual.e2e_quality_gate_cases import (
