@@ -14,16 +14,16 @@
     "source"
   ],
   "balance_strategy": "equal_columns",
-  "whitespace_ratio": 0.3522,
+  "whitespace_ratio": 0.3523,
   "elements": [
     {
       "id": "case_image_0",
       "role": "supporting_visual",
       "content_type": "image",
       "x": 0.7,
-      "y": 1.213,
+      "y": 1.191,
       "w": 4.238,
-      "h": 1.592,
+      "h": 1.605,
       "fit_mode": "cover",
       "crop_policy": "cover_crop"
     },
@@ -32,9 +32,9 @@
       "role": "supporting_visual",
       "content_type": "image",
       "x": 5.063,
-      "y": 1.213,
+      "y": 1.191,
       "w": 4.238,
-      "h": 1.592,
+      "h": 1.605,
       "fit_mode": "cover",
       "crop_policy": "cover_crop"
     },
@@ -43,9 +43,9 @@
       "role": "body_text",
       "content_type": "text",
       "x": 0.7,
-      "y": 2.847,
+      "y": 2.837,
       "w": 4.238,
-      "h": 1.303,
+      "h": 1.313,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -54,9 +54,9 @@
       "role": "body_text",
       "content_type": "text",
       "x": 5.063,
-      "y": 2.847,
+      "y": 2.837,
       "w": 4.238,
-      "h": 1.303,
+      "h": 1.313,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -89,7 +89,7 @@
       "x": 0.7,
       "y": 0.45,
       "w": 8.6,
-      "h": 0.68,
+      "h": 0.657,
       "fit_mode": null,
       "crop_policy": null
     }

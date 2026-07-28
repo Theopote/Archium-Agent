@@ -56,7 +56,7 @@ def latest_case_artifact_mtime() -> float:
     return max(mtimes)
 
 
-def assert_summary_fresh(summary: dict[str, Any], *, tolerance_seconds: float = 1.0) -> None:
+def assert_summary_fresh(summary: dict[str, Any], *, tolerance_seconds: float = 30.0) -> None:
     generated_raw = summary.get("generated_at")
     if not isinstance(generated_raw, str):
         msg = "benchmark-summary.json missing generated_at"

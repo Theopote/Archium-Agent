@@ -21,9 +21,9 @@
       "role": "supporting_visual",
       "content_type": "image",
       "x": 0.7,
-      "y": 1.213,
+      "y": 1.191,
       "w": 4.217,
-      "h": 2.679,
+      "h": 2.702,
       "fit_mode": "contain",
       "crop_policy": "safe_trim"
     },
@@ -32,9 +32,9 @@
       "role": "supporting_visual",
       "content_type": "image",
       "x": 5.083,
-      "y": 1.213,
+      "y": 1.191,
       "w": 4.217,
-      "h": 2.679,
+      "h": 2.702,
       "fit_mode": "cover",
       "crop_policy": "safe_trim"
     },
@@ -89,7 +89,7 @@
       "x": 0.7,
       "y": 0.45,
       "w": 8.6,
-      "h": 0.68,
+      "h": 0.657,
       "fit_mode": null,
       "crop_policy": null
     }

@@ -49,7 +49,21 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
             )
         )
 
-        source_reserve = 0.28 if context.content.source_text else 0.0
+        # Reserve vertical room inside the safe area so the footer/source strip
+        # doesn't collide with the main body. Use DesignSystem footer height
+        # instead of a fixed magic number so text-heavy metrics don't overflow.
+        source_reserve = 0.0
+        if context.content.source_text:
+            footer_h = (
+                context.design_system.footer_style.height
+                if context.design_system.footer_style.enabled
+                else 0.0
+            )
+            # Source box is currently sized to 0.22in in the footer placement.
+            # The safe area excludes the full footer height, so we only need
+            # to reserve the "extra" part beyond the source box.
+            source_box_h = 0.22
+            source_reserve = max(0.0, footer_h - source_box_h)
         body_top = safe.y + title_h + spacing.sm
         body = Rect(
             safe.x,
@@ -176,7 +190,21 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
             )
         )
 
-        source_reserve = 0.28 if context.content.source_text else 0.0
+        # Reserve vertical room inside the safe area so the footer/source strip
+        # does not collide with the main body.
+        #
+        # The safe area excludes the full footer height; the source box itself
+        # is placed inside the footer strip. Therefore we only need to reserve
+        # the "extra" part beyond the 0.22in source box.
+        source_reserve = 0.0
+        if context.content.source_text:
+            footer_h = (
+                context.design_system.footer_style.height
+                if context.design_system.footer_style.enabled
+                else 0.0
+            )
+            source_box_h = 0.22
+            source_reserve = max(0.0, footer_h - source_box_h)
         body_top = safe.y + title_h + spacing.sm
         body = Rect(
             safe.x,
@@ -360,7 +388,21 @@ class HybridCanvasLayoutGenerator(LayoutGenerator):
             )
         )
 
-        source_reserve = 0.28 if context.content.source_text else 0.0
+        # Reserve vertical room inside the safe area so the footer/source strip
+        # does not collide with the main body.
+        #
+        # The safe area excludes the full footer height; the source box is placed
+        # inside the footer strip with a fixed 0.22in height. So we reserve only
+        # the "extra" part beyond the source box.
+        source_reserve = 0.0
+        if context.content.source_text:
+            footer_h = (
+                context.design_system.footer_style.height
+                if context.design_system.footer_style.enabled
+                else 0.0
+            )
+            source_box_h = 0.22
+            source_reserve = max(0.0, footer_h - source_box_h)
         body_top = safe.y + title_h + spacing.sm
         body = Rect(
             safe.x,

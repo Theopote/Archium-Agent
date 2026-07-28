@@ -15,16 +15,16 @@
     "source"
   ],
   "balance_strategy": "hybrid_split",
-  "whitespace_ratio": 0.1945,
+  "whitespace_ratio": 0.1653,
   "elements": [
     {
       "id": "canvas_panel",
       "role": "decoration",
       "content_type": "shape",
       "x": 6.095,
-      "y": 1.213,
+      "y": 1.191,
       "w": 3.205,
-      "h": 3.332,
+      "h": 3.504,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -33,9 +33,9 @@
       "role": "hero_visual",
       "content_type": "image",
       "x": 0.7,
-      "y": 1.213,
+      "y": 1.191,
       "w": 5.229,
-      "h": 3.332,
+      "h": 3.504,
       "fit_mode": "contain",
       "crop_policy": "forbidden"
     },
@@ -44,9 +44,9 @@
       "role": "lead_statement",
       "content_type": "text",
       "x": 6.095,
-      "y": 3.878,
+      "y": 3.947,
       "w": 3.205,
-      "h": 0.667,
+      "h": 0.695,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -55,9 +55,9 @@
       "role": "metric",
       "content_type": "metric",
       "x": 6.095,
-      "y": 2.563,
+      "y": 2.606,
       "w": 1.04,
-      "h": 1.232,
+      "h": 1.257,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -66,9 +66,9 @@
       "role": "metric",
       "content_type": "metric",
       "x": 7.177,
-      "y": 2.563,
+      "y": 2.606,
       "w": 1.04,
-      "h": 1.232,
+      "h": 1.257,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -77,9 +77,9 @@
       "role": "metric",
       "content_type": "metric",
       "x": 8.26,
-      "y": 2.563,
+      "y": 2.606,
       "w": 1.04,
-      "h": 1.232,
+      "h": 1.257,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -99,9 +99,9 @@
       "role": "supporting_visual",
       "content_type": "image",
       "x": 6.095,
-      "y": 1.213,
+      "y": 1.191,
       "w": 3.205,
-      "h": 1.266,
+      "h": 1.332,
       "fit_mode": "cover",
       "crop_policy": "safe_trim"
     },
@@ -112,7 +112,7 @@
       "x": 0.7,
       "y": 0.45,
       "w": 8.6,
-      "h": 0.68,
+      "h": 0.657,
       "fit_mode": null,
       "crop_policy": null
     }

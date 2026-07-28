@@ -14,16 +14,16 @@
     "source"
   ],
   "balance_strategy": "drawing_annotated",
-  "whitespace_ratio": 0.3975,
+  "whitespace_ratio": 0.3976,
   "elements": [
     {
       "id": "annotation_0",
       "role": "annotation",
       "content_type": "text",
       "x": 6.939,
-      "y": 1.213,
+      "y": 1.191,
       "w": 2.361,
-      "h": 0.966,
+      "h": 0.973,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -32,9 +32,9 @@
       "role": "annotation",
       "content_type": "text",
       "x": 6.939,
-      "y": 2.263,
+      "y": 2.248,
       "w": 2.361,
-      "h": 0.966,
+      "h": 0.973,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -43,9 +43,9 @@
       "role": "annotation",
       "content_type": "text",
       "x": 6.939,
-      "y": 3.312,
+      "y": 3.304,
       "w": 2.361,
-      "h": 0.966,
+      "h": 0.973,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -65,9 +65,9 @@
       "role": "hero_visual",
       "content_type": "drawing",
       "x": 0.7,
-      "y": 1.213,
+      "y": 1.191,
       "w": 6.072,
-      "h": 3.065,
+      "h": 3.087,
       "fit_mode": "contain",
       "crop_policy": "forbidden"
     },
@@ -89,7 +89,7 @@
       "x": 0.7,
       "y": 0.45,
       "w": 8.6,
-      "h": 0.68,
+      "h": 0.657,
       "fit_mode": null,
       "crop_policy": null
     }

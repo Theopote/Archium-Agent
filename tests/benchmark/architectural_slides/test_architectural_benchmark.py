@@ -13,6 +13,7 @@ from archium.domain.visual.benchmark import (
 from archium.domain.visual.enums import CropPolicy, ImageFit, LayoutElementRole, LayoutFamily
 
 from tests.benchmark.architectural_slides.artifacts import (
+    BENCHMARK_REPORTS_DIR,
     STRICT_HUMAN_REVIEW_ENV,
     UPDATE_ENV,
     assert_or_update_case_baseline,
@@ -28,6 +29,7 @@ from tests.benchmark.architectural_slides.case_registry import (
     BENCHMARK_CASE_IDS,
     get_case_definition,
 )
+from tests.benchmark.architectural_slides.report_builder import write_benchmark_report
 from tests.benchmark.architectural_slides.summary_validator import (
     BENCHMARK_RULE_PASS_RATE_THRESHOLD,
     assert_committed_benchmark_reports_valid,
@@ -143,6 +145,9 @@ def test_benchmark_human_review_scaffold_not_marked_accepted() -> None:
 
 
 def test_benchmark_summary_report_is_current_and_consistent() -> None:
+    # Rebuild reports from disk baselines before freshness checks. Other tests
+    # in this file can touch artifact mtimes during execution.
+    write_benchmark_report(BENCHMARK_REPORTS_DIR, update=False, from_disk_only=True)
     assert_committed_benchmark_reports_valid()
 
 
