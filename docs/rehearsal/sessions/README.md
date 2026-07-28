@@ -25,7 +25,7 @@ Facilitator guide: [v0.2-beta-rehearsal-facilitator-checklist.md](../v0.2-beta-r
 
 Required files:
 
-- `session-meta.json` — E1–E5 step pass flags + `overall_pass`
+- `session-meta.json` — E0–E5 step pass flags + `overall_pass` + (`deck_page_count` / `worst_slide_id` / `total_session_seconds`)
 - `playbook-e-step-log.csv`
 - `playbook-e-issues.csv` (if any)
 - `evidence/` — local screenshots only; **do not commit** client-sensitive images

@@ -26,6 +26,10 @@ _SESSION_META_TEMPLATE = {
     "pptx_export_ready": None,
     "project_id": "",
     "project_name": "",
+    "deck_page_count": None,
+    "worst_slide_id": "",
+    "worst_slide_reason": "",
+    "total_session_seconds": None,
     "automated_gate": {
         "command": "python scripts/run_playbook_e_gate.py -q",
         "passed": False,
@@ -33,6 +37,7 @@ _SESSION_META_TEMPLATE = {
         "commit": "",
     },
     "steps": {
+        "E0": {"pass": None, "waived": False, "waive_reason": ""},
         "E1": {"pass": None, "waived": False, "waive_reason": ""},
         "E2": {"pass": None, "waived": False, "waive_reason": ""},
         "E3": {"pass": None, "waived": False, "waive_reason": ""},
@@ -97,9 +102,10 @@ def main(argv: list[str] | None = None) -> int:
             f"Playbook E session: {args.session_id}\n"
             "1. Follow docs/rehearsal/playbook-e-checklist.md\n"
             "2. Fill playbook-e-step-log.csv and playbook-e-issues.csv\n"
-            "3. Update session-meta.json steps / overall_pass when done\n"
-            "4. Do not commit evidence/ screenshots with PII\n"
-            "5. On pass: close UI-006 / ST-007 with link to this session\n",
+            "3. Fill session-meta.json: deck_page_count / worst_slide_* / total_session_seconds\n"
+            "4. Update session-meta.json steps / overall_pass when done\n"
+            "5. Do not commit evidence/ screenshots with PII\n"
+            "6. On pass: close UI-006 / ST-007 with link to this session\n",
             encoding="utf-8",
         )
 
@@ -116,8 +122,9 @@ def main(argv: list[str] | None = None) -> int:
         "  1. python scripts/run_playbook_e_gate.py -q\n"
         "  2. Open docs/rehearsal/playbook-e-checklist.md\n"
         "     Share docs/rehearsal/playbook-e-participant-guide.md with operator\n"
-        "  3. archium → Studio → walk through E1–E5\n"
-        "  4. Mark session-meta.json overall_pass when E1–E5 are green"
+        "  3. archium → Studio → walk through E0–E5\n"
+        "  4. Fill step durations + blocker_tag + pptx_edit_verified\n"
+        "  5. Mark session-meta.json overall_pass when E0–E5 are green"
     )
     return 0
 

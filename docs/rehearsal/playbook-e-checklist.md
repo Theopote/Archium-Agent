@@ -33,6 +33,19 @@
 
 **禁止范围（本场会）：** 不新增 Agent、不改导航 IA、不顺手「优化」生成页——问题进 `playbook-e-issues.csv`。
 
+## 本轮强制覆盖（UI-006 / ST-007 关闭前）
+
+- [ ] 使用自动生成的**约 20 页**汇报（记录 deck id / 页数）
+- [ ] 由操作者指出“视觉最差的一页”（记录 slide id + 口述原因）
+- [ ] 替换图片（该页）
+- [ ] 修改标题（该页）
+- [ ] 接受一次 AI 修改提案（该页）
+- [ ] 执行一次 Undo
+- [ ] 调整至少一个元素位置或尺寸
+- [ ] 重新导出 PPTX
+- [ ] 在 PowerPoint/WPS 打开并继续编辑一次（文字改动并保存）
+- [ ] 记录全过程总时长、步骤耗时与卡点（写入 step log + session-meta）
+
 ---
 
 ## 会前 15 分钟（Facilitator）
@@ -56,7 +69,7 @@ archium
 
 ## 逐步走查（E1–E5）
 
-每步在 `playbook-e-step-log.csv` 记：`pass`（Y/N/Partial）、`notes`、`evidence_path`。
+每步在 `playbook-e-step-log.csv` 至少记录：`pass`（Y/N/Partial）、`step_seconds`、`blocker_tag`、`pptx_edit_verified`、`notes`、`evidence_path`。
 
 ### E1 — 选中单个元素
 
@@ -146,6 +159,7 @@ archium
 ## 会后 10 分钟
 
 - [ ] `playbook-e-step-log.csv` 中 E1–E5 均为 `Y`（或 Waive 有 Owner + 补测日期）
+- [ ] `playbook-e-step-log.csv` 明确记录上述“本轮强制覆盖”十项动作（含耗时）
 - [ ] `playbook-e-issues.csv` 中 critical/high 已分级
 - [ ] `session-meta.json` → `"overall_pass": true` 或 `"status": "failed"` + blockers
 - [ ] 发版检查表勾选：「剧本 E 通过」并写操作者/日期
@@ -166,6 +180,7 @@ archium
 ## 通过线（UI-006 关闭条件）
 
 - [ ] E1–E5 全部 **Y**
+- [ ] “本轮强制覆盖”十项动作全部完成，且有证据路径
 - [ ] 无 open 的 **e_blocker**
 - [ ] `run_playbook_e_gate.py` 与会话同日或更近的 commit 上为绿
 - [ ] 至少 **1 名操作者** 完成（优先非开发）；`session-meta.json` 含日期与姓名/代号
