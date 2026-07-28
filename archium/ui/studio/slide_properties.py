@@ -871,6 +871,52 @@ def _render_element_properties(
                         "equal_height",
                         reference_element_id=element.id,
                     )
+            if st.button(
+                "组合",
+                use_container_width=True,
+                key=f"studio_multi_group_{slide_snapshot.slide.id}",
+                help="将多选元素组成一个可整体拖动的 GroupNode",
+            ):
+                try:
+                    with get_session() as session:
+                        from archium.ui.studio_service import apply_slide_element_group
+
+                        result = apply_slide_element_group(
+                            session,
+                            slide_snapshot.slide.id,
+                            element_ids=multi_ids,
+                        )
+                    group_ids = [
+                        action.node_id
+                        for action in getattr(result, "applied_actions", ())
+                        if getattr(action, "action_type", "") == "insert_node"
+                    ]
+                    set_studio_selection(group_ids or multi_ids[:1])
+                    st.success("已组合元素。")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(format_user_error(exc))
+
+        if element.content_type == LayoutContentType.GROUP:
+            if st.button(
+                "取消组合",
+                use_container_width=True,
+                key=f"studio_ungroup_{slide_snapshot.slide.id}_{element.id}",
+            ):
+                try:
+                    with get_session() as session:
+                        from archium.ui.studio_service import apply_slide_element_ungroup
+
+                        apply_slide_element_ungroup(
+                            session,
+                            slide_snapshot.slide.id,
+                            element_id=element.id,
+                        )
+                    set_studio_selection([])
+                    st.success("已取消组合。")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(format_user_error(exc))
 
         align_cols = st.columns(3)
         with align_cols[0]:

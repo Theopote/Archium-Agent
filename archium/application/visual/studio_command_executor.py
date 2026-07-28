@@ -30,13 +30,16 @@ from archium.domain.visual.reference_slide import REFERENCE_TEMPLATE_ASSET_ORIGI
 from archium.domain.visual.render_scene import (
     BaseRenderNode,
     DrawingNode,
+    GroupNode,
     ImageNode,
     RenderNode,
     RenderScene,
     SceneAssetReference,
     ShapeNode,
     TextNode,
+    compute_group_bounds,
     compute_scene_hash,
+    group_children,
     replace_text_node_content,
 )
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
@@ -46,6 +49,7 @@ from archium.domain.visual.studio_command import (
     DeleteNodeCommand,
     DuplicateNodesCommand,
     FixOverflowCommand,
+    GroupNodesCommand,
     IncreaseDrawingReadabilityCommand,
     MoveNodeCommand,
     MoveNodesCommand,
@@ -58,6 +62,7 @@ from archium.domain.visual.studio_command import (
     SetNodeLockCommand,
     SetNodeVisibilityCommand,
     StudioCommand,
+    UngroupNodesCommand,
     UpdateNodeStyleCommand,
     build_patch_action,
 )
@@ -164,6 +169,10 @@ class StudioCommandExecutor:
             return self._execute_reorder_node(scene, command, base_hash)
         if isinstance(command, UpdateNodeStyleCommand):
             return self._execute_update_node_style(scene, command, base_hash)
+        if isinstance(command, GroupNodesCommand):
+            return self._execute_group_nodes(scene, command, base_hash)
+        if isinstance(command, UngroupNodesCommand):
+            return self._execute_ungroup_nodes(scene, command, base_hash)
         return CommandExecutionResult(
             success=False,
             base_scene_hash=base_hash,
@@ -616,24 +625,53 @@ class StudioCommandExecutor:
         target = patched.node_by_id(command.node_id)
         assert target is not None
         before_token = geometry_token(target)
+        dx = command.x - target.x
+        dy = command.y - target.y
         target.x = command.x
         target.y = command.y
-        action = build_patch_action(
-            scene,
-            base_scene_hash=base_hash,
-            command_id=command.command_id,
-            node_id=command.node_id,
-            action_type="move_node",
-            property_name="geometry",
-            before_value=before_token,
-            after_value=geometry_token(target),
-            reason=command.reason or "move node",
-        )
+        actions: list[ScenePatchAction] = [
+            build_patch_action(
+                scene,
+                base_scene_hash=base_hash,
+                command_id=command.command_id,
+                node_id=command.node_id,
+                action_type="move_node",
+                property_name="geometry",
+                before_value=before_token,
+                after_value=geometry_token(target),
+                reason=command.reason or "move node",
+            )
+        ]
+        if isinstance(target, GroupNode) and (dx != 0 or dy != 0):
+            for child in group_children(patched, target):
+                if node_geometry_locked(child):
+                    return _locked_result(
+                        base_hash=base_hash,
+                        command_type="move_node",
+                        node_id=child.id,
+                        lock_kind="geometry",
+                    )
+                child_before = geometry_token(child)
+                child.x += dx
+                child.y += dy
+                actions.append(
+                    build_patch_action(
+                        scene,
+                        base_scene_hash=base_hash,
+                        command_id=command.command_id,
+                        node_id=child.id,
+                        action_type="move_node",
+                        property_name="geometry",
+                        before_value=child_before,
+                        after_value=geometry_token(child),
+                        reason=command.reason or "move group child",
+                    )
+                )
         return CommandExecutionResult(
             success=True,
             base_scene_hash=base_hash,
             candidate_scene=patched,
-            applied_actions=(action,),
+            applied_actions=tuple(actions),
         )
 
     def _execute_move_nodes(
@@ -707,26 +745,72 @@ class StudioCommandExecutor:
                 width = height * aspect
             else:
                 height = width / aspect
-        target.x = command.x
-        target.y = command.y
-        target.width = width
-        target.height = height
-        action = build_patch_action(
-            scene,
-            base_scene_hash=base_hash,
-            command_id=command.command_id,
-            node_id=command.node_id,
-            action_type="resize_node",
-            property_name="geometry",
-            before_value=before_token,
-            after_value=geometry_token(target),
-            reason=command.reason or "resize node",
+
+        actions: list[ScenePatchAction] = []
+        if isinstance(target, GroupNode):
+            # V1: uniform scale only — use the dominant axis scale factor.
+            old_w = max(target.width, 1e-6)
+            old_h = max(target.height, 1e-6)
+            scale = min(width / old_w, height / old_h)
+            origin_x = target.x
+            origin_y = target.y
+            for child in group_children(patched, target):
+                if node_geometry_locked(child):
+                    return _locked_result(
+                        base_hash=base_hash,
+                        command_type="resize_node",
+                        node_id=child.id,
+                        lock_kind="geometry",
+                    )
+                child_before = geometry_token(child)
+                rel_x = child.x - origin_x
+                rel_y = child.y - origin_y
+                child.x = command.x + rel_x * scale
+                child.y = command.y + rel_y * scale
+                child.width = max(child.width * scale, 0.05)
+                child.height = max(child.height * scale, 0.05)
+                actions.append(
+                    build_patch_action(
+                        scene,
+                        base_scene_hash=base_hash,
+                        command_id=command.command_id,
+                        node_id=child.id,
+                        action_type="resize_node",
+                        property_name="geometry",
+                        before_value=child_before,
+                        after_value=geometry_token(child),
+                        reason=command.reason or "resize group child",
+                    )
+                )
+            target.x = command.x
+            target.y = command.y
+            target.width = max(old_w * scale, 0.05)
+            target.height = max(old_h * scale, 0.05)
+        else:
+            target.x = command.x
+            target.y = command.y
+            target.width = width
+            target.height = height
+
+        actions.insert(
+            0,
+            build_patch_action(
+                scene,
+                base_scene_hash=base_hash,
+                command_id=command.command_id,
+                node_id=command.node_id,
+                action_type="resize_node",
+                property_name="geometry",
+                before_value=before_token,
+                after_value=geometry_token(target),
+                reason=command.reason or "resize node",
+            ),
         )
         return CommandExecutionResult(
             success=True,
             base_scene_hash=base_hash,
             candidate_scene=patched,
-            applied_actions=(action,),
+            applied_actions=tuple(actions),
         )
 
     def _execute_delete_node(
@@ -1115,6 +1199,253 @@ class StudioCommandExecutor:
             base_scene_hash=base_hash,
             candidate_scene=patched,
             applied_actions=(action,),
+        )
+
+    def _execute_group_nodes(
+        self,
+        scene: RenderScene,
+        command: GroupNodesCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        from uuid import uuid4
+
+        unique_ids = list(dict.fromkeys(command.node_ids))
+        if len(unique_ids) < 2:
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.GROUP_TOO_FEW",
+                        message="group_nodes requires at least two distinct nodes",
+                        evidence=list(command.node_ids),
+                    ),
+                ),
+            )
+
+        members: list[BaseRenderNode] = []
+        for node_id in unique_ids:
+            node = scene.node_by_id(node_id)
+            if node is None:
+                return _node_not_found(base_hash, node_id)
+            if isinstance(node, GroupNode):
+                return CommandExecutionResult(
+                    success=False,
+                    base_scene_hash=base_hash,
+                    issues=(
+                        _issue(
+                            code="STUDIO.GROUP_NEST_GROUP",
+                            message=(
+                                "V1 group_nodes does not accept GroupNode targets; "
+                                "select leaf nodes only"
+                            ),
+                            evidence=[node_id],
+                        ),
+                    ),
+                )
+            if node_geometry_locked(node):
+                return _locked_result(
+                    base_hash=base_hash,
+                    command_type="group_nodes",
+                    node_id=node_id,
+                    lock_kind="geometry",
+                )
+            members.append(node)
+
+        explicit = (command.group_id or "").strip()
+        group_id = explicit or f"group_{uuid4().hex[:10]}"
+        if scene.node_by_id(group_id) is not None:
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.GROUP_ID_COLLISION",
+                        message=f"group id already exists: {group_id}",
+                        evidence=[group_id],
+                    ),
+                ),
+            )
+
+        patched = scene.model_copy(deep=True)
+        actions: list[ScenePatchAction] = []
+
+        # Detach from any prior group membership.
+        for node_id in unique_ids:
+            child = patched.node_by_id(node_id)
+            assert child is not None
+            if not child.group_id:
+                continue
+            old_group = patched.node_by_id(child.group_id)
+            if isinstance(old_group, GroupNode):
+                old_group.children = [cid for cid in old_group.children if cid != node_id]
+                if not old_group.children:
+                    actions.append(
+                        build_patch_action(
+                            scene,
+                            base_scene_hash=base_hash,
+                            command_id=command.command_id,
+                            node_id=old_group.id,
+                            action_type="remove_node",
+                            property_name="nodes",
+                            before_value=old_group.id,
+                            after_value=None,
+                            before_payload=old_group.model_dump(mode="json"),
+                            reason=command.reason or "remove empty prior group",
+                        )
+                    )
+                    patched.nodes = [n for n in patched.nodes if n.id != old_group.id]
+            before_gid = child.group_id
+            child.group_id = None
+            actions.append(
+                build_patch_action(
+                    scene,
+                    base_scene_hash=base_hash,
+                    command_id=command.command_id,
+                    node_id=node_id,
+                    action_type="set_group_id",
+                    property_name="group_id",
+                    before_value=before_gid,
+                    after_value=None,
+                    reason=command.reason or "detach before regroup",
+                )
+            )
+
+        live_members = [patched.node_by_id(nid) for nid in unique_ids]
+        resolved = [m for m in live_members if m is not None]
+        x, y, width, height = compute_group_bounds(resolved)
+        max_z = max((node.z_index for node in patched.nodes), default=0)
+        # Link children before inserting GroupNode so RenderScene validation passes.
+        for node_id in unique_ids:
+            child = patched.node_by_id(node_id)
+            assert child is not None
+            before_gid = child.group_id
+            child.group_id = group_id
+            actions.append(
+                build_patch_action(
+                    scene,
+                    base_scene_hash=base_hash,
+                    command_id=command.command_id,
+                    node_id=node_id,
+                    action_type="set_group_id",
+                    property_name="group_id",
+                    before_value=before_gid,
+                    after_value=group_id,
+                    reason=command.reason or "join group",
+                )
+            )
+        group = GroupNode(
+            id=group_id,
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            z_index=max_z + 1,
+            children=list(unique_ids),
+            semantic_role="group",
+            source_layout_element_id=group_id,
+        )
+        patched.nodes = list(patched.nodes) + [group]
+        actions.append(
+            build_patch_action(
+                scene,
+                base_scene_hash=base_hash,
+                command_id=command.command_id,
+                node_id=group_id,
+                action_type="insert_node",
+                property_name="nodes",
+                before_value=None,
+                after_value=group_id,
+                after_payload=group.model_dump(mode="json"),
+                reason=command.reason or "create group",
+            )
+        )
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=tuple(actions),
+        )
+
+    def _execute_ungroup_nodes(
+        self,
+        scene: RenderScene,
+        command: UngroupNodesCommand,
+        base_hash: str,
+    ) -> CommandExecutionResult:
+        group = scene.node_by_id(command.group_id)
+        if group is None:
+            return _node_not_found(base_hash, command.group_id)
+        if not isinstance(group, GroupNode):
+            return CommandExecutionResult(
+                success=False,
+                base_scene_hash=base_hash,
+                issues=(
+                    _issue(
+                        code="STUDIO.UNGROUP_NOT_GROUP",
+                        message=f"node `{command.group_id}` is not a GroupNode",
+                        evidence=[command.group_id],
+                    ),
+                ),
+            )
+        if node_geometry_locked(group):
+            return _locked_result(
+                base_hash=base_hash,
+                command_type="ungroup_nodes",
+                node_id=command.group_id,
+                lock_kind="geometry",
+            )
+
+        patched = scene.model_copy(deep=True)
+        target = patched.node_by_id(command.group_id)
+        assert isinstance(target, GroupNode)
+        actions: list[ScenePatchAction] = []
+        for child_id in list(target.children):
+            child = patched.node_by_id(child_id)
+            if child is None:
+                continue
+            if node_geometry_locked(child):
+                return _locked_result(
+                    base_hash=base_hash,
+                    command_type="ungroup_nodes",
+                    node_id=child_id,
+                    lock_kind="geometry",
+                )
+            before_gid = child.group_id
+            child.group_id = None
+            actions.append(
+                build_patch_action(
+                    scene,
+                    base_scene_hash=base_hash,
+                    command_id=command.command_id,
+                    node_id=child_id,
+                    action_type="set_group_id",
+                    property_name="group_id",
+                    before_value=before_gid,
+                    after_value=None,
+                    reason=command.reason or "leave group",
+                )
+            )
+        actions.append(
+            build_patch_action(
+                scene,
+                base_scene_hash=base_hash,
+                command_id=command.command_id,
+                node_id=command.group_id,
+                action_type="remove_node",
+                property_name="nodes",
+                before_value=command.group_id,
+                after_value=None,
+                before_payload=target.model_dump(mode="json"),
+                reason=command.reason or "remove group",
+            )
+        )
+        patched.nodes = [node for node in patched.nodes if node.id != command.group_id]
+        return CommandExecutionResult(
+            success=True,
+            base_scene_hash=base_hash,
+            candidate_scene=patched,
+            applied_actions=tuple(actions),
         )
 
     def _validate_asset_binding(

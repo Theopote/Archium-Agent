@@ -18,6 +18,7 @@ from archium.domain._base import DomainModel
 from archium.domain.visual.render_scene import (
     BaseRenderNode,
     ChartNode,
+    GroupNode,
     ImageNode,
     ShapeNode,
     TableNode,
@@ -100,7 +101,7 @@ RENDER_SCENE_V1_CAPABILITIES: dict[str, PowerPointCapabilityMapping] = {
         fidelity=PowerPointFidelity.NATIVE_NORMALIZED,
         limitations=[
             "V1 supports rectangle, ellipse, line, and card only.",
-            "No connector, preset geometry library, freeform path, group, "
+            "No connector, preset geometry library, freeform path, "
             "gradient, pattern, glow, or full effect model.",
         ],
         validation_rules=["node_identity_preserved", "geometry_within_tolerance"],
@@ -145,6 +146,18 @@ RENDER_SCENE_V1_CAPABILITIES: dict[str, PowerPointCapabilityMapping] = {
             "Table styling depth (merged cells, theme table styles) is limited.",
         ],
         validation_rules=["node_identity_preserved", "table_grid_preserved"],
+    ),
+    "group": PowerPointCapabilityMapping(
+        scene_node_type="group",
+        pptx_object_type="p:grpSp",
+        fidelity=PowerPointFidelity.APPROXIMATE,
+        limitations=[
+            "V1 GroupNode is authoritative in RenderScene/Studio; PPTX still emits "
+            "flat siblings with group_id metadata until grpSp post-pass lands.",
+            "Children keep absolute coordinates; nested local frames are not modeled.",
+            "Uniform group scale only (non-uniform resize is deferred).",
+        ],
+        validation_rules=["node_identity_preserved", "group_children_consistent"],
     ),
 }
 
@@ -227,8 +240,12 @@ POWERPOINT_NATIVE_DEPTH_INVENTORY: tuple[PowerPointDepthEntry, ...] = (
     PowerPointDepthEntry(
         id="group",
         label="Group",
-        status=PowerPointDepthStatus.NOT_IMPLEMENTED,
+        status=PowerPointDepthStatus.PARTIAL,
         pptx_object_hint="p:grpSp / GroupNode",
+        notes=(
+            "GroupNode + Studio group/ungroup + child group_id; PPTX still flat "
+            "siblings (APPROXIMATE) until native grpSp wrap."
+        ),
     ),
     PowerPointDepthEntry(
         id="gradient_fill",
@@ -353,6 +370,11 @@ def capability_for_scene_node(
                 "CROSS_APP_STABLE table bake emits a shape/text grid (one_to_many)."
             )
 
+    if isinstance(node, GroupNode):
+        fidelity = PowerPointFidelity.APPROXIMATE
+        if len(node.children) < 1:
+            limitations.append("GroupNode has no children.")
+
     return cast(
         PowerPointCapabilityMapping,
         baseline.model_copy(
@@ -386,6 +408,10 @@ def assess_scene_node(
             features.append("border")
     if isinstance(node, ChartNode) and chart_export_mode:
         features.append(f"chart_export_mode:{chart_export_mode}")
+    if isinstance(node, GroupNode):
+        features.append(f"children:{len(node.children)}")
+        if node.clip_children:
+            features.append("clip_children")
     return PowerPointNodeAssessment(
         node_id=node.id,
         node_type=node.node_type,

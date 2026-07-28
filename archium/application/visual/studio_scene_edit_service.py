@@ -27,6 +27,7 @@ from archium.domain.visual.studio_command import (
     AlignNodesCommand,
     DeleteNodeCommand,
     DuplicateNodesCommand,
+    GroupNodesCommand,
     MoveNodeCommand,
     MoveNodesCommand,
     NodeAlignment,
@@ -40,6 +41,7 @@ from archium.domain.visual.studio_command import (
     SetNodeLockCommand,
     SetNodeVisibilityCommand,
     StudioCommand,
+    UngroupNodesCommand,
     UpdateNodeStyleCommand,
 )
 from archium.exceptions import WorkflowError
@@ -273,6 +275,44 @@ class StudioSceneEditService:
                     message=result.message,
                 )
         return result
+
+    def group_layout_elements(
+        self,
+        slide_id: UUID,
+        *,
+        element_ids: list[str],
+    ) -> SceneEditResult:
+        """Create a GroupNode from two or more layout/scene elements."""
+        if len(element_ids) < 2:
+            raise WorkflowError("组合至少需要两个元素。")
+        slide = self._require_slide(slide_id)
+        node_ids = [self._resolve_node_id(slide_id, element_id) for element_id in element_ids]
+        command = GroupNodesCommand(
+            presentation_id=slide.presentation_id,
+            slide_id=slide.id,
+            target_node_ids=list(node_ids),
+            node_ids=list(node_ids),
+            reason="group elements",
+        )
+        return self.apply_command(slide.id, command)
+
+    def ungroup_layout_element(
+        self,
+        slide_id: UUID,
+        *,
+        element_id: str,
+    ) -> SceneEditResult:
+        """Dissolve a GroupNode identified by layout/scene id."""
+        node_id = self._resolve_node_id(slide_id, element_id)
+        slide = self._require_slide(slide_id)
+        command = UngroupNodesCommand(
+            presentation_id=slide.presentation_id,
+            slide_id=slide.id,
+            target_node_ids=[node_id],
+            group_id=node_id,
+            reason="ungroup elements",
+        )
+        return self.apply_command(slide.id, command)
 
     def rewrite_layout_element_text(
         self,
@@ -602,6 +642,7 @@ def _layout_element_from_scene_node(node: object, element_id: str) -> LayoutElem
     from archium.domain.visual.render_scene import (
         ChartNode,
         DrawingNode,
+        GroupNode,
         ImageNode,
         ShapeNode,
         TableNode,
@@ -644,6 +685,10 @@ def _layout_element_from_scene_node(node: object, element_id: str) -> LayoutElem
         content_type = LayoutContentType.TABLE
         if not semantic:
             role = LayoutElementRole.BODY_TEXT
+    elif isinstance(node, GroupNode):
+        content_type = LayoutContentType.GROUP
+        if not semantic:
+            role = LayoutElementRole.DECORATION
 
     return LayoutElement(
         id=element_id[:100],

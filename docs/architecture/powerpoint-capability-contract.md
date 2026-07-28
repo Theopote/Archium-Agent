@@ -83,7 +83,7 @@ Executable source: `POWERPOINT_NATIVE_DEPTH_INVENTORY` in
 | Connector | **Not implemented** |
 | Preset Shape library | **Not implemented** |
 | Freeform Path | **Not implemented** |
-| Group | **Not implemented** |
+| Group | **Partial** (GroupNode + Studio; PPTX flat until grpSp) |
 | Gradient fill | **Not implemented** |
 | Pattern fill | **Not implemented** |
 | Shadow effect | **Not implemented** |

@@ -17,6 +17,7 @@ from archium.domain.visual.pptx_structure import (
 from archium.domain.visual.render_scene import (
     ChartNode,
     DrawingNode,
+    GroupNode,
     ImageNode,
     RenderScene,
     ShapeNode,
@@ -155,18 +156,25 @@ class RenderScenePptxAdapter:
 
     def _node_instruction(self, node: object, scene: RenderScene) -> dict[str, Any]:
         if isinstance(node, TextNode):
-            return self._text_instruction(node, scene)
-        if isinstance(node, ImageNode):
-            return self._image_instruction(node)
-        if isinstance(node, DrawingNode):
-            return self._drawing_instruction(node)
-        if isinstance(node, ShapeNode):
-            return self._shape_instruction(node)
-        if isinstance(node, ChartNode):
-            return self._chart_instruction(node)
-        if isinstance(node, TableNode):
-            return self._table_instruction(node)
-        raise TypeError(f"unsupported render node: {type(node)!r}")
+            instruction = self._text_instruction(node, scene)
+        elif isinstance(node, ImageNode):
+            instruction = self._image_instruction(node)
+        elif isinstance(node, DrawingNode):
+            instruction = self._drawing_instruction(node)
+        elif isinstance(node, ShapeNode):
+            instruction = self._shape_instruction(node)
+        elif isinstance(node, GroupNode):
+            instruction = self._group_instruction(node)
+        elif isinstance(node, ChartNode):
+            instruction = self._chart_instruction(node)
+        elif isinstance(node, TableNode):
+            instruction = self._table_instruction(node)
+        else:
+            raise TypeError(f"unsupported render node: {type(node)!r}")
+        group_id = getattr(node, "group_id", None)
+        if group_id:
+            instruction["group_id"] = group_id
+        return instruction
 
     def _chart_instruction(self, node: ChartNode) -> dict[str, Any]:
         instruction: dict[str, Any] = {
@@ -308,6 +316,20 @@ class RenderScenePptxAdapter:
         if node.corner_radius:
             instruction["corner_radius"] = node.corner_radius
         return instruction
+
+    def _group_instruction(self, node: GroupNode) -> dict[str, Any]:
+        return {
+            "id": node.id,
+            "role": node.semantic_role or "group",
+            "content_type": "group",
+            "x": node.x,
+            "y": node.y,
+            "w": node.width,
+            "h": node.height,
+            "z_index": node.z_index,
+            "children": list(node.children),
+            "clip_children": node.clip_children,
+        }
 
     @staticmethod
     def _cjk_font(node: TextNode, scene: RenderScene) -> str:

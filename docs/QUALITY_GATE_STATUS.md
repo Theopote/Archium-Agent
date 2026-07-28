@@ -61,9 +61,10 @@ Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolve
 |------|--------|
 | RenderScene V1 最小节点闭环（Text / Image / Drawing / Shape） | **Done** (Phase 0–2 requirement) |
 | ChartNode / TableNode + dual export mode | **Partial** — nodes + `ChartExportMode` exist; not full chart/table effect depth |
-| 完整 RenderScene / Presenton 式全节点模型 | **Not done** — no GroupNode / ContainerNode / Connector / Freeform |
+| 完整 RenderScene / Presenton 式全节点模型 | **Not done** — GroupNode V1 partial; no ContainerNode / Connector / Freeform |
 | 深度原生 PowerPoint / ppt-master 级对象模型 | **Not done** — capability *map* exists; most depth inventory rows are empty |
-| Connector / Preset Shape / Freeform / Group / Gradient / Pattern / Glow / Transition | **Not implemented** (see `POWERPOINT_NATIVE_DEPTH_INVENTORY`) |
+| Connector / Preset Shape / Freeform / Gradient / Pattern / Glow / Transition | **Not implemented** (see `POWERPOINT_NATIVE_DEPTH_INVENTORY`) |
+| GroupNode（组合 / 整体拖动 / 均匀缩放） | **Partial** — domain + Studio group/ungroup; PPTX still flat siblings (`group_id`) until `p:grpSp` |
 | P0 Closure Cardinality (`one_to_one` / `one_to_many` / `many_to_one`) | **Done** — bake charts/tables plan multi-emissions; not treated as duplicate errors |
 | P0 Workflow Route dispatch + preservation | **Partial** — `execute_fill_native_template` + router wired; FILL fingerprints are template-derived (not in-place OOXML yet) |
 | P0 Capability Contract → export / manifest | **Done** — pre-export gate + closure + object-type → `DeckExportManifest` |

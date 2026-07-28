@@ -109,6 +109,11 @@ export function renderSlideFromPlan(pres, slideInstruction, deckTheme = null, st
  */
 function renderElement(pres, page, element, slideInstruction, deckTheme, placeholderName, chartExportMode) {
   const contentType = element.content_type ?? "text";
+  if (contentType === "group") {
+    // V1: GroupNode is scene/Studio authoritative; children still render as flat
+    // siblings carrying group_id until native p:grpSp post-pass lands.
+    return;
+  }
   if (contentType === "image" || contentType === "drawing") {
     renderImageElement(pres, page, element, slideInstruction, deckTheme, placeholderName);
     return;

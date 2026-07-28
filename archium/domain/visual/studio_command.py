@@ -197,6 +197,22 @@ class UpdateNodeStyleCommand(StudioCommandBase):
     fill_color: str | None = None
 
 
+class GroupNodesCommand(StudioCommandBase):
+    """Create a GroupNode from two or more existing scene nodes."""
+
+    command_type: Literal["group_nodes"] = "group_nodes"
+    node_ids: list[str] = Field(min_length=2)
+    # Optional deterministic id (tests); otherwise executor allocates ``group_{hex}``.
+    group_id: str = ""
+
+
+class UngroupNodesCommand(StudioCommandBase):
+    """Dissolve a GroupNode and clear child group_id links."""
+
+    command_type: Literal["ungroup_nodes"] = "ungroup_nodes"
+    group_id: str = Field(min_length=1)
+
+
 StudioCommand = Annotated[
     RewriteTextCommand
     | FixOverflowCommand
@@ -212,7 +228,9 @@ StudioCommand = Annotated[
     | SetNodeVisibilityCommand
     | AlignNodesCommand
     | ReorderNodeCommand
-    | UpdateNodeStyleCommand,
+    | UpdateNodeStyleCommand
+    | GroupNodesCommand
+    | UngroupNodesCommand,
     Field(discriminator="command_type"),
 ]
 

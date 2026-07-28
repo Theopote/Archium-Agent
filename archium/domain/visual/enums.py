@@ -113,6 +113,7 @@ class LayoutContentType(StrEnum):
     CHART = "chart"
     TABLE = "table"
     SHAPE = "shape"
+    GROUP = "group"
 
 
 class OverflowPolicy(StrEnum):

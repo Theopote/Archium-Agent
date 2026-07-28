@@ -1,8 +1,8 @@
 """RenderScene — unified final visual scene for all renderers.
 
-Supports Text / Image / Drawing / Shape plus optional Chart / Table nodes for
-dual chart-export strategy (``ChartExportMode``). Chart/Table nodes carry
-structured data so exporters can choose cross-app stable shapes/images or
+Supports Text / Image / Drawing / Shape / Group plus optional Chart / Table
+nodes for dual chart-export strategy (``ChartExportMode``). Chart/Table nodes
+carry structured data so exporters can choose cross-app stable shapes/images or
 native PowerPoint Chart/Table objects with embedded workbooks.
 """
 
@@ -291,6 +291,21 @@ class ShapeNode(BaseRenderNode):
     corner_radius: float = Field(default=0, ge=0)
 
 
+MAX_GROUP_DEPTH = 4
+
+
+class GroupNode(BaseRenderNode):
+    """Logical group of sibling scene nodes (V1: absolute child coordinates).
+
+    Children keep page-absolute geometry. ``group_id`` on each child must equal
+    this node's ``id``. Nesting depth is capped at ``MAX_GROUP_DEPTH``.
+    """
+
+    node_type: Literal["group"] = "group"
+    children: list[str] = Field(min_length=1)
+    clip_children: bool = False
+
+
 class ChartNode(BaseRenderNode):
     """Structured chart with series data (dual export: native vs cross-app stable).
 
@@ -327,7 +342,13 @@ class TableNode(BaseRenderNode):
 
 
 RenderNode = Annotated[
-    TextNode | ImageNode | DrawingNode | ShapeNode | ChartNode | TableNode,
+    TextNode
+    | ImageNode
+    | DrawingNode
+    | ShapeNode
+    | GroupNode
+    | ChartNode
+    | TableNode,
     Field(discriminator="node_type"),
 ]
 
@@ -335,8 +356,9 @@ RenderNode = Annotated[
 class RenderScene(IdentifiedModel, VersionedModel, TimestampedModel):
     """Unified visual scene — single source of truth for all renderers.
 
-    Supports Text / Image / Drawing / Shape plus optional Chart / Table nodes
-    for ``ChartExportMode`` dual export (cross-app stable vs native data-backed).
+    Supports Text / Image / Drawing / Shape / Group plus optional Chart / Table
+    nodes for ``ChartExportMode`` dual export (cross-app stable vs native
+    data-backed).
 
     Theme model: persist geometry + token references; resolve colors/fonts from
     the active DesignSystem at compile / preview time
@@ -374,6 +396,7 @@ class RenderScene(IdentifiedModel, VersionedModel, TimestampedModel):
         ids = [node.id for node in self.nodes]
         if len(ids) != len(set(ids)):
             raise ValueError("duplicate render node IDs are not allowed")
+        _validate_group_structure(self.nodes)
         return self
 
     def sorted_nodes(self) -> list[RenderNode]:
@@ -402,6 +425,94 @@ class RenderScene(IdentifiedModel, VersionedModel, TimestampedModel):
         return self.model_dump_json(
             exclude={"created_at", "updated_at", "id", "version"}
         )
+
+
+def _validate_group_structure(nodes: list[RenderNode]) -> None:
+    """Fail closed on broken group membership, cycles, or excessive nesting."""
+    by_id = {node.id: node for node in nodes}
+    listed_by_group: dict[str, set[str]] = {}
+
+    for node in nodes:
+        if not isinstance(node, GroupNode):
+            continue
+        if len(set(node.children)) != len(node.children):
+            raise ValueError(f"group `{node.id}` has duplicate child ids")
+        if node.id in node.children:
+            raise ValueError(f"group `{node.id}` cannot contain itself")
+        child_ids: set[str] = set()
+        for child_id in node.children:
+            child = by_id.get(child_id)
+            if child is None:
+                raise ValueError(f"group `{node.id}` references missing child `{child_id}`")
+            if child.group_id != node.id:
+                raise ValueError(
+                    f"child `{child_id}` group_id must equal parent group `{node.id}`"
+                )
+            child_ids.add(child_id)
+        listed_by_group[node.id] = child_ids
+
+    for node in nodes:
+        if not node.group_id:
+            continue
+        parent = by_id.get(node.group_id)
+        if parent is None or not isinstance(parent, GroupNode):
+            raise ValueError(
+                f"node `{node.id}` group_id `{node.group_id}` does not reference a GroupNode"
+            )
+        if node.id not in listed_by_group.get(parent.id, set()):
+            raise ValueError(
+                f"node `{node.id}` is not listed in group `{parent.id}` children"
+            )
+
+    for node in nodes:
+        if not isinstance(node, GroupNode):
+            continue
+        depth = _group_nesting_depth(node.id, by_id, visiting=set())
+        if depth > MAX_GROUP_DEPTH:
+            raise ValueError(
+                f"group nesting depth {depth} exceeds max {MAX_GROUP_DEPTH} "
+                f"(leaf under `{node.id}`)"
+            )
+
+
+def _group_nesting_depth(
+    node_id: str,
+    by_id: dict[str, RenderNode],
+    *,
+    visiting: set[str],
+) -> int:
+    if node_id in visiting:
+        raise ValueError(f"group cycle detected at `{node_id}`")
+    node = by_id.get(node_id)
+    if node is None or not isinstance(node, GroupNode):
+        return 0
+    visiting.add(node_id)
+    try:
+        if not node.children:
+            return 1
+        return 1 + max(
+            _group_nesting_depth(child_id, by_id, visiting=visiting)
+            for child_id in node.children
+        )
+    finally:
+        visiting.remove(node_id)
+
+
+def group_children(scene: RenderScene, group: GroupNode) -> list[RenderNode]:
+    """Return child nodes for a group in scene order."""
+    by_id = {node.id: node for node in scene.nodes}
+    return [by_id[child_id] for child_id in group.children if child_id in by_id]
+
+
+def compute_group_bounds(nodes: list[BaseRenderNode]) -> tuple[float, float, float, float]:
+    """Return (x, y, width, height) bounding box for the given nodes."""
+    if not nodes:
+        raise ValueError("cannot compute bounds for empty node list")
+    left = min(node.x for node in nodes)
+    top = min(node.y for node in nodes)
+    right = max(node.x + node.width for node in nodes)
+    bottom = max(node.y + node.height for node in nodes)
+    return left, top, max(right - left, 0.05), max(bottom - top, 0.05)
 
 
 def compute_scene_hash(scene: RenderScene) -> str:

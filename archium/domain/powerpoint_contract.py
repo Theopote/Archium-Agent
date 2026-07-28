@@ -102,10 +102,18 @@ class PowerPointContractService:
         *,
         chart_export_mode: str | None = None,
     ) -> list[RendererEmission]:
-        """Plan traceable emissions, including one_to_many bake expansions."""
+        """Plan traceable emissions, including one_to_many bake expansions.
+
+        GroupNode is structural metadata in V1 (children emit as flat siblings
+        with ``group_id``); it does not produce a PPTX emission until ``p:grpSp``.
+        """
+        from archium.domain.visual.render_scene import GroupNode
+
         emissions: list[RendererEmission] = []
         for node in scene.sorted_nodes():
             if not node.visible:
+                continue
+            if isinstance(node, GroupNode):
                 continue
             mapping = capability_for_scene_node(node, chart_export_mode=chart_export_mode)
             if mapping.mapping_cardinality == MappingCardinality.ONE_TO_MANY:
@@ -303,7 +311,14 @@ class PowerPointContractService:
         capability_overrides: dict[str, PowerPointCapabilityMapping] | None = None,
         chart_export_mode: str | None = None,
     ) -> SceneClosureReport:
-        visible_nodes = {node.id: node for node in scene.nodes if node.visible}
+        from archium.domain.visual.render_scene import GroupNode
+
+        # GroupNode is scene/Studio structural only in V1 — not an emitted PPTX object.
+        visible_nodes = {
+            node.id: node
+            for node in scene.nodes
+            if node.visible and not isinstance(node, GroupNode)
+        }
         expected = set(visible_nodes)
         covered: set[str] = set()
         for item in emissions:

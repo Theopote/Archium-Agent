@@ -618,8 +618,15 @@ def _apply_patch_action(scene: RenderScene, action: ScenePatchAction) -> None:
         scene.nodes = list(scene.nodes) + [cloned]
         return
 
+    if action.action_type == "remove_node":
+        scene.nodes = [node for node in scene.nodes if node.id != action.node_id]
+        return
+
     node = scene.node_by_id(action.node_id)
     if node is None:
+        return
+    if action.action_type == "set_group_id":
+        node.group_id = action.after_value or None
         return
     if action.action_type == "rewrite_text" and isinstance(node, TextNode):
         if action.after_value is not None:
@@ -649,7 +656,7 @@ def _apply_patch_action(scene: RenderScene, action: ScenePatchAction) -> None:
             node.height = height
             node.fit_mode = "contain"
         return
-    if action.action_type in {"move_node", "resize_node", "align_nodes"}:
+    if action.action_type in {"move_node", "move_nodes", "resize_node", "align_nodes"}:
         if action.after_value:
             apply_geometry_token(node, action.after_value)
         return

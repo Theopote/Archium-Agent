@@ -20,7 +20,6 @@ def test_depth_inventory_marks_core_gaps_not_implemented() -> None:
         "connector",
         "preset_shape",
         "freeform_path",
-        "group",
         "gradient_fill",
         "pattern_fill",
         "shadow_effect",
@@ -31,11 +30,12 @@ def test_depth_inventory_marks_core_gaps_not_implemented() -> None:
         assert depth_entry(construct_id).status is PowerPointDepthStatus.NOT_IMPLEMENTED
 
 
-def test_depth_inventory_marks_partial_chart_table_master() -> None:
+def test_depth_inventory_marks_partial_chart_table_master_group() -> None:
     assert depth_entry("native_chart").status is PowerPointDepthStatus.PARTIAL
     assert depth_entry("native_table").status is PowerPointDepthStatus.PARTIAL
     assert depth_entry("master_layout").status is PowerPointDepthStatus.PARTIAL
     assert depth_entry("basic_shape").status is PowerPointDepthStatus.PARTIAL
+    assert depth_entry("group").status is PowerPointDepthStatus.PARTIAL
 
 
 def test_native_depth_is_currently_shallow() -> None:

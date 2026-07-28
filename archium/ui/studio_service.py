@@ -934,6 +934,38 @@ def apply_slide_element_duplicate(
     ).duplicate_layout_elements(slide_id, element_ids=element_ids)
 
 
+def apply_slide_element_group(
+    session: Session,
+    slide_id: UUID,
+    *,
+    element_ids: list[str],
+) -> object:
+    """Group layout element(s) through the Studio command chain."""
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    clear_visual_redo_stack(slide_id)
+    return StudioSceneEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).group_layout_elements(slide_id, element_ids=element_ids)
+
+
+def apply_slide_element_ungroup(
+    session: Session,
+    slide_id: UUID,
+    *,
+    element_id: str,
+) -> object:
+    """Ungroup a GroupNode through the Studio command chain."""
+    from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    clear_visual_redo_stack(slide_id)
+    return StudioSceneEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).ungroup_layout_element(slide_id, element_id=element_id)
+
+
 def apply_slide_element_visibility(
     session: Session,
     slide_id: UUID,
