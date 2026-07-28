@@ -95,6 +95,10 @@ Current verdict: **capability map exists; most of the map is still empty**.
 `native_depth_is_shallow()` remains true while unimplemented rows outnumber
 fully implemented ones.
 
+**Phased build plan (five high-ROI primitives):**
+[`docs/roadmap/render-scene-native-primitives.md`](../roadmap/render-scene-native-primitives.md).
+Prerequisite: close Playbook E / UI-006 before expanding native depth.
+
 ## Workflow routes
 
 Generation, native template fill, beautification, native enhancement, image-deck recovery, and
