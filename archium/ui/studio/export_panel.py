@@ -44,6 +44,83 @@ def _apply_visual_result(result: object) -> None:
         st.session_state.visual_workflow_run_id = str(result.workflow_run.id)
 
 
+def _render_visual_workflow_followup(
+    *,
+    context: StudioPresentationContext,
+) -> None:
+    """Keep visual progress and required review actions visible across reruns."""
+    active = render_workflow_progress_panel(
+        context.project.id,
+        scope="visual",
+        presentation_id=context.presentation.id,
+        result_session_key="last_visual_workflow_result",
+        on_complete=_apply_visual_result,
+        awaiting_review_message="视觉版式已暂停，请在下方批准视觉方向并继续。",
+        success_message="视觉版式已生成，可以检查问题或导出。",
+        rerun_on_complete=False,
+    )
+
+    result = st.session_state.get("last_visual_workflow_result")
+    result_matches_context = (
+        isinstance(result, VisualWorkflowResult)
+        and result.presentation is not None
+        and result.presentation.id == context.presentation.id
+    )
+    awaiting_art_direction = (
+        result_matches_context
+        and result.awaiting_review
+        and result.review_gate == "art_direction"
+        and result.art_direction is not None
+    )
+    if not active and not awaiting_art_direction:
+        return
+
+    if awaiting_art_direction:
+        st.warning(
+            "视觉生成正在等待确认。批准视觉方向后，工作流才会继续生成版式与 PPTX。",
+            icon=":material/rate_review:",
+        )
+        from archium.ui.art_direction_panel import render_art_direction_panel
+
+        with st.container(border=True):
+            st.markdown("#### 确认视觉方向")
+            render_art_direction_panel(
+                art_direction=result.art_direction,
+                workflow_run_id=result.workflow_run.id,
+                awaiting_approval=True,
+            )
+
+
+def _render_latest_pptx_download(
+    *, context: StudioPresentationContext, key_prefix: str
+) -> None:
+    """Persist the latest successful PPTX download action across reruns."""
+    from pathlib import Path
+
+    raw_path = st.session_state.get("last_studio_pptx_path")
+    owner = st.session_state.get("last_studio_pptx_presentation_id")
+    if not raw_path or owner != str(context.presentation.id):
+        return
+    path = Path(str(raw_path))
+    if not path.is_file():
+        st.warning("最近导出的 PPTX 文件已不存在，请重新导出。")
+        return
+
+    with st.container(border=True):
+        st.success(f"PPTX 已就绪：{path.name}", icon=":material/check_circle:")
+        st.download_button(
+            "下载 PPTX",
+            data=path.read_bytes(),
+            file_name=path.name,
+            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            icon=":material/download:",
+            width="content",
+            key=f"{key_prefix}_latest_pptx_download",
+        )
+        with st.expander("文件位置", expanded=False):
+            st.code(str(path), language=None)
+
+
 def _resolve_scene_preferences() -> VisualPreferences:
     preset_key = str(st.session_state.get("studio_scene_preset") or SCENE_PRESET_KEYS[0])
     if preset_key not in SCENE_PRESET_KEYS:
@@ -74,7 +151,7 @@ def _launch_visual_job(
         preferences=preferences,
     )
     set_active_job_id(project_id, job.job_id, scope="visual", presentation_id=presentation_id)
-    st.info("已在后台生成视觉版式，进度见页面底部。")
+    st.info("已在后台生成视觉版式。本页会持续显示进度；如需确认视觉方向，可直接在进度下方处理。")
     render_workflow_progress_panel(
         project_id,
         scope="visual",
@@ -270,6 +347,7 @@ def _export_pptx(
             )
             store_manifest(manifest)
             st.session_state.last_studio_pptx_path = str(path)
+            st.session_state.last_studio_pptx_presentation_id = str(presentation_id)
             _append_delivery_record(
                 "PPTX",
                 str(path),
@@ -603,3 +681,5 @@ def render_export_panel(
 
     render_export_policy_panel(key_prefix="deliver")
     render_fidelity_report_panel(key_prefix="deliver")
+    _render_visual_workflow_followup(context=context)
+    _render_latest_pptx_download(context=context, key_prefix="deliver")

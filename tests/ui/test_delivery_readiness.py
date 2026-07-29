@@ -45,6 +45,28 @@ def test_export_panel_warns_when_record_persist_fails() -> None:
     assert "except Exception:\n        pass" not in export
 
 
+def test_export_panel_keeps_visual_progress_review_and_download_visible() -> None:
+    export = (
+        ROOT / "archium" / "ui" / "studio" / "export_panel.py"
+    ).read_text(encoding="utf-8")
+    assert "_render_visual_workflow_followup(context=context)" in export
+    assert 'scope="visual"' in export
+    assert 'result.review_gate == "art_direction"' in export
+    assert "批准视觉方向后，工作流才会继续" in export
+    assert "_render_latest_pptx_download(context=context" in export
+    assert "last_studio_pptx_presentation_id" in export
+    assert '"下载 PPTX"' in export
+    assert "application/vnd.openxmlformats-officedocument.presentationml.presentation" in export
+
+
+def test_missing_llm_configuration_links_directly_to_settings() -> None:
+    mission = (
+        ROOT / "archium" / "ui" / "pages" / "project_mission.py"
+    ).read_text(encoding="utf-8")
+    assert mission.count('get_app_page("settings")') >= 2
+    assert mission.count("前往 AI 服务设置") >= 2
+
+
 def test_delivery_records_survive_new_session(
     test_settings: Settings,
     tmp_path: Path,

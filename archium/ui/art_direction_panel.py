@@ -169,11 +169,11 @@ def render_art_direction_panel(
             )
 
         c1, c2, c3 = st.columns(3)
-        save_clicked = c1.form_submit_button("保存修改", use_container_width=True)
-        approve_clicked = c2.form_submit_button("批准视觉方向", use_container_width=True)
+        save_clicked = c1.form_submit_button("保存修改", width="stretch")
+        approve_clicked = c2.form_submit_button("批准视觉方向", width="stretch")
         approve_continue = c3.form_submit_button(
             "批准并继续工作流",
-            use_container_width=True,
+            width="stretch",
             disabled=workflow_run_id is None,
         )
 

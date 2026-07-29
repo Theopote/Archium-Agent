@@ -139,7 +139,8 @@ class SlidePreviewService:
 
             with Image.open(path) as image:
                 sample = image.convert("L").resize((48, 27))
-                pixels = [int(value) for value in sample.getdata()]
+                # ``tobytes()`` is typed as iterable ints; ``getdata()`` stubs omit ``__iter__``.
+                pixels = list(sample.tobytes())
             if not pixels:
                 return True
             return bool((max(pixels) - min(pixels)) < 12)

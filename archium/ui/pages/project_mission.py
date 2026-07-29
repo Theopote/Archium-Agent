@@ -267,6 +267,11 @@ def _render_describe(project_id: UUID) -> None:
     settings = get_ui_effective_settings()
     if not settings.llm_configured:
         st.error("未配置 LLM API Key。请前往 **设置 → AI 服务** 配置。")
+        st.page_link(
+            get_app_page("settings"),
+            label="前往 AI 服务设置",
+            icon=":material/settings:",
+        )
         return
 
     if "mission_task_draft" not in st.session_state:
@@ -824,6 +829,11 @@ def start_outline_planning(project_id: UUID, task_description: str) -> bool:
     settings = get_ui_effective_settings()
     if not settings.llm_configured:
         st.error("未配置 LLM API Key。请前往 **设置 → AI 服务** 配置。")
+        st.page_link(
+            get_app_page("settings"),
+            label="前往 AI 服务设置",
+            icon=":material/settings:",
+        )
         return False
     if not task_description.strip():
         st.error("请先描述汇报任务。")
