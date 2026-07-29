@@ -9,10 +9,12 @@ from uuid import uuid4
 
 import pytest
 from archium.application.architectural_benchmark_review_store import (
+    benchmark_rollout_progress,
     list_benchmark_cases,
     list_case_review_statuses,
     load_case_layout_review,
     load_case_review,
+    review_needs_refresh,
     review_progress,
     review_progress_by_category,
     save_case_layout_review,
@@ -429,3 +431,45 @@ def test_save_and_load_manual_review_round_trip(tmp_path: Path) -> None:
     assert loaded.accepted is True
     progress = review_progress(root=tmp_path)
     assert progress["manual_accepted_count"] == 1
+
+
+def test_review_needs_refresh_when_review_predates_render(tmp_path: Path) -> None:
+    case_dir = tmp_path / "case_demo"
+    case_dir.mkdir()
+    (case_dir / "input.json").write_text(
+        json.dumps(
+            {
+                "case_id": "case_demo",
+                "title": "Demo",
+                "category": "drawing",
+                "page_type": "demo",
+                "page_task": "demo",
+                "visual_focus": "demo",
+                "expected_layout_family": "drawing_focus",
+                "allowed_layout_variants": ["drawing_only"],
+                "layout_variant": "drawing_only",
+            }
+        ),
+        encoding="utf-8",
+    )
+    _seed_visual_review_ready(case_dir)
+    review = HumanVisualReview(
+        case_id="case_demo",
+        source=HumanVisualReviewSource.MANUAL,
+        reporting_ready="ready",
+        review_completed=True,
+        reviewer="legacy",
+        reviewed_at=datetime(2026, 7, 28, 12, 0, tzinfo=UTC),
+    )
+    assert review_needs_refresh("case_demo", review, root=tmp_path) is True
+
+
+def test_benchmark_rollout_progress_counts_stale_cases() -> None:
+    rollout = benchmark_rollout_progress()
+    assert rollout["case_count"] == 30
+    assert rollout["pilot_exception_total"] == 3
+    assert rollout["rollout_total"] == 27
+    assert rollout["rollout_pending"] >= 27
+    statuses = list_case_review_statuses()
+    stale_count = sum(1 for status in statuses if status.stale_render)
+    assert stale_count >= 27

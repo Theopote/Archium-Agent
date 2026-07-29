@@ -143,7 +143,8 @@ reviewers must use a **type-aware pass/review rubric** instead of aesthetic micr
 
 1. **Re-generate screenshots** with Windows PowerPoint COM (or CI LibreOffice) for Goldens (pilot trio) — **done 2026-07-29** (`render_valid=true`, `placeholder_asset_count=0`); evidence: `docs/rehearsal/sessions/2026-07-29-pilot-trio-rerender/`
 2. **Keep** formal quality gate on `pptx_screenshot_generated=true` (already enforced)
-3. **Pilot human exception review on 3 pages** — **done 2026-07-29** (`human_verified`); **3/3 `fixable`** (automation `ready_with_minor_edits` target met)
+3. **Pilot human exception review on 3 pages** — **done 2026-07-29** (`human_verified`); **3/3 `fixable`**
+4. **Expand to 30 pages** — **in progress (2026-07-29)**; Settings →「建筑幻灯片基准 · 人工视觉评审」; 27 legacy reviews auto-marked stale after full re-render
 
 ### Pilot trio (do first)
 
@@ -184,13 +185,15 @@ python scripts/render_architectural_benchmark_visuals.py --approve-goldens \
 
 Then Settings →「建筑幻灯片基准 · 人工视觉评审」for those three only.
 
+**30-page rollout (2026-07-29):** All 30 cases have `render_valid=true` + fresh `pptx_render.png`. Reviews with `reviewed_at < rendered_at` show as「待重评（渲染已更新）」. Use filter「扩面待重评」or「从第一个待评审开始」.
+
 ## Architectural Slide Benchmark (30 cases)
 
 | Gate | Status | Evidence |
 |------|--------|----------|
 | Layout rule quality | **Passed** | `rule_pass_rate = 1.0` (30/30) |
 | Provenance chain scene → PPTX → screenshot | **In place** | hashes + sidecars |
-| Manual human exception review | **Pilot done (3)** | 3/3 `fixable` (2026-07-29 r2); 27 cases stale (`do_not_use` or older reviews) |
+| Manual human exception review | **Pilot done (3) + rollout (27 pending)** | 3/3 `fixable` on 2026-07-29 renders; 27 cases stale until re-reviewed on new `pptx_render.png` |
 | Manual delivery acceptance | **Not started** | `manual_human_accepted_count = 0` |
 | Placeholder reviews | 0 counted in summary | remaining cases lack fresh formal reviews |
 | Fresh PPTX screenshot for formal review | **Done (30/30)** | all cases `pptx_screenshot_generated=true`, `render_valid=true` (2026-07-29 full re-render) |

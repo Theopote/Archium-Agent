@@ -13,6 +13,7 @@ from archium.domain.visual.benchmark import (
     BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER,
     HUMAN_REVIEW_INVALIDATED_LABEL,
     HUMAN_REVIEW_PENDING_LABEL,
+    HUMAN_REVIEW_STALE_RENDER_LABEL,
     BenchmarkHumanReviewExport,
     BenchmarkPendingCase,
     EditabilityReview,
@@ -31,6 +32,14 @@ HUMAN_VISUAL_REVIEW_FILE = "human_visual_review.json"
 HUMAN_LAYOUT_REVIEW_FILE = "human_layout_review.json"
 EDITABILITY_REVIEW_FILE = "editability_review.json"
 LEGACY_HUMAN_REVIEW_FILE = "human_review.json"
+
+PILOT_BENCHMARK_CASE_IDS = frozenset(
+    {
+        "case_001_site_plan",
+        "case_002_site_photos",
+        "case_006_project_hero",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -79,21 +88,77 @@ class CaseReviewStatus:
     accepted_for_delivery: bool
     reviewer: str | None
     pending: bool
+    stale_render: bool = False
+
+
+def _case_directory(case_id: str, *, root: Path | None = None) -> Path:
+    return benchmark_root(root) / case_id
+
+
+def review_needs_refresh(case_id: str, review: HumanVisualReview | None, *, root: Path | None = None) -> bool:
+    """Return True when human review must be redone on the current pptx_render.png."""
+    if review is None:
+        return True
+    from tests.benchmark.architectural_slides.render_manifest import load_render_manifest
+
+    manifest = load_render_manifest(_case_directory(case_id, root=root))
+    if manifest is None or not manifest.render_valid:
+        return review.is_scaffold_review() or review.is_invalidated()
+    return review.is_stale_for_current_render(
+        scene_hash=manifest.scene_hash,
+        rendered_at=manifest.rendered_at,
+    )
+
+
+def benchmark_rollout_progress(*, root: Path | None = None) -> dict[str, int]:
+    """Track 30-page expansion after the pilot trio exception reviews."""
+    cases = list_benchmark_cases(root=root)
+    pilot_exception_done = 0
+    rollout_pending = 0
+    accepted = 0
+    for case in cases:
+        review = load_case_review(case.case_id, root=root)
+        if review is not None and review.accepted_for_delivery and not review_needs_refresh(
+            case.case_id, review, root=root
+        ):
+            accepted += 1
+        if case.case_id in PILOT_BENCHMARK_CASE_IDS:
+            if review is not None and review.is_exception_review() and not review_needs_refresh(
+                case.case_id, review, root=root
+            ):
+                pilot_exception_done += 1
+            continue
+        if review_needs_refresh(case.case_id, review, root=root):
+            rollout_pending += 1
+    return {
+        "case_count": len(cases),
+        "pilot_exception_done": pilot_exception_done,
+        "pilot_exception_total": len(PILOT_BENCHMARK_CASE_IDS),
+        "rollout_pending": rollout_pending,
+        "rollout_total": len(cases) - len(PILOT_BENCHMARK_CASE_IDS),
+        "accepted_for_delivery": accepted,
+    }
 
 
 def list_case_review_statuses(*, root: Path | None = None) -> list[CaseReviewStatus]:
     statuses: list[CaseReviewStatus] = []
     for case in list_benchmark_cases(root=root):
         review = load_case_review(case.case_id, root=root)
+        stale = review_needs_refresh(case.case_id, review, root=root)
         pending = (
             review is None
             or review.is_scaffold_review()
             or review.is_invalidated()
+            or stale
         )
         if pending:
             label = HUMAN_REVIEW_PENDING_LABEL
-            if review is not None and review.is_invalidated():
+            if review is not None and review.is_scaffold_review():
+                label = HUMAN_REVIEW_PENDING_LABEL
+            elif review is not None and review.is_invalidated():
                 label = HUMAN_REVIEW_INVALIDATED_LABEL
+            elif stale and review is not None and not review.is_invalidated():
+                label = HUMAN_REVIEW_STALE_RENDER_LABEL
             statuses.append(
                 CaseReviewStatus(
                     case_id=case.case_id,
@@ -106,6 +171,7 @@ def list_case_review_statuses(*, root: Path | None = None) -> list[CaseReviewSta
                     accepted_for_delivery=False,
                     reviewer=None,
                     pending=True,
+                    stale_render=stale,
                 )
             )
             continue
@@ -122,6 +188,7 @@ def list_case_review_statuses(*, root: Path | None = None) -> list[CaseReviewSta
                 accepted_for_delivery=bool(review.accepted_for_delivery),
                 reviewer=review.reviewer or None,
                 pending=False,
+                stale_render=False,
             )
         )
     return statuses
@@ -320,11 +387,17 @@ def save_case_review(
     # Legacy score threshold retired — problem-driven status is the formal gate.
     if review.reviewed_at is None:
         review = review.model_copy(update={"reviewed_at": datetime.now(UTC)})
+    from tests.benchmark.architectural_slides.render_manifest import load_render_manifest
+
+    manifest = load_render_manifest(case_directory)
+    scene_hash = manifest.scene_hash if manifest is not None else ""
     review = review.model_copy(
         update={
             "review_completed": True,
             "accepted": review.accepted_for_delivery,
             "scoring_mode": review.scoring_mode,
+            "reviewed_scene_hash": scene_hash,
+            "validity": review.validity,
         }
     )
     path = case_directory / HUMAN_VISUAL_REVIEW_FILE
@@ -374,7 +447,7 @@ def review_progress(*, root: Path | None = None) -> dict[str, int]:
     placeholder = 0
     for case in cases:
         review = load_case_review(case.case_id, root=root)
-        if review is None:
+        if review is None or review_needs_refresh(case.case_id, review, root=root):
             placeholder += 1
             continue
         if review.is_scaffold_review() or review.is_invalidated():
@@ -416,7 +489,11 @@ def build_human_review_export(
 
     for case in cases:
         review = load_case_review(case.case_id, root=root)
-        if review is not None and review.is_manual_review():
+        if (
+            review is not None
+            and review.is_manual_review()
+            and not review_needs_refresh(case.case_id, review, root=root)
+        ):
             manual_reviews.append(review)
             continue
         if include_pending_cases:

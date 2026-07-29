@@ -20,6 +20,7 @@ HUMAN_REVIEW_FORMAL_TOTAL_CASES = 30
 HUMAN_REVIEW_FORMAL_MIN_EXCEPTION_REVIEWS = 3  # pilot exception reviews before deck gate
 HUMAN_REVIEW_PENDING_LABEL = "待人工复核"
 HUMAN_REVIEW_INVALIDATED_LABEL = "已作废（需重评）"
+HUMAN_REVIEW_STALE_RENDER_LABEL = "待重评（渲染已更新）"
 LAYOUT_REVIEW_PENDING_LABEL = "待几何评审"
 LAYOUT_REVIEW_PASS_THRESHOLD = 3.5
 BENCHMARK_VISUAL_REVIEW_REQUIRES_FINAL_RENDER = (
@@ -161,6 +162,7 @@ class HumanVisualReview(DomainModel):
     reviewed_at: datetime | None = None
     reviewer_notes: str = ""
     invalidation_reason: str = ""
+    reviewed_scene_hash: str = ""
 
     @field_validator(
         "information_hierarchy",
@@ -338,6 +340,16 @@ class HumanVisualReview(DomainModel):
             return self.model_copy(update={"source": HumanVisualReviewSource.PLACEHOLDER})
         return self
 
+    def is_stale_for_current_render(self, *, scene_hash: str, rendered_at: datetime | None) -> bool:
+        """True when the stored review predates the committed render generation."""
+        if self.is_scaffold_review() or self.is_invalidated():
+            return True
+        if scene_hash and self.reviewed_scene_hash:
+            return self.reviewed_scene_hash != scene_hash
+        if rendered_at is not None and self.reviewed_at is not None:
+            return self.reviewed_at < rendered_at
+        return False
+
     def is_manual_review(self) -> bool:
         return self.source == HumanVisualReviewSource.MANUAL
 
@@ -348,6 +360,11 @@ class HumanVisualReview(DomainModel):
             and self.review_completed
             and not self.is_invalidated()
             and self.validity == ReviewValidity.VALID
+            and (
+                bool(self.selected_issue_codes)
+                or bool(self.worst_problem.strip())
+                or self.reporting_ready != ReportingReady.UNSPECIFIED
+            )
         )
 
     def is_invalidated(self) -> bool:

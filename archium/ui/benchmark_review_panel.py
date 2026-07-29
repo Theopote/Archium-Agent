@@ -11,6 +11,7 @@ from archium.application.architectural_benchmark_review_store import (
     BenchmarkCaseSummary,
     CaseReviewStatus,
     benchmark_report_paths,
+    benchmark_rollout_progress,
     build_human_review_export,
     default_human_review_export_path,
     export_human_review_bundle,
@@ -100,6 +101,17 @@ EDITABILITY_REVIEW_DIMENSION_LABELS: dict[str, str] = {
 
 def render_benchmark_review_panel() -> None:
     st.markdown("### 建筑幻灯片基准 · 双层人工评审")
+    rollout = benchmark_rollout_progress()
+    st.success(
+        f"**30 页扩面评审已开启**：试点异常复核 {rollout['pilot_exception_done']}/"
+        f"{rollout['pilot_exception_total']} 完成 · "
+        f"扩面待重评 {rollout['rollout_pending']}/{rollout['rollout_total']} · "
+        f"可交付 {rollout['accepted_for_delivery']}/{rollout['case_count']}"
+    )
+    st.caption(
+        "2026-07-29 全量重渲染后，旧评审（reviewed_at 早于 rendered_at）自动标为「待重评」。"
+        "请对照 `pptx_render.png` 完成问题驱动异常复核，再勾选可交付。"
+    )
     st.caption(
         "Rendered Visual Benchmark：默认预览与评分对象均为 `pptx_render.png`（须 render_valid）。"
         "Layout Geometry Benchmark：基于 `wireframe.png` 评价几何（与视觉评分分离）。"
@@ -133,7 +145,7 @@ def render_benchmark_review_panel() -> None:
     filter_cols = st.columns([1.2, 1, 1])
     filter_mode = filter_cols[0].radio(
         "筛选",
-        options=["待评审", "已评审（未接受）", "已接受", "全部"],
+        options=["待评审", "扩面待重评", "已评审（未接受）", "已接受", "全部"],
         horizontal=True,
         key="benchmark_review_filter",
     )
@@ -207,6 +219,7 @@ def render_benchmark_review_panel() -> None:
 
 
 def _render_progress_header(progress: dict[str, int]) -> None:
+    rollout = benchmark_rollout_progress()
     case_count = max(progress["case_count"], 1)
     review_ratio = progress["manual_review_count"] / case_count
     accepted_ratio = progress["manual_accepted_count"] / case_count
@@ -247,8 +260,13 @@ def _render_progress_header(progress: dict[str, int]) -> None:
 
     if progress["manual_review_count"] == 0:
         st.info(
-            "当前尚无人工异常复核。"
+            "当前尚无本轮有效人工异常复核。"
             "请查看 pptx_render.png，勾选具体问题清单并填写「可否汇报」，无需 1–5 打分。"
+        )
+    elif rollout["rollout_pending"] > 0:
+        st.info(
+            f"扩面评审进行中：尚有 {rollout['rollout_pending']} 页需在最新渲染上重做异常复核。"
+            "使用筛选「扩面待重评」或「从第一个待评审开始」依次处理。"
         )
 
 
@@ -387,7 +405,7 @@ def _filter_cases(
         if filter_mode == "全部":
             filtered.append(case)
             continue
-        if filter_mode == "待评审" and status.pending or filter_mode == "已接受" and status.accepted_for_delivery or (
+        if filter_mode == "待评审" and status.pending or filter_mode == "扩面待重评" and status.stale_render or filter_mode == "已接受" and status.accepted_for_delivery or (
             filter_mode == "已评审（未接受）"
             and not status.pending
             and not status.accepted_for_delivery
