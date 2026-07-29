@@ -34,7 +34,9 @@ from archium.domain.enums import (
     SlideAssetBindingRole,
     SlideStatus,
     SlideType,
+    VisualType,
 )
+from archium.domain.visual.layout_evidence_item import EvidenceItemRole, LayoutEvidenceItem
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation_manuscript import ManuscriptStatus
 from archium.domain.review import ReviewIssue
@@ -907,7 +909,148 @@ def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID |
         except Exception as exc:
             st.error(f"重新生成失败：{exc}")
 
+    _render_slide_evidence_items_section(
+        slides=context.slides,
+        project_id=context.presentation.project_id,
+    )
+
     render_slide_history_panel(presentation_id=context_presentation_id, slides=context.slides)
+
+
+_EVIDENCE_ROLE_LABELS = {
+    EvidenceItemRole.PRIMARY.value: "主证据",
+    EvidenceItemRole.SUPPORTING.value: "辅证",
+    EvidenceItemRole.DETAIL.value: "细节",
+}
+
+
+def _slide_needs_evidence_editor(slide: SlideSpec, *, force: bool = False) -> bool:
+    if force:
+        return True
+    if slide.evidence_items:
+        return True
+    if any(req.type == VisualType.SITE_PHOTO for req in slide.visual_requirements):
+        return True
+    return len(slide.key_points) >= 2
+
+
+def _render_slide_evidence_items_section(
+    *,
+    slides: list[SlideSpec],
+    project_id: UUID,
+) -> None:
+    focus_id = st.session_state.get(FOCUS_SLIDE_SESSION_KEY)
+    candidates = sorted(slides, key=lambda item: item.order)
+    editable = [
+        slide
+        for slide in candidates
+        if _slide_needs_evidence_editor(
+            slide,
+            force=focus_id is not None and str(slide.id) == focus_id,
+        )
+    ]
+    if not editable:
+        return
+
+    st.markdown("**语义证据（EvidenceItem）**")
+    st.caption("为证据板页面编辑 claim / role / 素材绑定；保存后同步 key_points 与视觉需求。")
+
+    from archium.infrastructure.database.repositories import AssetRepository
+
+    with get_session() as session:
+        assets = AssetRepository(session).list_by_project(project_id)
+    asset_options = {str(asset.id): asset.filename for asset in assets}
+
+    for slide in editable:
+        header = f"第 {slide.order + 1} 页 · {slide.title}"
+        with st.expander(header, expanded=focus_id is not None and str(slide.id) == focus_id):
+            existing = list(slide.evidence_items)
+            if not existing:
+                existing = [
+                    LayoutEvidenceItem(claim=point, role=EvidenceItemRole.SUPPORTING)
+                    for point in slide.key_points[:6]
+                ]
+            if not existing:
+                st.caption("该页暂无证据要点，请先在上方表格填写 key_points。")
+                continue
+
+            edited: list[LayoutEvidenceItem] = []
+            for index, item in enumerate(existing[:6]):
+                st.markdown(f"**证据 {index + 1}**")
+                claim = st.text_input(
+                    "claim（图注/问题要点）",
+                    value=item.claim,
+                    key=f"review_evidence_claim_{slide.id}_{index}",
+                )
+                role_value = st.selectbox(
+                    "role",
+                    options=list(_EVIDENCE_ROLE_LABELS.keys()),
+                    index=list(_EVIDENCE_ROLE_LABELS.keys()).index(item.role.value)
+                    if item.role.value in _EVIDENCE_ROLE_LABELS
+                    else 1,
+                    format_func=lambda value: _EVIDENCE_ROLE_LABELS.get(value, value),
+                    key=f"review_evidence_role_{slide.id}_{index}",
+                )
+                focus = st.text_input(
+                    "focus（关注区域，可选）",
+                    value=item.focus or "",
+                    key=f"review_evidence_focus_{slide.id}_{index}",
+                )
+                source = st.text_input(
+                    "source（来源，可选）",
+                    value=item.source or "",
+                    key=f"review_evidence_source_{slide.id}_{index}",
+                )
+                asset_value = item.asset or ""
+                if asset_options:
+                    option_keys = ["", *asset_options.keys()]
+                    default_index = (
+                        option_keys.index(asset_value) if asset_value in option_keys else 0
+                    )
+                    picked = st.selectbox(
+                        "asset",
+                        options=option_keys,
+                        index=default_index,
+                        format_func=lambda value: "（未绑定）"
+                        if not value
+                        else asset_options[value],
+                        key=f"review_evidence_asset_{slide.id}_{index}",
+                    )
+                    asset_value = picked or None
+                else:
+                    asset_value = (
+                        st.text_input(
+                            "asset（UUID，可选）",
+                            value=asset_value,
+                            key=f"review_evidence_asset_raw_{slide.id}_{index}",
+                        )
+                        or None
+                    )
+                edited.append(
+                    LayoutEvidenceItem(
+                        claim=claim.strip() or item.claim,
+                        role=EvidenceItemRole(role_value),
+                        focus=focus.strip() or None,
+                        source=source.strip() or None,
+                        asset=asset_value,
+                    )
+                )
+
+            if st.button(
+                f"保存第 {slide.order + 1} 页语义证据",
+                key=f"review_save_evidence_{slide.id}",
+                use_container_width=True,
+            ):
+                try:
+                    with get_session() as session:
+                        PresentationReviewService(session).update_slide_evidence_items(
+                            slide.id,
+                            edited,
+                        )
+                    st.success(f"第 {slide.order + 1} 页语义证据已保存。")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(format_user_error(exc))
 
 
 def _render_review_issues_panel(

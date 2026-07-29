@@ -272,8 +272,21 @@ class AssetMatchingService:
             presentation_id,
             updated,
             assets_by_id={asset.id: asset for asset in assets},
+            qa_reports=qa_reports,
         )
         match_count += binding_count
+
+        rebound: list[SlideSpec] = []
+        for slide in updated:
+            bound_slide, rebound_changed = self._bind_slide_evidence_items(
+                slide,
+                assets,
+                qa_reports,
+            )
+            if rebound_changed:
+                bound_slide = self._presentations.save_slide(bound_slide)
+            rebound.append(bound_slide)
+        updated = rebound
 
         self._refresh_presentation_delivery(presentation_id, updated)
         return updated, match_count
@@ -360,7 +373,7 @@ class AssetMatchingService:
         rematch: bool,
         only_unmatched: bool,
     ) -> tuple[SlideSpec, int, bool]:
-        if not slide.visual_requirements:
+        if not slide.visual_requirements and not slide.evidence_items:
             return slide, 0, False
 
         changed = False
@@ -399,8 +412,24 @@ class AssetMatchingService:
             if requirement.preferred_asset_ids:
                 match_count += 1
 
-        slide, changed = _finalize_slide_delivery(slide, changed=changed)
+        slide, evidence_changed = self._bind_slide_evidence_items(slide, assets, qa_reports)
+        slide, changed = _finalize_slide_delivery(slide, changed=changed or evidence_changed)
         return slide, match_count, changed
+
+    def _bind_slide_evidence_items(
+        self,
+        slide: SlideSpec,
+        assets: list[Asset],
+        qa_reports: dict[UUID, VisualQAReport],
+    ) -> tuple[SlideSpec, bool]:
+        from archium.application.evidence_item_binding_service import bind_slide_evidence_items
+
+        return bind_slide_evidence_items(
+            slide,
+            assets,
+            assets_by_id={asset.id: asset for asset in assets},
+            qa_reports=qa_reports,
+        )
 
     def _ensure_assets_have_cached_readiness(self, assets: list[Asset]) -> list[Asset]:
         from archium.application.asset_presentation_readiness_service import (
@@ -538,8 +567,12 @@ class AssetMatchingService:
         slides: list[SlideSpec],
         *,
         assets_by_id: dict[UUID, Asset],
+        qa_reports: dict[UUID, VisualQAReport] | None = None,
     ) -> tuple[list[SlideSpec], int]:
         """Apply OutlinePlan.page_asset_bindings after auto-match (user wins)."""
+        from archium.application.evidence_item_binding_service import (
+            bind_evidence_item_for_asset_binding,
+        )
         from archium.application.slide_asset_binding_service import apply_slide_asset_bindings
 
         outline = None
@@ -557,6 +590,15 @@ class AssetMatchingService:
             list(outline.page_asset_bindings),
             assets_by_id=assets_by_id,
         )
+        if applied > 0:
+            for slide in updated_slides:
+                page_bindings = [
+                    binding
+                    for binding in outline.page_asset_bindings
+                    if binding.page_order == slide.order
+                ]
+                for binding in page_bindings:
+                    bind_evidence_item_for_asset_binding(slide, binding)
         if applied <= 0 and resolved_bindings == list(outline.page_asset_bindings):
             return slides, 0
 

@@ -417,6 +417,27 @@ class StudioSceneEditService:
         asset_id: UUID,
     ) -> SceneEditResult:
         """Replace image asset via ReplaceAssetCommand (Studio command chain)."""
+        from archium.application.slide_evidence_edit_service import SlideEvidenceEditService
+
+        result = self._replace_layout_element_asset_impl(
+            slide_id,
+            element_id=element_id,
+            asset_id=asset_id,
+        )
+        SlideEvidenceEditService(self._session, settings=self._settings).sync_asset_from_photo_element(
+            slide_id,
+            element_id=element_id,
+            asset_id=asset_id,
+        )
+        return result
+
+    def _replace_layout_element_asset_impl(
+        self,
+        slide_id: UUID,
+        *,
+        element_id: str,
+        asset_id: UUID,
+    ) -> SceneEditResult:
         from archium.application.visual.asset_path_resolver import storage_asset_uri
 
         node_id = self._resolve_node_id(slide_id, element_id)

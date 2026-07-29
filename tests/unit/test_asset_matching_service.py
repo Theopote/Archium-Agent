@@ -7,6 +7,11 @@ from uuid import uuid4
 import pytest
 from archium.application.asset_matching_service import AssetMatchingService
 from archium.domain.asset import Asset
+from archium.domain.asset_presentation_readiness import (
+    ASSET_PRESENTATION_READINESS_KEY,
+    AssetPresentationReadiness,
+    AssetPresentationRole,
+)
 from archium.domain.enums import AssetType, ProjectType, VisualType
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
@@ -26,20 +31,41 @@ def project_id(db_session: Session) -> object:
     ).id
 
 
+def _with_hero_readiness(asset: Asset) -> Asset:
+    readiness = AssetPresentationReadiness(
+        pixel_analyzed=True,
+        presentation_ready=True,
+        visual_information_density=0.8,
+        readable_at_slide_scale=True,
+        recommended_role=AssetPresentationRole.HERO_DRAWING,
+    )
+    metadata = dict(asset.metadata or {})
+    metadata[ASSET_PRESENTATION_READINESS_KEY] = readiness.to_metadata()
+    return asset.model_copy(
+        update={
+            "metadata": metadata,
+            "width": asset.width or 2000,
+            "height": asset.height or 1500,
+        }
+    )
+
+
 def test_match_assets_links_visual_requirement(
     db_session: Session,
     project_id: object,
 ) -> None:
     asset_repo = AssetRepository(db_session)
     asset = asset_repo.create(
-        Asset(
-            project_id=project_id,  # type: ignore[arg-type]
-            filename="site_plan.png",
-            path="/tmp/site_plan.png",
-            asset_type=AssetType.DRAWING,
-            description="总平面图交通流线",
-            tags=["site_plan", "drawing"],
-            quality_score=0.9,
+        _with_hero_readiness(
+            Asset(
+                project_id=project_id,  # type: ignore[arg-type]
+                filename="site_plan.png",
+                path="/tmp/site_plan.png",
+                asset_type=AssetType.DRAWING,
+                description="总平面图交通流线",
+                tags=["site_plan", "drawing"],
+                quality_score=0.9,
+            )
         )
     )
 

@@ -10,6 +10,7 @@ import streamlit as st
 from archium.application.asset_board_service import AssetBoardService
 from archium.domain.visual.element_lock import canvas_geometry_locked, is_drawing_element
 from archium.domain.visual.enums import LayoutContentType
+from archium.domain.visual.layout_evidence_item import EvidenceItemRole, LayoutEvidenceItem
 from archium.domain.visual.render_scene import TextNode
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
@@ -22,6 +23,7 @@ from archium.ui.studio_service import (
     apply_slide_element_asset,
     apply_slide_element_style,
     apply_slide_element_text,
+    apply_slide_evidence_items,
     generate_slide_vision_illustration,
 )
 
@@ -314,7 +316,7 @@ def render_slide_properties(
         from archium.application.visual.visual_grammar_slots import missing_evidence_slots
 
         missing = missing_evidence_slots(slide_snapshot.slide)
-        if cites or missing:
+        if cites or missing or slide_snapshot.slide.evidence_items:
             st.markdown("**证据绑定**")
             if cites:
                 st.caption(f"已绑定 {len(cites)} 条来源引用")
@@ -323,6 +325,10 @@ def render_slide_properties(
                     st.markdown(f"- {name}")
             if missing:
                 st.warning("缺证据槽：" + "、".join(slot.role for slot in missing[:4]))
+        _render_evidence_items_panel(
+            slide_snapshot=slide_snapshot,
+            project_id=project_id,
+        )
     except Exception:
         pass
 
@@ -547,6 +553,111 @@ def _render_vision_illustration_panel(
             f"最近生成：asset `{last['asset_id']}` · {last.get('provider')} · "
             f"hash `{last.get('prompt_hash')}`{flag_note}"
         )
+
+
+def _render_evidence_items_panel(
+    *,
+    slide_snapshot: SlideVisualSnapshot,
+    project_id: UUID | None,
+) -> None:
+    slide = slide_snapshot.slide
+    intent = slide_snapshot.visual_intent
+    show_panel = bool(slide.evidence_items)
+    if intent is not None and intent.dominant_content_type.value == "photo_evidence":
+        show_panel = True
+    if not show_panel:
+        return
+
+    st.markdown("**语义证据（EvidenceItem）**")
+    st.caption("每条证据绑定 claim + role + 素材；保存后同步图注与照片节点。")
+
+    asset_options: dict[str, str] = {}
+    if project_id is not None:
+        with get_session() as session:
+            assets = AssetBoardService(session).list_project_assets(project_id)
+        asset_options = {str(asset.id): asset.filename for asset in assets}
+
+    role_labels = {
+        EvidenceItemRole.PRIMARY.value: "主证据",
+        EvidenceItemRole.SUPPORTING.value: "辅证",
+        EvidenceItemRole.DETAIL.value: "细节",
+    }
+    existing = list(slide.evidence_items)
+    if not existing:
+        existing = [
+            LayoutEvidenceItem(claim=point, role=EvidenceItemRole.SUPPORTING)
+            for point in slide.key_points[:3]
+        ]
+
+    edited: list[LayoutEvidenceItem] = []
+    for index, item in enumerate(existing[:6]):
+        with st.expander(f"证据 {index + 1}", expanded=index < 2):
+            claim = st.text_input(
+                "claim（图注/问题要点）",
+                value=item.claim,
+                key=f"studio_evidence_claim_{slide.id}_{index}",
+            )
+            role_value = st.selectbox(
+                "role",
+                options=list(role_labels.keys()),
+                index=list(role_labels.keys()).index(item.role.value)
+                if item.role.value in role_labels
+                else 1,
+                format_func=lambda value: role_labels.get(value, value),
+                key=f"studio_evidence_role_{slide.id}_{index}",
+            )
+            focus = st.text_input(
+                "focus（关注区域，可选）",
+                value=item.focus or "",
+                key=f"studio_evidence_focus_{slide.id}_{index}",
+            )
+            source = st.text_input(
+                "source（来源，可选）",
+                value=item.source or "",
+                key=f"studio_evidence_source_{slide.id}_{index}",
+            )
+            asset_value = item.asset or ""
+            if asset_options:
+                option_keys = ["", *asset_options.keys()]
+                default_index = option_keys.index(asset_value) if asset_value in option_keys else 0
+                picked = st.selectbox(
+                    "asset",
+                    options=option_keys,
+                    index=default_index,
+                    format_func=lambda value: "（未绑定）" if not value else asset_options[value],
+                    key=f"studio_evidence_asset_{slide.id}_{index}",
+                )
+                asset_value = picked or None
+            else:
+                asset_value = st.text_input(
+                    "asset（UUID，可选）",
+                    value=asset_value,
+                    key=f"studio_evidence_asset_raw_{slide.id}_{index}",
+                ) or None
+            edited.append(
+                LayoutEvidenceItem(
+                    claim=claim.strip() or item.claim,
+                    role=EvidenceItemRole(role_value),
+                    focus=focus.strip() or None,
+                    source=source.strip() or None,
+                    asset=asset_value,
+                )
+            )
+
+    if st.button(
+        "保存语义证据",
+        use_container_width=True,
+        type="primary",
+        key=f"studio_save_evidence_items_{slide.id}",
+    ):
+        try:
+            with get_session() as session:
+                result = apply_slide_evidence_items(session, slide.id, items=edited)
+            note = "已同步预览图注与照片。" if result.scene_patched else "已保存页面证据（预览节点未找到）。"
+            st.success(note)
+            st.rerun()
+        except Exception as exc:
+            st.error(format_user_error(exc))
 
 
 def _render_element_properties(

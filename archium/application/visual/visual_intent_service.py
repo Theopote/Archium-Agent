@@ -181,6 +181,14 @@ class VisualIntentService:
         hero_asset_id = draft.hero_asset_id
         supporting = list(draft.supporting_asset_ids)
         grammar_hero = resolve_grammar_hero_asset_id(slide)
+        evidence_assets = _ordered_evidence_assets(slide)
+        if evidence_assets:
+            if grammar_hero is None and hero_asset_id is None:
+                hero_asset_id = evidence_assets[0]
+            for asset_id in evidence_assets:
+                if asset_id != hero_asset_id:
+                    supporting.append(asset_id)
+            supporting = list(dict.fromkeys(supporting))
         if grammar_hero is not None:
             hero_asset_id = grammar_hero
         elif hero_asset_id is None and slide.visual_requirements:
@@ -408,3 +416,9 @@ class VisualIntentService:
             emotional_tone="克制专业",
             continuity_role=continuity,
         )
+
+
+def _ordered_evidence_assets(slide: SlideSpec) -> list[UUID]:
+    from archium.application.evidence_item_binding_service import ordered_evidence_asset_ids
+
+    return ordered_evidence_asset_ids(slide)

@@ -8,6 +8,7 @@ from archium.domain.enums import ProjectType, SlideStatus, SlideType
 from archium.domain.presentation import Presentation, PresentationBrief
 from archium.domain.project import Project
 from archium.domain.slide import SlideSpec
+from archium.domain.visual.layout_evidence_item import EvidenceItemRole, LayoutEvidenceItem
 from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
 from sqlalchemy.orm import Session
 
@@ -65,3 +66,25 @@ def test_approve_all_slides(db_session: Session) -> None:
     approved = service.approve_all_slides(slide.presentation_id)
     assert len(approved) == 1
     assert slides_are_approved(approved)
+
+
+def test_update_slide_evidence_items_resets_status_to_draft(db_session: Session) -> None:
+    slide = _seed_slide(db_session)
+    service = PresentationReviewService(db_session)
+    service.approve_slide(slide.id)
+    updated = service.update_slide_evidence_items(
+        slide.id,
+        [
+            LayoutEvidenceItem(
+                claim="入口混行",
+                role=EvidenceItemRole.PRIMARY,
+            ),
+            LayoutEvidenceItem(
+                claim="停车占道",
+                role=EvidenceItemRole.SUPPORTING,
+            ),
+        ],
+    )
+    assert updated.status == SlideStatus.DRAFT
+    assert updated.key_points == ["入口混行", "停车占道"]
+    assert len(updated.evidence_items) == 2

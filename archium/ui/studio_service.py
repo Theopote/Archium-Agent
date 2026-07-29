@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from archium.application.content_adaptation_service import ContentAdaptationService
 from archium.application.ingestion_service import ImportItemResult
+from archium.application.slide_evidence_edit_service import SlideEvidenceEditResult
 from archium.application.visual.slide_preview_service import SlidePreviewService
 from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.application.visual.visual_edit_service import VisualEditResult
@@ -23,6 +24,7 @@ from archium.domain.render import RenderResult
 from archium.domain.revision import EntityRevision
 from archium.domain.scene_revision_summary import SceneRevisionRestoreResult
 from archium.domain.slide import SlideSpec, build_slide_logical_key
+from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
 from archium.domain.visual.deck_repair import DeckRepairSuggestion
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.scene_change_proposal import SceneChangeProposal
@@ -695,6 +697,22 @@ def apply_slide_element_asset(
     return StudioSceneEditService(
         session, settings=_resolve_runtime_settings(None)
     ).replace_layout_element_asset(slide_id, element_id=element_id, asset_id=asset_id)
+
+
+def apply_slide_evidence_items(
+    session: Session,
+    slide_id: UUID,
+    *,
+    items: list[LayoutEvidenceItem],
+) -> SlideEvidenceEditResult:
+    """Save semantic evidence items and patch annotation/photo nodes."""
+    from archium.application.slide_evidence_edit_service import SlideEvidenceEditService
+    from archium.ui.studio.undo_stack import clear_visual_redo_stack
+
+    clear_visual_redo_stack(slide_id)
+    return SlideEvidenceEditService(
+        session, settings=_resolve_runtime_settings(None)
+    ).save_evidence_items(slide_id, items)
 
 
 def generate_slide_vision_illustration(

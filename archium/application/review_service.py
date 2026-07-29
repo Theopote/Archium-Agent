@@ -43,6 +43,7 @@ from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import ManuscriptStatus, PresentationManuscript
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
+from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
 from archium.domain.slide_asset_binding import SlideAssetBinding
 from archium.domain.slide_design_brief import (
     SlideDesignBrief,
@@ -364,6 +365,20 @@ class PresentationReviewService:
         slide.layout_id = update.layout_id.strip() or "default"
         slide.key_points = list(update.key_points)
         slide.speaker_notes = update.speaker_notes.strip() if update.speaker_notes else None
+        slide.status = SlideStatus.DRAFT
+        slide.version += 1
+        return self._presentations.save_slide(slide)
+
+    def update_slide_evidence_items(
+        self,
+        slide_id: UUID,
+        items: list[LayoutEvidenceItem],
+    ) -> SlideSpec:
+        """Persist semantic evidence items during human review (pre/post render)."""
+        from archium.application.slide_evidence_edit_service import SlideEvidenceEditService
+
+        result = SlideEvidenceEditService(self._session).save_evidence_items(slide_id, items)
+        slide = result.slide
         slide.status = SlideStatus.DRAFT
         slide.version += 1
         return self._presentations.save_slide(slide)
