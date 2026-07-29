@@ -2,7 +2,7 @@
   "session_id": "2026-07-29-pilot-trio-rerender",
   "date": "2026-07-29",
   "playbook": "pilot_trio_rerender",
-  "status": "rendered_automation_passed",
+  "status": "human_verified_partial",
   "cases": [
     "case_001_site_plan",
     "case_002_site_photos",
@@ -15,8 +15,14 @@
     "post_render_qa_passed": true,
     "placeholder_asset_count": 0
   },
-  "human_verified": false,
-  "reporting_ready_updated": false,
+  "human_verified": true,
+  "human_verified_at": "2026-07-29T14:30:00Z",
+  "reporting_ready_updated": true,
+  "reporting_ready_summary": {
+    "fixable": 2,
+    "do_not_use": 1,
+    "target_ready_with_minor_edits_met": false
+  },
   "prior_session": "2026-07-28-visual-kpi-1",
-  "notes": "Rendered after readiness fail-open fixes; awaiting human exception review."
+  "notes": "Desk exception review completed. Layout/readiness gates improved vs 2026-07-28; curated asset content and PPTX image embed remain delivery blockers. case_006 still do_not_use."
 }

@@ -61,7 +61,7 @@
         "assets_pixel_acceptable": true
       },
       "suggested_reporting_ready": "ready_with_minor_edits",
-      "human_verified": false
+        "human_verified": true
     },
     {
       "case_id": "case_002_site_photos",
@@ -155,7 +155,7 @@
         "assets_pixel_acceptable": true
       },
       "suggested_reporting_ready": "ready_with_minor_edits",
-      "human_verified": false
+        "human_verified": true
     },
     {
       "case_id": "case_006_project_hero",
@@ -217,7 +217,7 @@
         "assets_pixel_acceptable": true
       },
       "suggested_reporting_ready": "ready_with_minor_edits",
-      "human_verified": false
+        "human_verified": true
     }
   ]
 }

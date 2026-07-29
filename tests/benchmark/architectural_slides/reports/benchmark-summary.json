@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-07-29T12:15:02.755988+00:00",
+  "generated_at": "2026-07-29T12:44:40.320633+00:00",
   "case_count": 30,
   "rule_passed_count": 30,
   "rule_pass_rate": 1.0,
   "manual_human_review_count": 30,
   "manual_human_accepted_count": 0,
   "placeholder_human_review_count": 0,
-  "human_average_weighted_score": 3.596,
+  "human_average_weighted_score": 3.683,
   "human_quality_gate_passed": false,
   "human_quality_gate_reasons": [
     "accepted deliverable pages 0 < required 24/30"
@@ -14,8 +14,8 @@
   "page_quality_status_counts": {
     "PASS": 27,
     "PASS_WITH_WARNINGS": 0,
-    "NEEDS_REVIEW": 0,
-    "BLOCKED": 3
+    "NEEDS_REVIEW": 2,
+    "BLOCKED": 1
   },
   "formal_gate_mode": "problem_driven",
   "cases": [
@@ -34,7 +34,7 @@
       "layout_score": 1.0,
       "has_critical": false,
       "human_weighted_score": null,
-      "human_score_label": "BLOCKED",
+      "human_score_label": "NEEDS_REVIEW",
       "human_review_source": "manual",
       "human_review_validity": "valid",
       "human_review_completed": true,
@@ -42,16 +42,14 @@
       "human_accepted": false,
       "human_invalidated": false,
       "invalidation_reason": null,
-      "reviewer": "facilitator-pilot-2026-07-28",
-      "reviewed_at": "2026-07-28T06:15:21.195893+00:00",
+      "reviewer": "desk-review-2026-07-29",
+      "reviewed_at": "2026-07-29T14:30:00+00:00",
       "major_problems": [
-        "主图不是可读总平面，仅为占位示意图"
+        "主图内容不可作为总平面证据（需替换真实图纸）"
       ],
-      "page_quality_status": "BLOCKED",
-      "reporting_ready": "do_not_use",
+      "page_quality_status": "NEEDS_REVIEW",
+      "reporting_ready": "fixable",
       "selected_issue_codes": [
-        "IMAGE_TEXT.HERO_UNCLEAR",
-        "IMAGE_TEXT.DOES_NOT_SUPPORT_CONCLUSION",
         "CONTENT.IMPORTANT_MISSING",
         "ARCH.ANNOTATIONS_UNREADABLE"
       ],
@@ -72,7 +70,7 @@
       "layout_score": 0.975,
       "has_critical": false,
       "human_weighted_score": null,
-      "human_score_label": "BLOCKED",
+      "human_score_label": "NEEDS_REVIEW",
       "human_review_source": "manual",
       "human_review_validity": "valid",
       "human_review_completed": true,
@@ -80,18 +78,16 @@
       "human_accepted": false,
       "human_invalidated": false,
       "invalidation_reason": null,
-      "reviewer": "facilitator-pilot-2026-07-28",
-      "reviewed_at": "2026-07-28T06:15:21.195893+00:00",
+      "reviewer": "desk-review-2026-07-29",
+      "reviewed_at": "2026-07-29T14:30:00+00:00",
       "major_problems": [
-        "四宫格照片不可作为现场证据"
+        "四张证据图不可作为现场踏勘照片使用（需替换真实现场图）"
       ],
-      "page_quality_status": "BLOCKED",
-      "reporting_ready": "do_not_use",
+      "page_quality_status": "NEEDS_REVIEW",
+      "reporting_ready": "fixable",
       "selected_issue_codes": [
         "ARCH.PROBLEM_WITHOUT_EVIDENCE",
-        "IMAGE_TEXT.HERO_UNCLEAR",
-        "CONTENT.IMPORTANT_MISSING",
-        "IMAGE_TEXT.EQUAL_WEIGHT_IMAGES"
+        "CONTENT.IMPORTANT_MISSING"
       ],
       "scoring_mode": "experimental"
     },
@@ -211,10 +207,10 @@
       "human_accepted": false,
       "human_invalidated": false,
       "invalidation_reason": null,
-      "reviewer": "facilitator-pilot-2026-07-28",
-      "reviewed_at": "2026-07-28T06:15:21.195893+00:00",
+      "reviewer": "desk-review-2026-07-29",
+      "reviewed_at": "2026-07-29T14:30:00+00:00",
       "major_problems": [
-        "主图不主导页面，留白失控"
+        "Hero 主视觉在 PPTX 交付中不主导，留白失控"
       ],
       "page_quality_status": "BLOCKED",
       "reporting_ready": "do_not_use",

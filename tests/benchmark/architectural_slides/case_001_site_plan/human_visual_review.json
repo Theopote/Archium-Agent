@@ -1,38 +1,37 @@
 {
   "case_id": "case_001_site_plan",
   "source": "manual",
-  "information_hierarchy": 3,
-  "visual_focus": 2,
+  "information_hierarchy": 4,
+  "visual_focus": 3,
   "reading_order": 4,
-  "image_text_relationship": 1,
-  "whitespace_density": 3,
-  "architectural_expression": 1,
-  "aesthetic_finish": 2,
+  "image_text_relationship": 2,
+  "whitespace_density": 4,
+  "architectural_expression": 2,
+  "aesthetic_finish": 3,
   "editability": 4,
   "scoring_mode": "experimental",
   "selected_issue_codes": [
-    "IMAGE_TEXT.HERO_UNCLEAR",
-    "IMAGE_TEXT.DOES_NOT_SUPPORT_CONCLUSION",
     "CONTENT.IMPORTANT_MISSING",
     "ARCH.ANNOTATIONS_UNREADABLE"
   ],
   "quality_issues": [],
-  "page_quality_status": "BLOCKED",
-  "worst_problem": "主图为合成占位图（文件名栅格），无法作为总平面证据用于汇报",
-  "system_missed": "自动 QA 记 render_valid=true，但未识别主图仅为文件名占位而非可读图纸",
-  "reporting_ready": "do_not_use",
+  "page_quality_status": "NEEDS_REVIEW",
+  "worst_problem": "主图仍为文件名栅格示意，不是可读总平面；PPTX 截图中图片未正确嵌入",
+  "system_missed": "automation 记 layout_valid + hero_ratio=0.722，但未拦截 curated 池文件名栅格资产；pptx_render 显示破损图标",
+  "reporting_ready": "fixable",
   "major_problems": [
-    "主图不是可读总平面，仅为占位示意图"
+    "主图内容不可作为总平面证据（需替换真实图纸）"
   ],
   "minor_problems": [
-    "右侧指标卡版式可用，标题层级清晰"
+    "full_canvas 版式与右侧三指标卡结构达标",
+    "标题层级与阅读顺序清晰"
   ],
   "review_completed": true,
   "accepted_for_delivery": false,
   "validity": "valid",
   "accepted": false,
-  "reviewer": "facilitator-pilot-2026-07-28",
-  "reviewed_at": "2026-07-28T06:15:21.195893Z",
-  "reviewer_notes": "对照 output.pptx + pptx_render.png（generated=true）。版式骨架（标题/主图区/三指标）可读，但主图内容不可交付。估计替换真实图纸并对齐约 8–12 分钟。",
+  "reviewer": "desk-review-2026-07-29",
+  "reviewed_at": "2026-07-29T14:30:00Z",
+  "reviewer_notes": "对照 pptx_render.png（generated=true）+ scene_preview.png。相较 2026-07-28：版式骨架与主图区面积已改善，TEXT_OVERFLOW 已消除；仍缺真实图纸且 PPTX 嵌入失败。估计替换总平面 PDF 导出图并对齐约 8–12 分钟。",
   "invalidation_reason": ""
 }

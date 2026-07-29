@@ -22,13 +22,22 @@ Automation evidence (per render_manifest.json):
 
 Automation pre-check (scripts/check_pilot_trio_acceptance.py):
 - case_001_site_plan → suggested=ready_with_minor_edits (layout_valid, hero_ratio=0.722)
-- case_002_site_photos → suggested=needs_review (TEXT_OVERFLOW on title/annotations)
-- case_006_project_hero → suggested=needs_review (TEXT_OVERFLOW on lead; hero_ratio=0.752)
+- case_002_site_photos → suggested=ready_with_minor_edits (hierarchical, primary larger)
+- case_006_project_hero → suggested=ready_with_minor_edits (hero_ratio=0.706)
 
-What this is NOT:
-- Human exception review (reporting_ready not updated)
-- Delivery acceptance / ready_with_minor_edits sign-off
+Human exception review (2026-07-29, desk-review-2026-07-29):
+- case_001_site_plan → fixable (layout OK; replace real site plan drawing)
+- case_002_site_photos → fixable (hierarchical OK; replace real site photos)
+- case_006_project_hero → do_not_use (PPTX hero still not dominant)
+
+Target ready_with_minor_edits: NOT fully met (2/3 fixable, 1/3 do_not_use).
+
+Open blockers:
+- Curated benchmark assets are filename-grid / solid-color bars, not real content
+- pptx_render.png shows broken image icons (benchmark:// embed failure in PowerPoint COM)
+- pixel_acceptable threshold too low for curated pool assets
 
 Next:
-- Settings → 建筑幻灯片基准 · 人工视觉评审 (pilot trio only)
-- Update reporting_ready if pages reach ready_with_minor_edits
+- Replace curated pool assets with real drawings/photos for pilot trio
+- Fix PPTX image embed for benchmark:// URIs
+- Re-run render + human review before expanding to 30 pages

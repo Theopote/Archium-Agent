@@ -143,38 +143,38 @@ reviewers must use a **type-aware pass/review rubric** instead of aesthetic micr
 
 1. **Re-generate screenshots** with Windows PowerPoint COM (or CI LibreOffice) for Goldens (pilot trio) — **done 2026-07-29** (`render_valid=true`, `placeholder_asset_count=0`); evidence: `docs/rehearsal/sessions/2026-07-29-pilot-trio-rerender/`
 2. **Keep** formal quality gate on `pptx_screenshot_generated=true` (already enforced)
-3. **Pilot human exception review on 3 pages** — **needs re-run on 2026-07-29 renders** (`human_verified` pending); **do not expand to 30** until placeholder / hero-dominance / evidence readability reach `ready_with_minor_edits` or `closed`
+3. **Pilot human exception review on 3 pages** — **done 2026-07-29** (`human_verified`); **do not expand to 30** until all three reach `fixable`/交付接受（当前 2/3 `fixable`，1/3 `do_not_use`）
 
 ### Pilot trio (do first)
 
-| Case | Covers | Fresh screenshot (2026-07-29) | Automation pre-check | Exception review |
-|------|--------|------------------------------|----------------------|------------------|
-| `case_001_site_plan` | 建筑图纸 | `render_valid=true`; `placeholder_asset_count=0` | `ready_with_minor_edits` | **pending** |
-| `case_002_site_photos` | 多张现场照片 | `render_valid=true`; hierarchical layout | `needs_review` (text overflow) | **pending** |
-| `case_006_project_hero` | 大图视觉页面 | `render_valid=true`; hero_ratio≈0.75 | `needs_review` (text overflow) | **pending** |
+| Case | Covers | Fresh screenshot (2026-07-29) | Automation pre-check | Exception review (2026-07-29) |
+|------|--------|------------------------------|----------------------|-------------------------------|
+| `case_001_site_plan` | 建筑图纸 | `render_valid=true`; `placeholder_asset_count=0` | `ready_with_minor_edits` | **`fixable`** — 版式达标，需替换真实总平面 |
+| `case_002_site_photos` | 多张现场照片 | `render_valid=true`; hierarchical layout | `ready_with_minor_edits` | **`fixable`** — 主次明确，需替换真实现场图 |
+| `case_006_project_hero` | 大图视觉页面 | `render_valid=true`; hero_ratio≈0.71 (plan) | `ready_with_minor_edits` | **`do_not_use`** — PPTX 交付 Hero 仍不主导 |
 
 Each pilot page must simultaneously satisfy:
 
 - Fresh PPTX screenshot (`pptx_screenshot_generated=true`) — **done for pilot trio**
 - Scene / PPTX / screenshot hash consistency — **done** (`post_render_qa_passed=true`)
-- Automation pre-check (`scripts/check_pilot_trio_acceptance.py`) — **done**; case_001 at `ready_with_minor_edits`, 002/006 `needs_review`
-- Human exception review (`source=manual`, problem checklist + reporting_ready) — **pending** (prior 2026-07-28: 0/3 `do_not_use`)
-- PPTX editability review passed — **done** (native text/images editable; content is the blocker)
+- Automation pre-check (`scripts/check_pilot_trio_acceptance.py`) — **done**; 3/3 layout metrics at `ready_with_minor_edits`
+- Human exception review (`source=manual`, problem checklist + reporting_ready) — **done** (2/3 `fixable`, 1/3 `do_not_use`; prior 2026-07-28: 3/3 `do_not_use`)
+- PPTX editability review passed — **done** (native text editable; image embed + content remain blockers)
 
 **Step 3 decision (2026-07-28):** 3/3 不可汇报 → **停扩布局模型 / 停扩 30 页人工评分**。  
-新增（已工程实现 2026-07-29）：像素级 `asset_presentation_readiness` 分析 + Hero/Evidence 匹配的 `pixel_analyzed` 硬门禁，防止“未知/占位图当内容”被放行（仍需重新渲染与人工复核后才可 close）。证据：`archium/application/asset_presentation_readiness_service.py` + `archium/application/asset_matching_service.py` + 入库分析接线。  
-仍保持 stop 扩：缺陷已 `rendered`（2026-07-29 pilot trio 重渲），`human_verified/closed` 仍待人工异常复核。证据：`docs/rehearsal/sessions/2026-07-29-pilot-trio-rerender/`（渲染）+ `docs/rehearsal/sessions/2026-07-28-visual-kpi-1/`（上轮人工结论）。
+新增（已工程实现 2026-07-29）：像素级 `asset_presentation_readiness` 分析 + Hero/Evidence 匹配的 `pixel_analyzed` 硬门禁。  
+**2026-07-29 人工复核结论：** 版式与 TEXT_OVERFLOW 较上轮明显改善；benchmark curated 素材（文件名栅格/纯色条带）与 PPTX `benchmark://` 嵌入失败仍是交付阻断。证据：`docs/rehearsal/sessions/2026-07-29-pilot-trio-rerender/human-exception-review.json`。
 
 ### Visual defects closure tracking (unified)
 统一状态流：`identified → implemented → rendered → human_verified → closed`
 
 | Visual defect | identified | implemented | rendered | human_verified | closed |
 |---|---|---|---|---|---|
-| 占位素材被当作可展示内容（placeholder / blank） | 2026-07-28 | 2026-07-29 | 2026-07-29 | pending | pending |
-| Hero 主导不达标（Hero 过小 / 留白失控） | 2026-07-28 | 2026-07-29 | 2026-07-29 | pending | pending |
-| Evidence Board 可读性不足（证据区内容不可读/近空白） | 2026-07-28 | 2026-07-29 | 2026-07-29 | pending | pending |
+| 占位素材被当作可展示内容（placeholder / blank） | 2026-07-28 | 2026-07-29 | 2026-07-29 | 2026-07-29 (partial — 匹配门已关，curated 池仍误放行) | pending |
+| Hero 主导不达标（Hero 过小 / 留白失控） | 2026-07-28 | 2026-07-29 | 2026-07-29 | 2026-07-29 (case_006 仍 BLOCKED) | pending |
+| Evidence Board 可读性不足（证据区内容不可读/近空白） | 2026-07-28 | 2026-07-29 | 2026-07-29 | 2026-07-29 (版式 OK，素材内容仍不可辨认) | pending |
 
-Automation pre-check: `scripts/check_pilot_trio_acceptance.py` → `docs/rehearsal/sessions/2026-07-29-pilot-trio-rerender/automation-precheck.json` (case_001 at `ready_with_minor_edits`; 002/006 `needs_review` for text overflow).
+Automation pre-check: `scripts/check_pilot_trio_acceptance.py` → `docs/rehearsal/sessions/2026-07-29-pilot-trio-rerender/automation-precheck.json` (3/3 layout at `ready_with_minor_edits`). Human review: `human-exception-review.json` (2/3 `fixable`, target not fully met).
 
 ```bash
 # Regenerate pilot screenshots into Goldens (PowerPoint available on this host)

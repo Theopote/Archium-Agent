@@ -2,12 +2,12 @@
   "case_id": "case_006_project_hero",
   "source": "manual",
   "information_hierarchy": 3,
-  "visual_focus": 1,
-  "reading_order": 3,
+  "visual_focus": 2,
+  "reading_order": 4,
   "image_text_relationship": 2,
-  "whitespace_density": 1,
+  "whitespace_density": 2,
   "architectural_expression": 2,
-  "aesthetic_finish": 1,
+  "aesthetic_finish": 2,
   "editability": 4,
   "scoring_mode": "experimental",
   "selected_issue_codes": [
@@ -18,21 +18,22 @@
   ],
   "quality_issues": [],
   "page_quality_status": "BLOCKED",
-  "worst_problem": "Hero 主图过小、页面大面积空白，无法形成封面级视觉冲击",
-  "system_missed": "布局规则通过，但未对 Hero 主导面积做交付级判定",
+  "worst_problem": "PPTX 交付截图主图破损且面积极小，页面大面积空白，未达封面级 Hero 主导",
+  "system_missed": "layout plan hero_ratio=0.706 与 pptx_render 视觉不一致；render_valid=true 未反映 Office 嵌入失败",
   "reporting_ready": "do_not_use",
   "major_problems": [
-    "主图不主导页面，留白失控"
+    "Hero 主视觉在 PPTX 交付中不主导，留白失控"
   ],
   "minor_problems": [
-    "标题与副标题文案可用"
+    "标题与副标题文案可用、可编辑",
+    "split 版式 lead 区 TEXT_OVERFLOW 已修复"
   ],
   "review_completed": true,
   "accepted_for_delivery": false,
   "validity": "valid",
   "accepted": false,
-  "reviewer": "facilitator-pilot-2026-07-28",
-  "reviewed_at": "2026-07-28T06:15:21.195893Z",
-  "reviewer_notes": "PPTX 原生文字可编辑；视觉完成度不达标。估计放大/替换主图并重排约 5–8 分钟。",
+  "reviewer": "desk-review-2026-07-29",
+  "reviewed_at": "2026-07-29T14:30:00Z",
+  "reviewer_notes": "对照 pptx_render.png：主图仅为左上角破损图标，与 layout 计划 70% 面积严重不符。scene_preview 亦显示文件名栅格而非全幅 Hero。需先修复 benchmark:// 资产 PPTX 嵌入，再替换真实效果图并验证全幅铺满。",
   "invalidation_reason": ""
 }
