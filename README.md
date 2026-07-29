@@ -406,24 +406,29 @@ alembic upgrade head
 
 [![CI](https://github.com/Theopote/Archium-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Theopote/Archium-Agent/actions/workflows/ci.yml)
 
-仓库在 `push` / `pull_request` 时运行 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)（Python 3.11 / 3.12 matrix）：
+仓库在 `push` / `pull_request` 时运行 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)。合并 `master` 前建议要求的 status checks：
 
-| Status check（合并前必须通过） | 内容 |
-|-------------------------------|------|
-| `test (3.11)` | ruff、mypy、pytest |
-| `test (3.12)` | ruff、mypy、pytest |
+| Status check | 内容 |
+|--------------|------|
+| `compatibility (3.11)` / `compatibility (3.12)` | ruff、mypy、unit、thin integration |
+| `quality-full` | full integration、benchmark、golden、PptxGen smoke |
+| `layout pptx screenshot regression` | LayoutPlan PPTX 截图回归 |
+| `architectural benchmark render pipeline` | 建筑幻灯片渲染管线样本 |
 
-> 在 GitHub **Branch protection** 界面中，status check 可能显示为 `CI / test (3.11)` 形式（工作流名 + job 名）。勾选与 Python 版本对应的两个 job 即可。
+> Branch protection UI 中可能显示为 `CI / <job name>`。以 **Check Runs** 为准；`/commits/.../status`（combined status）对 Actions 常为空，不能用来判断 CI 是否跑过。
 
 **为 `master` 启用分支保护（仓库 Admin 一次性操作）：**
 
 1. 打开 [Actions](https://github.com/Theopote/Archium-Agent/actions/workflows/ci.yml) 确认至少有一次 **CI 已在 `master` 上跑绿**（否则 Settings 里还选不到 status check）。
 2. GitHub → **Settings** → **Branches** → **Add branch protection rule**
 3. **Branch name pattern:** `master`
-4. 勾选 **Require status checks to pass before merging**
-5. 勾选 **Require branches to be up to date before merging**（推荐）
-6. 在 status checks 搜索并勾选 **`test (3.11)`** 与 **`test (3.12)`**（或带 `CI /` 前缀的同名项）
-7. （推荐）勾选 **Require a pull request before merging**，**Do not allow bypassing the above settings**
+4. 勾选 **Require a pull request before merging**（视觉 / 渲染改动强制）
+5. 勾选 **Require status checks to pass before merging**
+6. 勾选 **Require branches to be up to date before merging**（推荐）
+7. 勾选上表 recommended checks（或带 `CI /` 前缀的同名项）
+8. （推荐）**Do not allow bypassing the above settings**
+
+视觉路径改动另须满足 **Visual Change PR Gate**（Before/After、PPTX 截图、LayoutFamily、Golden 影响、人工成本）——见 PR 模板与 [`docs/branch-protection.md`](docs/branch-protection.md)。
 
 完整说明与 `gh` CLI 脚本见 [`docs/branch-protection.md`](docs/branch-protection.md)。
 

@@ -65,13 +65,23 @@ python scripts/eval_mission_live.py
 
 ## 分支与 PR
 
-1. 从默认分支拉取最新代码并开 topic 分支（例如 `fix/...`、`fix/...`）。
+1. 从默认分支拉取最新代码并开 **topic 分支**（例如 `feat/...`、`fix/...`）。**不要**把视觉 / 渲染高风险改动直接推到 `master`。
 2. 保持改动聚焦；大功能请拆成多个 PR。
-3. PR 描述写清：**动机**、**改了什么**、**如何验证**。
+3. PR 描述写清：**动机**、**改了什么**、**如何验证**（使用仓库 PR 模板）。
 4. 若触及用户可见行为，更新相关 `docs/` 或 README 片段。
 5. 不要提交：`.env`、密钥、客户原始资料、未脱敏的 golden fixture 文件。
 
-可使用仓库内的 Pull Request 模板填写清单。
+### Visual Change PR Gate
+
+触及 `archium/domain/visual/**`、`infrastructure/renderers/**`、`infrastructure/layout/**`、`ui/studio/**`、benchmark / visual goldens 时，PR **必须**附：
+
+- 关键页面 Before / After 拼图（或 CI artifact 链接）
+- PPTX 截图
+- 受影响 LayoutFamily / variant
+- 是否改变 Golden / baseline
+- 人工修订成本估计
+
+合并前以 Actions **Check Runs** 为准确认 `compatibility`、`quality-full`、`layout pptx screenshot regression`、`architectural benchmark render pipeline` 等绿灯。详见 [`docs/branch-protection.md`](docs/branch-protection.md)。
 
 ## 问题反馈
 
