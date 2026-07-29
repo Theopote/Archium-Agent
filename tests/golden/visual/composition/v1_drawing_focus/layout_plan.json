@@ -12,16 +12,16 @@
     "source"
   ],
   "balance_strategy": "drawing_dominant",
-  "whitespace_ratio": 0.3923,
+  "whitespace_ratio": 0.3906,
   "elements": [
     {
       "id": "caption",
       "role": "caption",
       "content_type": "text",
       "x": 0.7,
-      "y": 4.283,
+      "y": 4.32,
       "w": 5.59,
-      "h": 0.28,
+      "h": 0.258,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -30,9 +30,9 @@
       "role": "hero_visual",
       "content_type": "drawing",
       "x": 0.7,
-      "y": 1.213,
+      "y": 1.191,
       "w": 6.072,
-      "h": 3.028,
+      "h": 3.087,
       "fit_mode": "contain",
       "crop_policy": "forbidden"
     },
@@ -41,9 +41,9 @@
       "role": "metric",
       "content_type": "metric",
       "x": 6.939,
-      "y": 1.213,
+      "y": 1.191,
       "w": 2.361,
-      "h": 3.028,
+      "h": 3.087,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -52,9 +52,9 @@
       "role": "source",
       "content_type": "text",
       "x": 0.7,
-      "y": 4.605,
+      "y": 4.619,
       "w": 5.59,
-      "h": 0.22,
+      "h": 0.206,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -65,7 +65,7 @@
       "x": 0.7,
       "y": 0.45,
       "w": 8.6,
-      "h": 0.68,
+      "h": 0.657,
       "fit_mode": null,
       "crop_policy": null
     }

@@ -1163,20 +1163,20 @@ def _render_element_properties(
             use_container_width=True,
             key=f"studio_ungroup_{slide_snapshot.slide.id}_{element.id}",
         ):
-                try:
-                    with get_session() as session:
-                        from archium.ui.studio_service import apply_slide_element_ungroup
+            try:
+                with get_session() as session:
+                    from archium.ui.studio_service import apply_slide_element_ungroup
 
-                        apply_slide_element_ungroup(
-                            session,
-                            slide_snapshot.slide.id,
-                            element_id=element.id,
-                        )
-                    set_studio_selection([])
-                    st.success("已取消组合。")
-                    st.rerun()
-                except Exception as exc:
-                    st.error(format_user_error(exc))
+                    apply_slide_element_ungroup(
+                        session,
+                        slide_snapshot.slide.id,
+                        element_id=element.id,
+                    )
+                set_studio_selection([])
+                st.success("已取消组合。")
+                st.rerun()
+            except Exception as exc:
+                st.error(format_user_error(exc))
 
         if element.content_type == LayoutContentType.FREEFORM:
             st.caption(

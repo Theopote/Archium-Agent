@@ -1871,7 +1871,7 @@ class StudioCommandExecutor:
                         )
                     )
                     patched.nodes = [n for n in patched.nodes if n.id != old_group.id]
-            before_gid = child.group_id
+            before_gid: str | None = child.group_id
             child.group_id = None
             actions.append(
                 build_patch_action(

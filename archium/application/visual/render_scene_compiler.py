@@ -45,6 +45,7 @@ from archium.domain.visual.render_scene import (
     DrawingType,
     FreeformNode,
     ImageNode,
+    RenderNode,
     RenderScene,
     SceneAssetReference,
     ShapeNode,
@@ -108,7 +109,7 @@ class RenderSceneCompiler:
         bundle = content_bundle or SlideContentBundle()
         warnings: list[str] = list(overlay.warnings)
         asset_manifest: list[SceneAssetReference] = []
-        nodes: list[TextNode | ImageNode | DrawingNode | ShapeNode | ChartNode | TableNode] = []
+        nodes: list[RenderNode] = []
         drawing_type = self._infer_drawing_type(slide, visual_intent)
 
         bg_color = effective.colors.resolve("background")

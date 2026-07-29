@@ -9,7 +9,8 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal, Self
+from collections.abc import Sequence
+from typing import Annotated, Any, Literal, Self, TypedDict
 from uuid import UUID
 
 from pydantic import ConfigDict, Field, field_validator, model_validator
@@ -251,7 +252,18 @@ def set_text_node_runs(node: TextNode, runs: list[TextRun]) -> None:
     node.paragraphs = [TextParagraph(text=derived, alignment=alignment)]
 
 
-def effective_run_style(node: TextNode, run: TextRun) -> dict[str, object]:
+class EffectiveRunStyle(TypedDict):
+    font_family: str
+    font_family_cjk: str
+    font_family_latin: str
+    font_size: float
+    font_weight: int
+    font_style: str
+    color: str
+    color_token: str
+
+
+def effective_run_style(node: TextNode, run: TextRun) -> EffectiveRunStyle:
     """Resolve a run's visual style with TextNode fallbacks."""
     return {
         "font_family": run.font_family or node.font_family,
@@ -652,7 +664,7 @@ def group_children(scene: RenderScene, group: GroupNode) -> list[RenderNode]:
     return [by_id[child_id] for child_id in group.children if child_id in by_id]
 
 
-def compute_group_bounds(nodes: list[BaseRenderNode]) -> tuple[float, float, float, float]:
+def compute_group_bounds(nodes: Sequence[BaseRenderNode]) -> tuple[float, float, float, float]:
     """Return (x, y, width, height) bounding box for the given nodes."""
     if not nodes:
         raise ValueError("cannot compute bounds for empty node list")
