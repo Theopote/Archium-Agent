@@ -9,6 +9,7 @@ from archium.application.visual.benchmark_service import (
 from archium.domain.slide import VisualRequirement
 from archium.domain.visual.benchmark import BenchmarkCaseDefinition
 from archium.domain.visual.design_system import DesignSystem
+from archium.domain.visual.enums import LayoutFamily
 
 from tests.benchmark.architectural_slides.case_catalog import (
     CASE_001_HERO,
@@ -98,7 +99,12 @@ def _slide_content(entry: CaseCatalogEntry) -> BenchmarkSlideContent | None:
     )
     if not has_content:
         return None
-    evidence = catalog_evidence_items(entry)
+    if entry.evidence_items:
+        evidence = list(entry.evidence_items)
+    elif entry.definition.expected_layout_family == LayoutFamily.EVIDENCE_BOARD:
+        evidence = catalog_evidence_items(entry)
+    else:
+        evidence = []
     return BenchmarkSlideContent(
         key_points=list(entry.key_points) if entry.key_points else None,
         metrics=list(entry.metrics) if entry.metrics else None,

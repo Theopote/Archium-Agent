@@ -97,6 +97,7 @@ class BenchmarkService:
             title=request.title,
             message=request.message,
             key_points=list(content_input.key_points or []) if content_input else [],
+            evidence_items=list(content_input.evidence_items or []) if content_input else [],
             visual_requirements=list(request.visual_requirements),
             source_citations=[
                 SourceCitation(
@@ -188,7 +189,7 @@ class BenchmarkService:
                 str(asset_id) for asset_id in (override.supporting_asset_ids or [])
             ]
             or base.supporting_asset_refs,
-            evidence_items=list(override.evidence_items or base.evidence_items),
+            evidence_items=list(override.evidence_items or slide.evidence_items or base.evidence_items),
             insight=override.insight or base.insight,
         )
 

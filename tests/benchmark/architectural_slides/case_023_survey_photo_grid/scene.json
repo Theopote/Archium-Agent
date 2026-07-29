@@ -1,13 +1,13 @@
 {
-  "created_at": "2026-07-29T13:23:07.443640Z",
-  "updated_at": "2026-07-29T13:23:07.443640Z",
+  "created_at": "2026-07-29T13:49:06.305749Z",
+  "updated_at": "2026-07-29T13:49:06.305749Z",
   "version": 1,
-  "id": "1cbaa32c-9c77-4f99-90b2-eb5efdd56da8",
+  "id": "cb82d1fb-172e-4ad3-aae8-3bfafd7544e8",
   "schema_version": 2,
-  "slide_id": "3bbeaddf-2573-4ba3-9333-2eff15f48b96",
+  "slide_id": "b8a8565e-fb31-4d5a-92c9-c6952f425cab",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "4a5de8d4-5c08-4fd7-aaa5-1d2c1aa90b83",
-  "design_system_id": "1f53cd75-16b2-49be-9f5e-dc90eaedbe39",
+  "layout_plan_id": "69576c22-bac0-4588-b68a-e98b49b2d350",
+  "design_system_id": "2d124613-38c4-4e82-91e1-98c78181501f",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -109,10 +109,10 @@
       "locked": false,
       "lock_scopes": [],
       "group_id": null,
-      "text": "1. 交通混行",
+      "text": "1. 主入口交通混行，人车冲突明显",
       "paragraphs": [
         {
-          "text": "1. 交通混行",
+          "text": "1. 主入口交通混行，人车冲突明显",
           "alignment": "left"
         }
       ],
@@ -187,10 +187,10 @@
       "locked": false,
       "lock_scopes": [],
       "group_id": null,
-      "text": "2. 界面封闭",
+      "text": "2. 沿街界面封闭，缺乏公共性",
       "paragraphs": [
         {
-          "text": "2. 界面封闭",
+          "text": "2. 沿街界面封闭，缺乏公共性",
           "alignment": "left"
         }
       ],
@@ -265,10 +265,10 @@
       "locked": false,
       "lock_scopes": [],
       "group_id": null,
-      "text": "3. 景观缺失",
+      "text": "3. 景观缺失，到达体验单调",
       "paragraphs": [
         {
-          "text": "3. 景观缺失",
+          "text": "3. 景观缺失，到达体验单调",
           "alignment": "left"
         }
       ],

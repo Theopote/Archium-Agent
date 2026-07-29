@@ -232,6 +232,16 @@ class VisualRequirementDraft(BaseModel):
     required: bool = True
 
 
+class SlideEvidenceItemDraft(BaseModel):
+    """Semantic photo/drawing evidence for narrative slide planning."""
+
+    claim: str = Field(min_length=1)
+    role: str = Field(default="supporting")
+    focus: str | None = None
+    source: str | None = None
+    asset_id: str | None = None
+
+
 class SlideDraft(BaseModel):
     chapter_id: str
     order: int = Field(ge=0)
@@ -240,6 +250,7 @@ class SlideDraft(BaseModel):
     slide_type: SlideType = SlideType.CONTENT
     layout_id: str = "default"
     key_points: list[str] = Field(default_factory=list)
+    evidence_items: list[SlideEvidenceItemDraft] = Field(default_factory=list, max_length=6)
     visual_requirements: list[VisualRequirementDraft] = Field(default_factory=list)
     source_citations: list[CitationDraft] = Field(default_factory=list)
     speaker_notes: str | None = None

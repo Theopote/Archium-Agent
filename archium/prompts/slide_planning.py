@@ -9,6 +9,7 @@ SLIDE_PLAN_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 - 每一页只能有一个核心观点（message 字段）。
 - message 必须是该页要证明或传达的结论，不是主题标题。
 - 控制每页 key_points 不超过 5 条。
+- 现场问题 / 照片证据页：优先输出 evidence_items（语义证据），每条含 claim（图注/问题要点）、role（primary|supporting|detail）、可选 focus 与 source；不要仅用平行 key_points 代替图注。
 - 项目资料中的 `[chunk_id=...]` 可直接复制到 source_citations.chunk_id。
 - 为每页分配合适的 slide_type 与 visual_requirements。
 
@@ -47,6 +48,9 @@ SLIDE_PLAN_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
       "slide_type": "content",
       "layout_id": "default",
       "key_points": ["要点1", "要点2"],
+      "evidence_items": [
+        {"claim": "入口混行导致人车冲突", "role": "primary", "focus": "主入口", "source": "踏勘记录.pdf p.3"}
+      ],
       "visual_requirements": [{"type": "site_plan", "description": "总平面图", "required": true}],
       "source_citations": [{"document_name": "任务书.pdf", "chunk_id": "uuid", "page_number": 2, "quote": "...", "confidence": 0.9}],
       "speaker_notes": "演讲备注"
@@ -90,6 +94,7 @@ SINGLE_SLIDE_PLAN_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
 - 若提供【页面意图卡】：message 优先采用「中心结论」；必须落实「必须使用的证据」与「指定素材」；严禁「禁止内容」；期望版式应反映到 slide_type / visual_requirements。
 - 若提供【页面素材绑定】：必须把列出的 asset_id 写入对应 visual_requirements.preferred_asset_ids，并按绑定角色选择 visual type；不得改用其他素材替代必用绑定。
 - key_points 不超过 5 条；优先使用页面上下文中已核实事实与引用。
+- 现场问题 / 照片证据页：用 evidence_items 输出「claim + role (+ focus/source)」语义证据；key_points 可留空或仅保留非证据要点。
 - 项目资料中的 `[chunk_id=...]` 可直接复制到 source_citations.chunk_id。
 - 为页面分配合适的 slide_type 与 visual_requirements。
 - 功能图标使用 `{"type": "icon", "description": "pedestrian_flow"}` 等语义名，不要写文件名。
@@ -108,6 +113,7 @@ SINGLE_SLIDE_PLAN_SYSTEM_PROMPT = ARCHIUM_IDENTITY + """\
   "slide_type": "content",
   "layout_id": "default",
   "key_points": ["要点1"],
+  "evidence_items": [],
   "visual_requirements": [],
   "source_citations": [],
   "speaker_notes": null

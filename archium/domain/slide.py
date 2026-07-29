@@ -11,6 +11,7 @@ from archium.domain.citation import Citation
 from archium.domain.enums import SlideDeliveryStatus, SlideStatus, SlideType, VisualType
 from archium.domain.project_knowledge import SourceCitation
 from archium.domain.slide_role import SlideRole, VisualStrategy, coerce_slide_role
+from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
 from archium.domain.visual.visual_grammar import PageArchetype, coerce_page_archetype
 
 
@@ -69,6 +70,7 @@ class SlideSpec(IdentifiedModel, VersionedModel):
     slide_type: SlideType = SlideType.CONTENT
     layout_id: str = Field(default="default", min_length=1)
     key_points: list[str] = Field(default_factory=list)
+    evidence_items: list[LayoutEvidenceItem] = Field(default_factory=list)
     visual_requirements: list[SlideVisualRequirement] = Field(default_factory=list)
     # Topic 07: SourceCitation so Research URL cites can land on pages (not document-only Citation).
     source_citations: list[SourceCitation] = Field(default_factory=list)
@@ -143,6 +145,19 @@ class SlideSpec(IdentifiedModel, VersionedModel):
         if len(value) > 5:
             raise ValueError("key_points must not exceed 5 items per slide")
         return value
+
+    @field_validator("evidence_items")
+    @classmethod
+    def _limit_evidence_items(cls, value: list[LayoutEvidenceItem]) -> list[LayoutEvidenceItem]:
+        if len(value) > 6:
+            raise ValueError("evidence_items must not exceed 6 items per slide")
+        return value
+
+    @model_validator(mode="after")
+    def _sync_key_points_from_evidence(self) -> SlideSpec:
+        if self.evidence_items and not self.key_points:
+            self.key_points = [item.claim for item in self.evidence_items[:5]]
+        return self
 
     def mark_planned(self) -> None:
         self.status = SlideStatus.PLANNED

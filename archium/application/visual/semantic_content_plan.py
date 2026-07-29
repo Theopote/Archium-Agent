@@ -5,6 +5,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from archium.domain.visual.layout_evidence_item import (
+    build_evidence_items_from_claims,
+)
 from archium.domain.citation import Citation
 from archium.domain.enums import SlideType
 from archium.domain.outline import OutlinePlan, OutlineSection
@@ -127,7 +130,8 @@ def build_slide_spec_from_outline_page(
     key_message = section.key_message.strip()
     if key_message and key_message not in seen and key_message != message:
         key_points.append(key_message)
-    key_points = key_points[:8]
+    key_points = key_points[:5]
+    evidence_items = build_evidence_items_from_claims(key_points)
 
     speaker_notes = ""
     purpose = section.purpose.strip()
@@ -147,7 +151,8 @@ def build_slide_spec_from_outline_page(
         order=page.planned_page_index,
         title=section.title,
         message=message,
-        key_points=key_points,
+        key_points=key_points[:5],
+        evidence_items=evidence_items[:6],
         speaker_notes=speaker_notes,
         slide_type=slide_type,
     )

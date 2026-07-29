@@ -491,6 +491,24 @@ def _visual_from_draft(item: VisualRequirementDraft) -> VisualRequirement:
     )
 
 
+def _evidence_from_draft(item) -> "LayoutEvidenceItem":
+    from archium.domain.visual.layout_evidence_item import EvidenceItemRole, LayoutEvidenceItem
+
+    role = EvidenceItemRole.SUPPORTING
+    try:
+        role = EvidenceItemRole(str(item.role).strip().lower())
+    except ValueError:
+        pass
+    asset = str(item.asset_id).strip() if getattr(item, "asset_id", None) else None
+    return LayoutEvidenceItem(
+        claim=item.claim,
+        role=role,
+        focus=item.focus,
+        source=item.source,
+        asset=asset or None,
+    )
+
+
 def slide_from_draft(
     draft: SlideDraft,
     *,
@@ -511,6 +529,7 @@ def slide_from_draft(
         slide_type=draft.slide_type,
         layout_id=draft.layout_id,
         key_points=list(draft.key_points[:5]),
+        evidence_items=[_evidence_from_draft(item) for item in draft.evidence_items],
         visual_requirements=[_visual_from_draft(v) for v in draft.visual_requirements],
         source_citations=[
             citation

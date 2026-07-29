@@ -1,13 +1,13 @@
 {
-  "created_at": "2026-07-29T13:23:16.556418Z",
-  "updated_at": "2026-07-29T13:23:16.556418Z",
+  "created_at": "2026-07-29T13:49:16.646538Z",
+  "updated_at": "2026-07-29T13:49:16.646538Z",
   "version": 1,
-  "id": "fa0bba1e-67f2-4079-97e7-d3bab5d9171c",
+  "id": "bea910a0-9c59-47f9-85d5-f7ccf9371775",
   "schema_version": 2,
-  "slide_id": "86c65a56-939a-4f9d-b6a9-b98b0e55afa1",
+  "slide_id": "6b1ce5bb-cd6c-4052-8631-b0ada2b46ff5",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "94877efa-82c4-4fba-aae4-b91b7489d7e9",
-  "design_system_id": "2a2b8a48-30a6-4d71-a859-71aa80c56299",
+  "layout_plan_id": "833b4029-d7bd-4d58-923f-55a13d8ed8d5",
+  "design_system_id": "e8d58217-7191-4c03-ba52-945a181f6e55",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -109,10 +109,10 @@
       "locked": false,
       "lock_scopes": [],
       "group_id": null,
-      "text": "1. 现状封闭",
+      "text": "1. 改造前：院区界面封闭，公共性不足",
       "paragraphs": [
         {
-          "text": "1. 现状封闭",
+          "text": "1. 改造前：院区界面封闭，公共性不足",
           "alignment": "left"
         }
       ],
@@ -187,10 +187,10 @@
       "locked": false,
       "lock_scopes": [],
       "group_id": null,
-      "text": "2. 一期开放",
+      "text": "2. 一期：南侧内院开放，形成公共活动面",
       "paragraphs": [
         {
-          "text": "2. 一期开放",
+          "text": "2. 一期：南侧内院开放，形成公共活动面",
           "alignment": "left"
         }
       ],
@@ -265,10 +265,10 @@
       "locked": false,
       "lock_scopes": [],
       "group_id": null,
-      "text": "3. 二期整合",
+      "text": "3. 二期：医疗与科研体量整合，流线重组",
       "paragraphs": [
         {
-          "text": "3. 二期整合",
+          "text": "3. 二期：医疗与科研体量整合，流线重组",
           "alignment": "left"
         }
       ],

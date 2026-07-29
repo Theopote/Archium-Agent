@@ -1,0 +1,118 @@
+{
+  "layout_family": "evidence_board",
+  "layout_variant": "image_grid_2x2",
+  "page_width": 10.0,
+  "page_height": 5.625,
+  "hero_element_id": "photo_0",
+  "reading_order": [
+    "title",
+    "photo_0",
+    "photo_1",
+    "photo_2",
+    "lead",
+    "source"
+  ],
+  "balance_strategy": "evidence_hierarchy",
+  "whitespace_ratio": 0.3558,
+  "elements": [
+    {
+      "id": "annotation_0",
+      "role": "annotation",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 3.751,
+      "w": 5.255,
+      "h": 0.553,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "annotation_1",
+      "role": "annotation",
+      "content_type": "text",
+      "x": 6.08,
+      "y": 2.424,
+      "w": 3.221,
+      "h": 0.261,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "annotation_2",
+      "role": "annotation",
+      "content_type": "text",
+      "x": 6.08,
+      "y": 4.043,
+      "w": 3.221,
+      "h": 0.261,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "lead",
+      "role": "lead_statement",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.388,
+      "w": 8.6,
+      "h": 0.438,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "photo_0",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 0.7,
+      "y": 1.191,
+      "w": 5.255,
+      "h": 2.519,
+      "fit_mode": "cover",
+      "crop_policy": "cover_crop"
+    },
+    {
+      "id": "photo_1",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 6.08,
+      "y": 1.191,
+      "w": 3.221,
+      "h": 1.191,
+      "fit_mode": "cover",
+      "crop_policy": "cover_crop"
+    },
+    {
+      "id": "photo_2",
+      "role": "supporting_visual",
+      "content_type": "image",
+      "x": 6.08,
+      "y": 2.81,
+      "w": 3.221,
+      "h": 1.191,
+      "fit_mode": "cover",
+      "crop_policy": "cover_crop"
+    },
+    {
+      "id": "source",
+      "role": "source",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 4.955,
+      "w": 6.02,
+      "h": 0.22,
+      "fit_mode": null,
+      "crop_policy": null
+    },
+    {
+      "id": "title",
+      "role": "title",
+      "content_type": "text",
+      "x": 0.7,
+      "y": 0.45,
+      "w": 8.6,
+      "h": 0.657,
+      "fit_mode": null,
+      "crop_policy": null
+    }
+  ]
+}

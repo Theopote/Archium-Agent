@@ -1,0 +1,8 @@
+{
+  "benchmark": "layout_geometry",
+  "case_id": "edge_034_conflicting_assets",
+  "layout_score": 0.975,
+  "layout_valid": true,
+  "has_critical": false,
+  "passed": true
+}

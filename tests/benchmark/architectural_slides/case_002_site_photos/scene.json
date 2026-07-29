@@ -1,13 +1,13 @@
 {
-  "created_at": "2026-07-29T13:20:17.825108Z",
-  "updated_at": "2026-07-29T13:20:17.825108Z",
+  "created_at": "2026-07-29T13:45:57.605903Z",
+  "updated_at": "2026-07-29T13:45:57.605903Z",
   "version": 1,
-  "id": "43d9245c-0817-448c-8c58-827e3113956b",
+  "id": "65efcd7f-5fef-437a-96fe-a506dceb285b",
   "schema_version": 2,
-  "slide_id": "d1648148-87e9-4ce0-881f-a00c628e4681",
+  "slide_id": "4f730216-e4c0-45fd-9943-18e444616e28",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "a8b2d972-a577-4869-b82e-4e6e0db7acd2",
-  "design_system_id": "3b1f2f0a-5f0b-4cf3-a7ab-ed10ebb2f1cd",
+  "layout_plan_id": "942423f5-3567-400c-89e3-eba03ad54e4e",
+  "design_system_id": "ece630d5-6c12-4d8e-a029-9ec297e06e6a",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -109,10 +109,10 @@
       "locked": false,
       "lock_scopes": [],
       "group_id": null,
-      "text": "1. 混行",
+      "text": "1. 入口混行导致患者与车流交织",
       "paragraphs": [
         {
-          "text": "1. 混行",
+          "text": "1. 入口混行导致患者与车流交织",
           "alignment": "left"
         }
       ],
@@ -187,10 +187,10 @@
       "locked": false,
       "lock_scopes": [],
       "group_id": null,
-      "text": "2. 占道",
+      "text": "2. 停车占道压缩人行空间",
       "paragraphs": [
         {
-          "text": "2. 占道",
+          "text": "2. 停车占道压缩人行空间",
           "alignment": "left"
         }
       ],
@@ -265,10 +265,10 @@
       "locked": false,
       "lock_scopes": [],
       "group_id": null,
-      "text": "3. 景观",
+      "text": "3. 景观缺失削弱到达体验",
       "paragraphs": [
         {
-          "text": "3. 景观",
+          "text": "3. 景观缺失削弱到达体验",
           "alignment": "left"
         }
       ],

@@ -47,9 +47,9 @@ class TestLayoutEvidenceItem:
     def test_sort_evidence_items_primary_first(self) -> None:
         items = sort_evidence_items(
             [
-                LayoutEvidenceItem(str(_PHOTO_B), "辅证", EvidenceItemRole.SUPPORTING),
-                LayoutEvidenceItem(str(_PHOTO_A), "主证", EvidenceItemRole.PRIMARY),
-                LayoutEvidenceItem(str(_PHOTO_C), "细节", EvidenceItemRole.DETAIL),
+                LayoutEvidenceItem(asset=str(_PHOTO_B), claim="辅证", role=EvidenceItemRole.SUPPORTING),
+                LayoutEvidenceItem(asset=str(_PHOTO_A), claim="主证", role=EvidenceItemRole.PRIMARY),
+                LayoutEvidenceItem(asset=str(_PHOTO_C), claim="细节", role=EvidenceItemRole.DETAIL),
             ]
         )
         assert [item.role for item in items] == [
@@ -58,16 +58,24 @@ class TestLayoutEvidenceItem:
             EvidenceItemRole.DETAIL,
         ]
 
-    def test_content_from_slide_populates_evidence_items(self) -> None:
+    def test_content_from_slide_prefers_slide_evidence_items(self) -> None:
         slide = SlideSpec(
             presentation_id=UUID("11111111-1111-1111-1111-111111111111"),
             chapter_id="site",
             order=1,
             title="交通问题",
             message="入口混行影响到达体验。",
-            key_points=["混行", "占道", "景观"],
-            visual_requirements=[
-                VisualRequirement(type=VisualType.SITE_PHOTO, description="入口"),
+            evidence_items=[
+                LayoutEvidenceItem(
+                    claim="入口混行导致患者与车流交织",
+                    role=EvidenceItemRole.PRIMARY,
+                    asset=str(_PHOTO_A),
+                ),
+                LayoutEvidenceItem(
+                    claim="停车占道压缩人行空间",
+                    role=EvidenceItemRole.SUPPORTING,
+                    asset=str(_PHOTO_B),
+                ),
             ],
         )
         intent = VisualIntent(
@@ -76,13 +84,27 @@ class TestLayoutEvidenceItem:
             audience_takeaway=slide.message,
             visual_priority="photos > title",
             dominant_content_type=VisualContentType.PHOTO_EVIDENCE,
-            supporting_asset_ids=[_PHOTO_A, _PHOTO_B, _PHOTO_C],
+            supporting_asset_ids=[_PHOTO_C],
         )
         bundle = content_from_slide(slide, intent)
         items = resolve_layout_evidence_items(bundle, limit=3)
-        assert len(items) == 3
-        assert items[0].claim == "混行"
-        assert items[0].role == EvidenceItemRole.PRIMARY
+        assert len(items) == 2
+        assert items[0].claim == "入口混行导致患者与车流交织"
+        assert items[0].asset == str(_PHOTO_A)
+
+    def test_slide_spec_syncs_key_points_from_evidence(self) -> None:
+        slide = SlideSpec(
+            presentation_id=UUID("11111111-1111-1111-1111-111111111111"),
+            chapter_id="site",
+            order=1,
+            title="交通问题",
+            message="入口混行影响到达体验。",
+            evidence_items=[
+                LayoutEvidenceItem(claim="混行", role=EvidenceItemRole.PRIMARY),
+                LayoutEvidenceItem(claim="占道", role=EvidenceItemRole.SUPPORTING),
+            ],
+        )
+        assert slide.key_points == ["混行", "占道"]
 
     def test_evidence_board_uses_semantic_claims(self) -> None:
         slide = SlideSpec(

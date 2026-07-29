@@ -1,0 +1,12 @@
+{
+  "communication_goal": "让受众理解：对比现状建筑照片（横图）与改造后立面图（竖图），展示改造前后变化。",
+  "dominant_content_type": "comparison",
+  "density_level": "compact",
+  "continuity_role": "comparison",
+  "preferred_layout_families": [
+    "evidence_board"
+  ],
+  "composition_strategy": "page_claim:drawing_story; emotion=calm; expression_mode=before_after; bias=drawing_dominant; copy≤3pts/80chars; evidence=primary_drawing,north_arrow,keyed_annotations",
+  "has_hero_asset": true,
+  "supporting_asset_count": 3
+}

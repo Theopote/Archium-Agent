@@ -94,6 +94,8 @@ _CHECKPOINT_MODULES: list[tuple[str, str]] = [
     ("archium.domain.slide", "SlideSpec"),
     ("archium.domain.slide", "SlideVisualRequirement"),
     ("archium.domain.slide", "VisualRequirement"),
+    ("archium.domain.visual.layout_evidence_item", "EvidenceItemRole"),
+    ("archium.domain.visual.layout_evidence_item", "LayoutEvidenceItem"),
     ("archium.domain.visual.art_direction", "ArtDirection"),
     ("archium.domain.visual.design_system", "DesignSystem"),
     ("archium.domain.visual.design_system", "PageSystem"),

@@ -1,0 +1,16 @@
+{
+  "case_id": "edge_031_minimal_content",
+  "title": "极少内容场景",
+  "category": "text_narrative",
+  "page_type": "极简文字页",
+  "page_task": "测试系统处理极少内容的能力：仅标题，无要点，无素材。",
+  "visual_focus": "标题应清晰展示，留白应充足但不过度空旷。",
+  "expected_layout_family": "textual_argument",
+  "allowed_layout_variants": [
+    "lead_and_points",
+    "quote_argument",
+    "two_column_text"
+  ],
+  "layout_variant": "lead_and_points",
+  "assets": []
+}

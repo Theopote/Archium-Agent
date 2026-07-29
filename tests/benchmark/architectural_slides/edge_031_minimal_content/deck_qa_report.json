@@ -1,0 +1,9 @@
+{
+  "deck_qa_score": 1.0,
+  "passed": true,
+  "layout_valid": true,
+  "layout_score": 1.0,
+  "has_critical": false,
+  "blocking_issue_count": 0,
+  "rule_codes": []
+}

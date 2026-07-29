@@ -1,0 +1,61 @@
+{
+  "title": "现状照片与改造立面",
+  "message": "对比现状建筑照片（横图）与改造后立面图（竖图），展示改造前后变化。",
+  "chapter_id": "edge_cases",
+  "order": 34,
+  "key_points": [
+    "现状：外立面老旧，缺乏识别性",
+    "改造：统一材质，增强标识系统",
+    "色彩：采用医疗建筑常用白色+蓝色",
+    "细节：增加遮阳百叶，提升节能"
+  ],
+  "visual_requirements": [
+    {
+      "type": "site_photo",
+      "description": "现状建筑照片（横图）",
+      "asset_count": 1
+    },
+    {
+      "type": "elevation",
+      "description": "改造后南立面图（竖图）",
+      "asset_count": 1
+    },
+    {
+      "type": "site_photo",
+      "description": "现状入口照片（横图）",
+      "asset_count": 1
+    },
+    {
+      "type": "elevation",
+      "description": "改造后东立面图（竖图）",
+      "asset_count": 1
+    }
+  ],
+  "source_count": 1,
+  "evidence_items": [
+    {
+      "claim": "现状：外立面老旧，缺乏识别性",
+      "role": "primary",
+      "asset": "c0340001-0001-4001-8001-000000000001",
+      "focus": "南立面实景"
+    },
+    {
+      "claim": "改造：统一材质，增强标识系统",
+      "role": "supporting",
+      "asset": "c0340002-0001-4001-8001-000000000002",
+      "focus": "南立面改造方案"
+    },
+    {
+      "claim": "现状入口尺度局促，导向信息不足",
+      "role": "supporting",
+      "asset": "c0340003-0001-4001-8001-000000000003",
+      "focus": "入口实景"
+    },
+    {
+      "claim": "改造东立面：白色+蓝色医疗标识体系",
+      "role": "detail",
+      "asset": "c0340004-0001-4001-8001-000000000004",
+      "focus": "东立面改造方案"
+    }
+  ]
+}

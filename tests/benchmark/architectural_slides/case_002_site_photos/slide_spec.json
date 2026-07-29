@@ -31,5 +31,31 @@
       "asset_count": 1
     }
   ],
-  "source_count": 1
+  "source_count": 1,
+  "evidence_items": [
+    {
+      "claim": "入口混行导致患者与车流交织",
+      "role": "primary",
+      "asset": "c0020001-0001-4001-8001-000000000001",
+      "focus": "入口区域"
+    },
+    {
+      "claim": "停车占道压缩人行空间",
+      "role": "supporting",
+      "asset": "c0020002-0001-4001-8001-000000000002",
+      "focus": "路缘带"
+    },
+    {
+      "claim": "景观缺失削弱到达体验",
+      "role": "supporting",
+      "asset": "c0020003-0001-4001-8001-000000000003",
+      "focus": null
+    },
+    {
+      "claim": "导向不清增加迷路风险",
+      "role": "detail",
+      "asset": "c0020004-0001-4001-8001-000000000004",
+      "focus": null
+    }
+  ]
 }

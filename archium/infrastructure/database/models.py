@@ -455,6 +455,9 @@ class SlideORM(UUIDPrimaryKeyMixin, Base):
     required_evidence_slots_json: Mapped[list[str]] = mapped_column(
         "required_evidence_slots", JSON, default=list
     )
+    evidence_items_json: Mapped[list[dict[str, object]]] = mapped_column(
+        "evidence_items", JSON, default=list
+    )
     slide_role: Mapped[str | None] = mapped_column(String(40), nullable=True)
     visual_strategy_json: Mapped[dict[str, object] | None] = mapped_column(
         "visual_strategy", JSON, nullable=True

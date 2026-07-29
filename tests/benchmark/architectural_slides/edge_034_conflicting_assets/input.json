@@ -1,0 +1,21 @@
+{
+  "case_id": "edge_034_conflicting_assets",
+  "title": "冲突素材场景",
+  "category": "case_comparison",
+  "page_type": "混合构图对比页",
+  "page_task": "测试系统处理横竖构图混合的能力：横向照片 + 竖向立面图。",
+  "visual_focus": "应合理布局不同比例的素材，避免变形或裁剪不当。",
+  "expected_layout_family": "evidence_board",
+  "allowed_layout_variants": [
+    "image_grid_2x2",
+    "image_grid_3x1",
+    "split_comparison"
+  ],
+  "layout_variant": "image_grid_2x2",
+  "assets": [
+    "assets/c0340001-0001-4001-8001-000000000001.png",
+    "assets/c0340002-0001-4001-8001-000000000002.png",
+    "assets/c0340003-0001-4001-8001-000000000003.png",
+    "assets/c0340004-0001-4001-8001-000000000004.png"
+  ]
+}

@@ -165,6 +165,18 @@ def visual_requirements_from_json(data: list[dict[str, object]]) -> list[VisualR
     return [VisualRequirement.model_validate(item) for item in data]
 
 
+def evidence_items_to_json(items: list) -> list[dict[str, object]]:
+    from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
+
+    return [item.model_dump(mode="json") for item in items if isinstance(item, LayoutEvidenceItem)]
+
+
+def evidence_items_from_json(data: list[dict[str, object]]):
+    from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
+
+    return [LayoutEvidenceItem.model_validate(item) for item in data]
+
+
 # ── Project ──────────────────────────────────────────────────
 
 
@@ -979,6 +991,9 @@ def slide_to_domain(orm: SlideORM) -> SlideSpec:
         slide_type=SlideType(orm.slide_type),
         layout_id=orm.layout_id,
         key_points=list(orm.key_points_json),
+        evidence_items=evidence_items_from_json(
+            list(getattr(orm, "evidence_items_json", None) or [])
+        ),
         visual_requirements=visual_requirements_from_json(orm.visual_requirements_json),
         source_citations=source_citations_from_json(orm.source_citations_json),
         speaker_notes=orm.speaker_notes,
@@ -1007,6 +1022,7 @@ def slide_to_orm(domain: SlideSpec, orm: SlideORM | None = None) -> SlideORM:
     target.slide_type = domain.slide_type.value
     target.layout_id = domain.layout_id
     target.key_points_json = list(domain.key_points)
+    target.evidence_items_json = evidence_items_to_json(domain.evidence_items)
     target.visual_requirements_json = visual_requirements_to_json(domain.visual_requirements)
     target.source_citations_json = source_citations_to_json(domain.source_citations)
     target.speaker_notes = domain.speaker_notes

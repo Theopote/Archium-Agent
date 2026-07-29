@@ -47,7 +47,7 @@ def materialized_benchmark_case_ids(*, root: Path | None = None) -> tuple[str, .
 
 def fingerprint_slide_spec(result: BenchmarkCaseResult) -> dict[str, Any]:
     slide = result.slide
-    return {
+    payload: dict[str, Any] = {
         "title": slide.title,
         "message": slide.message,
         "chapter_id": slide.chapter_id,
@@ -63,6 +63,17 @@ def fingerprint_slide_spec(result: BenchmarkCaseResult) -> dict[str, Any]:
         ],
         "source_count": len(slide.source_citations),
     }
+    if slide.evidence_items:
+        payload["evidence_items"] = [
+            {
+                "claim": item.claim,
+                "role": item.role.value,
+                "asset": item.asset,
+                "focus": item.focus,
+            }
+            for item in slide.evidence_items
+        ]
+    return payload
 
 
 def fingerprint_visual_intent(result: BenchmarkCaseResult) -> dict[str, Any]:

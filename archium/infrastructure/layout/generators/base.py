@@ -19,6 +19,7 @@ from archium.domain.visual.layout import LayoutConstraint, LayoutElement, Layout
 from archium.domain.visual.layout_evidence_item import (
     LayoutEvidenceItem,
     build_evidence_items_from_legacy,
+    hydrate_evidence_item_assets,
     sort_evidence_items,
 )
 from archium.domain.visual.visual_intent import VisualIntent
@@ -201,12 +202,19 @@ def content_from_slide(
         for req in slide.visual_requirements
         if req.type == VisualType.ICON and req.icon_canonical_name
     ]
-    evidence_items = build_evidence_items_from_legacy(
-        asset_refs=supporting,
-        claims=points,
-        source=citations,
-        hero_asset_ref=hero,
-    )
+    if slide.evidence_items:
+        evidence_items = hydrate_evidence_item_assets(
+            list(slide.evidence_items),
+            hero_asset_ref=hero,
+            supporting_asset_refs=supporting,
+        )
+    else:
+        evidence_items = build_evidence_items_from_legacy(
+            asset_refs=supporting,
+            claims=points,
+            source=citations,
+            hero_asset_ref=hero,
+        )
     return LayoutContentBundle(
         title=slide.title,
         message=slide.message,
@@ -230,7 +238,12 @@ def resolve_layout_evidence_items(
 ) -> list[LayoutEvidenceItem]:
     """Return semantic evidence items for layout (explicit list or legacy bridge)."""
     if content.evidence_items:
-        return sort_evidence_items(list(content.evidence_items))[:limit]
+        hydrated = hydrate_evidence_item_assets(
+            list(content.evidence_items),
+            hero_asset_ref=content.hero_asset_ref if include_hero else None,
+            supporting_asset_refs=list(content.supporting_asset_refs),
+        )
+        return sort_evidence_items(hydrated)[:limit]
     return build_evidence_items_from_legacy(
         asset_refs=list(content.supporting_asset_refs),
         claims=list(content.key_points),
