@@ -1,0 +1,226 @@
+{
+  "cases": [
+    {
+      "case_id": "case_001_site_plan",
+      "criterion": "site_plan_readable_drawing",
+      "layout_family": "drawing_focus",
+      "layout_variant": "full_canvas",
+      "hero_safe_area_ratio": 0.722,
+      "layout_issue_codes": [],
+      "asset_provenance": {
+        "total": 1,
+        "curated": 1,
+        "placeholder": 0
+      },
+      "asset_readiness": [
+        {
+          "pixel_analyzed": true,
+          "presentation_ready": false,
+          "pixel_acceptable": true,
+          "is_placeholder": false,
+          "density": 0.303,
+          "reasons": [
+            "low_visual_information_density",
+            "insufficient_resolution_for_slide_scale"
+          ]
+        }
+      ],
+      "render_manifest": {
+        "render_source": "pptx_screenshot",
+        "pptx_path": "output.pptx",
+        "image_path": "pptx_render.png",
+        "scene_path": "scene.json",
+        "scene_preview_path": "scene_preview.png",
+        "scene_id": "750aa1cd-0bbc-41f0-a36c-b15adf00cdc9",
+        "scene_hash": "4b3e8089c86860c0cd21108ceae3924ba5eb80aadbf88f8e510a6a498ad8e5f4",
+        "rendered_at": "2026-07-29T12:05:28.645701Z",
+        "renderer": "png_renderer+pptxgenjs",
+        "asset_count": 1,
+        "real_asset_count": 1,
+        "placeholder_asset_count": 0,
+        "font_fallbacks": [],
+        "missing_assets": [],
+        "render_valid": true,
+        "notes": "pptx_screenshot_generated=true",
+        "screenshot_tools_available": true,
+        "pptx_screenshot_generated": true,
+        "pptx_screenshot_reused": false,
+        "pptx_screenshot_source_hash": "4b3e8089c86860c0cd21108ceae3924ba5eb80aadbf88f8e510a6a498ad8e5f4",
+        "render_attempt_id": "9eaff20a-0e36-4797-a840-da21180e81b8",
+        "pptx_content_hash": "efec7d4a661eb3f153fd4862d25641fa9c42bcafd216ace8165cc3d8974aae16",
+        "post_render_qa_passed": true,
+        "post_render_qa_issues": []
+      },
+      "automation_pass": {
+        "layout_valid": true,
+        "hero_ratio_ge_0_65": true,
+        "evidence_primary_larger": true,
+        "render_valid": true,
+        "fresh_screenshot": true,
+        "placeholder_assets_zero": true,
+        "assets_pixel_acceptable": true
+      },
+      "suggested_reporting_ready": "ready_with_minor_edits",
+      "human_verified": false
+    },
+    {
+      "case_id": "case_002_site_photos",
+      "criterion": "evidence_hierarchy",
+      "layout_family": "evidence_board",
+      "layout_variant": "hierarchical",
+      "hero_safe_area_ratio": 0.405,
+      "layout_issue_codes": [
+        "LAYOUT.INCONSISTENT_ALIGNMENT",
+        "LAYOUT.TEXT_OVERFLOW"
+      ],
+      "asset_provenance": {
+        "total": 4,
+        "curated": 4,
+        "placeholder": 0
+      },
+      "asset_readiness": [
+        {
+          "pixel_analyzed": true,
+          "presentation_ready": false,
+          "pixel_acceptable": true,
+          "is_placeholder": false,
+          "density": 0.292,
+          "reasons": [
+            "low_visual_information_density"
+          ]
+        },
+        {
+          "pixel_analyzed": true,
+          "presentation_ready": false,
+          "pixel_acceptable": true,
+          "is_placeholder": false,
+          "density": 0.278,
+          "reasons": [
+            "low_visual_information_density"
+          ]
+        },
+        {
+          "pixel_analyzed": true,
+          "presentation_ready": false,
+          "pixel_acceptable": true,
+          "is_placeholder": false,
+          "density": 0.299,
+          "reasons": [
+            "low_visual_information_density"
+          ]
+        },
+        {
+          "pixel_analyzed": true,
+          "presentation_ready": false,
+          "pixel_acceptable": true,
+          "is_placeholder": false,
+          "density": 0.244,
+          "reasons": [
+            "low_visual_information_density"
+          ]
+        }
+      ],
+      "render_manifest": {
+        "render_source": "pptx_screenshot",
+        "pptx_path": "output.pptx",
+        "image_path": "pptx_render.png",
+        "scene_path": "scene.json",
+        "scene_preview_path": "scene_preview.png",
+        "scene_id": "2b242dfb-1355-42ca-9721-04bf82e3810d",
+        "scene_hash": "67b81f58756e3f8edbbf6c54ecd59519b40547a339ccfc01645fa64d1672b4ff",
+        "rendered_at": "2026-07-29T12:07:01.787550Z",
+        "renderer": "png_renderer+pptxgenjs",
+        "asset_count": 4,
+        "real_asset_count": 4,
+        "placeholder_asset_count": 0,
+        "font_fallbacks": [],
+        "missing_assets": [],
+        "render_valid": true,
+        "notes": "pptx_screenshot_generated=true",
+        "screenshot_tools_available": true,
+        "pptx_screenshot_generated": true,
+        "pptx_screenshot_reused": false,
+        "pptx_screenshot_source_hash": "67b81f58756e3f8edbbf6c54ecd59519b40547a339ccfc01645fa64d1672b4ff",
+        "render_attempt_id": "209ebd41-adb4-4787-8667-ac6270d5a8e0",
+        "pptx_content_hash": "7f37b9e6c6fb8efdf5dfd0defc3c849e236f05a8eed0bec0366fe5b222938fb6",
+        "post_render_qa_passed": true,
+        "post_render_qa_issues": []
+      },
+      "automation_pass": {
+        "layout_valid": false,
+        "hero_ratio_ge_0_65": true,
+        "evidence_primary_larger": true,
+        "render_valid": true,
+        "fresh_screenshot": true,
+        "placeholder_assets_zero": true,
+        "assets_pixel_acceptable": true
+      },
+      "suggested_reporting_ready": "needs_review",
+      "human_verified": false
+    },
+    {
+      "case_id": "case_006_project_hero",
+      "criterion": "hero_dominance",
+      "layout_family": "hero",
+      "layout_variant": "split",
+      "hero_safe_area_ratio": 0.752,
+      "layout_issue_codes": [
+        "LAYOUT.TEXT_OVERFLOW"
+      ],
+      "asset_provenance": {
+        "total": 1,
+        "curated": 1,
+        "placeholder": 0
+      },
+      "asset_readiness": [
+        {
+          "pixel_analyzed": true,
+          "presentation_ready": false,
+          "pixel_acceptable": true,
+          "is_placeholder": false,
+          "density": 0.303,
+          "reasons": [
+            "low_visual_information_density"
+          ]
+        }
+      ],
+      "render_manifest": {
+        "render_source": "pptx_screenshot",
+        "pptx_path": "output.pptx",
+        "image_path": "pptx_render.png",
+        "scene_path": "scene.json",
+        "scene_preview_path": "scene_preview.png",
+        "scene_id": "905f4a36-ad9b-4a68-94f4-089f1e45ae72",
+        "scene_hash": "2b8c66844aff318eae77e68a83260f0d92bbdc565d9b1f3c2992972b4a415c2b",
+        "rendered_at": "2026-07-29T12:07:09.620881Z",
+        "renderer": "png_renderer+pptxgenjs",
+        "asset_count": 1,
+        "real_asset_count": 1,
+        "placeholder_asset_count": 0,
+        "font_fallbacks": [],
+        "missing_assets": [],
+        "render_valid": true,
+        "notes": "pptx_screenshot_generated=true",
+        "screenshot_tools_available": true,
+        "pptx_screenshot_generated": true,
+        "pptx_screenshot_reused": false,
+        "pptx_screenshot_source_hash": "2b8c66844aff318eae77e68a83260f0d92bbdc565d9b1f3c2992972b4a415c2b",
+        "render_attempt_id": "57750651-3497-4cb5-8fba-72047b4f4046",
+        "pptx_content_hash": "45a02d0161bb748335c7995d5c3f17fa5758db0a5b8f369ebee6156f994614c9",
+        "post_render_qa_passed": true,
+        "post_render_qa_issues": []
+      },
+      "automation_pass": {
+        "layout_valid": false,
+        "hero_ratio_ge_0_65": true,
+        "evidence_primary_larger": true,
+        "render_valid": true,
+        "fresh_screenshot": true,
+        "placeholder_assets_zero": true,
+        "assets_pixel_acceptable": true
+      },
+      "suggested_reporting_ready": "needs_review",
+      "human_verified": false
+    }
+  ]
+}

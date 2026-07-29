@@ -147,17 +147,18 @@ reviewers must use a **type-aware pass/review rubric** instead of aesthetic micr
 
 ### Pilot trio (do first)
 
-| Case | Covers | Fresh screenshot (2026-07-29) | Exception review |
-|------|--------|------------------------------|----------------|
-| `case_001_site_plan` | 建筑图纸 | `render_valid=true`; `placeholder_asset_count=0` | **pending** — prior `do_not_use` (2026-07-28) |
-| `case_002_site_photos` | 多张现场照片 | `render_valid=true`; `placeholder_asset_count=0` | **pending** — prior `do_not_use` (2026-07-28) |
-| `case_006_project_hero` | 大图视觉页面 | `render_valid=true`; `placeholder_asset_count=0` | **pending** — prior `do_not_use` (2026-07-28) |
+| Case | Covers | Fresh screenshot (2026-07-29) | Automation pre-check | Exception review |
+|------|--------|------------------------------|----------------------|------------------|
+| `case_001_site_plan` | 建筑图纸 | `render_valid=true`; `placeholder_asset_count=0` | `ready_with_minor_edits` | **pending** |
+| `case_002_site_photos` | 多张现场照片 | `render_valid=true`; hierarchical layout | `needs_review` (text overflow) | **pending** |
+| `case_006_project_hero` | 大图视觉页面 | `render_valid=true`; hero_ratio≈0.75 | `needs_review` (text overflow) | **pending** |
 
 Each pilot page must simultaneously satisfy:
 
 - Fresh PPTX screenshot (`pptx_screenshot_generated=true`) — **done for pilot trio**
 - Scene / PPTX / screenshot hash consistency — **done** (`post_render_qa_passed=true`)
-- Human exception review (`source=manual`, problem checklist + reporting_ready) — **done; 0/3 delivery-accepted**
+- Automation pre-check (`scripts/check_pilot_trio_acceptance.py`) — **done**; case_001 at `ready_with_minor_edits`, 002/006 `needs_review`
+- Human exception review (`source=manual`, problem checklist + reporting_ready) — **pending** (prior 2026-07-28: 0/3 `do_not_use`)
 - PPTX editability review passed — **done** (native text/images editable; content is the blocker)
 
 **Step 3 decision (2026-07-28):** 3/3 不可汇报 → **停扩布局模型 / 停扩 30 页人工评分**。  
@@ -172,6 +173,8 @@ Each pilot page must simultaneously satisfy:
 | 占位素材被当作可展示内容（placeholder / blank） | 2026-07-28 | 2026-07-29 | 2026-07-29 | pending | pending |
 | Hero 主导不达标（Hero 过小 / 留白失控） | 2026-07-28 | 2026-07-29 | 2026-07-29 | pending | pending |
 | Evidence Board 可读性不足（证据区内容不可读/近空白） | 2026-07-28 | 2026-07-29 | 2026-07-29 | pending | pending |
+
+Automation pre-check: `scripts/check_pilot_trio_acceptance.py` → `docs/rehearsal/sessions/2026-07-29-pilot-trio-rerender/automation-precheck.json` (case_001 at `ready_with_minor_edits`; 002/006 `needs_review` for text overflow).
 
 ```bash
 # Regenerate pilot screenshots into Goldens (PowerPoint available on this host)

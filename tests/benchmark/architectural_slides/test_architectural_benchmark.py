@@ -178,11 +178,17 @@ def test_case_001_drawing_hero_constraints() -> None:
     assert result.plan.elements_by_role(LayoutElementRole.SOURCE)
 
 
-def test_case_002_evidence_grid_uniformity() -> None:
+def test_case_002_evidence_hierarchy() -> None:
     result = build_benchmark_case("case_002_site_photos")
-    photos = result.plan.elements_by_role(LayoutElementRole.SUPPORTING_VISUAL)
-    assert len(photos) == 4
-    assert len({round(item.width, 3) for item in photos}) == 1
+    assert result.plan.layout_variant == "hierarchical"
+    photos = sorted(
+        [el for el in result.plan.elements if el.id.startswith("photo_")],
+        key=lambda item: -item.area,
+    )
+    assert len(photos) >= 2
+    assert photos[0].area > photos[1].area
+    annotations = [el for el in result.plan.elements if el.id.startswith("annotation_")]
+    assert len(annotations) >= 3
 
 
 def test_case_003_comparative_matrix() -> None:

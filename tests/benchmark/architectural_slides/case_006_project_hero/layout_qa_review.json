@@ -16,14 +16,16 @@
   "worst_problem": "",
   "system_missed": "",
   "reporting_ready": "unspecified",
-  "major_problems": [],
+  "major_problems": [
+    "layout validation failed"
+  ],
   "minor_problems": [],
   "review_completed": false,
   "accepted_for_delivery": false,
   "validity": "valid",
-  "accepted": true,
+  "accepted": false,
   "reviewer": "",
   "reviewed_at": null,
-  "reviewer_notes": "AUTO: layout QA rehearsal baseline (score 1.00); replace with manual human review.",
+  "reviewer_notes": "AUTO: layout QA rehearsal baseline (score 0.93); replace with manual human review.",
   "invalidation_reason": ""
 }

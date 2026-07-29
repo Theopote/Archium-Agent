@@ -2,8 +2,8 @@
 
 - **页面类型**: 四张现场问题照片
 - **分类**: photo_analysis
-- **预期版式**: `evidence_board` / `numbered_grid`
-- **视觉重点**: 四张照片等权重排列，标题点明问题主题。
+- **预期版式**: `evidence_board` / `hierarchical`
+- **视觉重点**: 主证据照片更大，辅证照片与图注一一对应。
 
 ## 修复记录
 

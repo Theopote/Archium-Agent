@@ -11,16 +11,16 @@
     "source"
   ],
   "balance_strategy": "image_dominant",
-  "whitespace_ratio": 0.4222,
+  "whitespace_ratio": 0.4109,
   "elements": [
     {
       "id": "hero",
       "role": "hero_visual",
       "content_type": "image",
-      "x": 3.228,
-      "y": 1.232,
-      "w": 6.072,
-      "h": 3.509,
+      "x": 0.7,
+      "y": 0.912,
+      "w": 7.31,
+      "h": 3.872,
       "fit_mode": "cover",
       "crop_policy": "cover_crop"
     },
@@ -28,10 +28,10 @@
       "id": "lead",
       "role": "lead_statement",
       "content_type": "text",
-      "x": 0.7,
-      "y": 1.232,
-      "w": 2.361,
-      "h": 1.755,
+      "x": 8.177,
+      "y": 0.912,
+      "w": 1.123,
+      "h": 1.936,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -52,8 +52,8 @@
       "content_type": "text",
       "x": 0.7,
       "y": 0.45,
-      "w": 8.6,
-      "h": 0.657,
+      "w": 3.01,
+      "h": 0.42,
       "fit_mode": null,
       "crop_policy": null
     }
