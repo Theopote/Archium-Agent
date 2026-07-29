@@ -70,6 +70,7 @@ class WebImageAssetService:
                 },
             )
         )
+        asset = self._analyze_asset_readiness(asset)
         return self._to_fallback(asset, image, absolute_path=absolute_path)
 
     def import_candidate(
@@ -106,7 +107,7 @@ class WebImageAssetService:
             timeout=self._settings.web_image_search_timeout_seconds,
         )
         relative = f"{_WEB_IMPORT_DIR}/{dest_path.name}".replace("\\", "/")
-        return self._assets.create(
+        asset = self._assets.create(
             Asset(
                 project_id=project_id,
                 filename=dest_path.name,
@@ -123,6 +124,7 @@ class WebImageAssetService:
                 },
             )
         )
+        return self._analyze_asset_readiness(asset)
 
     def _find_by_source_url(self, project_id: UUID, source_url: str) -> Asset | None:
         for asset in self._assets.list_by_project(project_id):
@@ -161,6 +163,19 @@ class WebImageAssetService:
         if path.is_absolute():
             return path
         return self._settings.project_storage_path / str(project_id) / path
+
+    def _analyze_asset_readiness(self, asset: Asset) -> Asset:
+        from archium.application.asset_presentation_readiness_service import (
+            analyze_and_cache_asset_presentation_readiness,
+        )
+
+        updated = analyze_and_cache_asset_presentation_readiness(
+            asset,
+            project_storage_root=self._settings.project_storage_path,
+        )
+        if updated.metadata != asset.metadata or updated != asset:
+            return self._assets.update(updated)
+        return updated
 
     @staticmethod
     def _asset_type_for(requirement: VisualRequirement) -> AssetType:

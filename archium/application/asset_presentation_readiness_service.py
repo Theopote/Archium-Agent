@@ -28,6 +28,69 @@ _HERO_MIN_EDGE_PX = 900
 _EVIDENCE_MIN_EDGE_PX = 640
 _MIN_DENSITY_READY = 0.35
 
+_PIXEL_ANALYZABLE_TYPES = {
+    AssetType.IMAGE,
+    AssetType.PHOTO,
+    AssetType.DRAWING,
+    AssetType.DIAGRAM,
+    AssetType.CHART,
+}
+
+PRESENTATION_READINESS_UNKNOWN = "presentation_readiness_unknown"
+
+
+def resolve_asset_runtime_image_path(
+    asset: Asset,
+    *,
+    project_storage_root: Path | str | None = None,
+) -> Path | None:
+    """Resolve ``asset.path`` to a readable filesystem path when possible."""
+    raw = Path(asset.path)
+    if raw.is_file():
+        return raw
+    if project_storage_root is not None and not raw.is_absolute():
+        candidate = Path(project_storage_root) / str(asset.project_id) / raw
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def is_pixel_analyzable_asset(asset: Asset) -> bool:
+    return asset.asset_type in _PIXEL_ANALYZABLE_TYPES
+
+
+def analyze_and_cache_asset_presentation_readiness(
+    asset: Asset,
+    *,
+    project_storage_root: Path | str | None = None,
+    intended_slot: str | None = None,
+) -> Asset:
+    """Run pixel-based readiness analysis and persist the result on the asset."""
+    if not is_pixel_analyzable_asset(asset):
+        return asset
+    image_path = resolve_asset_runtime_image_path(
+        asset,
+        project_storage_root=project_storage_root,
+    )
+    readiness = evaluate_asset_presentation_readiness(
+        asset,
+        image_path=image_path,
+        intended_slot=intended_slot,
+    )
+    updated = cache_readiness_on_asset(asset, readiness)
+    if image_path is not None and readiness.pixel_analyzed:
+        measured = _measure_image_metrics(image_path)
+        if measured is not None:
+            _density, width, height = measured
+            updates: dict[str, object] = {}
+            if updated.width is None:
+                updates["width"] = width
+            if updated.height is None:
+                updates["height"] = height
+            if updates:
+                updated = updated.model_copy(update=updates)
+    return updated
+
 
 def evaluate_asset_presentation_readiness(
     asset: Asset,
@@ -38,7 +101,8 @@ def evaluate_asset_presentation_readiness(
     """Score visual fitness without requiring a full Visual QA pass.
 
     Uses filename/metadata heuristics always; opens the image when
-    ``image_path`` is provided and Pillow is available.
+    ``image_path`` is provided and Pillow is available. Hero / evidence
+    matching requires a cached result with ``pixel_analyzed=True``.
     """
     reasons: list[str] = []
     cached = _cached_readiness(asset)
@@ -50,34 +114,41 @@ def evaluate_asset_presentation_readiness(
         reasons.append("filename_or_metadata_marks_placeholder")
 
     density = _density_from_metadata(asset)
+    pixel_analyzed = False
+    width = asset.width
+    height = asset.height
+
     path = Path(image_path) if image_path else None
     if path is not None and path.is_file():
-        measured = _measure_image_density(path)
+        measured = _measure_image_metrics(path)
         if measured is not None:
-            density = measured
+            density, measured_width, measured_height = measured
+            pixel_analyzed = True
+            width = width or measured_width
+            height = height or measured_height
             if density < 0.12:
                 is_placeholder = True
                 reasons.append("image_nearly_blank_or_flat")
             elif density < _MIN_DENSITY_READY:
                 reasons.append("low_visual_information_density")
+    elif is_pixel_analyzable_asset(asset):
+        reasons.append(PRESENTATION_READINESS_UNKNOWN)
 
-    if density <= 0.0:
-        # Unknown content — provisional mid density so catalog matching still works;
-        # image measurement / placeholder flags remain the hard gates.
-        if asset.width and asset.height:
-            density = 0.45 if not asset.is_low_resolution else 0.2
-        else:
-            density = 0.55
-            reasons.append("unknown_dimensions_provisional_density")
-
-    readable = _readable_at_slide_scale(asset, intended_slot=intended_slot)
+    readable = _readable_at_slide_scale(width, height, intended_slot=intended_slot)
     if not readable:
         reasons.append("insufficient_resolution_for_slide_scale")
 
-    role = _recommend_role(asset, is_placeholder=is_placeholder, density=density, readable=readable)
+    role = _recommend_role(
+        asset,
+        is_placeholder=is_placeholder,
+        density=density,
+        readable=readable,
+        pixel_analyzed=pixel_analyzed,
+    )
     min_area = _min_display_area(role)
     ready = (
-        not is_placeholder
+        pixel_analyzed
+        and not is_placeholder
         and density >= _MIN_DENSITY_READY
         and readable
         and role != AssetPresentationRole.UNSUITABLE
@@ -92,6 +163,7 @@ def evaluate_asset_presentation_readiness(
         recommended_role=role,
         min_display_area_ratio=min_area,
         presentation_ready=ready,
+        pixel_analyzed=pixel_analyzed,
         reasons=reasons,
     )
 
@@ -108,8 +180,15 @@ def cache_readiness_on_asset(asset: Asset, readiness: AssetPresentationReadiness
     return asset.model_copy(update={"metadata": metadata, "quality_score": quality})
 
 
+def has_pixel_verified_readiness(readiness: AssetPresentationReadiness) -> bool:
+    """Return True when readiness was produced from actual pixel measurement."""
+    return readiness.pixel_analyzed
+
+
 def is_hero_slot_eligible(readiness: AssetPresentationReadiness) -> bool:
     """Hero / drawing_focus primary slot requires presentation-ready content."""
+    if not has_pixel_verified_readiness(readiness):
+        return False
     if not readiness.presentation_ready:
         return False
     return readiness.recommended_role in {
@@ -120,6 +199,8 @@ def is_hero_slot_eligible(readiness: AssetPresentationReadiness) -> bool:
 
 
 def is_evidence_slot_eligible(readiness: AssetPresentationReadiness) -> bool:
+    if not has_pixel_verified_readiness(readiness):
+        return False
     if not readiness.presentation_ready:
         return False
     return readiness.recommended_role in {
@@ -185,15 +266,16 @@ def _density_from_metadata(asset: Asset) -> float:
     return 0.0
 
 
-def _measure_image_density(path: Path) -> float | None:
+def _measure_image_metrics(path: Path) -> tuple[float, int, int] | None:
     try:
         from PIL import Image, ImageFilter, ImageOps, ImageStat
     except ImportError:  # pragma: no cover
         return None
     try:
         with Image.open(path) as opened:
-            gray = ImageOps.grayscale(opened.convert("RGB"))
-            # Downsample for speed.
+            rgb = opened.convert("RGB")
+            width, height = rgb.size
+            gray = ImageOps.grayscale(rgb)
             gray = gray.resize((160, 90))
     except OSError:
         return None
@@ -202,16 +284,26 @@ def _measure_image_density(path: Path) -> float | None:
     edges = gray.filter(ImageFilter.FIND_EDGES)
     edge_stat = ImageStat.Stat(edges)
     edge_mean = float(edge_stat.mean[0]) if edge_stat.mean else 0.0
-    # Map stdev/edges into 0–1 density (blank ~0, busy drawing/photo ~0.7+).
     density = min(1.0, (stdev / 64.0) * 0.55 + (edge_mean / 40.0) * 0.45)
-    return density
+    return density, width, height
 
 
-def _readable_at_slide_scale(asset: Asset, *, intended_slot: str | None) -> bool:
-    if asset.width is None or asset.height is None:
-        # Unknown size: allow matching; delivery gates still require real pixels.
-        return True
-    edge = min(asset.width, asset.height)
+def _measure_image_density(path: Path) -> float | None:
+    measured = _measure_image_metrics(path)
+    if measured is None:
+        return None
+    return measured[0]
+
+
+def _readable_at_slide_scale(
+    width: int | None,
+    height: int | None,
+    *,
+    intended_slot: str | None,
+) -> bool:
+    if width is None or height is None:
+        return False
+    edge = min(width, height)
     if intended_slot in {"hero", "hero_drawing", "drawing", "site_plan"}:
         return edge >= _HERO_MIN_EDGE_PX
     if intended_slot in {"evidence", "photo"}:
@@ -225,7 +317,10 @@ def _recommend_role(
     is_placeholder: bool,
     density: float,
     readable: bool,
+    pixel_analyzed: bool,
 ) -> AssetPresentationRole:
+    if not pixel_analyzed:
+        return AssetPresentationRole.UNSUITABLE
     if is_placeholder or density < 0.12:
         return AssetPresentationRole.UNSUITABLE
     meta = asset.metadata or {}

@@ -1,0 +1,32 @@
+{
+  "rendered_at": "2026-07-29T12:00:25Z",
+  "cases": {
+    "case_001_site_plan": {
+      "render_valid": true,
+      "pptx_screenshot_generated": true,
+      "pptx_screenshot_reused": false,
+      "post_render_qa_passed": true,
+      "placeholder_asset_count": 0,
+      "real_asset_count": 1,
+      "layout_validation_score": 1.0
+    },
+    "case_002_site_photos": {
+      "render_valid": true,
+      "pptx_screenshot_generated": true,
+      "pptx_screenshot_reused": false,
+      "post_render_qa_passed": true,
+      "placeholder_asset_count": 0,
+      "real_asset_count": 4,
+      "layout_validation_score": 1.0
+    },
+    "case_006_project_hero": {
+      "render_valid": true,
+      "pptx_screenshot_generated": true,
+      "pptx_screenshot_reused": false,
+      "post_render_qa_passed": true,
+      "placeholder_asset_count": 0,
+      "real_asset_count": 1,
+      "layout_validation_score": 1.0
+    }
+  }
+}

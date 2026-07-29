@@ -91,3 +91,26 @@ def test_refresh_slide_asset_delivery_marks_missing() -> None:
     ]
     refresh_slide_asset_delivery(slide)
     assert slide.delivery_status == SlideDeliveryStatus.ASSET_MISSING
+    assert slide.delivery_detail == "missing required assets: site_plan"
+
+
+def test_refresh_slide_asset_delivery_includes_asset_blocker_reason() -> None:
+    from archium.domain.deck_delivery import refresh_slide_asset_delivery
+    from archium.domain.enums import VisualType
+    from archium.domain.slide import VisualRequirement
+
+    slide = _slide(0, SlideDeliveryStatus.READY)
+    slide.visual_requirements = [
+        VisualRequirement(
+            type=VisualType.SITE_PLAN,
+            description="总平面图",
+            required=True,
+            processing_instructions=["asset_blocker:presentation_readiness_unknown"],
+        )
+    ]
+    refresh_slide_asset_delivery(slide)
+    assert slide.delivery_status == SlideDeliveryStatus.ASSET_MISSING
+    assert (
+        slide.delivery_detail
+        == "missing required assets: site_plan (presentation_readiness_unknown)"
+    )

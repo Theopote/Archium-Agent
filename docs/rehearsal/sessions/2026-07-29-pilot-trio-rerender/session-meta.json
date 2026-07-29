@@ -1,0 +1,22 @@
+{
+  "session_id": "2026-07-29-pilot-trio-rerender",
+  "date": "2026-07-29",
+  "playbook": "pilot_trio_rerender",
+  "status": "rendered_automation_passed",
+  "cases": [
+    "case_001_site_plan",
+    "case_002_site_photos",
+    "case_006_project_hero"
+  ],
+  "automation": {
+    "pptx_screenshot_generated": true,
+    "pptx_screenshot_reused": false,
+    "render_valid": true,
+    "post_render_qa_passed": true,
+    "placeholder_asset_count": 0
+  },
+  "human_verified": false,
+  "reporting_ready_updated": false,
+  "prior_session": "2026-07-28-visual-kpi-1",
+  "notes": "Rendered after readiness fail-open fixes; awaiting human exception review."
+}

@@ -33,6 +33,7 @@ class AssetPresentationReadiness(DomainModel):
     recommended_role: AssetPresentationRole = AssetPresentationRole.UNSUITABLE
     min_display_area_ratio: float = Field(default=0.35, ge=0.05, le=1.0)
     presentation_ready: bool = False
+    pixel_analyzed: bool = False
     reasons: list[str] = Field(default_factory=list)
 
     def to_metadata(self) -> dict[str, object]:

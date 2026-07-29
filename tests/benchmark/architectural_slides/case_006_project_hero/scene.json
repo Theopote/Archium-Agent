@@ -1,13 +1,13 @@
 {
-  "created_at": "2026-07-28T13:41:32.271117Z",
-  "updated_at": "2026-07-28T13:41:32.271117Z",
+  "created_at": "2026-07-29T12:00:25.700188Z",
+  "updated_at": "2026-07-29T12:00:25.700188Z",
   "version": 1,
-  "id": "2d93efed-e3bb-48b6-9898-09a55466d37b",
+  "id": "e67dd5fa-6fa8-4186-8620-4b9f5007a610",
   "schema_version": 2,
-  "slide_id": "9313f1af-f488-4409-8f0f-062a524b912e",
+  "slide_id": "4a26c3e9-acc0-4f44-b220-4f315e83dd39",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "ee8f751e-cdf5-48b1-aab2-6edc3cf31dbf",
-  "design_system_id": "ce9e792c-ab54-494d-ab3f-f4da80f2d747",
+  "layout_plan_id": "a8b17f6b-9a29-4f99-90e0-412223b77545",
+  "design_system_id": "5ef70165-24d8-40ed-b370-14fd690e7175",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -20,10 +20,10 @@
       "node_type": "image",
       "semantic_role": "project_photo",
       "source_layout_element_id": "hero",
-      "x": 3.228,
-      "y": 1.2325,
-      "width": 6.072000000000001,
-      "height": 3.5091666666666668,
+      "x": 0.7,
+      "y": 0.9116666666666666,
+      "width": 7.310000000000001,
+      "height": 3.871666666666667,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 1,
@@ -43,7 +43,9 @@
       "caption_node_id": null,
       "asset_unresolved": false,
       "icon_stroke_color": null,
-      "icon_stroke_token": ""
+      "icon_stroke_token": "",
+      "fill": null,
+      "image_mask": null
     },
     {
       "id": "title",
@@ -52,8 +54,8 @@
       "source_layout_element_id": "title",
       "x": 0.7,
       "y": 0.45,
-      "width": 8.600000000000001,
-      "height": 0.6575,
+      "width": 3.0100000000000002,
+      "height": 0.42,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 2,
@@ -68,6 +70,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -95,10 +98,10 @@
       "node_type": "text",
       "semantic_role": "lead_statement",
       "source_layout_element_id": "lead",
-      "x": 0.7,
-      "y": 1.2325,
-      "width": 2.361333333333334,
-      "height": 1.7545833333333334,
+      "x": 8.176666666666668,
+      "y": 0.9116666666666666,
+      "width": 1.123333333333334,
+      "height": 1.9358333333333335,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 2,
@@ -113,6 +116,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -158,6 +162,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",

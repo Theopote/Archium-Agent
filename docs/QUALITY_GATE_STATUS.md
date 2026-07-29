@@ -4,7 +4,7 @@
 > **文档状态：历史快照。**
 > 本文记录特定阶段的分析、实施、验收或计划，可能包含已过时的路径、状态和结论。
 > 当前行为以代码、测试、`README.md`、`docs/README.md` 及现行专题文档为准。
-Last updated: 2026-07-28
+Last updated: 2026-07-29
 
 This document states what is **proven by automation** vs what still requires **human rehearsal** or **real project delivery**.
 
@@ -141,17 +141,17 @@ reviewers must use a **type-aware pass/review rubric** instead of aesthetic micr
 
 ### Next steps — only these three
 
-1. **Regenerate screenshots** with Windows PowerPoint COM (or CI LibreOffice) for Goldens — **pilot done 2026-07-28**
+1. **Re-generate screenshots** with Windows PowerPoint COM (or CI LibreOffice) for Goldens (pilot trio) — **done 2026-07-29** (`render_valid=true`, `placeholder_asset_count=0`); evidence: `docs/rehearsal/sessions/2026-07-29-pilot-trio-rerender/`
 2. **Keep** formal quality gate on `pptx_screenshot_generated=true` (already enforced)
-3. **Pilot human exception review on 3 pages** — **done 2026-07-28** (`source=manual`, all `reporting_ready=do_not_use`); **do not expand to 30** until placeholder assets + Hero dominance are fixed
+3. **Pilot human exception review on 3 pages** — **needs re-run on 2026-07-29 renders** (`human_verified` pending); **do not expand to 30** until placeholder / hero-dominance / evidence readability reach `ready_with_minor_edits` or `closed`
 
 ### Pilot trio (do first)
 
-| Case | Covers | Fresh screenshot (this host) | Exception review (2026-07-28) |
-|------|--------|------------------------------|------------------------------|
-| `case_001_site_plan` | 建筑图纸 | Regenerated; `render_valid=true` | `do_not_use` — 主图为文件名占位栅格 |
-| `case_002_site_photos` | 多张现场照片 | Regenerated; `render_valid=true` | `do_not_use` — 四宫格证据不可读 |
-| `case_006_project_hero` | 大图视觉页面 | Regenerated; `render_valid=true` | `do_not_use` — Hero 过小 / 留白失控 |
+| Case | Covers | Fresh screenshot (2026-07-29) | Exception review |
+|------|--------|------------------------------|----------------|
+| `case_001_site_plan` | 建筑图纸 | `render_valid=true`; `placeholder_asset_count=0` | **pending** — prior `do_not_use` (2026-07-28) |
+| `case_002_site_photos` | 多张现场照片 | `render_valid=true`; `placeholder_asset_count=0` | **pending** — prior `do_not_use` (2026-07-28) |
+| `case_006_project_hero` | 大图视觉页面 | `render_valid=true`; `placeholder_asset_count=0` | **pending** — prior `do_not_use` (2026-07-28) |
 
 Each pilot page must simultaneously satisfy:
 
@@ -160,7 +160,18 @@ Each pilot page must simultaneously satisfy:
 - Human exception review (`source=manual`, problem checklist + reporting_ready) — **done; 0/3 delivery-accepted**
 - PPTX editability review passed — **done** (native text/images editable; content is the blocker)
 
-**Step 3 decision (2026-07-28):** 3/3 不可汇报 → **停扩布局模型 / 停扩 30 页人工评分**。先修：(1) curated/e2e 占位素材换成可读建筑图；(2) Hero 主导面积；(3) 可选：自动 QA 识别「占位图当内容」。证据：`docs/rehearsal/sessions/2026-07-28-visual-kpi-1/`。
+**Step 3 decision (2026-07-28):** 3/3 不可汇报 → **停扩布局模型 / 停扩 30 页人工评分**。  
+新增（已工程实现 2026-07-29）：像素级 `asset_presentation_readiness` 分析 + Hero/Evidence 匹配的 `pixel_analyzed` 硬门禁，防止“未知/占位图当内容”被放行（仍需重新渲染与人工复核后才可 close）。证据：`archium/application/asset_presentation_readiness_service.py` + `archium/application/asset_matching_service.py` + 入库分析接线。  
+仍保持 stop 扩：缺陷已 `rendered`（2026-07-29 pilot trio 重渲），`human_verified/closed` 仍待人工异常复核。证据：`docs/rehearsal/sessions/2026-07-29-pilot-trio-rerender/`（渲染）+ `docs/rehearsal/sessions/2026-07-28-visual-kpi-1/`（上轮人工结论）。
+
+### Visual defects closure tracking (unified)
+统一状态流：`identified → implemented → rendered → human_verified → closed`
+
+| Visual defect | identified | implemented | rendered | human_verified | closed |
+|---|---|---|---|---|---|
+| 占位素材被当作可展示内容（placeholder / blank） | 2026-07-28 | 2026-07-29 | 2026-07-29 | pending | pending |
+| Hero 主导不达标（Hero 过小 / 留白失控） | 2026-07-28 | 2026-07-29 | 2026-07-29 | pending | pending |
+| Evidence Board 可读性不足（证据区内容不可读/近空白） | 2026-07-28 | 2026-07-29 | 2026-07-29 | pending | pending |
 
 ```bash
 # Regenerate pilot screenshots into Goldens (PowerPoint available on this host)

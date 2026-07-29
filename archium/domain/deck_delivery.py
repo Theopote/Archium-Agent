@@ -35,6 +35,7 @@ _BLOCKING_SLIDE_STATUSES = frozenset(
 )
 
 _SKIPPED_SLIDE_STATUSES = frozenset({SlideDeliveryStatus.SKIPPED})
+_ASSET_BLOCKER_PREFIX = "asset_blocker:"
 
 
 class DeckDeliveryReport(DomainModel):
@@ -167,16 +168,34 @@ def refresh_slide_asset_delivery(slide: SlideSpec) -> SlideSpec:
             SlideDeliveryStatus.ASSET_MISSING,
         }:
             types = ", ".join(sorted({req.type.value for req in missing}))
+            blocker_reasons = _collect_missing_asset_blockers(missing)
+            detail = f"missing required assets: {types}"
+            if blocker_reasons:
+                detail = f"{detail} ({', '.join(blocker_reasons)})"
             return mark_slide_delivery(
                 slide,
                 SlideDeliveryStatus.ASSET_MISSING,
-                detail=f"missing required assets: {types}",
+                detail=detail,
             )
         return slide
 
     if slide.delivery_status == SlideDeliveryStatus.ASSET_MISSING:
         return mark_slide_delivery(slide, SlideDeliveryStatus.READY)
     return slide
+
+
+def _collect_missing_asset_blockers(requirements: list[object]) -> list[str]:
+    reasons: list[str] = []
+    for requirement in requirements:
+        for instruction in getattr(requirement, "processing_instructions", []):
+            if not isinstance(instruction, str) or not instruction.startswith(
+                _ASSET_BLOCKER_PREFIX
+            ):
+                continue
+            reason = instruction[len(_ASSET_BLOCKER_PREFIX) :].strip()
+            if reason and reason not in reasons:
+                reasons.append(reason)
+    return reasons
 
 
 def apply_deck_delivery_to_presentation(

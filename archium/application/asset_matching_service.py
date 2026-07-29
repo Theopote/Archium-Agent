@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from archium.application.asset_matching_visual import drawing_type_match_adjustment
 from archium.application.asset_visual_utils import infer_visual_processing_flags
+from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
 from archium.domain.enums import AssetType, VisualType
 from archium.domain.slide import SlideSpec, VisualRequirement
@@ -84,6 +85,7 @@ _HERO_LIKE_VISUALS = frozenset(
     }
 )
 _EVIDENCE_LIKE_VISUALS = frozenset({VisualType.SITE_PHOTO, VisualType.REFERENCE_CASE})
+_ASSET_BLOCKER_PREFIX = "asset_blocker:"
 
 
 def score_asset_for_requirement(
@@ -97,7 +99,9 @@ def score_asset_for_requirement(
         return 0.0
 
     from archium.application.asset_presentation_readiness_service import (
+        PRESENTATION_READINESS_UNKNOWN,
         evaluate_asset_presentation_readiness,
+        has_pixel_verified_readiness,
         is_evidence_slot_eligible,
         is_hero_slot_eligible,
     )
@@ -108,6 +112,11 @@ def score_asset_for_requirement(
     readiness = evaluate_asset_presentation_readiness(asset, intended_slot=slot)
     if readiness.is_placeholder:
         return 0.0
+    if requirement.type in (_HERO_LIKE_VISUALS | _EVIDENCE_LIKE_VISUALS):
+        if not has_pixel_verified_readiness(readiness):
+            return 0.0
+        if PRESENTATION_READINESS_UNKNOWN in readiness.reasons:
+            return 0.0
     if requirement.type in _HERO_LIKE_VISUALS and not is_hero_slot_eligible(readiness):
         # Unsuitable / reference-only assets must not win formal hero / 总图 slots.
         return 0.0
@@ -217,8 +226,9 @@ def apply_asset_match(
 class AssetMatchingService:
     """Link slide visual requirements to project assets."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, *, settings: Settings | None = None) -> None:
         self._session = session
+        self._settings = settings or get_settings()
         self._assets = AssetRepository(session)
         self._presentations = PresentationRepository(session)
         self._qa_reports = VisualQAReportRepository(session)
@@ -238,6 +248,7 @@ class AssetMatchingService:
     ) -> tuple[list[SlideSpec], int]:
         """Populate preferred_asset_ids and return updated slides plus match count."""
         assets = self._assets.list_by_project(project_id)
+        assets = self._ensure_assets_have_cached_readiness(assets)
         qa_reports = self._load_qa_reports(assets)
         slides = self._presentations.list_slides(presentation_id)
         if not slides:
@@ -294,6 +305,7 @@ class AssetMatchingService:
             return [], 0
 
         assets = self._assets.list_by_project(project_id)
+        assets = self._ensure_assets_have_cached_readiness(assets)
         qa_reports = self._load_qa_reports(assets)
         match_count = 0
         updated_by_id: dict[UUID, SlideSpec] = {}
@@ -381,6 +393,7 @@ class AssetMatchingService:
                 min_score=min_score,
                 qa_reports=qa_reports,
             )
+            self._annotate_requirement_blocker(requirement, ranked=ranked, assets=assets)
             if apply_asset_match(requirement, ranked, overwrite=rematch):
                 changed = True
             if requirement.preferred_asset_ids:
@@ -388,6 +401,105 @@ class AssetMatchingService:
 
         slide, changed = _finalize_slide_delivery(slide, changed=changed)
         return slide, match_count, changed
+
+    def _ensure_assets_have_cached_readiness(self, assets: list[Asset]) -> list[Asset]:
+        from archium.application.asset_presentation_readiness_service import (
+            PRESENTATION_READINESS_UNKNOWN,
+            analyze_and_cache_asset_presentation_readiness,
+            evaluate_asset_presentation_readiness,
+            has_pixel_verified_readiness,
+            is_pixel_analyzable_asset,
+        )
+
+        prepared: list[Asset] = []
+        for asset in assets:
+            if not is_pixel_analyzable_asset(asset):
+                prepared.append(asset)
+                continue
+
+            readiness = evaluate_asset_presentation_readiness(asset)
+            if (
+                has_pixel_verified_readiness(readiness)
+                and PRESENTATION_READINESS_UNKNOWN not in readiness.reasons
+            ):
+                prepared.append(asset)
+                continue
+
+            updated = analyze_and_cache_asset_presentation_readiness(
+                asset,
+                project_storage_root=self._settings.project_storage_path,
+            )
+            if updated != asset:
+                updated = self._assets.update(updated)
+            prepared.append(updated)
+        return prepared
+
+    def _annotate_requirement_blocker(
+        self,
+        requirement: VisualRequirement,
+        *,
+        ranked: list[tuple[Asset, float]],
+        assets: list[Asset],
+    ) -> None:
+        requirement.processing_instructions = [
+            item
+            for item in requirement.processing_instructions
+            if not item.startswith(_ASSET_BLOCKER_PREFIX)
+        ]
+        if ranked or requirement.preferred_asset_ids or not requirement.required:
+            return
+
+        compatible_assets = [
+            asset
+            for asset in assets
+            if asset.asset_type in _VISUAL_ASSET_TYPES.get(
+                requirement.type,
+                {AssetType.IMAGE, AssetType.DRAWING},
+            )
+        ]
+        if not compatible_assets:
+            requirement.processing_instructions.append(
+                f"{_ASSET_BLOCKER_PREFIX}no_candidate_assets"
+            )
+            return
+
+        if requirement.type not in (_HERO_LIKE_VISUALS | _EVIDENCE_LIKE_VISUALS):
+            requirement.processing_instructions.append(
+                f"{_ASSET_BLOCKER_PREFIX}no_qualified_asset"
+            )
+            return
+
+        from archium.application.asset_presentation_readiness_service import (
+            PRESENTATION_READINESS_UNKNOWN,
+            evaluate_asset_presentation_readiness,
+            has_pixel_verified_readiness,
+        )
+
+        ready = False
+        unknown = False
+        unreadable = False
+        for asset in compatible_assets:
+            slot = "hero" if requirement.type in _HERO_LIKE_VISUALS else "evidence"
+            readiness = evaluate_asset_presentation_readiness(asset, intended_slot=slot)
+            if readiness.presentation_ready and has_pixel_verified_readiness(readiness):
+                ready = True
+                break
+            if not has_pixel_verified_readiness(readiness) or (
+                PRESENTATION_READINESS_UNKNOWN in readiness.reasons
+            ):
+                unknown = True
+            elif not readiness.readable_at_slide_scale:
+                unreadable = True
+
+        if ready:
+            return
+        if unknown:
+            code = "presentation_readiness_unknown"
+        elif unreadable:
+            code = "no_readable_presentation_asset"
+        else:
+            code = "no_presentation_ready_asset"
+        requirement.processing_instructions.append(f"{_ASSET_BLOCKER_PREFIX}{code}")
 
     def _match_icon_requirement(self, requirement: VisualRequirement) -> bool:
         """Bind semantic icon description onto the Architectural Icon Registry."""

@@ -475,6 +475,17 @@ class VisionImageGenerationService:
             )
             saved = self._assets.create(asset)
             asset_id = saved.id
+            from archium.application.asset_presentation_readiness_service import (
+                analyze_and_cache_asset_presentation_readiness,
+            )
+
+            analyzed = analyze_and_cache_asset_presentation_readiness(
+                saved,
+                project_storage_root=self._settings.project_storage_path,
+            )
+            if analyzed.metadata != saved.metadata or analyzed != saved:
+                saved = self._assets.update(analyzed)
+                asset_id = saved.id
             # Back-fill asset_id on nested design_artifact blob
             if isinstance(saved.metadata.get("design_artifact"), dict):
                 nested = dict(cast(dict[str, object], saved.metadata["design_artifact"]))

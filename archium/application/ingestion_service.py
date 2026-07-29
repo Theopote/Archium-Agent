@@ -128,6 +128,7 @@ class IngestionService:
                 base_chunk_index=len(saved_chunks),
             )
             assets = vision_result.assets
+            assets = self._analyze_assets_presentation_readiness(assets)
             for chunk in vision_result.chunks:
                 saved_chunks.append(self._documents.create_chunk(chunk))
 
@@ -257,6 +258,7 @@ class IngestionService:
                 base_chunk_index=len(saved_chunks),
             )
             assets = vision_result.assets
+            assets = self._analyze_assets_presentation_readiness(assets)
             for chunk in vision_result.chunks:
                 saved_chunks.append(self._documents.create_chunk(chunk))
 
@@ -520,6 +522,33 @@ class IngestionService:
             document.filename,
         )
         return chunks, True
+
+    def _analyze_assets_presentation_readiness(
+        self,
+        assets: list[Asset],
+    ) -> list[Asset]:
+        from archium.application.asset_presentation_readiness_service import (
+            analyze_and_cache_asset_presentation_readiness,
+        )
+
+        analyzed: list[Asset] = []
+        for asset in assets:
+            try:
+                updated = analyze_and_cache_asset_presentation_readiness(
+                    asset,
+                    project_storage_root=self._settings.project_storage_path,
+                )
+                if updated.metadata != asset.metadata or updated != asset:
+                    updated = self._assets.update(updated)
+                analyzed.append(updated)
+            except Exception as exc:
+                logger.warning(
+                    "Presentation readiness analysis failed for %s: %s",
+                    asset.filename,
+                    exc,
+                )
+                analyzed.append(asset)
+        return analyzed
 
     def _process_asset_vision_rag(
         self,

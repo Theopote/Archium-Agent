@@ -7,9 +7,33 @@ from uuid import uuid4
 from archium.application.asset_matching_service import score_asset_for_requirement
 from archium.application.asset_matching_visual import drawing_type_match_adjustment
 from archium.domain.asset import Asset
+from archium.domain.asset_presentation_readiness import (
+    ASSET_PRESENTATION_READINESS_KEY,
+    AssetPresentationReadiness,
+    AssetPresentationRole,
+)
 from archium.domain.enums import AssetType, VisualType
 from archium.domain.slide import VisualRequirement
 from archium.domain.visual_qa import VisualQAReport
+
+
+def _with_pixel_readiness(asset: Asset, *, role: AssetPresentationRole = AssetPresentationRole.HERO_DRAWING) -> Asset:
+    readiness = AssetPresentationReadiness(
+        pixel_analyzed=True,
+        presentation_ready=True,
+        visual_information_density=0.8,
+        readable_at_slide_scale=True,
+        recommended_role=role,
+    )
+    metadata = dict(asset.metadata or {})
+    metadata[ASSET_PRESENTATION_READINESS_KEY] = readiness.to_metadata()
+    return asset.model_copy(
+        update={
+            "metadata": metadata,
+            "width": asset.width or 2000,
+            "height": asset.height or 1500,
+        }
+    )
 
 
 def test_drawing_type_match_bonus() -> None:
@@ -40,18 +64,23 @@ def test_drawing_type_mismatch_penalty() -> None:
 
 def test_site_plan_prefers_matching_drawing_type_over_filename() -> None:
     requirement = VisualRequirement(type=VisualType.SITE_PLAN, description="总平面图")
-    site_asset = Asset(
-        project_id=uuid4(),
-        filename="IMG_0234.jpg",
-        path="/tmp/img.jpg",
-        asset_type=AssetType.IMAGE,
+    site_asset = _with_pixel_readiness(
+        Asset(
+            project_id=uuid4(),
+            filename="IMG_0234.jpg",
+            path="/tmp/img.jpg",
+            asset_type=AssetType.IMAGE,
+        )
     )
-    floor_asset = Asset(
-        project_id=uuid4(),
-        filename="site_plan.png",
-        path="/tmp/site.png",
-        asset_type=AssetType.DRAWING,
-        tags=["site_plan"],
+    floor_asset = _with_pixel_readiness(
+        Asset(
+            project_id=uuid4(),
+            filename="site_plan.png",
+            path="/tmp/site.png",
+            asset_type=AssetType.DRAWING,
+            tags=["site_plan"],
+        ),
+        role=AssetPresentationRole.EVIDENCE_SUPPORTING,
     )
     site_report = VisualQAReport(
         asset_id=site_asset.id,
