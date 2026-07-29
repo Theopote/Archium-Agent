@@ -10,6 +10,10 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from archium.application.generation_contract import (
+    build_generation_contract,
+    validate_generation_contract,
+)
 from archium.application.presentation_models import PresentationRequest
 from archium.application.review_service import PresentationReviewService
 from archium.application.workflow_models import WorkflowRunResult
@@ -193,6 +197,7 @@ class PresentationWorkflowService:
                 gate.readiness.verdict.value,
             )
 
+        generation_contract: dict[str, Any] | None = None
         if reuse_presentation_id is None:
             presentation = self._runtime.presentation_service.create_presentation(
                 project_id, request, actor_id=actor_id
@@ -224,6 +229,10 @@ class PresentationWorkflowService:
             briefs_ready, missing = design_briefs_ready(context.outline)
             if not briefs_ready:
                 raise WorkflowError("页面设计摘要尚未就绪：" + "；".join(missing))
+            generation_contract = build_generation_contract(
+                context,
+                actor_id=actor_id,
+            )
         resolved_preview_images = (
             export_preview_images
             if export_preview_images is not None
@@ -257,6 +266,7 @@ class PresentationWorkflowService:
                     "require_slides_review": require_slides_review,
                     "reuse_approved_plan": reuse_presentation_id is not None,
                     "replace_existing_slides": reuse_presentation_id is not None,
+                    "generation_contract": generation_contract,
                     "cognition_gate": gate.as_dict(),
                 },
             )
@@ -484,6 +494,10 @@ class PresentationWorkflowService:
                 or context.outline is None
             ):
                 raise WorkflowError("批准输入快照已失效，请返回大纲阶段检查")
+            contract = run.state.get("generation_contract")
+            if not isinstance(contract, dict):
+                raise WorkflowError("生成任务缺少可审计的生成契约，请重新发起生成。")
+            validate_generation_contract(contract, context)
             state.update(
                 {
                     "brief": context.brief,

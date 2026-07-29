@@ -237,7 +237,7 @@ def test_reuse_approved_plan_preserves_human_approved_artifacts(
     repo.save_outline(approved_outline)
     db_session.commit()
 
-    second = workflow_service.run(
+    prepared = workflow_service.prepare_run(
         project_with_context.id,
         request_payload,
         reuse_presentation_id=first.presentation.id,
@@ -246,6 +246,12 @@ def test_reuse_approved_plan_preserves_human_approved_artifacts(
         require_outline_review=False,
         require_slides_review=True,
     )
+    contract = prepared.state["generation_contract"]
+    assert contract["schema"] == "archium.generation-contract/v1"
+    assert contract["artifacts"]["outline"]["id"] == str(first_outline.id)
+    assert contract["page_design_brief_count"] == len(briefs)
+
+    second = workflow_service.execute_prepared(prepared.id)
 
     assert second.presentation.id == first.presentation.id
     assert second.brief is not None and second.brief.id == first.brief.id
