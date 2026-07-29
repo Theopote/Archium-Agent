@@ -10,6 +10,7 @@ import streamlit as st
 from archium.application.asset_board_service import AssetBoardService
 from archium.domain.visual.element_lock import canvas_geometry_locked, is_drawing_element
 from archium.domain.visual.enums import LayoutContentType
+from archium.domain.visual.render_scene import TextNode
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import format_user_error
 from archium.ui.label_map import entity_label, field_label
@@ -727,8 +728,8 @@ def _render_element_properties(
 
         with st.expander("混排样式（同框粗细/颜色）", expanded=False):
             existing_runs = []
-            if scene_node is not None and getattr(scene_node, "runs", None):
-                existing_runs = list(scene_node.runs or [])
+            if isinstance(scene_node, TextNode) and scene_node.runs:
+                existing_runs = list(scene_node.runs)
             default_a = existing_runs[0].text if existing_runs else (element.text_content or "")
             default_b = existing_runs[1].text if len(existing_runs) > 1 else ""
             weight_a = (

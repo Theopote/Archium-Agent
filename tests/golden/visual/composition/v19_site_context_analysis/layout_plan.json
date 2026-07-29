@@ -14,14 +14,14 @@
     "source"
   ],
   "balance_strategy": "site_context_split",
-  "whitespace_ratio": 0.4101,
+  "whitespace_ratio": 0.3977,
   "elements": [
     {
       "id": "conclusion",
       "role": "lead_statement",
       "content_type": "text",
       "x": 5.505,
-      "y": 3.85,
+      "y": 4.0,
       "w": 3.795,
       "h": 0.695,
       "fit_mode": null,
@@ -34,7 +34,7 @@
       "x": 0.7,
       "y": 1.191,
       "w": 4.638,
-      "h": 3.354,
+      "h": 3.504,
       "fit_mode": "contain",
       "crop_policy": "forbidden"
     },

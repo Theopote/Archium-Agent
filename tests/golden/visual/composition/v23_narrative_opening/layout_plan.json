@@ -13,7 +13,7 @@
     "source"
   ],
   "balance_strategy": "narrative_opening_split",
-  "whitespace_ratio": 0.3843,
+  "whitespace_ratio": 0.3631,
   "elements": [
     {
       "id": "historic_photo",
@@ -21,8 +21,8 @@
       "content_type": "image",
       "x": 0.7,
       "y": 1.191,
-      "w": 4.638,
-      "h": 3.354,
+      "w": 4.217,
+      "h": 3.504,
       "fit_mode": "cover",
       "crop_policy": "cover_crop"
     },
@@ -30,10 +30,10 @@
       "id": "problem_tension",
       "role": "lead_statement",
       "content_type": "text",
-      "x": 5.505,
+      "x": 5.083,
       "y": 1.191,
-      "w": 3.795,
-      "h": 1.063,
+      "w": 4.217,
+      "h": 1.113,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -41,10 +41,10 @@
       "id": "renewal_goal",
       "role": "annotation",
       "content_type": "text",
-      "x": 5.505,
-      "y": 3.482,
-      "w": 3.795,
-      "h": 1.063,
+      "x": 5.083,
+      "y": 3.583,
+      "w": 4.217,
+      "h": 1.113,
       "fit_mode": null,
       "crop_policy": null
     },
@@ -63,10 +63,10 @@
       "id": "spatial_contradiction",
       "role": "body_text",
       "content_type": "text",
-      "x": 5.505,
-      "y": 2.337,
-      "w": 3.795,
-      "h": 1.063,
+      "x": 5.083,
+      "y": 2.387,
+      "w": 4.217,
+      "h": 1.113,
       "fit_mode": null,
       "crop_policy": null
     },

@@ -139,7 +139,7 @@ class SlidePreviewService:
 
             with Image.open(path) as image:
                 sample = image.convert("L").resize((48, 27))
-                pixels = list(sample.get_flattened_data())
+                pixels = [int(value) for value in sample.getdata()]
             if not pixels:
                 return True
             return bool((max(pixels) - min(pixels)) < 12)
