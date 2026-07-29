@@ -182,3 +182,50 @@ def test_matching_service_backfills_pixel_readiness_before_scoring(tmp_path: Pat
     assert prepared[0].width == 2000
     assert prepared[0].height == 1500
     service._assets.update.assert_called_once()
+
+
+def test_curated_color_bar_stub_detected_from_pixels(tmp_path: Path) -> None:
+    from PIL import Image, ImageDraw
+
+    pool = tmp_path / "color_bar_stub.png"
+    image = Image.new("RGB", (1280, 800), color=(95, 119, 104))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((0, 680, 1280, 800), fill=(30, 30, 30))
+    draw.text((48, 720), "01_village_aerial.png", fill=(245, 245, 240))
+    image.save(pool)
+    asset = _asset(filename=pool.name, path=str(pool), asset_type=AssetType.PHOTO)
+    readiness = evaluate_asset_presentation_readiness(
+        asset,
+        image_path=pool,
+        intended_slot="evidence",
+    )
+    assert readiness.pixel_analyzed is True
+    assert readiness.is_placeholder is True
+    assert "synthetic_filename_grid_or_color_bar" in readiness.reasons
+    assert readiness.presentation_ready is False
+
+
+def test_curated_benchmark_stub_detected_from_pixels(tmp_path: Path) -> None:
+    from PIL import Image, ImageDraw
+
+    pool = tmp_path / "filename_grid_stub.png"
+    image = Image.new("RGB", (1280, 800), "#F7F6F3")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((80, 120, 1200, 700), outline="#8A8780", width=2, fill="#FFFFFF")
+    for row in range(2):
+        for col in range(2):
+            x = 120 + col * 520
+            y = 160 + row * 240
+            draw.rectangle((x, y, x + 460, y + 200), fill="#EEF3FA", outline="#4A6FA5", width=2)
+            draw.text((x + 12, y + 80), "04_water_network_plan.png", fill="#1A1A1A")
+    image.save(pool)
+    asset = _asset(filename=pool.name, path=str(pool))
+    readiness = evaluate_asset_presentation_readiness(
+        asset,
+        image_path=pool,
+        intended_slot="hero",
+    )
+    assert readiness.pixel_analyzed is True
+    assert readiness.is_placeholder is True
+    assert "synthetic_filename_grid_or_color_bar" in readiness.reasons
+    assert readiness.presentation_ready is False

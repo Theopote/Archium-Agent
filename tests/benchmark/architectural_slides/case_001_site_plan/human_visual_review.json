@@ -2,36 +2,30 @@
   "case_id": "case_001_site_plan",
   "source": "manual",
   "information_hierarchy": 4,
-  "visual_focus": 3,
+  "visual_focus": 4,
   "reading_order": 4,
-  "image_text_relationship": 2,
+  "image_text_relationship": 4,
   "whitespace_density": 4,
-  "architectural_expression": 2,
+  "architectural_expression": 3,
   "aesthetic_finish": 3,
   "editability": 4,
   "scoring_mode": "experimental",
-  "selected_issue_codes": [
-    "CONTENT.IMPORTANT_MISSING",
-    "ARCH.ANNOTATIONS_UNREADABLE"
-  ],
+  "selected_issue_codes": [],
   "quality_issues": [],
-  "page_quality_status": "NEEDS_REVIEW",
-  "worst_problem": "主图仍为文件名栅格示意，不是可读总平面；PPTX 截图中图片未正确嵌入",
-  "system_missed": "automation 记 layout_valid + hero_ratio=0.722，但未拦截 curated 池文件名栅格资产；pptx_render 显示破损图标",
+  "page_quality_status": "PASS_WITH_WARNINGS",
+  "worst_problem": "主图为示意性总平面（非实测图纸），但分区可读、主图区面积合格",
+  "system_missed": "",
   "reporting_ready": "fixable",
-  "major_problems": [
-    "主图内容不可作为总平面证据（需替换真实图纸）"
-  ],
+  "major_problems": [],
   "minor_problems": [
-    "full_canvas 版式与右侧三指标卡结构达标",
-    "标题层级与阅读顺序清晰"
+    "fixture 素材为示意总平面，正式汇报需替换项目真图纸"
   ],
   "review_completed": true,
   "accepted_for_delivery": false,
   "validity": "valid",
   "accepted": false,
-  "reviewer": "desk-review-2026-07-29",
-  "reviewed_at": "2026-07-29T14:30:00Z",
-  "reviewer_notes": "对照 pptx_render.png（generated=true）+ scene_preview.png。相较 2026-07-28：版式骨架与主图区面积已改善，TEXT_OVERFLOW 已消除；仍缺真实图纸且 PPTX 嵌入失败。估计替换总平面 PDF 导出图并对齐约 8–12 分钟。",
+  "reviewer": "desk-review-2026-07-29-r2",
+  "reviewed_at": "2026-07-29T15:10:00Z",
+  "reviewer_notes": "对照 pptx_render.png（generated=true）。refresh_pilot_trio_curated_assets 后：PPTX 嵌入正常，full_canvas 主图区约 72%，四色分区与指标卡结构达标。",
   "invalidation_reason": ""
 }

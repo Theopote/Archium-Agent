@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from uuid import uuid4
 
 from archium.domain.visual.render_scene import (
@@ -93,7 +94,6 @@ def test_adapter_prefers_resolved_path_over_portable_uri() -> None:
 
 
 def test_resolve_for_export_preserves_existing_resolved_path(tmp_path) -> None:
-    """PPTX export without benchmark_root must not wipe a prior resolved file."""
     from archium.infrastructure.renderers.pptx_renderer import PptxRenderer
     from archium.infrastructure.storage.asset_path_resolver import (
         AssetPathResolveContext,
@@ -133,6 +133,53 @@ def test_resolve_for_export_preserves_existing_resolved_path(tmp_path) -> None:
     exported = next(n for n in export_resolved.nodes if n.id == "plan")
     assert exported.resolved_path == str(asset)
     assert exported.asset_unresolved is False
+
+
+def test_resolve_for_export_infers_benchmark_root_for_portable_uris() -> None:
+    from archium.infrastructure.renderers.pptx_renderer import PptxRenderer
+
+    case_id = "case_001_site_plan"
+    asset_name = "c0010001-0001-4001-8001-000000000001.png"
+    asset_path = (
+        Path(__file__).resolve().parents[2]
+        / "benchmark"
+        / "architectural_slides"
+        / case_id
+        / "assets"
+        / asset_name
+    )
+    if not asset_path.is_file():
+        import pytest
+
+        pytest.skip("pilot benchmark asset missing")
+
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[
+            DrawingNode(
+                id="plan",
+                x=1,
+                y=1,
+                width=4,
+                height=3,
+                storage_uri=f"benchmark://{case_id}/assets/{asset_name}",
+                asset_path=f"benchmark://{case_id}/assets/{asset_name}",
+                drawing_type="site_plan",
+            )
+        ],
+    )
+    export_resolved = PptxRenderer()._resolve_for_export(scene, project_id=None)
+    exported = next(n for n in export_resolved.nodes if n.id == "plan")
+    assert exported.resolved_path == str(asset_path.resolve())
+    assert exported.asset_unresolved is False
+
+    instruction = RenderScenePptxAdapter().render_slide(export_resolved)
+    plan = next(el for el in instruction.elements if el["id"] == "plan")
+    assert plan["path"] == str(asset_path.resolve())
 
 
 def test_scene_pptx_unavailable_reason_is_string_or_none() -> None:

@@ -1,39 +1,31 @@
 {
   "case_id": "case_006_project_hero",
   "source": "manual",
-  "information_hierarchy": 3,
-  "visual_focus": 2,
+  "information_hierarchy": 4,
+  "visual_focus": 4,
   "reading_order": 4,
-  "image_text_relationship": 2,
-  "whitespace_density": 2,
-  "architectural_expression": 2,
-  "aesthetic_finish": 2,
+  "image_text_relationship": 4,
+  "whitespace_density": 4,
+  "architectural_expression": 3,
+  "aesthetic_finish": 3,
   "editability": 4,
   "scoring_mode": "experimental",
-  "selected_issue_codes": [
-    "LAYOUT.NO_VISUAL_FOCUS",
-    "LAYOUT.TOO_EMPTY",
-    "LAYOUT.WHITESPACE_IMBALANCE",
-    "IMAGE_TEXT.HERO_UNCLEAR"
-  ],
+  "selected_issue_codes": [],
   "quality_issues": [],
-  "page_quality_status": "BLOCKED",
-  "worst_problem": "PPTX 交付截图主图破损且面积极小，页面大面积空白，未达封面级 Hero 主导",
-  "system_missed": "layout plan hero_ratio=0.706 与 pptx_render 视觉不一致；render_valid=true 未反映 Office 嵌入失败",
-  "reporting_ready": "do_not_use",
-  "major_problems": [
-    "Hero 主视觉在 PPTX 交付中不主导，留白失控"
-  ],
+  "page_quality_status": "PASS_WITH_WARNINGS",
+  "worst_problem": "Hero 为 fixture 纹理示意，非真实效果图，但主视觉已主导页面",
+  "system_missed": "",
+  "reporting_ready": "fixable",
+  "major_problems": [],
   "minor_problems": [
-    "标题与副标题文案可用、可编辑",
-    "split 版式 lead 区 TEXT_OVERFLOW 已修复"
+    "正式汇报需替换为项目真实效果图"
   ],
   "review_completed": true,
   "accepted_for_delivery": false,
   "validity": "valid",
   "accepted": false,
-  "reviewer": "desk-review-2026-07-29",
-  "reviewed_at": "2026-07-29T14:30:00Z",
-  "reviewer_notes": "对照 pptx_render.png：主图仅为左上角破损图标，与 layout 计划 70% 面积严重不符。scene_preview 亦显示文件名栅格而非全幅 Hero。需先修复 benchmark:// 资产 PPTX 嵌入，再替换真实效果图并验证全幅铺满。",
+  "reviewer": "desk-review-2026-07-29-r2",
+  "reviewed_at": "2026-07-29T15:10:00Z",
+  "reviewer_notes": "split 版式：主图约占左侧 70%，标题克制，留白受控。较 r1 复核：Hero 主导问题已解决。",
   "invalidation_reason": ""
 }

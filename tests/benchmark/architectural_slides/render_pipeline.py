@@ -37,6 +37,8 @@ from tests.benchmark.architectural_slides.render_manifest import (
     SCENE_JSON_NAME,
     SCENE_PREVIEW_NAME,
     count_assets,
+    count_pptx_embedded_media,
+    count_scene_image_nodes,
     ensure_pptx_render_alias,
     run_post_render_qa,
     sha256_file,
@@ -273,15 +275,21 @@ def render_benchmark_visual_artifacts(
     pptx_render = ensure_pptx_render_alias(case_dir)
     if pptx_render is not None:
         if pptx_screenshot_generated:
-            pass
+            pptx_screenshot_reused = False
         elif existing_pptx_render and final_render is None:
             pptx_screenshot_reused = True
-        elif final_render is not None:
-            pptx_screenshot_generated = True
 
     asset_count, curated_count, placeholder_count = count_assets(case_dir)
     scene_ok = scene_render.scene_preview_path.is_file()
     absolute_paths = scene_has_machine_absolute_paths(scene_render.scene)
+    pptx_media_issues: list[str] = []
+    if pptx_path is not None and pptx_path.is_file():
+        expected_media = count_scene_image_nodes(scene_render.scene)
+        embedded_media = count_pptx_embedded_media(pptx_path)
+        if expected_media > 0 and embedded_media < expected_media:
+            pptx_media_issues.append(
+                f"pptx_embedded_media={embedded_media} < scene_image_nodes={expected_media}"
+            )
     render_valid = (
         scene_ok
         and not build.missing_content_refs
@@ -289,6 +297,7 @@ def render_benchmark_visual_artifacts(
         and placeholder_count == 0
         and not conformance_issues
         and not absolute_paths
+        and not pptx_media_issues
     )
 
     render_source = "html" if scene_ok else "pending"
@@ -312,6 +321,8 @@ def render_benchmark_visual_artifacts(
         )
 
     qa_ok, qa_issues = run_post_render_qa(case_dir, scene_render.scene)
+    qa_issues = [*qa_issues, *pptx_media_issues]
+    qa_ok = qa_ok and not pptx_media_issues
     if not qa_ok:
         render_valid = False
 

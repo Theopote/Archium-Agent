@@ -1,21 +1,21 @@
 {
-  "generated_at": "2026-07-29T12:44:40.320633+00:00",
+  "generated_at": "2026-07-29T13:08:54.793184+00:00",
   "case_count": 30,
   "rule_passed_count": 30,
   "rule_pass_rate": 1.0,
   "manual_human_review_count": 30,
   "manual_human_accepted_count": 0,
   "placeholder_human_review_count": 0,
-  "human_average_weighted_score": 3.683,
+  "human_average_weighted_score": 3.762,
   "human_quality_gate_passed": false,
   "human_quality_gate_reasons": [
     "accepted deliverable pages 0 < required 24/30"
   ],
   "page_quality_status_counts": {
     "PASS": 27,
-    "PASS_WITH_WARNINGS": 0,
-    "NEEDS_REVIEW": 2,
-    "BLOCKED": 1
+    "PASS_WITH_WARNINGS": 3,
+    "NEEDS_REVIEW": 0,
+    "BLOCKED": 0
   },
   "formal_gate_mode": "problem_driven",
   "cases": [
@@ -29,12 +29,12 @@
       "preview_png": "case_001_site_plan\\scene_preview.png",
       "render_valid": true,
       "render_source": "pptx_screenshot",
-      "scene_hash": "4b3e8089c86860c0cd21108ceae3924ba5eb80aadbf88f8e510a6a498ad8e5f4",
+      "scene_hash": "2b1a1f524cfc16a816a6901df3969674c9447231865e87902d121d159e8bb20c",
       "rule_passed": true,
       "layout_score": 1.0,
       "has_critical": false,
       "human_weighted_score": null,
-      "human_score_label": "NEEDS_REVIEW",
+      "human_score_label": "PASS_WITH_WARNINGS",
       "human_review_source": "manual",
       "human_review_validity": "valid",
       "human_review_completed": true,
@@ -42,17 +42,12 @@
       "human_accepted": false,
       "human_invalidated": false,
       "invalidation_reason": null,
-      "reviewer": "desk-review-2026-07-29",
-      "reviewed_at": "2026-07-29T14:30:00+00:00",
-      "major_problems": [
-        "主图内容不可作为总平面证据（需替换真实图纸）"
-      ],
-      "page_quality_status": "NEEDS_REVIEW",
+      "reviewer": "desk-review-2026-07-29-r2",
+      "reviewed_at": "2026-07-29T15:10:00+00:00",
+      "major_problems": [],
+      "page_quality_status": "PASS_WITH_WARNINGS",
       "reporting_ready": "fixable",
-      "selected_issue_codes": [
-        "CONTENT.IMPORTANT_MISSING",
-        "ARCH.ANNOTATIONS_UNREADABLE"
-      ],
+      "selected_issue_codes": [],
       "scoring_mode": "experimental"
     },
     {
@@ -65,12 +60,12 @@
       "preview_png": "case_002_site_photos\\scene_preview.png",
       "render_valid": true,
       "render_source": "pptx_screenshot",
-      "scene_hash": "456d42df24be2282b3b2b0d2b609e24f772986f6da7964537b5915c133194928",
+      "scene_hash": "174519ea14cdd83336d77f64a00ce3e22252c659c09e7bd4bdea055a7714150b",
       "rule_passed": true,
       "layout_score": 0.975,
       "has_critical": false,
       "human_weighted_score": null,
-      "human_score_label": "NEEDS_REVIEW",
+      "human_score_label": "PASS_WITH_WARNINGS",
       "human_review_source": "manual",
       "human_review_validity": "valid",
       "human_review_completed": true,
@@ -78,17 +73,12 @@
       "human_accepted": false,
       "human_invalidated": false,
       "invalidation_reason": null,
-      "reviewer": "desk-review-2026-07-29",
-      "reviewed_at": "2026-07-29T14:30:00+00:00",
-      "major_problems": [
-        "四张证据图不可作为现场踏勘照片使用（需替换真实现场图）"
-      ],
-      "page_quality_status": "NEEDS_REVIEW",
+      "reviewer": "desk-review-2026-07-29-r2",
+      "reviewed_at": "2026-07-29T15:10:00+00:00",
+      "major_problems": [],
+      "page_quality_status": "PASS_WITH_WARNINGS",
       "reporting_ready": "fixable",
-      "selected_issue_codes": [
-        "ARCH.PROBLEM_WITHOUT_EVIDENCE",
-        "CONTENT.IMPORTANT_MISSING"
-      ],
+      "selected_issue_codes": [],
       "scoring_mode": "experimental"
     },
     {
@@ -194,12 +184,12 @@
       "preview_png": "case_006_project_hero\\scene_preview.png",
       "render_valid": true,
       "render_source": "pptx_screenshot",
-      "scene_hash": "03d6ecb8765f1fa278ab26d5234c187b4e1e1b68f3c19e9e3e8eb6913b3c91a0",
+      "scene_hash": "e57e61e04cb6348bfb5af4580ef74eeb7006bb8835dd1fb0347c7b1126942650",
       "rule_passed": true,
       "layout_score": 1.0,
       "has_critical": false,
       "human_weighted_score": null,
-      "human_score_label": "BLOCKED",
+      "human_score_label": "PASS_WITH_WARNINGS",
       "human_review_source": "manual",
       "human_review_validity": "valid",
       "human_review_completed": true,
@@ -207,19 +197,12 @@
       "human_accepted": false,
       "human_invalidated": false,
       "invalidation_reason": null,
-      "reviewer": "desk-review-2026-07-29",
-      "reviewed_at": "2026-07-29T14:30:00+00:00",
-      "major_problems": [
-        "Hero 主视觉在 PPTX 交付中不主导，留白失控"
-      ],
-      "page_quality_status": "BLOCKED",
-      "reporting_ready": "do_not_use",
-      "selected_issue_codes": [
-        "LAYOUT.NO_VISUAL_FOCUS",
-        "LAYOUT.TOO_EMPTY",
-        "LAYOUT.WHITESPACE_IMBALANCE",
-        "IMAGE_TEXT.HERO_UNCLEAR"
-      ],
+      "reviewer": "desk-review-2026-07-29-r2",
+      "reviewed_at": "2026-07-29T15:10:00+00:00",
+      "major_problems": [],
+      "page_quality_status": "PASS_WITH_WARNINGS",
+      "reporting_ready": "fixable",
+      "selected_issue_codes": [],
       "scoring_mode": "experimental"
     },
     {

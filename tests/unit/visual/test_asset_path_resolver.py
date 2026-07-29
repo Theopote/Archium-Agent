@@ -9,6 +9,8 @@ from archium.application.visual.asset_path_resolver import (
     AssetPathResolveContext,
     AssetPathResolver,
     benchmark_asset_uri,
+    benchmark_case_ids_in_scene,
+    build_export_resolve_context,
     is_machine_absolute_path,
     is_portable_storage_uri,
     project_asset_uri,
@@ -188,4 +190,46 @@ def test_resolve_scene_clears_asset_unresolved_when_file_found(tmp_path: Path) -
     assert isinstance(node, ImageNode)
     assert node.resolved_path
     assert node.asset_unresolved is False
+
+
+def test_build_export_resolve_context_infers_benchmark_case(tmp_path: Path) -> None:
+    case_id = "case_demo"
+    case_dir = tmp_path / case_id
+    assets = case_dir / "assets"
+    assets.mkdir(parents=True)
+    asset = assets / "hero.png"
+    asset.write_bytes(b"png")
+    uri = benchmark_asset_uri(case_id, "assets/hero.png")
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[
+            ImageNode(
+                id="hero",
+                x=0,
+                y=0,
+                width=4,
+                height=3,
+                storage_uri=uri,
+            )
+        ],
+    )
+    assert benchmark_case_ids_in_scene(scene) == (case_id,)
+
+    ctx = build_export_resolve_context(
+        scene,
+        resolve_ctx=AssetPathResolveContext(
+            benchmark_root=tmp_path,
+            case_dir=case_dir,
+            case_id=case_id,
+            assets_dir=assets,
+        ),
+    )
+    resolved = AssetPathResolver().resolve_scene(scene, ctx)
+    node = resolved.nodes[0]
+    assert isinstance(node, ImageNode)
+    assert node.resolved_path == str(asset.resolve())
 

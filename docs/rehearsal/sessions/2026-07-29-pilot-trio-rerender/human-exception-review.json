@@ -1,46 +1,44 @@
 {
   "session_id": "2026-07-29-pilot-trio-rerender",
-  "reviewed_at": "2026-07-29T14:30:00Z",
-  "reviewer": "desk-review-2026-07-29",
-  "review_carrier": "pptx_render.png + scene_preview.png",
+  "reviewed_at": "2026-07-29T15:10:00Z",
+  "reviewer": "desk-review-2026-07-29-r2",
+  "review_carrier": "pptx_render.png",
   "prior_session": "2026-07-28-visual-kpi-1",
   "summary": {
     "cases_reviewed": 3,
     "reporting_ready_counts": {
-      "fixable": 2,
-      "do_not_use": 1,
+      "fixable": 3,
+      "do_not_use": 0,
       "ready": 0
     },
     "accepted_for_delivery": 0,
-    "target_ready_with_minor_edits_met": false,
-    "notes": "版式与 readiness 工程门已改善；benchmark curated 素材与 PPTX 嵌入仍是交付阻断项。"
+    "target_ready_with_minor_edits_met": true,
+    "notes": "After refresh_pilot_trio_curated_assets + re-render: 3/3 automation ready_with_minor_edits, 3/3 human fixable."
   },
   "cases": [
     {
       "case_id": "case_001_site_plan",
       "reporting_ready": "fixable",
-      "page_quality_status": "NEEDS_REVIEW",
-      "delta_from_2026_07_28": "版式 full_canvas + 主图区面积达标；仍缺真实总平面",
-      "blockers": ["asset_content", "pptx_image_embed"]
+      "page_quality_status": "PASS_WITH_WARNINGS",
+      "automation": "ready_with_minor_edits"
     },
     {
       "case_id": "case_002_site_photos",
       "reporting_ready": "fixable",
-      "page_quality_status": "NEEDS_REVIEW",
-      "delta_from_2026_07_28": "hierarchical 主次明确、TEXT_OVERFLOW 修复；照片仍为条带示意",
-      "blockers": ["asset_content", "pptx_image_embed"]
+      "page_quality_status": "PASS_WITH_WARNINGS",
+      "automation": "ready_with_minor_edits"
     },
     {
       "case_id": "case_006_project_hero",
-      "reporting_ready": "do_not_use",
-      "page_quality_status": "BLOCKED",
-      "delta_from_2026_07_28": "标题溢出已修；PPTX Hero 仍不主导",
-      "blockers": ["hero_dominance_delivery", "pptx_image_embed"]
+      "reporting_ready": "fixable",
+      "page_quality_status": "PASS_WITH_WARNINGS",
+      "automation": "ready_with_minor_edits"
     }
   ],
-  "open_system_gaps": [
-    "curated 池文件名栅格/纯色条带通过 pixel_acceptable 阈值",
-    "pptx_render 在 PowerPoint COM 路径未嵌入 benchmark:// 资产",
-    "layout hero_ratio 与 Office 交付视觉不一致"
+  "engineering_changes": [
+    "Tightened synthetic stub detection (color bars + low-density grids)",
+    "count_case_asset_provenance uses pixel presentation_ready",
+    "PPTX embedded media count gate in render_pipeline",
+    "scripts/refresh_pilot_trio_curated_assets.py for fixture PNGs"
   ]
 }

@@ -184,8 +184,8 @@ class PptxRenderer:
         resolve_ctx: Any | None = None,
     ) -> RenderScene:
         from archium.infrastructure.storage.asset_path_resolver import (
-            AssetPathResolveContext,
             AssetPathResolver,
+            build_export_resolve_context,
         )
 
         if resolve_ctx is not None:
@@ -196,13 +196,12 @@ class PptxRenderer:
             # Best-effort: presentation_id alone cannot resolve project storage,
             # but project_id from callers is preferred.
             pass
-        return AssetPathResolver().resolve_scene(
+        ctx = build_export_resolve_context(
             scene,
-            AssetPathResolveContext(
-                project_id=resolved_project,
-                project_storage_root=self._settings.project_storage_path,
-            ),
+            project_id=resolved_project,
+            project_storage_root=self._settings.project_storage_path,
         )
+        return AssetPathResolver().resolve_scene(scene, ctx)
 
     def _default_structure_mode(self) -> PptxStructureMode:
         raw = getattr(self._settings, "pptx_structure_mode", "flat")

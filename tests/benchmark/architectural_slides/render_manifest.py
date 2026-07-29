@@ -395,6 +395,18 @@ def validate_scene_manifest_consistency(case_dir: Path) -> list[str]:
                     "pptx_render sidecar pptx_content_hash mismatch vs manifest"
                 )
 
+    final_render = final_render_path(case_dir)
+    if (
+        manifest.pptx_screenshot_generated
+        and final_render.is_file()
+        and pptx_png.is_file()
+        and sha256_file(final_render) != sha256_file(pptx_png)
+    ):
+        blockers.append(
+            "pptx_render.png stale: bytes differ from final_render.png "
+            "(re-run render or ensure_pptx_render_alias)"
+        )
+
     qa_ok, qa_issues = run_post_render_qa(case_dir, scene)
     if not qa_ok:
         blockers.append("post-render QA failed: " + "; ".join(qa_issues[:4]))
@@ -448,15 +460,18 @@ def ensure_wireframe_alias(case_dir: Path) -> Path | None:
 
 
 def ensure_pptx_render_alias(case_dir: Path) -> Path | None:
-    """Copy final_render.png to pptx_render.png when screenshot tooling produced it."""
-    pptx_render = pptx_render_path(case_dir)
-    if pptx_render.is_file():
-        return pptx_render
+    """Copy final_render.png to pptx_render.png when screenshot tooling produced it.
+
+  Always refreshes ``pptx_render.png`` from ``final_render.png`` when the latter
+  exists so a prior render cannot leave a stale formal review carrier behind.
+    """
     final_render = final_render_path(case_dir)
     if final_render.is_file():
+        pptx_render = pptx_render_path(case_dir)
         shutil.copy(final_render, pptx_render)
         return pptx_render
-    return None
+    pptx_render = pptx_render_path(case_dir)
+    return pptx_render if pptx_render.is_file() else None
 
 
 def normalize_case_scene_portability(case_dir: Path) -> dict[str, Any]:
@@ -647,10 +662,38 @@ def rendered_visual_artifacts(case_dir: Path) -> dict[str, bool]:
 
 
 def count_assets(case_dir: Path) -> tuple[int, int, int]:
-    """Return (total, curated_real, placeholder) asset counts."""
+    """Return (total, presentation_ready, placeholder_or_unverified) asset counts."""
     from tests.benchmark.architectural_slides.curated_assets import count_case_asset_provenance
 
     return count_case_asset_provenance(case_dir)
+
+
+def count_pptx_embedded_media(pptx_path: Path) -> int:
+    """Count image/media parts embedded in a PPTX package."""
+    import zipfile
+
+    if not pptx_path.is_file():
+        return 0
+    with zipfile.ZipFile(pptx_path) as archive:
+        return sum(
+            1
+            for name in archive.namelist()
+            if name.startswith("ppt/media/") and not name.endswith("/")
+        )
+
+
+def count_scene_image_nodes(scene: object) -> int:
+    """Count visible image/drawing nodes that should embed raster media."""
+    nodes = getattr(scene, "nodes", None) or []
+    total = 0
+    for node in nodes:
+        node_type = getattr(node, "node_type", None)
+        if node_type not in {"image", "drawing"}:
+            continue
+        if getattr(node, "visible", True) is False:
+            continue
+        total += 1
+    return total
 
 
 def bootstrap_case_render_artifacts(case_dir: Path) -> dict[str, Any]:

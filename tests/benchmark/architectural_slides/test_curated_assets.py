@@ -42,7 +42,8 @@ def test_ensure_case_assets_prefers_curated_pool(tmp_path: Path, monkeypatch) ->
     assert paths
     written = case_dir / f"{asset_id}.png"
     assert written.read_bytes() == b"curated-bytes"
-    total, curated, placeholder = count_case_asset_provenance(case_dir.parent)
+    total, ready, placeholder = count_case_asset_provenance(case_dir.parent)
     assert total == 1
-    assert curated == 1
-    assert placeholder == 0
+    # Invalid PNG bytes cannot pass pixel analysis and count as placeholder.
+    assert ready == 0
+    assert placeholder == 1

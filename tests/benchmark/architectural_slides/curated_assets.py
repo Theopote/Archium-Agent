@@ -41,19 +41,40 @@ def is_curated_asset(asset_id: str) -> bool:
 
 
 def count_case_asset_provenance(case_dir: Path) -> tuple[int, int, int]:
-    """Return (total, curated_real, placeholder) asset counts for one case folder."""
+    """Return (total, presentation_ready, placeholder_or_unverified) asset counts."""
+    from uuid import uuid4
+
+    from archium.application.asset_presentation_readiness_service import (
+        evaluate_asset_presentation_readiness,
+    )
+    from archium.domain.asset import Asset
+    from archium.domain.enums import AssetType
+
     assets_dir = case_dir / "assets"
     if not assets_dir.is_dir():
         return 0, 0, 0
     total = 0
-    curated = 0
+    ready = 0
+    placeholder = 0
     for path in assets_dir.iterdir():
         if not path.is_file() or path.suffix.lower() != ".png":
             continue
         total += 1
-        if is_curated_asset(path.stem):
-            curated += 1
-    return total, curated, total - curated
+        asset_type = AssetType.DRAWING if path.stem.startswith("c001") else AssetType.PHOTO
+        if path.stem.startswith("c006"):
+            asset_type = AssetType.IMAGE
+        asset = Asset(
+            project_id=uuid4(),
+            filename=path.name,
+            path=str(path),
+            asset_type=asset_type,
+        )
+        readiness = evaluate_asset_presentation_readiness(asset, image_path=path)
+        if readiness.presentation_ready and not readiness.is_placeholder:
+            ready += 1
+        else:
+            placeholder += 1
+    return total, ready, placeholder
 
 
 def ensure_case_assets(case_id: str, assets_dir: Path) -> list[str]:

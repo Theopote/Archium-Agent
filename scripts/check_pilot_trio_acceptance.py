@@ -62,7 +62,7 @@ def _pixel_readiness(asset_path: Path, *, asset_type: AssetType) -> dict[str, ob
     acceptable = (
         readiness.pixel_analyzed
         and not readiness.is_placeholder
-        and readiness.visual_information_density >= 0.12
+        and readiness.presentation_ready
     )
     return {
         "pixel_analyzed": readiness.pixel_analyzed,

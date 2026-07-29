@@ -121,6 +121,60 @@ def scene_has_machine_absolute_paths(scene: RenderScene) -> list[str]:
     return [uri for uri in iter_scene_asset_uris(scene) if is_machine_absolute_path(uri)]
 
 
+def default_benchmark_cases_root() -> Path | None:
+    """Return the architectural benchmark case root when the repo layout exists."""
+    candidate = (
+        Path(__file__).resolve().parents[3] / "tests" / "benchmark" / "architectural_slides"
+    )
+    return candidate if candidate.is_dir() else None
+
+
+def benchmark_case_ids_in_scene(scene: RenderScene) -> tuple[str, ...]:
+    """Collect ``case_id`` values referenced by ``benchmark://`` URIs in a scene."""
+    case_ids: list[str] = []
+    seen: set[str] = set()
+    for uri in iter_scene_asset_uris(scene):
+        if not uri.startswith(BENCHMARK_SCHEME):
+            continue
+        remainder = uri[len(BENCHMARK_SCHEME) :].replace("\\", "/")
+        case_id = remainder.split("/", 1)[0].strip()
+        if case_id and case_id not in seen:
+            seen.add(case_id)
+            case_ids.append(case_id)
+    return tuple(case_ids)
+
+
+def build_export_resolve_context(
+    scene: RenderScene,
+    *,
+    project_id: UUID | str | None = None,
+    project_storage_root: Path | None = None,
+    resolve_ctx: AssetPathResolveContext | None = None,
+) -> AssetPathResolveContext:
+    """Build a resolver context for PPTX export, inferring benchmark roots when needed."""
+    if resolve_ctx is not None:
+        return resolve_ctx
+
+    case_ids = benchmark_case_ids_in_scene(scene)
+    benchmark_root_path = default_benchmark_cases_root() if case_ids else None
+    case_id: str | None = None
+    case_dir: Path | None = None
+    if benchmark_root_path is not None and len(case_ids) == 1:
+        case_id = case_ids[0]
+        candidate = benchmark_root_path / case_id
+        if candidate.is_dir():
+            case_dir = candidate
+
+    return AssetPathResolveContext(
+        case_dir=case_dir,
+        case_id=case_id,
+        project_id=project_id,
+        project_storage_root=project_storage_root,
+        assets_dir=(case_dir / "assets") if case_dir is not None else None,
+        benchmark_root=benchmark_root_path,
+    )
+
+
 class AssetPathResolver:
     """Encode portable storage URIs and resolve them for the current environment."""
 

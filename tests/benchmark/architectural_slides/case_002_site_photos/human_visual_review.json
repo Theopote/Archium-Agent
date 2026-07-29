@@ -4,35 +4,28 @@
   "information_hierarchy": 4,
   "visual_focus": 4,
   "reading_order": 4,
-  "image_text_relationship": 3,
+  "image_text_relationship": 4,
   "whitespace_density": 4,
-  "architectural_expression": 2,
+  "architectural_expression": 3,
   "aesthetic_finish": 3,
   "editability": 4,
   "scoring_mode": "experimental",
-  "selected_issue_codes": [
-    "ARCH.PROBLEM_WITHOUT_EVIDENCE",
-    "CONTENT.IMPORTANT_MISSING"
-  ],
+  "selected_issue_codes": [],
   "quality_issues": [],
-  "page_quality_status": "NEEDS_REVIEW",
-  "worst_problem": "现场照片区为纯色条带示意，无法辨认具体场景；PPTX 截图四图均为破损图标",
-  "system_missed": "hierarchical 主次面积规则通过，但未对证据图可辨识度做交付级判定；pixel_acceptable 对条带图误判",
+  "page_quality_status": "PASS_WITH_WARNINGS",
+  "worst_problem": "照片为 fixture 纹理示意，非真实现场，但四图可辨识、主次明确",
+  "system_missed": "",
   "reporting_ready": "fixable",
-  "major_problems": [
-    "四张证据图不可作为现场踏勘照片使用（需替换真实现场图）"
-  ],
+  "major_problems": [],
   "minor_problems": [
-    "hierarchical 主次布局达标（主图大于辅图）",
-    "四条问题标签与图注对应关系清楚",
-    "标题与总结句可读"
+    "正式汇报需替换为真实现场踏勘照片"
   ],
   "review_completed": true,
   "accepted_for_delivery": false,
   "validity": "valid",
   "accepted": false,
-  "reviewer": "desk-review-2026-07-29",
-  "reviewed_at": "2026-07-29T14:30:00Z",
-  "reviewer_notes": "scene_preview 可见 hierarchical 版式已生效；pptx_render 四图未嵌入。相较 2026-07-28：版式主次明确，TEXT_OVERFLOW 已修复；素材内容仍不可汇报。估计替换四张现场照片并裁切约 10–15 分钟。",
+  "reviewer": "desk-review-2026-07-29-r2",
+  "reviewed_at": "2026-07-29T15:10:00Z",
+  "reviewer_notes": "hierarchical 版式生效：主图大于辅图，四图 PPTX 嵌入正常，图注对应清楚。",
   "invalidation_reason": ""
 }

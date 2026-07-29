@@ -20,7 +20,10 @@ from tests.benchmark.architectural_slides.render_manifest import (
     SCENE_PREVIEW_NAME,
     bootstrap_case_render_artifacts,
     editability_review_eligibility,
+    ensure_pptx_render_alias,
+    final_render_path,
     normalize_case_scene_portability,
+    pptx_render_path,
     sha256_file,
     validate_scene_manifest_consistency,
     visual_review_eligibility,
@@ -91,6 +94,17 @@ def _write_full_provenance(
         ),
     )
     return scene_hash
+
+
+def test_ensure_pptx_render_alias_refreshes_stale_carrier(tmp_path: Path) -> None:
+    case_dir = tmp_path / "case_demo"
+    case_dir.mkdir()
+    stale = pptx_render_path(case_dir)
+    stale.write_bytes(b"stale-pptx-render")
+    final_render_path(case_dir).write_bytes(b"fresh-final-render")
+    refreshed = ensure_pptx_render_alias(case_dir)
+    assert refreshed is not None
+    assert refreshed.read_bytes() == b"fresh-final-render"
 
 
 def test_pending_manifest_blocks_visual_review(tmp_path: Path) -> None:

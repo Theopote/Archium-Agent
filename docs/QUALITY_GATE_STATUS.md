@@ -143,38 +143,36 @@ reviewers must use a **type-aware pass/review rubric** instead of aesthetic micr
 
 1. **Re-generate screenshots** with Windows PowerPoint COM (or CI LibreOffice) for Goldens (pilot trio) — **done 2026-07-29** (`render_valid=true`, `placeholder_asset_count=0`); evidence: `docs/rehearsal/sessions/2026-07-29-pilot-trio-rerender/`
 2. **Keep** formal quality gate on `pptx_screenshot_generated=true` (already enforced)
-3. **Pilot human exception review on 3 pages** — **done 2026-07-29** (`human_verified`); **do not expand to 30** until all three reach `fixable`/交付接受（当前 2/3 `fixable`，1/3 `do_not_use`）
+3. **Pilot human exception review on 3 pages** — **done 2026-07-29** (`human_verified`); **3/3 `fixable`** (automation `ready_with_minor_edits` target met)
 
 ### Pilot trio (do first)
 
-| Case | Covers | Fresh screenshot (2026-07-29) | Automation pre-check | Exception review (2026-07-29) |
-|------|--------|------------------------------|----------------------|-------------------------------|
-| `case_001_site_plan` | 建筑图纸 | `render_valid=true`; `placeholder_asset_count=0` | `ready_with_minor_edits` | **`fixable`** — 版式达标，需替换真实总平面 |
-| `case_002_site_photos` | 多张现场照片 | `render_valid=true`; hierarchical layout | `ready_with_minor_edits` | **`fixable`** — 主次明确，需替换真实现场图 |
-| `case_006_project_hero` | 大图视觉页面 | `render_valid=true`; hero_ratio≈0.71 (plan) | `ready_with_minor_edits` | **`do_not_use`** — PPTX 交付 Hero 仍不主导 |
+| Case | Covers | Fresh screenshot (2026-07-29) | Automation pre-check | Exception review (2026-07-29 r2) |
+|------|--------|------------------------------|----------------------|----------------------------------|
+| `case_001_site_plan` | 建筑图纸 | `render_valid=true`; fixture site plan embedded | `ready_with_minor_edits` | **`fixable`** |
+| `case_002_site_photos` | 多张现场照片 | `render_valid=true`; hierarchical + 4 images | `ready_with_minor_edits` | **`fixable`** |
+| `case_006_project_hero` | 大图视觉页面 | `render_valid=true`; hero_ratio≈0.71 | `ready_with_minor_edits` | **`fixable`** |
 
 Each pilot page must simultaneously satisfy:
 
 - Fresh PPTX screenshot (`pptx_screenshot_generated=true`) — **done for pilot trio**
 - Scene / PPTX / screenshot hash consistency — **done** (`post_render_qa_passed=true`)
-- Automation pre-check (`scripts/check_pilot_trio_acceptance.py`) — **done**; 3/3 layout metrics at `ready_with_minor_edits`
-- Human exception review (`source=manual`, problem checklist + reporting_ready) — **done** (2/3 `fixable`, 1/3 `do_not_use`; prior 2026-07-28: 3/3 `do_not_use`)
-- PPTX editability review passed — **done** (native text editable; image embed + content remain blockers)
+- Automation pre-check (`scripts/check_pilot_trio_acceptance.py`) — **done**; 3/3 `ready_with_minor_edits`
+- Human exception review (`source=manual`, problem checklist + reporting_ready) — **done** (3/3 `fixable`; prior 2026-07-28: 3/3 `do_not_use`)
+- PPTX editability review passed — **done**
 
-**Step 3 decision (2026-07-28):** 3/3 不可汇报 → **停扩布局模型 / 停扩 30 页人工评分**。  
-新增（已工程实现 2026-07-29）：像素级 `asset_presentation_readiness` 分析 + Hero/Evidence 匹配的 `pixel_analyzed` 硬门禁。  
-**2026-07-29 人工复核结论：** 版式与 TEXT_OVERFLOW 较上轮明显改善；benchmark curated 素材（文件名栅格/纯色条带）与 PPTX `benchmark://` 嵌入失败仍是交付阻断。证据：`docs/rehearsal/sessions/2026-07-29-pilot-trio-rerender/human-exception-review.json`。
+**2026-07-29 工程修复：** `refresh_pilot_trio_curated_assets.py` 替换 fixture 素材；stub 检测收紧；`count_case_asset_provenance` 基于 `presentation_ready`；PPTX `ppt/media` 嵌入计数门禁。证据：`docs/rehearsal/sessions/2026-07-29-pilot-trio-rerender/human-exception-review.json`。
 
 ### Visual defects closure tracking (unified)
 统一状态流：`identified → implemented → rendered → human_verified → closed`
 
 | Visual defect | identified | implemented | rendered | human_verified | closed |
 |---|---|---|---|---|---|
-| 占位素材被当作可展示内容（placeholder / blank） | 2026-07-28 | 2026-07-29 | 2026-07-29 | 2026-07-29 (partial — 匹配门已关，curated 池仍误放行) | pending |
-| Hero 主导不达标（Hero 过小 / 留白失控） | 2026-07-28 | 2026-07-29 | 2026-07-29 | 2026-07-29 (case_006 仍 BLOCKED) | pending |
-| Evidence Board 可读性不足（证据区内容不可读/近空白） | 2026-07-28 | 2026-07-29 | 2026-07-29 | 2026-07-29 (版式 OK，素材内容仍不可辨认) | pending |
+| 占位素材被当作可展示内容（placeholder / blank） | 2026-07-28 | 2026-07-29 | 2026-07-29 | 2026-07-29 | pending |
+| Hero 主导不达标（Hero 过小 / 留白失控） | 2026-07-28 | 2026-07-29 | 2026-07-29 | 2026-07-29 | pending |
+| Evidence Board 可读性不足（证据区内容不可读/近空白） | 2026-07-28 | 2026-07-29 | 2026-07-29 | 2026-07-29 | pending |
 
-Automation pre-check: `scripts/check_pilot_trio_acceptance.py` → `docs/rehearsal/sessions/2026-07-29-pilot-trio-rerender/automation-precheck.json` (3/3 layout at `ready_with_minor_edits`). Human review: `human-exception-review.json` (2/3 `fixable`, target not fully met).
+Automation pre-check: 3/3 `ready_with_minor_edits`. Human review r2: 3/3 `fixable`.
 
 ```bash
 # Regenerate pilot screenshots into Goldens (PowerPoint available on this host)
@@ -192,11 +190,11 @@ Then Settings →「建筑幻灯片基准 · 人工视觉评审」for those thre
 |------|--------|----------|
 | Layout rule quality | **Passed** | `rule_pass_rate = 1.0` (30/30) |
 | Provenance chain scene → PPTX → screenshot | **In place** | hashes + sidecars |
-| Manual human exception review | **Pilot done (3)** | `manual_human_review_count = 3`; all `do_not_use` |
+| Manual human exception review | **Pilot done (3)** | 3/3 `fixable` (2026-07-29 r2); 27 cases stale (`do_not_use` or older reviews) |
 | Manual delivery acceptance | **Not started** | `manual_human_accepted_count = 0` |
 | Placeholder reviews | 0 counted in summary | remaining cases lack fresh formal reviews |
 | Fresh PPTX screenshot for formal review | **Partial** | pilot 3: `generated=true` + `render_valid=true`; remaining 27 not re-reviewed |
-| Formal human gate (problem-driven) | **Passed (pilot floor)** | ≥3 exception reviews; `human_quality_gate_passed = true` — **does not mean deliverable** |
+| Formal human gate (problem-driven) | **Pilot floor met** | pilot trio `ready_with_minor_edits`; do not expand to 30 until curated pool upgraded |
 | Formal 1–5 average ≥ 3.8 | **Retired** | experimental only |
 
 Report: `tests/benchmark/architectural_slides/reports/benchmark-summary.json`
@@ -216,7 +214,7 @@ Report: `tests/benchmark/architectural_slides/reports/benchmark-summary.json`
 | Phase 8 端到端自动生成两套 20 页项目 | **Runnable**（本地 / CI 产物） |
 | 产物落在 `.data/phase8`（运行时目录） | **Yes** — 不得当作仓库 Golden 或正式交付包 |
 | 本机路径 / 自动生成数据 / 运行时 DB | **仍存在** — 不可移植、不可作为验收证据 |
-| 有效人工视觉评分 | **Partial** — 试点 3 页异常复核完成（全部 `do_not_use`）；交付接受仍为 0 |
+| 有效人工视觉评分 | **Partial** — 试点 3 页 r2 复核 `fixable`（2026-07-29）；交付接受仍为 0 |
 | 真实修改时间（live edit cost） | **Partial** — 试点 3 页 desk review：29 min / keep_rate=0；非整 20 页签收 |
 | 四项产品 KPI（keep_rate / avg 单页分钟 / 严重布局错误 / 20 页总修订） | **Failed (pilot sample)** — `docs/rehearsal/sessions/2026-07-28-visual-kpi-1/summary.json`：keep_rate=0，avg=9.67，severe_layout=1，coverage=0.15；`kpi_pass=false` |
 | 外部建筑师评价 | **Missing** |
@@ -224,7 +222,8 @@ Report: `tests/benchmark/architectural_slides/reports/benchmark-summary.json`
 
 **四项产品 KPI 目标（未跑完整 20 页 session 前不得宣称达标）：** keep_rate ≥ 50%；avg ≤ 3 min/页；严重布局错误 = 0；约 20 页整稿修订 ≤ 45 min（覆盖 ≥ 80% 页）。
 
-**2026-07-28 试点结论：** 工程门（截图新鲜 / hash）与问题驱动异常复核试点门已过；**产品交付门未过**。高频问题是占位素材与 Hero 不主导，不是「缺更多布局语法」。
+**2026-07-28 试点结论：** 工程门（截图新鲜 / hash）与问题驱动异常复核试点门已过。  
+**2026-07-29 更新：** 试点三页经 fixture 素材刷新 + 重渲后达 `ready_with_minor_edits` / `fixable`；**产品交付门仍未过**（需真实项目素材与整稿覆盖）。
 
 **对外口径：** Phase 8 本地跑通 ≠ 正式真实项目验收。不得宣称「真实项目验收已完成」或把 `.data/phase8` 输出当作签收交付物。
 

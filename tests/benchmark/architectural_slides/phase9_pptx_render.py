@@ -52,7 +52,13 @@ def materialize_case_pptx_render(
         )
 
     existing = pptx_render_path(case_dir)
-    if existing.is_file() and not force and existing.stat().st_size > 0:
+    pptx_mtime = (case_dir / PPTX_NAME).stat().st_mtime_ns if (case_dir / PPTX_NAME).is_file() else 0
+    render_stale = (
+        existing.is_file()
+        and pptx_mtime
+        and existing.stat().st_mtime_ns < pptx_mtime
+    )
+    if existing.is_file() and not force and not render_stale and existing.stat().st_size > 0:
         _refresh_manifest_after_render(case_dir, reused=True)
         return PptxRenderMaterializeResult(
             case_id=case_id,

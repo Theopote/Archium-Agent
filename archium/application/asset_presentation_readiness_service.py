@@ -129,6 +129,9 @@ def evaluate_asset_presentation_readiness(
             if density < 0.12:
                 is_placeholder = True
                 reasons.append("image_nearly_blank_or_flat")
+            elif _detect_synthetic_visual_stub(path):
+                is_placeholder = True
+                reasons.append("synthetic_filename_grid_or_color_bar")
             elif density < _MIN_DENSITY_READY:
                 reasons.append("low_visual_information_density")
     elif is_pixel_analyzable_asset(asset):
@@ -293,6 +296,53 @@ def _measure_image_density(path: Path) -> float | None:
     if measured is None:
         return None
     return measured[0]
+
+
+def _detect_synthetic_visual_stub(path: Path) -> bool:
+    """Detect benchmark-style stubs: solid photo bars or filename-grid diagrams."""
+    try:
+        from PIL import Image, ImageFilter, ImageOps, ImageStat
+    except ImportError:  # pragma: no cover
+        return False
+    try:
+        with Image.open(path) as opened:
+            gray = ImageOps.grayscale(opened.convert("RGB"))
+    except OSError:
+        return False
+
+    width, height = gray.size
+    if width < 64 or height < 64:
+        return False
+
+    top = gray.crop((0, 0, width, int(height * 0.78)))
+    bottom = gray.crop((0, int(height * 0.82), width, height))
+    top_stdev = float(ImageStat.Stat(top).stddev[0] or 0)
+    bottom_edges = bottom.filter(ImageFilter.FIND_EDGES)
+    top_edges = top.filter(ImageFilter.FIND_EDGES)
+    bottom_edge_mean = float(ImageStat.Stat(bottom_edges).mean[0] or 0)
+    top_edge_mean = float(ImageStat.Stat(top_edges).mean[0] or 0)
+    if top_stdev < 8 and bottom_edge_mean > max(3.0, top_edge_mean * 2.0):
+        return True
+
+    density = _measure_image_density(path)
+    stats = ImageStat.Stat(gray)
+    stdev = float(stats.stddev[0] or 0)
+    edges = gray.filter(ImageFilter.FIND_EDGES)
+    edge_mean = float(ImageStat.Stat(edges).mean[0] or 0)
+    if density is not None and density < 0.38 and 12 <= stdev <= 48 and edge_mean < 22:
+        sample = gray.resize((48, 27))
+        cell_stdevs: list[float] = []
+        for row in range(3):
+            for col in range(3):
+                x0 = col * 48 // 3
+                y0 = row * 27 // 3
+                x1 = (col + 1) * 48 // 3
+                y1 = (row + 1) * 27 // 3
+                cell = sample.crop((x0, y0, x1, y1))
+                cell_stdevs.append(float(ImageStat.Stat(cell).stddev[0] or 0))
+        if cell_stdevs and max(cell_stdevs) - min(cell_stdevs) < 18:
+            return True
+    return False
 
 
 def _readable_at_slide_scale(
