@@ -61,21 +61,24 @@ def _render_visual_workflow_followup(
     )
 
     result = st.session_state.get("last_visual_workflow_result")
+    visual_result = result if isinstance(result, VisualWorkflowResult) else None
     result_matches_context = (
-        isinstance(result, VisualWorkflowResult)
-        and result.presentation is not None
-        and result.presentation.id == context.presentation.id
+        visual_result is not None
+        and visual_result.presentation is not None
+        and visual_result.presentation.id == context.presentation.id
     )
-    awaiting_art_direction = (
+    awaiting_art_direction = bool(
         result_matches_context
-        and result.awaiting_review
-        and result.review_gate == "art_direction"
-        and result.art_direction is not None
+        and visual_result is not None
+        and visual_result.awaiting_review
+        and visual_result.review_gate == "art_direction"
+        and visual_result.art_direction is not None
     )
     if not active and not awaiting_art_direction:
         return
 
     if awaiting_art_direction:
+        assert visual_result is not None and visual_result.art_direction is not None
         st.warning(
             "视觉生成正在等待确认。批准视觉方向后，工作流才会继续生成版式与 PPTX。",
             icon=":material/rate_review:",
@@ -85,8 +88,8 @@ def _render_visual_workflow_followup(
         with st.container(border=True):
             st.markdown("#### 确认视觉方向")
             render_art_direction_panel(
-                art_direction=result.art_direction,
-                workflow_run_id=result.workflow_run.id,
+                art_direction=visual_result.art_direction,
+                workflow_run_id=visual_result.workflow_run.id,
                 awaiting_approval=True,
             )
 
