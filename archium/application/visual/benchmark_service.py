@@ -17,6 +17,7 @@ from archium.domain.visual.enums import LayoutFamily, VisualContentType
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent
+from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
 from archium.infrastructure.layout.generators.base import (
     LayoutContentBundle,
     LayoutGeneratorContext,
@@ -38,6 +39,7 @@ class BenchmarkSlideContent:
     insight: str | None = None
     hero_asset_id: UUID | None = None
     supporting_asset_ids: list[UUID] | None = None
+    evidence_items: list[LayoutEvidenceItem] | None = None
     dominant_content_type: VisualContentType | None = None
     preferred_layout_families: list[LayoutFamily] | None = None
     drawing_hero: bool = False
@@ -186,6 +188,7 @@ class BenchmarkService:
                 str(asset_id) for asset_id in (override.supporting_asset_ids or [])
             ]
             or base.supporting_asset_refs,
+            evidence_items=list(override.evidence_items or base.evidence_items),
             insight=override.insight or base.insight,
         )
 

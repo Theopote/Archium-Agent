@@ -16,6 +16,11 @@ from archium.domain.visual.enums import (
     VisualContentType,
 )
 from archium.domain.visual.layout import LayoutConstraint, LayoutElement, LayoutPlan
+from archium.domain.visual.layout_evidence_item import (
+    LayoutEvidenceItem,
+    build_evidence_items_from_legacy,
+    sort_evidence_items,
+)
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.layout.geometry import Rect, occupied_area, safe_area, whitespace_ratio
 from archium.infrastructure.layout.variant_layout_tokens import (
@@ -36,6 +41,7 @@ class LayoutContentBundle:
     source_text: str | None = None
     hero_asset_ref: str | None = None
     supporting_asset_refs: list[str] = field(default_factory=list)
+    evidence_items: list[LayoutEvidenceItem] = field(default_factory=list)
     # Curated architectural icon refs (e.g. "icon:pedestrian_flow").
     # Used by specific layout generators to place semantic symbols.
     icon_refs: list[str] = field(default_factory=list)
@@ -195,6 +201,12 @@ def content_from_slide(
         for req in slide.visual_requirements
         if req.type == VisualType.ICON and req.icon_canonical_name
     ]
+    evidence_items = build_evidence_items_from_legacy(
+        asset_refs=supporting,
+        claims=points,
+        source=citations,
+        hero_asset_ref=hero,
+    )
     return LayoutContentBundle(
         title=slide.title,
         message=slide.message,
@@ -203,10 +215,28 @@ def content_from_slide(
         source_text=citations,
         hero_asset_ref=hero,
         supporting_asset_refs=supporting,
+        evidence_items=evidence_items,
         icon_refs=icon_refs,
         case_labels=[point for point in points if "：" in point or ":" in point][:3],
         insight=slide.message if len(slide.message) < 120 else None,
     )
+
+
+def resolve_layout_evidence_items(
+    content: LayoutContentBundle,
+    *,
+    limit: int,
+    include_hero: bool = True,
+) -> list[LayoutEvidenceItem]:
+    """Return semantic evidence items for layout (explicit list or legacy bridge)."""
+    if content.evidence_items:
+        return sort_evidence_items(list(content.evidence_items))[:limit]
+    return build_evidence_items_from_legacy(
+        asset_refs=list(content.supporting_asset_refs),
+        claims=list(content.key_points),
+        source=content.source_text,
+        hero_asset_ref=content.hero_asset_ref if include_hero else None,
+    )[:limit]
 
 
 def _looks_like_metric(text: str) -> bool:

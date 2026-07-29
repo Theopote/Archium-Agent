@@ -1,13 +1,13 @@
 {
-  "created_at": "2026-07-28T13:42:48.974090Z",
-  "updated_at": "2026-07-28T13:42:48.974090Z",
+  "created_at": "2026-07-29T13:22:11.028773Z",
+  "updated_at": "2026-07-29T13:22:11.028773Z",
   "version": 1,
-  "id": "659066f9-c3fb-4ba8-8736-3b44ccbdbbe0",
+  "id": "ffc5c1f2-1d96-42d1-9dbd-6e94c00d6efa",
   "schema_version": 2,
-  "slide_id": "4d22d48d-a2f9-45d3-81d7-79e15b01ac1c",
+  "slide_id": "06960543-b53f-4328-a0e5-2489d53dff50",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "2949b05a-bfbb-4c9b-9fc8-717a3d14f5fb",
-  "design_system_id": "5feed6ce-a513-4aa3-b6ee-9af91717d16a",
+  "layout_plan_id": "a031a699-7480-490d-9d40-6a460aa657b2",
+  "design_system_id": "4038eb37-3884-4c54-bbc6-bf2690f7905b",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -38,6 +38,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -83,6 +84,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -128,6 +130,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -173,6 +176,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -218,6 +222,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -263,6 +268,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",

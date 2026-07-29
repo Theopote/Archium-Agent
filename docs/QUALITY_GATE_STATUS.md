@@ -161,16 +161,16 @@ Each pilot page must simultaneously satisfy:
 - Human exception review (`source=manual`, problem checklist + reporting_ready) — **done** (3/3 `fixable`; prior 2026-07-28: 3/3 `do_not_use`)
 - PPTX editability review passed — **done**
 
-**2026-07-29 工程修复：** `refresh_pilot_trio_curated_assets.py` 替换 fixture 素材；stub 检测收紧；`count_case_asset_provenance` 基于 `presentation_ready`；PPTX `ppt/media` 嵌入计数门禁。证据：`docs/rehearsal/sessions/2026-07-29-pilot-trio-rerender/human-exception-review.json`。
+**2026-07-29 工程修复：** `refresh_pilot_trio_curated_assets.py` / `materialize_benchmark_curated_assets.py --presentation-ready` 替换全池 40 个 fixture 素材；stub 检测收紧；`count_case_asset_provenance` 基于 `presentation_ready`；PPTX `ppt/media` 嵌入计数门禁；`build_export_resolve_context` 自动解析 `benchmark://`。证据：`docs/rehearsal/sessions/2026-07-29-pilot-trio-rerender/human-exception-review.json`。
 
 ### Visual defects closure tracking (unified)
 统一状态流：`identified → implemented → rendered → human_verified → closed`
 
 | Visual defect | identified | implemented | rendered | human_verified | closed |
 |---|---|---|---|---|---|
-| 占位素材被当作可展示内容（placeholder / blank） | 2026-07-28 | 2026-07-29 | 2026-07-29 | 2026-07-29 | pending |
-| Hero 主导不达标（Hero 过小 / 留白失控） | 2026-07-28 | 2026-07-29 | 2026-07-29 | 2026-07-29 | pending |
-| Evidence Board 可读性不足（证据区内容不可读/近空白） | 2026-07-28 | 2026-07-29 | 2026-07-29 | 2026-07-29 | pending |
+| 占位素材被当作可展示内容（placeholder / blank） | 2026-07-28 | 2026-07-29 | 2026-07-29 (30/30) | 2026-07-29 (pilot) | pending |
+| Hero 主导不达标（Hero 过小 / 留白失控） | 2026-07-28 | 2026-07-29 | 2026-07-29 (30/30) | 2026-07-29 (pilot) | pending |
+| Evidence Board 可读性不足（证据区内容不可读/近空白） | 2026-07-28 | 2026-07-29 | 2026-07-29 (30/30) | 2026-07-29 (pilot) | pending |
 
 Automation pre-check: 3/3 `ready_with_minor_edits`. Human review r2: 3/3 `fixable`.
 
@@ -193,8 +193,8 @@ Then Settings →「建筑幻灯片基准 · 人工视觉评审」for those thre
 | Manual human exception review | **Pilot done (3)** | 3/3 `fixable` (2026-07-29 r2); 27 cases stale (`do_not_use` or older reviews) |
 | Manual delivery acceptance | **Not started** | `manual_human_accepted_count = 0` |
 | Placeholder reviews | 0 counted in summary | remaining cases lack fresh formal reviews |
-| Fresh PPTX screenshot for formal review | **Partial** | pilot 3: `generated=true` + `render_valid=true`; remaining 27 not re-reviewed |
-| Formal human gate (problem-driven) | **Pilot floor met** | pilot trio `ready_with_minor_edits`; do not expand to 30 until curated pool upgraded |
+| Fresh PPTX screenshot for formal review | **Done (30/30)** | all cases `pptx_screenshot_generated=true`, `render_valid=true` (2026-07-29 full re-render) |
+| Formal human gate (problem-driven) | **Pilot floor met** | pilot trio `fixable`; 27 cases need fresh human exception review on new renders |
 | Formal 1–5 average ≥ 3.8 | **Retired** | experimental only |
 
 Report: `tests/benchmark/architectural_slides/reports/benchmark-summary.json`

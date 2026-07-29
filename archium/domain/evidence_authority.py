@@ -37,6 +37,7 @@ PRESENTATION_EVIDENCE_TYPES: Final[tuple[str, ...]] = (
     "PresentationEvidenceItem",
     "PresentationEvidenceSlot",
     "PresentationEvidenceRequirement",
+    "LayoutEvidenceItem",
 )
 DELIVERY_MATERIALS_TYPES: Final[tuple[str, ...]] = (
     "MaterialsAvailability",

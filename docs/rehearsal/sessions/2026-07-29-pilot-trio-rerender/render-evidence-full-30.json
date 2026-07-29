@@ -1,0 +1,16 @@
+{
+  "rendered_at": "2026-07-29T13:25:00Z",
+  "command": "py -3 scripts/render_architectural_benchmark_visuals.py --approve-goldens",
+  "case_count": 30,
+  "final_render_count": 30,
+  "pptx_only_count": 0,
+  "skipped_count": 0,
+  "aggregate": {
+    "render_valid": 30,
+    "pptx_screenshot_generated": 30,
+    "pptx_screenshot_reused": 0,
+    "placeholder_asset_count_zero": 30,
+    "post_render_qa_passed": 30
+  },
+  "notes": "Full suite re-render after presentation-ready curated fixture pool upgrade."
+}

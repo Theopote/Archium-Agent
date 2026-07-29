@@ -8,6 +8,11 @@ from uuid import UUID
 from archium.domain.enums import VisualType
 from archium.domain.visual.benchmark import ArchitecturalSlideCategory, BenchmarkCaseDefinition
 from archium.domain.visual.enums import LayoutFamily, VisualContentType
+from archium.domain.visual.layout_evidence_item import (
+    EvidenceItemRole,
+    LayoutEvidenceItem,
+    build_evidence_items_from_legacy,
+)
 
 # Preserve stable UUIDs for the original five cases.
 CASE_001_HERO = UUID("c0010001-0001-4001-8001-000000000001")
@@ -23,6 +28,35 @@ CASE_003_IMAGES = (
     UUID("c0030003-0001-4001-8001-000000000003"),
 )
 CASE_004_CHART = UUID("c0040001-0001-4001-8001-000000000001")
+
+CASE_002_EVIDENCE_ITEMS: tuple[LayoutEvidenceItem, ...] = (
+    LayoutEvidenceItem(
+        asset=str(CASE_002_PHOTOS[0]),
+        claim="入口混行导致患者与车流交织",
+        role=EvidenceItemRole.PRIMARY,
+        focus="入口区域",
+        source="现场踏勘记录.pdf p.6",
+    ),
+    LayoutEvidenceItem(
+        asset=str(CASE_002_PHOTOS[1]),
+        claim="停车占道压缩人行空间",
+        role=EvidenceItemRole.SUPPORTING,
+        focus="路缘带",
+        source="现场踏勘记录.pdf p.6",
+    ),
+    LayoutEvidenceItem(
+        asset=str(CASE_002_PHOTOS[2]),
+        claim="景观缺失削弱到达体验",
+        role=EvidenceItemRole.SUPPORTING,
+        source="现场踏勘记录.pdf p.6",
+    ),
+    LayoutEvidenceItem(
+        asset=str(CASE_002_PHOTOS[3]),
+        claim="导向不清增加迷路风险",
+        role=EvidenceItemRole.DETAIL,
+        source="现场踏勘记录.pdf p.6",
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -45,6 +79,7 @@ class CaseCatalogEntry:
     key_points: tuple[str, ...] = ()
     metrics: tuple[str, ...] = ()
     captions: tuple[str, ...] = ()
+    evidence_items: tuple[LayoutEvidenceItem, ...] = ()
     insight: str | None = None
     assets: tuple[CaseAssetSpec, ...] = ()
     hero_asset_id: UUID | None = None
@@ -60,6 +95,133 @@ def catalog_asset_uuid(case_number: int, asset_index: int) -> UUID:
     """Deterministic asset UUID for cases 006+ (index starts at 1)."""
     return UUID(
         f"c{case_number:03d}{asset_index:04d}-0001-4001-8001-{asset_index:012d}"
+    )
+
+
+CASE_023_PHOTOS = tuple(catalog_asset_uuid(23, index) for index in range(1, 7))
+CASE_024_PHOTOS = tuple(catalog_asset_uuid(24, index) for index in range(1, 5))
+EDGE_034_ASSETS = tuple(catalog_asset_uuid(34, index) for index in range(1, 5))
+
+CASE_023_EVIDENCE_ITEMS: tuple[LayoutEvidenceItem, ...] = (
+    LayoutEvidenceItem(
+        asset=str(CASE_023_PHOTOS[0]),
+        claim="主入口交通混行，人车冲突明显",
+        role=EvidenceItemRole.PRIMARY,
+        focus="主入口车道",
+        source="踏勘报告.pdf p.3",
+    ),
+    LayoutEvidenceItem(
+        asset=str(CASE_023_PHOTOS[1]),
+        claim="沿街界面封闭，缺乏公共性",
+        role=EvidenceItemRole.SUPPORTING,
+        focus="南侧街景",
+        source="踏勘报告.pdf p.3",
+    ),
+    LayoutEvidenceItem(
+        asset=str(CASE_023_PHOTOS[2]),
+        claim="景观缺失，到达体验单调",
+        role=EvidenceItemRole.SUPPORTING,
+        focus="入口广场",
+        source="踏勘报告.pdf p.3",
+    ),
+    LayoutEvidenceItem(
+        asset=str(CASE_023_PHOTOS[3]),
+        claim="导向标识不足，流线易迷失",
+        role=EvidenceItemRole.DETAIL,
+        focus="分叉节点",
+        source="踏勘报告.pdf p.3",
+    ),
+    LayoutEvidenceItem(
+        asset=str(CASE_023_PHOTOS[4]),
+        claim="无障碍坡道破损，通行受阻",
+        role=EvidenceItemRole.DETAIL,
+        focus="主入口坡道",
+        source="踏勘报告.pdf p.3",
+    ),
+    LayoutEvidenceItem(
+        asset=str(CASE_023_PHOTOS[5]),
+        claim="后勤通道与公众流线交叉",
+        role=EvidenceItemRole.DETAIL,
+        focus="后勤卸货口",
+        source="踏勘报告.pdf p.3",
+    ),
+)
+
+CASE_024_EVIDENCE_ITEMS: tuple[LayoutEvidenceItem, ...] = (
+    LayoutEvidenceItem(
+        asset=str(CASE_024_PHOTOS[0]),
+        claim="改造前：院区界面封闭，公共性不足",
+        role=EvidenceItemRole.PRIMARY,
+        focus="主入口与围墙",
+        source="实施记录.pdf p.4",
+    ),
+    LayoutEvidenceItem(
+        asset=str(CASE_024_PHOTOS[1]),
+        claim="一期：南侧内院开放，形成公共活动面",
+        role=EvidenceItemRole.SUPPORTING,
+        focus="南侧内院",
+        source="实施记录.pdf p.4",
+    ),
+    LayoutEvidenceItem(
+        asset=str(CASE_024_PHOTOS[2]),
+        claim="二期：医疗与科研体量整合，流线重组",
+        role=EvidenceItemRole.SUPPORTING,
+        focus="东侧连廊",
+        source="实施记录.pdf p.4",
+    ),
+    LayoutEvidenceItem(
+        asset=str(CASE_024_PHOTOS[3]),
+        claim="完成：内院公共空间成型，界面转向开放",
+        role=EvidenceItemRole.SUPPORTING,
+        focus="内院核心区",
+        source="实施记录.pdf p.4",
+    ),
+)
+
+EDGE_034_EVIDENCE_ITEMS: tuple[LayoutEvidenceItem, ...] = (
+    LayoutEvidenceItem(
+        asset=str(EDGE_034_ASSETS[0]),
+        claim="现状：外立面老旧，缺乏识别性",
+        role=EvidenceItemRole.PRIMARY,
+        focus="南立面实景",
+        source="现状调研.pdf p.12",
+    ),
+    LayoutEvidenceItem(
+        asset=str(EDGE_034_ASSETS[1]),
+        claim="改造：统一材质，增强标识系统",
+        role=EvidenceItemRole.SUPPORTING,
+        focus="南立面改造方案",
+        source="现状调研.pdf p.12",
+    ),
+    LayoutEvidenceItem(
+        asset=str(EDGE_034_ASSETS[2]),
+        claim="现状入口尺度局促，导向信息不足",
+        role=EvidenceItemRole.SUPPORTING,
+        focus="入口实景",
+        source="现状调研.pdf p.12",
+    ),
+    LayoutEvidenceItem(
+        asset=str(EDGE_034_ASSETS[3]),
+        claim="改造东立面：白色+蓝色医疗标识体系",
+        role=EvidenceItemRole.DETAIL,
+        focus="东立面改造方案",
+        source="现状调研.pdf p.12",
+    ),
+)
+
+
+def catalog_evidence_items(entry: CaseCatalogEntry) -> list[LayoutEvidenceItem]:
+    """Semantic evidence pairs for layout — explicit catalog or legacy asset/claim zip."""
+    if entry.evidence_items:
+        return list(entry.evidence_items)
+    asset_ids = list(entry.supporting_asset_ids) or [asset.asset_id for asset in entry.assets]
+    if not asset_ids:
+        return []
+    claims = list(entry.key_points) or [asset.description for asset in entry.assets]
+    return build_evidence_items_from_legacy(
+        asset_refs=[str(asset_id) for asset_id in asset_ids],
+        claims=claims,
+        hero_asset_ref=str(entry.hero_asset_id) if entry.hero_asset_id else None,
     )
 
 
@@ -161,6 +323,7 @@ FULL_CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
             )
         ),
         supporting_asset_ids=CASE_002_PHOTOS,
+        evidence_items=CASE_002_EVIDENCE_ITEMS,
         dominant_content_type=VisualContentType.PHOTO_EVIDENCE,
         preferred_layout_families=(LayoutFamily.EVIDENCE_BOARD,),
         source_document="现场踏勘记录.pdf",
@@ -665,7 +828,8 @@ FULL_CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
         message="场地现状呈现交通混行、界面封闭与景观缺失三类问题。",
         key_points=("交通混行", "界面封闭", "景观缺失", "标识不足", "无障碍短板"),
         assets=tuple(_asset(23, index, VisualType.SITE_PHOTO, f"踏勘 {index}") for index in range(1, 7)),
-        supporting_asset_ids=tuple(catalog_asset_uuid(23, index) for index in range(1, 7)),
+        supporting_asset_ids=CASE_023_PHOTOS,
+        evidence_items=CASE_023_EVIDENCE_ITEMS,
         dominant_content_type=VisualContentType.PHOTO_EVIDENCE,
         preferred_layout_families=(LayoutFamily.EVIDENCE_BOARD,),
         source_document="踏勘报告.pdf",
@@ -689,7 +853,8 @@ FULL_CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
         message="通过逐期更新，院区由封闭界面转向开放公共内院。",
         key_points=("现状封闭", "一期开放", "二期整合", "内院完成"),
         assets=tuple(_asset(24, index, VisualType.SITE_PHOTO, label) for index, label in enumerate(("现状", "一期", "二期", "完成"), start=1)),
-        supporting_asset_ids=tuple(catalog_asset_uuid(24, index) for index in range(1, 5)),
+        supporting_asset_ids=CASE_024_PHOTOS,
+        evidence_items=CASE_024_EVIDENCE_ITEMS,
         dominant_content_type=VisualContentType.PHOTO_EVIDENCE,
         preferred_layout_families=(LayoutFamily.EVIDENCE_BOARD,),
         source_document="实施记录.pdf",
@@ -970,12 +1135,9 @@ FULL_CASE_CATALOG: tuple[CaseCatalogEntry, ...] = (
             _asset(34, 3, VisualType.SITE_PHOTO, "现状入口照片（横图）"),  # 横向照片
             _asset(34, 4, VisualType.ELEVATION, "改造后东立面图（竖图）"),  # 竖向立面图
         ),
-        hero_asset_id=catalog_asset_uuid(34, 1),
-        supporting_asset_ids=(
-            catalog_asset_uuid(34, 2),
-            catalog_asset_uuid(34, 3),
-            catalog_asset_uuid(34, 4),
-        ),
+        hero_asset_id=EDGE_034_ASSETS[0],
+        supporting_asset_ids=EDGE_034_ASSETS[1:],
+        evidence_items=EDGE_034_EVIDENCE_ITEMS,
         dominant_content_type=VisualContentType.COMPARISON,
         preferred_layout_families=(LayoutFamily.EVIDENCE_BOARD,),
         source_document="现状调研.pdf",

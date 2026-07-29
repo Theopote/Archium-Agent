@@ -12,7 +12,11 @@ from archium.domain.visual.enums import (
     LayoutFamily,
 )
 from archium.domain.visual.layout import LayoutConstraint, LayoutElement, LayoutPlan
-from archium.infrastructure.layout.generators.base import LayoutGenerator, LayoutGeneratorContext
+from archium.infrastructure.layout.generators.base import (
+    LayoutGenerator,
+    LayoutGeneratorContext,
+    resolve_layout_evidence_items,
+)
 from archium.infrastructure.layout.geometry import (
     Rect,
     grid_cells,
@@ -37,12 +41,8 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
         # Default and grid aliases: hierarchical 1+2 + conclusion (not equal 2×2).
         return self._generate_hierarchical(context)
 
-    def _collect_refs(self, context: LayoutGeneratorContext, *, limit: int) -> list[str]:
-        refs = list(context.content.supporting_asset_refs)
-        if context.content.hero_asset_ref and context.content.hero_asset_ref not in refs:
-            refs = [context.content.hero_asset_ref, *refs]
-        refs = refs[:limit] or [f"photo_{i}" for i in range(min(2, limit))]
-        return refs[: max(1, min(limit, len(refs)))]
+    def _collect_evidence_items(self, context: LayoutGeneratorContext, *, limit: int):
+        return resolve_layout_evidence_items(context.content, limit=limit)
 
     def _generate_diagnosis_split(self, context: LayoutGeneratorContext) -> LayoutPlan:
         """现状问题页：左主证据、右辅助图+问题标签、底部分析结论。"""
@@ -72,15 +72,14 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
         board = Rect(safe.x, board_top, safe.width, max(1.0, board_bottom - board_top))
         photo_panel, tag_panel = split_horizontal(board, left_ratio=0.62, gap=spacing.lg)
 
-        refs = self._collect_refs(context, limit=_MAX_EVIDENCE_PHOTOS)
-        count = len(refs)
-        labels = list(context.content.key_points[:count])
-        while len(labels) < count:
-            labels.append(f"问题 {len(labels) + 1}")
+        items = self._collect_evidence_items(context, limit=_MAX_EVIDENCE_PHOTOS)
+        count = len(items)
 
         visual_ids: list[str] = []
         if count == 1:
             cells = [photo_panel]
+        elif count == 0:
+            cells = []
         else:
             primary, aux_stack = split_horizontal(photo_panel, left_ratio=0.58, gap=spacing.sm)
             if count == 2:
@@ -89,7 +88,7 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
                 aux1, aux2 = split_vertical(aux_stack, top_ratio=0.5, gap=spacing.sm)
                 cells = [primary, aux1, aux2]
 
-        for index, (cell, ref) in enumerate(zip(cells, refs, strict=False)):
+        for index, (cell, item) in enumerate(zip(cells, items, strict=False)):
             vid = f"photo_{index}"
             visual_ids.append(vid)
             photo_area, caption_area = split_vertical(cell, top_ratio=0.82, gap=spacing.xs)
@@ -98,7 +97,7 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
                     id=vid,
                     role=LayoutElementRole.SUPPORTING_VISUAL,
                     content_type=LayoutContentType.IMAGE,
-                    content_ref=ref,
+                    content_ref=item.asset,
                     x=photo_area.x,
                     y=photo_area.y,
                     width=photo_area.width,
@@ -113,7 +112,7 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
                     id=f"annotation_{index}",
                     role=LayoutElementRole.ANNOTATION,
                     content_type=LayoutContentType.TEXT,
-                    text_content=f"{index + 1}. {labels[index]}",
+                    text_content=f"{index + 1}. {item.claim}",
                     x=caption_area.x,
                     y=caption_area.y,
                     width=caption_area.width,
@@ -223,11 +222,8 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
         board_bottom = safe.bottom - conclusion_h - spacing.sm
         board = Rect(safe.x, board_top, safe.width, max(1.2, board_bottom - board_top))
 
-        refs = self._collect_refs(context, limit=_MAX_EVIDENCE_PHOTOS)
-        count = len(refs)
-        labels = list(context.content.key_points[:count])
-        while len(labels) < count:
-            labels.append(f"问题节点 {len(labels) + 1}")
+        items = self._collect_evidence_items(context, limit=_MAX_EVIDENCE_PHOTOS)
+        count = len(items)
 
         # Geometry: primary left ~62% of board width; two aux stacked on the right.
         if count == 1:
@@ -235,13 +231,15 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
         elif count == 2:
             primary, aux = split_horizontal(board, left_ratio=0.62, gap=spacing.md)
             regions = [primary, aux]
-        else:
+        elif count >= 3:
             primary, aux_col = split_horizontal(board, left_ratio=0.62, gap=spacing.md)
             aux1, aux2 = split_vertical(aux_col, top_ratio=0.5, gap=spacing.md)
             regions = [primary, aux1, aux2]
+        else:
+            regions = []
 
         visual_ids: list[str] = []
-        for index, (region, ref, label) in enumerate(zip(regions, refs, labels, strict=False)):
+        for index, (region, item) in enumerate(zip(regions, items, strict=False)):
             photo_area, caption_area = split_vertical(region, top_ratio=0.82, gap=spacing.xs)
             vid = f"photo_{index}"
             visual_ids.append(vid)
@@ -250,7 +248,7 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
                     id=vid,
                     role=LayoutElementRole.SUPPORTING_VISUAL,
                     content_type=LayoutContentType.IMAGE,
-                    content_ref=ref,
+                    content_ref=item.asset,
                     x=photo_area.x,
                     y=photo_area.y,
                     width=photo_area.width,
@@ -265,7 +263,7 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
                     id=f"annotation_{index}",
                     role=LayoutElementRole.ANNOTATION,
                     content_type=LayoutContentType.TEXT,
-                    text_content=f"{index + 1}. {label}",
+                    text_content=f"{index + 1}. {item.claim}",
                     x=caption_area.x,
                     y=caption_area.y,
                     width=caption_area.width,
@@ -374,20 +372,21 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
             max(1.2, safe.bottom - board_top - spacing.sm),
         )
 
-        refs = self._collect_refs(context, limit=_MAX_EVIDENCE_PHOTOS)
-        count = max(2, min(_MAX_EVIDENCE_PHOTOS, len(refs)))
-        refs = refs[:count]
+        items = self._collect_evidence_items(context, limit=_MAX_EVIDENCE_PHOTOS)
+        count = max(2, min(_MAX_EVIDENCE_PHOTOS, len(items))) if items else 0
+        items = items[:count]
 
-        cols = 2 if count <= 4 else 3
-        rows = (count + cols - 1) // cols
-        cells = grid_cells(board, rows=rows, cols=cols, gap_x=spacing.md, gap_y=spacing.md)
-
-        labels = context.content.key_points[:count]
-        while len(labels) < count:
-            labels.append(f"问题节点 {len(labels) + 1}")
+        if count == 0:
+            cols = 2
+            rows = 1
+            cells: list = []
+        else:
+            cols = 2 if count <= 4 else 3
+            rows = (count + cols - 1) // cols
+            cells = grid_cells(board, rows=rows, cols=cols, gap_x=spacing.md, gap_y=spacing.md)
 
         visual_ids: list[str] = []
-        for index, (cell, ref, label) in enumerate(zip(cells, refs, labels, strict=False)):
+        for index, (cell, item) in enumerate(zip(cells, items, strict=False)):
             photo_area, caption_area = split_vertical(cell, top_ratio=0.78, gap=spacing.xs)
             vid = f"photo_{index}"
             visual_ids.append(vid)
@@ -396,7 +395,7 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
                     id=vid,
                     role=LayoutElementRole.SUPPORTING_VISUAL,
                     content_type=LayoutContentType.IMAGE,
-                    content_ref=ref,
+                    content_ref=item.asset,
                     x=photo_area.x,
                     y=photo_area.y,
                     width=photo_area.width,
@@ -411,7 +410,7 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
                     id=f"annotation_{index}",
                     role=LayoutElementRole.ANNOTATION,
                     content_type=LayoutContentType.TEXT,
-                    text_content=f"{index + 1}. {label}",
+                    text_content=f"{index + 1}. {item.claim}",
                     x=caption_area.x,
                     y=caption_area.y,
                     width=caption_area.width,

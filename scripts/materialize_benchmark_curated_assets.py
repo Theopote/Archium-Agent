@@ -14,6 +14,9 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from archium.domain.enums import VisualType  # noqa: E402
+from tests.benchmark.architectural_slides.benchmark_fixture_assets import (  # noqa: E402
+    write_benchmark_fixture_asset,
+)
 from tests.benchmark.architectural_slides.case_catalog import CASE_CATALOG  # noqa: E402
 from tests.benchmark.architectural_slides.curated_assets import (  # noqa: E402
     CURATED_MANIFEST_PATH,
@@ -78,7 +81,7 @@ def _pick_source(visual_type: VisualType, index: int) -> Path | None:
     return existing[index % len(existing)]
 
 
-def build_manifest(*, force: bool) -> dict[str, str]:
+def build_manifest(*, force: bool, presentation_ready: bool = False) -> dict[str, str]:
     CURATED_ROOT.mkdir(parents=True, exist_ok=True)
     CURATED_POOL_DIR.mkdir(parents=True, exist_ok=True)
     manifest: dict[str, str] = {}
@@ -87,23 +90,38 @@ def build_manifest(*, force: bool) -> dict[str, str]:
     for entry in CASE_CATALOG:
         for asset in entry.assets:
             asset_id = str(asset.asset_id)
+            pool_name = f"{asset_id}.png"
+            dest = CURATED_POOL_DIR / pool_name
+            if presentation_ready:
+                write_benchmark_fixture_asset(
+                    dest,
+                    asset_id=asset_id,
+                    visual_type=asset.visual_type,
+                    label=asset.description,
+                )
+                manifest[asset_id] = f"pool/{pool_name}"
+                continue
+
             counter = type_counters.get(asset.visual_type, 0)
             source = _pick_source(asset.visual_type, counter)
             type_counters[asset.visual_type] = counter + 1
             if source is None:
                 continue
-            pool_name = f"{asset_id}.png"
-            dest = CURATED_POOL_DIR / pool_name
             if force or not dest.exists():
                 shutil.copy(source, dest)
             manifest[asset_id] = f"pool/{pool_name}"
 
-    payload = {
-        "version": 1,
-        "notes": (
+    notes = (
+        "Curated PNG pool generated as presentation-ready fixtures."
+        if presentation_ready
+        else (
             "Curated PNG pool copied from Phase 7 e2e project files. "
             "Used by ensure_case_assets() before placeholder fallback."
-        ),
+        )
+    )
+    payload = {
+        "version": 1,
+        "notes": notes,
         "assets": manifest,
     }
     CURATED_MANIFEST_PATH.write_text(
@@ -117,12 +135,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--force", action="store_true", help="Overwrite pool PNG copies")
     parser.add_argument(
+        "--presentation-ready",
+        action="store_true",
+        help="Generate presentation-ready fixture PNGs instead of copying e2e stubs",
+    )
+    parser.add_argument(
         "--sync-cases",
         action="store_true",
         help="Replace per-case assets/*.png from curated pool",
     )
     args = parser.parse_args(argv)
-    manifest = build_manifest(force=args.force)
+    manifest = build_manifest(force=args.force, presentation_ready=args.presentation_ready)
     print(f"Wrote {CURATED_MANIFEST_PATH} ({len(manifest)} assets)")
     if args.sync_cases:
         from tests.benchmark.architectural_slides.artifacts import (  # noqa: E402

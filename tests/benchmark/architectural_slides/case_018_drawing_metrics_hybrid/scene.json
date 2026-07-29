@@ -1,13 +1,13 @@
 {
-  "created_at": "2026-07-28T13:43:04.815778Z",
-  "updated_at": "2026-07-28T13:43:04.815778Z",
+  "created_at": "2026-07-29T13:22:26.677399Z",
+  "updated_at": "2026-07-29T13:22:26.677399Z",
   "version": 1,
-  "id": "5ef92720-bf14-420a-b0d6-e9731ea45f80",
+  "id": "8ee02000-0813-4bb7-867d-33d095cc233a",
   "schema_version": 2,
-  "slide_id": "c9839293-94f8-4ff8-aa43-304fe2f5d6bb",
+  "slide_id": "f509331b-3385-4388-9314-a005326360e4",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "d5243ee1-e0c6-45ae-b21e-57468ae7b6ec",
-  "design_system_id": "2d1d0e4b-b0d6-4463-85b3-b6d8aac56cd0",
+  "layout_plan_id": "d7114143-579a-419f-bbfd-be34c37bfee1",
+  "design_system_id": "69e64222-6ed3-43f1-a816-b172c90030af",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -38,6 +38,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -78,6 +79,7 @@
       "group_id": null,
       "shape_kind": "rectangle",
       "fill_color": "#F2F3F1",
+      "fill": null,
       "stroke_color": "#D9D5CF",
       "stroke_width": 0.0,
       "corner_radius": 0.0
@@ -129,6 +131,7 @@
       "group_id": null,
       "shape_kind": "card",
       "fill_color": "#FFFFFF",
+      "fill": null,
       "stroke_color": "#D9D5CF",
       "stroke_width": 1.0,
       "corner_radius": 0.041666666666666664
@@ -156,6 +159,7 @@
           "alignment": "center"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -196,6 +200,7 @@
       "group_id": null,
       "shape_kind": "card",
       "fill_color": "#FFFFFF",
+      "fill": null,
       "stroke_color": "#D9D5CF",
       "stroke_width": 1.0,
       "corner_radius": 0.041666666666666664
@@ -223,6 +228,7 @@
           "alignment": "center"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -263,6 +269,7 @@
       "group_id": null,
       "shape_kind": "card",
       "fill_color": "#FFFFFF",
+      "fill": null,
       "stroke_color": "#D9D5CF",
       "stroke_width": 1.0,
       "corner_radius": 0.041666666666666664
@@ -290,6 +297,7 @@
           "alignment": "center"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -335,6 +343,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -380,6 +389,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -425,6 +435,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",

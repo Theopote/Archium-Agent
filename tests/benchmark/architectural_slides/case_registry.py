@@ -18,6 +18,7 @@ from tests.benchmark.architectural_slides.case_catalog import (
     CASE_CATALOG,
     EDGE_CASE_CATALOG,
     CaseCatalogEntry,
+    catalog_evidence_items,
     get_catalog_entry,
 )
 
@@ -86,6 +87,7 @@ def _slide_content(entry: CaseCatalogEntry) -> BenchmarkSlideContent | None:
             entry.key_points,
             entry.metrics,
             entry.captions,
+            entry.evidence_items,
             entry.insight,
             entry.hero_asset_id,
             entry.supporting_asset_ids,
@@ -96,6 +98,7 @@ def _slide_content(entry: CaseCatalogEntry) -> BenchmarkSlideContent | None:
     )
     if not has_content:
         return None
+    evidence = catalog_evidence_items(entry)
     return BenchmarkSlideContent(
         key_points=list(entry.key_points) if entry.key_points else None,
         metrics=list(entry.metrics) if entry.metrics else None,
@@ -103,6 +106,7 @@ def _slide_content(entry: CaseCatalogEntry) -> BenchmarkSlideContent | None:
         insight=entry.insight,
         hero_asset_id=entry.hero_asset_id,
         supporting_asset_ids=list(entry.supporting_asset_ids) if entry.supporting_asset_ids else None,
+        evidence_items=evidence or None,
         dominant_content_type=entry.dominant_content_type,
         preferred_layout_families=list(entry.preferred_layout_families)
         if entry.preferred_layout_families

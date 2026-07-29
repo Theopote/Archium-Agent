@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "notes": "Curated PNG pool copied from Phase 7 e2e project files. Used by ensure_case_assets() before placeholder fallback.",
+  "notes": "Curated PNG pool generated as presentation-ready fixtures.",
   "assets": {
     "c0010001-0001-4001-8001-000000000001": "pool/c0010001-0001-4001-8001-000000000001.png",
     "c0020001-0001-4001-8001-000000000001": "pool/c0020001-0001-4001-8001-000000000001.png",

@@ -1,13 +1,13 @@
 {
-  "created_at": "2026-07-28T13:44:02.269911Z",
-  "updated_at": "2026-07-28T13:44:02.270908Z",
+  "created_at": "2026-07-29T13:23:25.642976Z",
+  "updated_at": "2026-07-29T13:23:25.642976Z",
   "version": 1,
-  "id": "c9ff12e4-d530-4847-a858-e2445c7bc1cb",
+  "id": "b274d80e-ffdf-4427-a8f1-f3a872080fdd",
   "schema_version": 2,
-  "slide_id": "d0335ab5-b127-4ac3-8b30-dfbc14d94114",
+  "slide_id": "ef0bede4-7f7b-420a-b3e6-29604b87f40e",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "ad198a09-cf2a-4ee5-8d87-8ad98e3be0f9",
-  "design_system_id": "0dd2fb09-bb57-4745-8c23-d5a578bf9847",
+  "layout_plan_id": "e2c2034e-09ea-4726-9cc5-580289493eb6",
+  "design_system_id": "1a5ce985-6df0-4bd6-8164-a02dff601d3d",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -38,6 +38,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -88,7 +89,9 @@
       "caption_node_id": null,
       "asset_unresolved": false,
       "icon_stroke_color": null,
-      "icon_stroke_token": ""
+      "icon_stroke_token": "",
+      "fill": null,
+      "image_mask": null
     },
     {
       "id": "case_text_0",
@@ -113,6 +116,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -163,7 +167,9 @@
       "caption_node_id": null,
       "asset_unresolved": false,
       "icon_stroke_color": null,
-      "icon_stroke_token": ""
+      "icon_stroke_token": "",
+      "fill": null,
+      "image_mask": null
     },
     {
       "id": "case_text_1",
@@ -188,6 +194,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -233,6 +240,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -278,6 +286,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",

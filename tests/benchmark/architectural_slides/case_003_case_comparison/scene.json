@@ -1,13 +1,13 @@
 {
-  "created_at": "2026-07-28T13:41:08.452801Z",
-  "updated_at": "2026-07-28T13:41:08.452801Z",
+  "created_at": "2026-07-29T13:20:26.669772Z",
+  "updated_at": "2026-07-29T13:20:26.669772Z",
   "version": 1,
-  "id": "9d88a125-c9ca-4561-a523-70105cbbee80",
+  "id": "ea1c122f-f89f-4f9f-bcae-d431b1afd152",
   "schema_version": 2,
-  "slide_id": "1346dbaf-ce44-4c80-9f0a-aa238d505ce2",
+  "slide_id": "1f5ca082-2602-44d3-87ff-228c087e654a",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "82026299-7e51-445e-82e9-e2e2943c02cd",
-  "design_system_id": "f416285c-06d7-40dd-844b-7512d2b4d0a7",
+  "layout_plan_id": "c1d90684-7564-4879-8267-94d1166819d7",
+  "design_system_id": "3e1befe0-4475-4cb5-af40-7ab32039ea09",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -38,6 +38,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -88,7 +89,9 @@
       "caption_node_id": null,
       "asset_unresolved": false,
       "icon_stroke_color": null,
-      "icon_stroke_token": ""
+      "icon_stroke_token": "",
+      "fill": null,
+      "image_mask": null
     },
     {
       "id": "case_text_0",
@@ -113,6 +116,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -163,7 +167,9 @@
       "caption_node_id": null,
       "asset_unresolved": false,
       "icon_stroke_color": null,
-      "icon_stroke_token": ""
+      "icon_stroke_token": "",
+      "fill": null,
+      "image_mask": null
     },
     {
       "id": "case_text_1",
@@ -188,6 +194,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -238,7 +245,9 @@
       "caption_node_id": null,
       "asset_unresolved": false,
       "icon_stroke_color": null,
-      "icon_stroke_token": ""
+      "icon_stroke_token": "",
+      "fill": null,
+      "image_mask": null
     },
     {
       "id": "case_text_2",
@@ -263,6 +272,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -308,6 +318,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -353,6 +364,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",

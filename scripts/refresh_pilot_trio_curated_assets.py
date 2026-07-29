@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Refresh curated pool + case assets for the architectural benchmark pilot trio."""
+"""Refresh curated pool + case assets for the architectural benchmark pilot trio.
+
+Prefer ``scripts/materialize_benchmark_curated_assets.py --presentation-ready --sync-cases``
+for the full 30-case pool.
+"""
 
 from __future__ import annotations
 
