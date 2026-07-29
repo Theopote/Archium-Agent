@@ -1,8 +1,8 @@
 {
   "benchmark": "layout_geometry",
   "case_id": "case_002_site_photos",
-  "layout_score": 0.75,
-  "layout_valid": false,
+  "layout_score": 0.975,
+  "layout_valid": true,
   "has_critical": false,
-  "passed": false
+  "passed": true
 }

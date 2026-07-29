@@ -1,13 +1,13 @@
 {
-  "created_at": "2026-07-28T13:41:40.161922Z",
-  "updated_at": "2026-07-28T13:41:40.161922Z",
+  "created_at": "2026-07-29T12:14:09.809059Z",
+  "updated_at": "2026-07-29T12:14:09.809059Z",
   "version": 1,
-  "id": "e8e5c580-492f-4516-84cb-fde1a0c8eceb",
+  "id": "bfd8ce33-3dbb-4654-921e-51bafa4d9f4b",
   "schema_version": 2,
-  "slide_id": "791deced-d7c2-457b-9b9f-b03d77642aab",
+  "slide_id": "847f779a-183c-4f95-9abe-e23fcbe3172f",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "e2c2472b-5f32-410d-a2d0-a4d5f4bfe7a4",
-  "design_system_id": "f05495a5-bab7-4f43-b697-bac053a3d734",
+  "layout_plan_id": "2c58d8de-400f-418c-895b-266e2302a71b",
+  "design_system_id": "5caac141-55ea-4f29-9e34-b596a7985823",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -21,9 +21,9 @@
       "semantic_role": "project_photo",
       "source_layout_element_id": "hero",
       "x": 0.7,
-      "y": 1.2325,
+      "y": 1.1491666666666667,
       "width": 8.600000000000001,
-      "height": 3.5091666666666668,
+      "height": 3.6341666666666668,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 1,
@@ -43,7 +43,9 @@
       "caption_node_id": null,
       "asset_unresolved": false,
       "icon_stroke_color": null,
-      "icon_stroke_token": ""
+      "icon_stroke_token": "",
+      "fill": null,
+      "image_mask": null
     },
     {
       "id": "title",
@@ -68,6 +70,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -113,6 +116,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",

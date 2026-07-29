@@ -27,7 +27,8 @@ class HeroLayoutGenerator(LayoutGenerator):
         tokens = self._layout_tokens(context)
         elements: list[LayoutElement] = []
 
-        title_h = min(self._title_band_height(context), tokens.title_band_min_height)
+        title_h = self._title_band_height(context)
+        title_width = safe.width
         elements.append(
             LayoutElement(
                 id="title",
@@ -36,7 +37,7 @@ class HeroLayoutGenerator(LayoutGenerator):
                 text_content=context.content.title,
                 x=safe.x,
                 y=safe.y,
-                width=safe.width if variant != "split" else safe.width * 0.35,
+                width=title_width,
                 height=title_h,
                 style_token="title",
                 z_index=2,

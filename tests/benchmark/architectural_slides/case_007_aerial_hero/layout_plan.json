@@ -10,16 +10,16 @@
     "source"
   ],
   "balance_strategy": "image_dominant",
-  "whitespace_ratio": 0.3381,
+  "whitespace_ratio": 0.319,
   "elements": [
     {
       "id": "hero",
       "role": "hero_visual",
       "content_type": "image",
       "x": 0.7,
-      "y": 1.232,
+      "y": 1.149,
       "w": 8.6,
-      "h": 3.509,
+      "h": 3.634,
       "fit_mode": "cover",
       "crop_policy": "cover_crop"
     },

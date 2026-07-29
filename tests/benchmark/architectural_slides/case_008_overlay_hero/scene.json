@@ -1,13 +1,13 @@
 {
-  "created_at": "2026-07-28T13:41:48.008105Z",
-  "updated_at": "2026-07-28T13:41:48.008105Z",
+  "created_at": "2026-07-29T12:14:18.103060Z",
+  "updated_at": "2026-07-29T12:14:18.103060Z",
   "version": 1,
-  "id": "094ce5ed-e9ae-4070-b4d5-54d1a0fc187c",
+  "id": "1d1b6a8f-fff3-45e0-9ca7-297d06e22d60",
   "schema_version": 2,
-  "slide_id": "9aad2354-b138-4627-8a53-a71125a3f92f",
+  "slide_id": "b3ce6625-dacb-4349-ad2d-1e7a6e734d45",
   "presentation_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "layout_plan_id": "c2dcc79e-df41-4926-b2b8-c89e1b159711",
-  "design_system_id": "b4c2741c-f7e3-4b8d-824d-f22b58d6fda3",
+  "layout_plan_id": "a4a7d3e3-c1d1-4d47-a058-61b6f505b23b",
+  "design_system_id": "c9f3c41f-4a79-4844-8662-89d5bbb1b8fe",
   "page_width": 10.0,
   "page_height": 5.625,
   "background": {
@@ -21,9 +21,9 @@
       "semantic_role": "project_photo",
       "source_layout_element_id": "hero",
       "x": 0.7,
-      "y": 1.2325,
+      "y": 1.1491666666666667,
       "width": 8.600000000000001,
-      "height": 3.5091666666666668,
+      "height": 3.6341666666666668,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 1,
@@ -43,7 +43,9 @@
       "caption_node_id": null,
       "asset_unresolved": false,
       "icon_stroke_color": null,
-      "icon_stroke_token": ""
+      "icon_stroke_token": "",
+      "fill": null,
+      "image_mask": null
     },
     {
       "id": "title",
@@ -68,6 +70,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -113,6 +116,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",
@@ -141,9 +145,9 @@
       "semantic_role": "lead_statement",
       "source_layout_element_id": "lead",
       "x": 0.8666666666666666,
-      "y": 3.162541666666667,
+      "y": 3.1479583333333334,
       "width": 3.8700000000000006,
-      "height": 1.2282083333333333,
+      "height": 1.2719583333333333,
       "rotation": 0.0,
       "opacity": 1.0,
       "z_index": 3,
@@ -158,6 +162,7 @@
           "alignment": "left"
         }
       ],
+      "runs": [],
       "font_family": "Microsoft YaHei",
       "font_family_cjk": "Microsoft YaHei",
       "font_family_latin": "Arial",

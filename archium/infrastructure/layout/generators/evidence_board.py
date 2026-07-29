@@ -203,7 +203,7 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
         spacing = context.design_system.spacing
         elements: list[LayoutElement] = []
 
-        title_h = min(self._title_band_height(context), safe.height * 0.10)
+        title_h = self._title_band_height(context)
         elements.append(
             LayoutElement(
                 id="title",
@@ -242,7 +242,7 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
 
         visual_ids: list[str] = []
         for index, (region, ref, label) in enumerate(zip(regions, refs, labels, strict=False)):
-            photo_area, caption_area = split_vertical(region, top_ratio=0.88, gap=spacing.xs)
+            photo_area, caption_area = split_vertical(region, top_ratio=0.82, gap=spacing.xs)
             vid = f"photo_{index}"
             visual_ids.append(vid)
             elements.append(
