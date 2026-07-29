@@ -1,6 +1,8 @@
 {
-  "valid": true,
-  "score": 1.0,
+  "valid": false,
+  "score": 0.917,
   "has_critical": false,
-  "rule_codes": []
+  "rule_codes": [
+    "LAYOUT.HERO_NOT_DOMINANT"
+  ]
 }

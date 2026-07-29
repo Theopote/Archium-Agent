@@ -695,12 +695,13 @@ class LayoutValidationService:
         asset_context: AssetReferenceContext,
     ) -> list[LayoutValidationIssue]:
         """Block hero slots filled with known placeholders / unreadable assets."""
+        from uuid import uuid4
+
         from archium.application.asset_presentation_readiness_service import (
             evaluate_asset_presentation_readiness,
         )
         from archium.domain.asset import Asset
         from archium.domain.enums import AssetType
-        from uuid import uuid4
 
         if plan.layout_family.value not in _HERO_DOMINANCE_FAMILIES:
             return []

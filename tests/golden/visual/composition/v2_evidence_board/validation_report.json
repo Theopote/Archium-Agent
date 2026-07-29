@@ -1,6 +1,9 @@
 {
-  "valid": true,
-  "score": 1.0,
+  "valid": false,
+  "score": 0.75,
   "has_critical": false,
-  "rule_codes": []
+  "rule_codes": [
+    "LAYOUT.INCONSISTENT_ALIGNMENT",
+    "LAYOUT.TEXT_OVERFLOW"
+  ]
 }

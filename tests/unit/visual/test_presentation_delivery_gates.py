@@ -8,11 +8,11 @@ from archium.application.visual.layout_validation_service import LayoutValidatio
 from archium.domain.enums import SlideType, VisualType
 from archium.domain.slide import SlideSpec, VisualRequirement as SlideVisualRequirement
 from archium.domain.visual import (
+    default_presentation_design_system,
     LayoutFamily,
     LayoutIssueSeverity,
     VisualContentType,
     VisualIntent,
-    default_presentation_design_system,
 )
 from archium.domain.visual.validation import (
     LAYOUT_HERO_NOT_DOMINANT,

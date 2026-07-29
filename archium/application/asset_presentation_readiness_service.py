@@ -165,9 +165,9 @@ def _detect_placeholder(asset: Asset) -> bool:
         )
         if part
     )
-    if _PLACEHOLDER_NAME_RE.search(blob) or _FILENAME_GRID_HINT_RE.search(blob):
-        return True
-    return False
+    return bool(
+        _PLACEHOLDER_NAME_RE.search(blob) or _FILENAME_GRID_HINT_RE.search(blob)
+    )
 
 
 def _density_from_metadata(asset: Asset) -> float:

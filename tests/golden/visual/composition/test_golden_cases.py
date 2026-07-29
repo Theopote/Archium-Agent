@@ -74,8 +74,11 @@ def test_v2_evidence_board_photos(intent_service: VisualIntentService) -> None:
     assert LayoutFamily.EVIDENCE_BOARD in case.intent.preferred_layout_families
 
     photos_els = case.plan.elements_by_role(LayoutElementRole.SUPPORTING_VISUAL)
-    assert len(photos_els) == 4
-    assert len({round(el.width, 3) for el in photos_els}) == 1
+    # Delivery-grade evidence board is hierarchical:
+    # 1 primary evidence photo + 2 auxiliary evidence photos.
+    assert len(photos_els) == 3
+    assert photos_els[0].area >= photos_els[1].area
+    assert photos_els[0].area >= photos_els[2].area
     assert case.plan.elements_by_role(LayoutElementRole.LEAD_STATEMENT)
     assert not case.report.has_critical()
     assert_or_update_baseline(
