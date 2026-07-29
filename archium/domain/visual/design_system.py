@@ -205,7 +205,7 @@ class LayoutThresholds(DomainModel):
     min_body_font_pt: float = Field(default=14.0, gt=0)
     min_caption_font_pt: float = Field(default=9.0, gt=0)
     min_source_font_pt: float = Field(default=8.0, gt=0)
-    min_hero_area_ratio: float = Field(default=0.45, ge=0.0, le=1.0)
+    min_hero_area_ratio: float = Field(default=0.65, ge=0.0, le=1.0)
     min_whitespace_ratio: float = Field(default=0.08, ge=0.0, le=1.0)
     max_whitespace_ratio: float = Field(default=0.60, ge=0.0, le=1.0)
     max_title_lines: int = Field(default=2, ge=1)

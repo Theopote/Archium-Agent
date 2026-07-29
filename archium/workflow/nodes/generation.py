@@ -419,6 +419,16 @@ class GenerationNodesMixin(WorkflowNodeBase):
             return {"current_step": PresentationWorkflowStep.SLIDES.value}
 
         presentation_id = UUID(state["presentation_id"])
+        if state.get("replace_existing_slides"):
+            current_slides = self._presentations.list_slides(presentation_id)
+            if current_slides:
+                from archium.application.slide_history_service import SlideHistoryService
+
+                SlideHistoryService(self._runtime.session).archive_slides_before_regeneration(
+                    current_slides,
+                    note="基于批准输入重新生成前归档",
+                )
+                self._presentations.delete_slides_for_presentation(presentation_id)
         existing = state.get("slides") or []
         if existing:
             slides = self._presentations.list_slides(presentation_id)
@@ -482,6 +492,7 @@ class GenerationNodesMixin(WorkflowNodeBase):
 
             next_state: PresentationWorkflowState = {
                 "slides": reviewed_slides,
+                "replace_existing_slides": False,
                 "current_step": PresentationWorkflowStep.SLIDES.value,
             }
             if delivery.failed_count and delivery.allows_draft_export:

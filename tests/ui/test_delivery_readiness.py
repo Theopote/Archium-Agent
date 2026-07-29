@@ -67,6 +67,26 @@ def test_missing_llm_configuration_links_directly_to_settings() -> None:
     assert mission.count("前往 AI 服务设置") >= 2
 
 
+def test_generation_page_reuses_approved_contract_instead_of_replanning() -> None:
+    source = (ROOT / "archium" / "ui" / "pages" / "workspace.py").read_text(
+        encoding="utf-8"
+    )
+    assert "本次生成输入" in source
+    assert "页面生成会复用这些已批准版本" in source
+    assert "reuse_presentation_id=context.presentation.id" in source
+    assert "require_slides_review=True" in source
+    assert "按批准输入生成页面" in source
+
+
+def test_missing_deck_qa_is_not_reported_as_passed() -> None:
+    source = (
+        ROOT / "archium" / "ui" / "delivery" / "delivery_review_panel.py"
+    ).read_text(encoding="utf-8")
+    assert "qa_executed = deck_qa is not None" in source
+    assert "Deck QA 尚未执行" in source
+    assert "deck_qa is None or" not in source
+
+
 def test_delivery_records_survive_new_session(
     test_settings: Settings,
     tmp_path: Path,

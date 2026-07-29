@@ -95,13 +95,26 @@ def build_delivery_checklist(
         )
 
     deck_qa = _deck_qa_report(context)
-    qa_ok = deck_qa is None or int(deck_qa.get("blocker_count") or 0) == 0
+    qa_executed = deck_qa is not None
+    blocker_count = int(deck_qa.get("blocker_count") or 0) if deck_qa else 0
+    qa_ok = (
+        qa_executed
+        and blocker_count == 0
+        and verdict.deck_qa_blocker_count == 0
+    )
+    qa_detail = (
+        "Deck QA 无阻塞"
+        if qa_ok
+        else "Deck QA 尚未执行"
+        if not qa_executed
+        else "存在需处理的 QA 项"
+    )
     items.append(
         DeliveryCheckItem(
             label="整套一致性",
-            passed=qa_ok and verdict.deck_qa_blocker_count == 0,
-            detail="Deck QA 无阻塞" if qa_ok else "存在需处理的 QA 项",
-            tone="ok" if qa_ok else "warn",
+            passed=qa_ok,
+            detail=qa_detail,
+            tone="ok" if qa_ok else "info" if not qa_executed else "warn",
         )
     )
     items.append(

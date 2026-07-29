@@ -69,6 +69,8 @@ class PresentationWorkflowState(TypedDict, total=False):
     require_storyline_review: bool
     require_outline_review: bool
     require_slides_review: bool
+    reuse_approved_plan: bool
+    replace_existing_slides: bool
     review_gate: str | None
     slide_review_issues: list[str]
     current_step: str

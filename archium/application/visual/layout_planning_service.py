@@ -780,6 +780,29 @@ class LayoutPlanningService:
                     ]
         grammar_forbidden = forbidden_families_for_intent(intent)
         decisions: list[LayoutDecisionDraft] = []
+        # No presentation-ready hero asset → text monument cover, not a tiny image
+        # floating in empty whitespace.
+        hero_families = {LayoutFamily.HERO, LayoutFamily.DRAWING_FOCUS}
+        prefers_hero = bool(
+            set(intent.preferred_layout_families) & hero_families
+            or intent.dominant_content_type
+            in {
+                VisualContentType.HERO_IMAGE,
+                VisualContentType.SITE_PLAN,
+                VisualContentType.FLOOR_PLAN,
+                VisualContentType.SECTION,
+                VisualContentType.ELEVATION,
+            }
+        )
+        if prefers_hero and intent.hero_asset_id is None and asset_count == 0:
+            decisions.append(
+                LayoutDecisionDraft(
+                    layout_family=LayoutFamily.TEXTUAL_ARGUMENT.value,
+                    layout_variant="monument",
+                    reading_order=list(intent.reading_order),
+                    density_adjustment=DensityLevel.SPACIOUS.value,
+                )
+            )
         if (
             deck_directive is not None
             and deck_directive.transition_mode
@@ -789,7 +812,7 @@ class LayoutPlanningService:
             decisions.append(
                 LayoutDecisionDraft(
                     layout_family=LayoutFamily.HERO.value,
-                    layout_variant="split",
+                    layout_variant="full_bleed",
                     hero_content_ref=(str(intent.hero_asset_id) if intent.hero_asset_id else None),
                     supporting_content_refs=[
                         str(asset_id) for asset_id in intent.supporting_asset_ids

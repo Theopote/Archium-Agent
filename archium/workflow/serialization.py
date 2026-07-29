@@ -167,6 +167,8 @@ def snapshot_state(state: PresentationWorkflowState) -> dict[str, Any]:
         "require_storyline_review": state.get("require_storyline_review", False),
         "require_outline_review": state.get("require_outline_review", True),
         "require_slides_review": state.get("require_slides_review", False),
+        "reuse_approved_plan": state.get("reuse_approved_plan", False),
+        "replace_existing_slides": state.get("replace_existing_slides", False),
         "review_gate": state.get("review_gate"),
         "source_document_count": state.get("source_document_count", 0),
         "source_chunk_count": state.get("source_chunk_count", 0),

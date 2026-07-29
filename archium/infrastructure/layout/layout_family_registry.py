@@ -66,7 +66,7 @@ _REGISTRY: dict[LayoutFamily, LayoutFamilyDefinition] = {
         min_assets=1,
         max_assets=2,
         variants=("full_bleed", "split", "overlay"),
-        default="split",
+        default="full_bleed",
         required=(
             LayoutElementRole.TITLE,
             LayoutElementRole.HERO_VISUAL,
@@ -83,9 +83,15 @@ _REGISTRY: dict[LayoutFamily, LayoutFamilyDefinition] = {
         LayoutFamily.EVIDENCE_BOARD,
         content={VisualContentType.PHOTO_EVIDENCE, VisualContentType.MIXED},
         min_assets=2,
-        max_assets=8,
-        variants=("photo_grid", "numbered_grid", "journey_with_photos", "diagnosis_split"),
-        default="numbered_grid",
+        max_assets=3,
+        variants=(
+            "hierarchical",
+            "photo_grid",
+            "numbered_grid",
+            "journey_with_photos",
+            "diagnosis_split",
+        ),
+        default="hierarchical",
         required=(
             LayoutElementRole.TITLE,
             LayoutElementRole.SUPPORTING_VISUAL,
@@ -213,7 +219,7 @@ _REGISTRY: dict[LayoutFamily, LayoutFamilyDefinition] = {
         content={VisualContentType.TEXT_ARGUMENT, VisualContentType.MIXED},
         min_assets=0,
         max_assets=1,
-        variants=("lead_and_points", "quote_argument", "two_column_text"),
+        variants=("lead_and_points", "quote_argument", "two_column_text", "monument"),
         default="lead_and_points",
         required=(
             LayoutElementRole.TITLE,

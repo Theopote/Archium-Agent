@@ -80,6 +80,45 @@ class TextualArgumentLayoutGenerator(LayoutGenerator):
                     style_token="caption",
                 )
             )
+        elif context.variant == "monument":
+            # Text-only memorial cover when no presentation-ready hero asset exists.
+            lead_h = min(
+                body.height * 0.55,
+                self._text_band_height(
+                    context,
+                    context.content.message or context.content.title,
+                    "title",
+                    box_width_in=body.width * 0.82,
+                    min_height=body.height * 0.28,
+                ),
+            )
+            elements.append(
+                LayoutElement(
+                    id="lead",
+                    role=LayoutElementRole.LEAD_STATEMENT,
+                    content_type=LayoutContentType.TEXT,
+                    text_content=context.content.message or context.content.title,
+                    x=body.x,
+                    y=body.y + body.height * 0.18,
+                    width=body.width * 0.88,
+                    height=lead_h,
+                    style_token="title",
+                )
+            )
+            subtitle = context.content.key_points[0] if context.content.key_points else "缺少可用主视觉素材"
+            elements.append(
+                LayoutElement(
+                    id="body",
+                    role=LayoutElementRole.BODY_TEXT,
+                    content_type=LayoutContentType.TEXT,
+                    text_content=subtitle,
+                    x=body.x,
+                    y=body.y + body.height * 0.18 + lead_h + spacing.md,
+                    width=body.width * 0.7,
+                    height=0.55,
+                    style_token="subtitle",
+                )
+            )
         elif context.variant == "two_column_text":
             left, right = split_horizontal(body, left_ratio=0.48, gap=spacing.lg)
             elements.append(

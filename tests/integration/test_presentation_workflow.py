@@ -191,3 +191,68 @@ def test_workflow_resume_completed_run_is_idempotent(
     assert second.succeeded
     assert second.workflow_run.status == WorkflowStatus.COMPLETED
     assert len(mock_llm.calls) == call_count
+
+def test_reuse_approved_plan_preserves_human_approved_artifacts(
+    workflow_service: PresentationWorkflowService,
+    project_with_context: Project,
+    request_payload: PresentationRequest,
+    db_session: Session,
+) -> None:
+    first = workflow_service.run(
+        project_with_context.id,
+        request_payload,
+        require_outline_review=False,
+    )
+    assert first.brief is not None
+    assert first.storyline is not None
+    repo = PresentationRepository(db_session)
+    first_presentation = repo.get_presentation(first.presentation.id)
+    assert first_presentation is not None
+    outlines = repo.list_outlines(first.presentation.id)
+    assert outlines
+    first_outline = outlines[0]
+    from archium.domain.slide_intent import SlideIntent
+
+    first_outline.page_intents = [
+        SlideIntent(
+            order=slide.order,
+            chapter_id=slide.chapter_id,
+            page_task=slide.title,
+            central_conclusion=slide.message,
+        )
+        for slide in first.slides
+    ]
+    repo.save_outline(first_outline)
+    first_presentation.current_outline_id = first_outline.id
+    repo.update_presentation(first_presentation)
+
+    from archium.application.slide_design_brief_service import SlideDesignBriefService
+
+    briefs = SlideDesignBriefService(db_session).generate_all(first_outline.id)
+    assert briefs
+    SlideDesignBriefService(db_session).approve_all(first_outline.id)
+    approved_outline = repo.get_outline(first_outline.id)
+    assert approved_outline is not None
+    approved_outline.approve()
+    repo.save_outline(approved_outline)
+    db_session.commit()
+
+    second = workflow_service.run(
+        project_with_context.id,
+        request_payload,
+        reuse_presentation_id=first.presentation.id,
+        require_brief_review=False,
+        require_storyline_review=False,
+        require_outline_review=False,
+        require_slides_review=True,
+    )
+
+    assert second.presentation.id == first.presentation.id
+    assert second.brief is not None and second.brief.id == first.brief.id
+    assert second.storyline is not None and second.storyline.id == first.storyline.id
+    second_presentation = repo.get_presentation(second.presentation.id)
+    assert second_presentation is not None
+    assert second_presentation.current_outline_id == first_outline.id
+    assert second.workflow_run.state["reuse_approved_plan"] is True
+    assert second.awaiting_review
+    assert second.workflow_run.state["review_gate"] == "slides"

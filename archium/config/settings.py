@@ -749,7 +749,7 @@ class Settings(BaseSettings):
         description="Minimum source text size (pt) for LayoutValidator.",
     )
     layout_min_hero_area_ratio: float = Field(
-        default=0.45,
+        default=0.65,
         ge=0.0,
         le=1.0,
         description="Minimum hero area ratio of safe area for hero/drawing pages.",

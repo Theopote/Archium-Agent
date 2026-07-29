@@ -187,9 +187,14 @@ class TestGenerators:
             ),
         )
         photos = plan.elements_by_role(LayoutElementRole.SUPPORTING_VISUAL)
-        assert len(photos) == 4
-        widths = {round(photo.width, 3) for photo in photos}
-        assert len(widths) == 1
+        assert len(photos) == 3  # hard cap — hierarchical board, not equal 2×2
+        assert plan.balance_strategy == "evidence_hierarchy"
+        primary = plan.element_by_id("photo_0")
+        aux = plan.element_by_id("photo_1")
+        assert primary is not None and aux is not None
+        assert primary.area > aux.area
+        lead = plan.element_by_id("lead")
+        assert lead is not None
 
     def test_comparative_matrix_equal_columns(self) -> None:
         solver = LayoutSolver()

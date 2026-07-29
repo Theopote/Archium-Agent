@@ -73,6 +73,19 @@ def _tokenize_asset(asset: Asset) -> set[str]:
     return _tokenize(_asset_search_text(asset)) | {tag for tag in asset.tags if tag}
 
 
+_HERO_LIKE_VISUALS = frozenset(
+    {
+        VisualType.SITE_PLAN,
+        VisualType.FLOOR_PLAN,
+        VisualType.SECTION,
+        VisualType.ELEVATION,
+        VisualType.RENDERING,
+        VisualType.MAP,
+    }
+)
+_EVIDENCE_LIKE_VISUALS = frozenset({VisualType.SITE_PHOTO, VisualType.REFERENCE_CASE})
+
+
 def score_asset_for_requirement(
     requirement: VisualRequirement,
     asset: Asset,
@@ -81,6 +94,24 @@ def score_asset_for_requirement(
 ) -> float:
     """Score how well an asset satisfies a visual requirement."""
     if requirement.type == VisualType.TEXT_ONLY:
+        return 0.0
+
+    from archium.application.asset_presentation_readiness_service import (
+        evaluate_asset_presentation_readiness,
+        is_evidence_slot_eligible,
+        is_hero_slot_eligible,
+    )
+
+    slot = "hero" if requirement.type in _HERO_LIKE_VISUALS else None
+    if requirement.type in _EVIDENCE_LIKE_VISUALS:
+        slot = "evidence"
+    readiness = evaluate_asset_presentation_readiness(asset, intended_slot=slot)
+    if readiness.is_placeholder:
+        return 0.0
+    if requirement.type in _HERO_LIKE_VISUALS and not is_hero_slot_eligible(readiness):
+        # Unsuitable / reference-only assets must not win formal hero / 总图 slots.
+        return 0.0
+    if requirement.type in _EVIDENCE_LIKE_VISUALS and not is_evidence_slot_eligible(readiness):
         return 0.0
 
     score = 0.0
@@ -103,9 +134,12 @@ def score_asset_for_requirement(
 
     if asset.quality_score is not None:
         score += 0.2 * asset.quality_score
+    score += 0.15 * readiness.visual_information_density
 
     if asset.is_low_resolution:
         score -= 0.15
+    if not readiness.readable_at_slide_scale:
+        score -= 0.25
 
     score += drawing_type_match_adjustment(requirement, qa_report)
 

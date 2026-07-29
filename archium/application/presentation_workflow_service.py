@@ -87,7 +87,10 @@ class PresentationWorkflowService:
     ) -> PresentationWorkflowState:
         """Invoke LangGraph under WF-002 checkpoint serialization."""
         with self._checkpointer_manager.serialized_execution(thread_id):
-            return self._graph.invoke(state, thread_id=thread_id, resume=resume)
+            return cast(
+                PresentationWorkflowState,
+                self._graph.invoke(state, thread_id=thread_id, resume=resume),
+            )
 
     def run(
         self,
@@ -107,6 +110,7 @@ class PresentationWorkflowService:
         require_outline_review: bool = True,
         require_slides_review: bool = False,
         actor_id: str | None = None,
+        reuse_presentation_id: UUID | None = None,
     ) -> WorkflowRunResult:
         workflow_run = self.prepare_run(
             project_id,
@@ -124,6 +128,7 @@ class PresentationWorkflowService:
             require_outline_review=require_outline_review,
             require_slides_review=require_slides_review,
             actor_id=actor_id,
+            reuse_presentation_id=reuse_presentation_id,
         )
         return self.execute_prepared(workflow_run.id)
 
@@ -146,6 +151,7 @@ class PresentationWorkflowService:
         require_slides_review: bool = False,
         bypass_cognition_gate: bool = False,
         actor_id: str | None = None,
+        reuse_presentation_id: UUID | None = None,
     ) -> WorkflowRun:
         """Create presentation + WorkflowRun records without invoking the graph."""
         from archium.application.project_permission_gate import require_project_permission
@@ -187,9 +193,37 @@ class PresentationWorkflowService:
                 gate.readiness.verdict.value,
             )
 
-        presentation = self._runtime.presentation_service.create_presentation(
-            project_id, request, actor_id=actor_id
-        )
+        if reuse_presentation_id is None:
+            presentation = self._runtime.presentation_service.create_presentation(
+                project_id, request, actor_id=actor_id
+            )
+        else:
+            presentation = PresentationRepository(self._session).get_presentation(
+                reuse_presentation_id
+            )
+            if presentation is None or presentation.project_id != project_id:
+                raise WorkflowError("无法复用所选汇报：汇报不存在或不属于当前项目")
+            context = PresentationReviewService(self._session).get_review_context(
+                presentation.id
+            )
+            if (
+                context is None
+                or context.brief is None
+                or context.storyline is None
+                or context.outline is None
+            ):
+                raise WorkflowError("批准输入不完整：需要 Brief、Storyline 与 Outline")
+            from archium.application.slide_design_brief_service import design_briefs_ready
+            from archium.domain.enums import ApprovalStatus
+
+            if any(
+                item.approval_status != ApprovalStatus.APPROVED
+                for item in (context.brief, context.storyline, context.outline)
+            ):
+                raise WorkflowError("生成前必须批准 Brief、Storyline 与 Outline")
+            briefs_ready, missing = design_briefs_ready(context.outline)
+            if not briefs_ready:
+                raise WorkflowError("页面设计摘要尚未就绪：" + "；".join(missing))
         resolved_preview_images = (
             export_preview_images
             if export_preview_images is not None
@@ -221,6 +255,8 @@ class PresentationWorkflowService:
                     "require_storyline_review": require_storyline_review,
                     "require_outline_review": require_outline_review,
                     "require_slides_review": require_slides_review,
+                    "reuse_approved_plan": reuse_presentation_id is not None,
+                    "replace_existing_slides": reuse_presentation_id is not None,
                     "cognition_gate": gate.as_dict(),
                 },
             )
@@ -418,7 +454,7 @@ class PresentationWorkflowService:
     ) -> PresentationWorkflowState:
         if run.presentation_id is None:
             raise WorkflowError(f"Workflow run {run.id} is missing presentation_id")
-        return initial_workflow_state(
+        state = initial_workflow_state(
             project_id=str(run.project_id),
             presentation_id=str(run.presentation_id),
             workflow_run_id=str(run.id),
@@ -437,3 +473,26 @@ class PresentationWorkflowService:
             require_outline_review=bool(run.state.get("require_outline_review", True)),
             require_slides_review=bool(run.state.get("require_slides_review", False)),
         )
+        if bool(run.state.get("reuse_approved_plan", False)):
+            context = PresentationReviewService(self._session).get_review_context(
+                presentation.id
+            )
+            if (
+                context is None
+                or context.brief is None
+                or context.storyline is None
+                or context.outline is None
+            ):
+                raise WorkflowError("批准输入快照已失效，请返回大纲阶段检查")
+            state.update(
+                {
+                    "brief": context.brief,
+                    "storyline": context.storyline,
+                    "outline": context.outline,
+                    "reuse_approved_plan": True,
+                    "replace_existing_slides": bool(
+                        run.state.get("replace_existing_slides", False)
+                    ),
+                }
+            )
+        return state

@@ -51,7 +51,7 @@ class DrawingFocusLayoutGenerator(LayoutGenerator):
             point for point in context.content.key_points[:3]
         ]
         annotations = (
-            list(context.content.key_points[:4])
+            list(context.content.key_points[:3])
             if variant == "drawing_with_annotations"
             else []
         )

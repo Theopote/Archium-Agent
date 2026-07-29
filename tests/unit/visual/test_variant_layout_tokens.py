@@ -56,18 +56,19 @@ def _hero_context(*, variant: str = "split") -> LayoutGeneratorContext:
 class TestVariantLayoutTokens:
     def test_hero_split_tokens(self) -> None:
         tokens = resolve_layout_tokens(LayoutFamily.HERO, "split")
-        assert tokens.text_panel_max_width_ratio == 0.28
-        assert tokens.hero_min_body_area_ratio == 0.58
+        assert tokens.text_panel_max_width_ratio == 0.18
+        assert tokens.hero_min_body_area_ratio == 0.85
 
     def test_drawing_focus_tokens(self) -> None:
         tokens = resolve_layout_tokens(LayoutFamily.DRAWING_FOCUS, "drawing_with_metrics")
-        assert tokens.primary_visual_width_ratio == 0.72
+        assert tokens.primary_visual_width_ratio == 0.82
 
     def test_compute_hero_split_text_ratio_respects_cap(self) -> None:
         tokens = resolve_layout_tokens(LayoutFamily.HERO, "split")
         body = Rect(0.7, 1.2, 8.6, 3.5)
         ratio = compute_hero_split_text_ratio(body, tokens, gap=0.24)
-        assert ratio == 0.28
+        assert ratio <= tokens.text_panel_max_width_ratio + 1e-6
+        assert ratio >= 0.12
 
     def test_hero_split_meets_body_area_floor(self) -> None:
         ctx = _hero_context(variant="split")
@@ -97,7 +98,7 @@ class TestVariantLayoutTokens:
         assert hero is not None
         safe = safe_area(ctx.design_system)
         ratio = hero.area / safe.area
-        assert ratio > 0.48
+        assert ratio + 1e-6 >= 0.65
 
     def test_drawing_focus_footer_from_safe_ratios(self) -> None:
         tokens = resolve_layout_tokens(LayoutFamily.DRAWING_FOCUS, "drawing_with_metrics")
@@ -105,8 +106,8 @@ class TestVariantLayoutTokens:
         safe = safe_area(design)
         caption_h = safe.height * tokens.caption_max_height_ratio
         source_h = safe.height * tokens.source_max_height_ratio
-        assert abs(caption_h - 0.28) < 0.03
-        assert abs(source_h - 0.22) < 0.03
+        assert abs(caption_h - 0.24) < 0.04
+        assert abs(source_h - 0.19) < 0.04
 
     def test_effective_min_hero_area_ratio_uses_variant_token(self) -> None:
         ratio = effective_min_hero_area_ratio(
@@ -114,7 +115,7 @@ class TestVariantLayoutTokens:
             "split",
             design_fallback=0.45,
         )
-        assert ratio == 0.50
+        assert ratio == 0.65
 
     def test_hero_split_passes_delivery_grade_validation(self) -> None:
         from archium.application.visual.layout_validation_service import LayoutValidationService

@@ -20,6 +20,11 @@ from archium.infrastructure.layout.geometry import (
     split_vertical,
 )
 
+# Delivery floors for evidence readability (share of safe-area).
+_PRIMARY_MIN_SAFE_RATIO = 0.35
+_AUX_MIN_SAFE_RATIO = 0.15
+_MAX_EVIDENCE_PHOTOS = 3
+
 
 class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
     """Numbered photo evidence board (presentation layout — not IntentEvidence)."""
@@ -29,10 +34,18 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
     def generate(self, context: LayoutGeneratorContext) -> LayoutPlan:
         if context.variant == "diagnosis_split":
             return self._generate_diagnosis_split(context)
-        return self._generate_numbered_grid(context)
+        # Default and grid aliases: hierarchical 1+2 + conclusion (not equal 2×2).
+        return self._generate_hierarchical(context)
+
+    def _collect_refs(self, context: LayoutGeneratorContext, *, limit: int) -> list[str]:
+        refs = list(context.content.supporting_asset_refs)
+        if context.content.hero_asset_ref and context.content.hero_asset_ref not in refs:
+            refs = [context.content.hero_asset_ref, *refs]
+        refs = refs[:limit] or [f"photo_{i}" for i in range(min(2, limit))]
+        return refs[: max(1, min(limit, len(refs)))]
 
     def _generate_diagnosis_split(self, context: LayoutGeneratorContext) -> LayoutPlan:
-        """现状问题页：左照片、右问题标签、底部分析结论。"""
+        """现状问题页：左主证据、右辅助图+问题标签、底部分析结论。"""
         safe = self._safe(context.design_system)
         spacing = context.design_system.spacing
         elements: list[LayoutElement] = []
@@ -52,47 +65,60 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
             )
         )
 
-        analysis_h = self._text_band_height(
-            context,
-            context.content.message,
-            "subtitle",
-            box_width_in=safe.width,
-            min_height=0.45,
-        )
+        analysis_h = max(safe.height * 0.10, 0.45)
         analysis_h = min(analysis_h, 0.75)
         board_top = safe.y + title_h + spacing.sm
         board_bottom = safe.bottom - analysis_h - spacing.sm
         board = Rect(safe.x, board_top, safe.width, max(1.0, board_bottom - board_top))
-        photo_panel, tag_panel = split_horizontal(board, left_ratio=0.58, gap=spacing.lg)
+        photo_panel, tag_panel = split_horizontal(board, left_ratio=0.62, gap=spacing.lg)
 
-        refs = list(context.content.supporting_asset_refs)
-        if context.content.hero_asset_ref and context.content.hero_asset_ref not in refs:
-            refs = [context.content.hero_asset_ref, *refs]
-        refs = refs[:4] or [f"photo_{i}" for i in range(2)]
-        count = max(1, min(4, len(refs)))
-        refs = refs[:count]
-
-        cols = 2 if count >= 2 else 1
-        rows = (count + cols - 1) // cols
-        cells = grid_cells(photo_panel, rows=rows, cols=cols, gap_x=spacing.sm, gap_y=spacing.sm)
+        refs = self._collect_refs(context, limit=_MAX_EVIDENCE_PHOTOS)
+        count = len(refs)
+        labels = list(context.content.key_points[:count])
+        while len(labels) < count:
+            labels.append(f"问题 {len(labels) + 1}")
 
         visual_ids: list[str] = []
+        if count == 1:
+            cells = [photo_panel]
+        else:
+            primary, aux_stack = split_horizontal(photo_panel, left_ratio=0.58, gap=spacing.sm)
+            if count == 2:
+                cells = [primary, aux_stack]
+            else:
+                aux1, aux2 = split_vertical(aux_stack, top_ratio=0.5, gap=spacing.sm)
+                cells = [primary, aux1, aux2]
+
         for index, (cell, ref) in enumerate(zip(cells, refs, strict=False)):
             vid = f"photo_{index}"
             visual_ids.append(vid)
+            photo_area, caption_area = split_vertical(cell, top_ratio=0.82, gap=spacing.xs)
             elements.append(
                 LayoutElement(
                     id=vid,
                     role=LayoutElementRole.SUPPORTING_VISUAL,
                     content_type=LayoutContentType.IMAGE,
                     content_ref=ref,
-                    x=cell.x,
-                    y=cell.y,
-                    width=cell.width,
-                    height=cell.height,
+                    x=photo_area.x,
+                    y=photo_area.y,
+                    width=photo_area.width,
+                    height=photo_area.height,
                     fit_mode=ImageFit.COVER,
                     crop_policy=CropPolicy.COVER_CROP,
                     style_token="photo",
+                )
+            )
+            elements.append(
+                LayoutElement(
+                    id=f"annotation_{index}",
+                    role=LayoutElementRole.ANNOTATION,
+                    content_type=LayoutContentType.TEXT,
+                    text_content=f"{index + 1}. {labels[index]}",
+                    x=caption_area.x,
+                    y=caption_area.y,
+                    width=caption_area.width,
+                    height=caption_area.height,
+                    style_token="caption",
                 )
             )
 
@@ -156,14 +182,6 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
                 priority=ConstraintPriority.REQUIRED,
             ),
         ]
-        if len(visual_ids) >= 2:
-            constraints.append(
-                LayoutConstraint(
-                    constraint_type=LayoutConstraintType.EQUAL_WIDTH,
-                    element_ids=visual_ids,
-                    priority=ConstraintPriority.HIGH,
-                )
-            )
 
         reading = ["title", *visual_ids, "problem_tags", "analysis"]
         if context.content.source_text:
@@ -176,10 +194,144 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
             hero_element_id=visual_ids[0] if visual_ids else None,
             reading_order=reading,
             balance_strategy="diagnosis_split",
-            grid_rows=rows,
+            grid_rows=None,
+        )
+
+    def _generate_hierarchical(self, context: LayoutGeneratorContext) -> LayoutPlan:
+        """1 primary (~45%) + 2 aux (~25% each) + conclusion bar (~10%)."""
+        safe = self._safe(context.design_system)
+        spacing = context.design_system.spacing
+        elements: list[LayoutElement] = []
+
+        title_h = min(self._title_band_height(context), safe.height * 0.10)
+        elements.append(
+            LayoutElement(
+                id="title",
+                role=LayoutElementRole.TITLE,
+                content_type=LayoutContentType.TEXT,
+                text_content=context.content.title,
+                x=safe.x,
+                y=safe.y,
+                width=safe.width,
+                height=title_h,
+                style_token="title",
+            )
+        )
+
+        conclusion_h = max(safe.height * 0.10, 0.42)
+        board_top = safe.y + title_h + spacing.sm
+        board_bottom = safe.bottom - conclusion_h - spacing.sm
+        board = Rect(safe.x, board_top, safe.width, max(1.2, board_bottom - board_top))
+
+        refs = self._collect_refs(context, limit=_MAX_EVIDENCE_PHOTOS)
+        count = len(refs)
+        labels = list(context.content.key_points[:count])
+        while len(labels) < count:
+            labels.append(f"问题节点 {len(labels) + 1}")
+
+        # Geometry: primary left ~62% of board width; two aux stacked on the right.
+        if count == 1:
+            regions = [board]
+        elif count == 2:
+            primary, aux = split_horizontal(board, left_ratio=0.62, gap=spacing.md)
+            regions = [primary, aux]
+        else:
+            primary, aux_col = split_horizontal(board, left_ratio=0.62, gap=spacing.md)
+            aux1, aux2 = split_vertical(aux_col, top_ratio=0.5, gap=spacing.md)
+            regions = [primary, aux1, aux2]
+
+        visual_ids: list[str] = []
+        for index, (region, ref, label) in enumerate(zip(regions, refs, labels, strict=False)):
+            photo_area, caption_area = split_vertical(region, top_ratio=0.88, gap=spacing.xs)
+            vid = f"photo_{index}"
+            visual_ids.append(vid)
+            elements.append(
+                LayoutElement(
+                    id=vid,
+                    role=LayoutElementRole.SUPPORTING_VISUAL,
+                    content_type=LayoutContentType.IMAGE,
+                    content_ref=ref,
+                    x=photo_area.x,
+                    y=photo_area.y,
+                    width=photo_area.width,
+                    height=photo_area.height,
+                    fit_mode=ImageFit.COVER,
+                    crop_policy=CropPolicy.COVER_CROP,
+                    style_token="photo",
+                )
+            )
+            elements.append(
+                LayoutElement(
+                    id=f"annotation_{index}",
+                    role=LayoutElementRole.ANNOTATION,
+                    content_type=LayoutContentType.TEXT,
+                    text_content=f"{index + 1}. {label}",
+                    x=caption_area.x,
+                    y=caption_area.y,
+                    width=caption_area.width,
+                    height=caption_area.height,
+                    style_token="caption",
+                )
+            )
+
+        elements.append(
+            LayoutElement(
+                id="lead",
+                role=LayoutElementRole.LEAD_STATEMENT,
+                content_type=LayoutContentType.TEXT,
+                text_content=context.content.message,
+                x=safe.x,
+                y=safe.bottom - conclusion_h,
+                width=safe.width,
+                height=conclusion_h,
+                style_token="subtitle",
+            )
+        )
+
+        if context.content.source_text:
+            page = context.design_system.page
+            elements.append(
+                LayoutElement(
+                    id="source",
+                    role=LayoutElementRole.SOURCE,
+                    content_type=LayoutContentType.TEXT,
+                    text_content=context.content.source_text,
+                    x=safe.x,
+                    y=page.height - page.margin_bottom - 0.22,
+                    width=safe.width * 0.7,
+                    height=0.22,
+                    style_token="source",
+                )
+            )
+
+        constraints = [
+            LayoutConstraint(
+                constraint_type=LayoutConstraintType.CONTAIN_WITHIN_SAFE_AREA,
+                element_ids=[el.id for el in elements],
+                priority=ConstraintPriority.REQUIRED,
+            ),
+            LayoutConstraint(
+                constraint_type=LayoutConstraintType.NO_OVERLAP,
+                element_ids=[el.id for el in elements],
+                priority=ConstraintPriority.REQUIRED,
+            ),
+        ]
+        reading = ["title", *visual_ids, "lead"]
+        if context.content.source_text:
+            reading.append("source")
+
+        return self._build_plan(
+            context,
+            elements=elements,
+            constraints=constraints,
+            hero_element_id=visual_ids[0] if visual_ids else None,
+            reading_order=reading,
+            balance_strategy="evidence_hierarchy",
+            grid_rows=None,
         )
 
     def _generate_numbered_grid(self, context: LayoutGeneratorContext) -> LayoutPlan:
+        """Legacy equal grid — kept for explicit variant callers / tests."""
         safe = self._safe(context.design_system)
         spacing = context.design_system.spacing
         elements: list[LayoutElement] = []
@@ -222,11 +374,8 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
             max(1.2, safe.bottom - board_top - spacing.sm),
         )
 
-        refs = list(context.content.supporting_asset_refs)
-        if context.content.hero_asset_ref and context.content.hero_asset_ref not in refs:
-            refs = [context.content.hero_asset_ref, *refs]
-        refs = refs[:4] or [f"photo_{i}" for i in range(4)]
-        count = max(2, min(4, len(refs)))
+        refs = self._collect_refs(context, limit=_MAX_EVIDENCE_PHOTOS)
+        count = max(2, min(_MAX_EVIDENCE_PHOTOS, len(refs)))
         refs = refs[:count]
 
         cols = 2 if count <= 4 else 3
@@ -326,3 +475,8 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
 
 # KN-012 legacy alias — prefer PresentationEvidenceBoardLayoutGenerator in new code.
 EvidenceBoardLayoutGenerator = PresentationEvidenceBoardLayoutGenerator
+
+# Re-export floors for validators / tests.
+EVIDENCE_PRIMARY_MIN_SAFE_RATIO = _PRIMARY_MIN_SAFE_RATIO
+EVIDENCE_AUX_MIN_SAFE_RATIO = _AUX_MIN_SAFE_RATIO
+EVIDENCE_MAX_PHOTOS = _MAX_EVIDENCE_PHOTOS

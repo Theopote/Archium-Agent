@@ -20,11 +20,14 @@ from archium.domain.visual.enums import (
 )
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.validation import (
+    LAYOUT_ASSET_NOT_PRESENTATION_READY,
     LAYOUT_DRAWING_CROPPED,
     LAYOUT_ELEMENT_OUTSIDE_PAGE,
     LAYOUT_ELEMENT_OUTSIDE_SAFE_AREA,
     LAYOUT_ELEMENT_OVERLAP,
+    LAYOUT_EVIDENCE_IMAGE_TOO_SMALL,
     LAYOUT_EXCESSIVE_DENSITY,
+    LAYOUT_EXCESSIVE_WHITESPACE,
     LAYOUT_FONT_TOO_SMALL,
     LAYOUT_HERO_ASSET_MISSING,
     LAYOUT_HERO_NOT_DOMINANT,
@@ -37,6 +40,8 @@ from archium.domain.visual.validation import (
     LAYOUT_MISSING_TITLE,
     LAYOUT_TECHNICAL_DRAWING_MISSING,
     LAYOUT_TEXT_OVERFLOW,
+    LAYOUT_TITLE_BAND_TOO_LARGE,
+    LAYOUT_TOO_MANY_DECORATIONS,
     LAYOUT_UNRESOLVED_ASSET_PATH,
     LAYOUT_UNSUPPORTED_IMAGE_FORMAT,
     LayoutScore,
@@ -54,6 +59,12 @@ _ASSET_CONTENT_TYPES = frozenset(
         LayoutContentType.CHART,
     }
 )
+_HERO_DOMINANCE_FAMILIES = frozenset({"drawing_focus", "hero"})
+_MAX_DECORATIVE_ELEMENTS = 3
+_MAX_TITLE_SUBTITLE_AREA_RATIO = 0.20
+_EVIDENCE_PRIMARY_MIN_RATIO = 0.28
+_EVIDENCE_AUX_MIN_RATIO = 0.10
+
 
 
 class LayoutValidationService:
@@ -102,9 +113,13 @@ class LayoutValidationService:
                 thresholds.max_whitespace_ratio,
             )
         )
+        issues.extend(self._check_title_band_budget(layout_plan, safe))
+        issues.extend(self._check_decorative_budget(layout_plan))
+        issues.extend(self._check_evidence_image_sizes(layout_plan, safe))
         issues.extend(self._check_alignment(layout_plan))
         if asset_context is not None:
             issues.extend(self._check_asset_references(layout_plan, asset_context))
+            issues.extend(self._check_asset_presentation_readiness(layout_plan, asset_context))
 
         score = self._score(layout_plan, issues)
         return LayoutValidationReport(
@@ -566,21 +581,199 @@ class LayoutValidationService:
         if hero is None:
             return []
         # Only enforce for drawing/hero families where hero is expected to dominate.
-        if plan.layout_family.value not in {"drawing_focus", "hero"}:
+        if plan.layout_family.value not in _HERO_DOMINANCE_FAMILIES:
             return []
         ratio = hero.area / max(safe.area, 1e-6)
         if ratio + 1e-6 < min_ratio:
             return [
                 LayoutValidationIssue(
                     rule_code=LAYOUT_HERO_NOT_DOMINANT,
-                    severity=LayoutIssueSeverity.WARNING,
+                    severity=LayoutIssueSeverity.ERROR,
                     element_ids=[hero.id],
                     message=(f"Hero area ratio {ratio:.2f} is below minimum {min_ratio:.2f}."),
-                    suggestion="Enlarge the hero visual.",
+                    suggestion=(
+                        "Enlarge the hero visual to ≥65% of safe area, or fall back to a "
+                        "text monument cover when no presentation-ready asset exists."
+                    ),
                     auto_repairable=True,
                 )
             ]
         return []
+
+    def _check_title_band_budget(self, plan: LayoutPlan, safe: Rect) -> list[LayoutValidationIssue]:
+        if plan.layout_family.value not in _HERO_DOMINANCE_FAMILIES:
+            return []
+        text_roles = {
+            LayoutElementRole.TITLE,
+            LayoutElementRole.SUBTITLE,
+        }
+        text_area = sum(el.area for el in plan.elements if el.role in text_roles)
+        ratio = text_area / max(safe.area, 1e-6)
+        if ratio - 1e-6 > _MAX_TITLE_SUBTITLE_AREA_RATIO:
+            return [
+                LayoutValidationIssue(
+                    rule_code=LAYOUT_TITLE_BAND_TOO_LARGE,
+                    severity=LayoutIssueSeverity.ERROR,
+                    element_ids=[
+                        el.id for el in plan.elements if el.role in text_roles
+                    ],
+                    message=(
+                        f"Title/subtitle band occupies {ratio:.0%} of safe area "
+                        f"(max {_MAX_TITLE_SUBTITLE_AREA_RATIO:.0%})."
+                    ),
+                    suggestion="Shrink title/lead copy so the hero visual can dominate.",
+                    auto_repairable=True,
+                )
+            ]
+        return []
+
+    def _check_decorative_budget(self, plan: LayoutPlan) -> list[LayoutValidationIssue]:
+        if plan.layout_family.value not in _HERO_DOMINANCE_FAMILIES:
+            return []
+        decorations = [
+            el
+            for el in plan.elements
+            if el.role == LayoutElementRole.DECORATION
+            or (el.style_token or "").startswith("decor")
+        ]
+        if len(decorations) > _MAX_DECORATIVE_ELEMENTS:
+            return [
+                LayoutValidationIssue(
+                    rule_code=LAYOUT_TOO_MANY_DECORATIONS,
+                    severity=LayoutIssueSeverity.ERROR,
+                    element_ids=[el.id for el in decorations],
+                    message=(
+                        f"Found {len(decorations)} decorative elements "
+                        f"(max {_MAX_DECORATIVE_ELEMENTS})."
+                    ),
+                    suggestion="Remove non-essential ornaments from the hero page.",
+                    auto_repairable=False,
+                )
+            ]
+        return []
+
+    def _check_evidence_image_sizes(
+        self, plan: LayoutPlan, safe: Rect
+    ) -> list[LayoutValidationIssue]:
+        if plan.layout_family.value != "evidence_board":
+            return []
+        if plan.balance_strategy not in {"evidence_hierarchy", "evidence_grid"}:
+            return []
+        issues: list[LayoutValidationIssue] = []
+        visuals = [
+            el
+            for el in plan.elements
+            if el.role
+            in {LayoutElementRole.SUPPORTING_VISUAL, LayoutElementRole.HERO_VISUAL}
+            and el.content_type == LayoutContentType.IMAGE
+        ]
+        if not visuals:
+            return []
+        ordered = sorted(visuals, key=lambda el: el.area, reverse=True)
+        for index, element in enumerate(ordered):
+            min_ratio = _EVIDENCE_PRIMARY_MIN_RATIO if index == 0 else _EVIDENCE_AUX_MIN_RATIO
+            ratio = element.area / max(safe.area, 1e-6)
+            if ratio + 1e-6 < min_ratio:
+                issues.append(
+                    LayoutValidationIssue(
+                        rule_code=LAYOUT_EVIDENCE_IMAGE_TOO_SMALL,
+                        severity=LayoutIssueSeverity.ERROR,
+                        element_ids=[element.id],
+                        message=(
+                            f"Evidence image `{element.id}` area ratio {ratio:.2f} "
+                            f"is below minimum {min_ratio:.2f}."
+                        ),
+                        suggestion="Use fewer photos with a primary/aux hierarchy.",
+                        auto_repairable=False,
+                    )
+                )
+        return issues
+
+    def _check_asset_presentation_readiness(
+        self,
+        plan: LayoutPlan,
+        asset_context: AssetReferenceContext,
+    ) -> list[LayoutValidationIssue]:
+        """Block hero slots filled with known placeholders / unreadable assets."""
+        from archium.application.asset_presentation_readiness_service import (
+            evaluate_asset_presentation_readiness,
+        )
+        from archium.domain.asset import Asset
+        from archium.domain.enums import AssetType
+        from uuid import uuid4
+
+        if plan.layout_family.value not in _HERO_DOMINANCE_FAMILIES:
+            return []
+        if plan.hero_element_id is None:
+            return []
+        hero = plan.element_by_id(plan.hero_element_id)
+        if hero is None or not hero.content_ref:
+            return []
+
+        abs_path = asset_context.absolute_paths.get(hero.content_ref)
+        resolved = asset_context.resolved_paths.get(hero.content_ref, "")
+        asset_type_raw = asset_context.asset_types.get(hero.content_ref)
+        try:
+            asset_type = AssetType(asset_type_raw) if asset_type_raw else AssetType.IMAGE
+        except ValueError:
+            asset_type = AssetType.IMAGE
+
+        filename = Path(abs_path).name if abs_path else (Path(resolved).name if resolved else hero.content_ref)
+        metadata: dict[str, object] = {}
+        blob = f"{filename} {resolved}".lower()
+        if any(
+            token in blob
+            for token in (
+                "placeholder",
+                "filename_grid",
+                "filename-grid",
+                "file_name_grid",
+                "占位",
+                "文件名",
+            )
+        ):
+            metadata["is_placeholder"] = True
+
+        stub = Asset(
+            project_id=uuid4(),
+            filename=filename or "asset",
+            path=abs_path or resolved or hero.content_ref,
+            asset_type=asset_type,
+            metadata=metadata,
+            # Unknown pixel size: do not fail readability solely on missing dims.
+            width=1600 if abs_path or resolved else None,
+            height=1200 if abs_path or resolved else None,
+        )
+        readiness = evaluate_asset_presentation_readiness(
+            stub,
+            image_path=abs_path,
+            intended_slot="hero",
+        )
+        # Only hard-fail on positive placeholder / blank evidence — not on missing
+        # catalog dimensions during layout planning.
+        if not readiness.is_placeholder and readiness.visual_information_density >= 0.12:
+            return []
+        if not readiness.is_placeholder and abs_path is None:
+            return []
+
+        message = (
+            "缺少可用总图：绑定素材疑似占位图或无可读图面内容"
+            if plan.layout_family.value == "drawing_focus"
+            else "缺少可用主视觉：绑定素材疑似占位图或无可读内容"
+        )
+        return [
+            LayoutValidationIssue(
+                rule_code=LAYOUT_ASSET_NOT_PRESENTATION_READY,
+                severity=LayoutIssueSeverity.ERROR,
+                element_ids=[hero.id],
+                message=message,
+                suggestion=(
+                    "Replace with a presentation-ready asset, or switch to a text "
+                    "monument cover instead of a fake completed hero page."
+                ),
+                auto_repairable=False,
+            )
+        ]
 
     def _check_whitespace(
         self, plan: LayoutPlan, min_ratio: float, max_ratio: float
@@ -598,16 +791,23 @@ class LayoutValidationService:
                 )
             )
         if plan.whitespace_ratio - 1e-6 > max_ratio:
+            hero_page = plan.layout_family.value in _HERO_DOMINANCE_FAMILIES
             issues.append(
                 LayoutValidationIssue(
-                    rule_code=LAYOUT_EXCESSIVE_DENSITY,
-                    severity=LayoutIssueSeverity.INFO,
+                    rule_code=LAYOUT_EXCESSIVE_WHITESPACE,
+                    severity=(
+                        LayoutIssueSeverity.ERROR if hero_page else LayoutIssueSeverity.INFO
+                    ),
                     element_ids=[],
                     message=(
                         f"Whitespace ratio {plan.whitespace_ratio:.2f} exceeds "
                         f"comfortable maximum {max_ratio:.2f}."
                     ),
-                    suggestion="Add supporting content or tighten spacing.",
+                    suggestion=(
+                        "Enlarge the hero visual or fall back to a text monument cover."
+                        if hero_page
+                        else "Add supporting content or tighten spacing."
+                    ),
                     auto_repairable=False,
                 )
             )
@@ -625,7 +825,6 @@ class LayoutValidationService:
                 )
             )
         return issues
-
     def _check_alignment(self, plan: LayoutPlan) -> list[LayoutValidationIssue]:
         issues: list[LayoutValidationIssue] = []
         by_role: dict[LayoutElementRole, list[LayoutElement]] = {}
@@ -691,7 +890,12 @@ class LayoutValidationService:
         )
         whitespace = 1.0
         if any(
-            i.rule_code in {LAYOUT_INSUFFICIENT_WHITESPACE, LAYOUT_EXCESSIVE_DENSITY}
+            i.rule_code
+            in {
+                LAYOUT_INSUFFICIENT_WHITESPACE,
+                LAYOUT_EXCESSIVE_DENSITY,
+                LAYOUT_EXCESSIVE_WHITESPACE,
+            }
             for i in issues
         ):
             whitespace = 0.6
@@ -704,6 +908,7 @@ class LayoutValidationService:
             LAYOUT_HERO_ASSET_MISSING,
             LAYOUT_TECHNICAL_DRAWING_MISSING,
             LAYOUT_UNSUPPORTED_IMAGE_FORMAT,
+            LAYOUT_ASSET_NOT_PRESENTATION_READY,
         }
         if any(i.rule_code in asset_codes for i in issues):
             asset_usage = 0.4

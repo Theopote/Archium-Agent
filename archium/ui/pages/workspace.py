@@ -419,10 +419,134 @@ def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
                 st.error(str(exc))
 
 
+def _load_generation_contract(project_id: UUID):
+    """Load the selected persisted plan; generation must not re-plan it."""
+    from archium.application.review_service import PresentationReviewService
+    from archium.infrastructure.database.repositories import PresentationRepository
+
+    preferred = st.session_state.get("selected_presentation_id")
+    with get_session() as session:
+        presentations = PresentationRepository(session).list_by_project(project_id)
+        if preferred:
+            presentations.sort(key=lambda item: str(item.id) != str(preferred))
+        for presentation in presentations:
+            context = PresentationReviewService(session).get_review_context(presentation.id)
+            if context is not None and context.outline is not None:
+                return context
+    return None
+
+
+def _render_approved_generation_contract(project_id: UUID, settings) -> bool:
+    """Render a frozen human-approved input summary. Return True when handled."""
+    context = _load_generation_contract(project_id)
+    if context is None:
+        return False
+
+    from archium.application.slide_design_brief_service import design_briefs_ready
+    from archium.domain.enums import ApprovalStatus
+    from archium.ui.app_navigation import get_app_page
+
+    brief = context.brief
+    storyline = context.storyline
+    outline = context.outline
+    artifacts_approved = all(
+        item is not None and item.approval_status == ApprovalStatus.APPROVED
+        for item in (brief, storyline, outline)
+    )
+    briefs_ready, brief_missing = design_briefs_ready(outline)
+    blockers: list[str] = []
+    if not artifacts_approved:
+        blockers.append("Brief、Storyline 与 Outline 必须保持批准状态")
+    if not briefs_ready:
+        blockers.extend(brief_missing)
+
+    with st.container(border=True):
+        st.markdown("#### 本次生成输入")
+        st.caption("以下内容是生成合同。页面生成会复用这些已批准版本，不会重新规划任务或大纲。")
+        with st.container(horizontal=True):
+            st.metric("汇报", context.presentation.title, border=True)
+            st.metric("Outline", f"v{outline.version}", border=True)
+            st.metric("页面意图", len(outline.page_intents), border=True)
+            approved_briefs = sum(
+                1
+                for item in outline.page_design_briefs
+                if item.status == ApprovalStatus.APPROVED
+            )
+            st.metric(
+                "设计摘要",
+                f"{approved_briefs}/{len(outline.page_design_briefs)}",
+                border=True,
+            )
+        st.markdown(f"**对象：** {outline.audience}  ")
+        st.markdown(f"**目的：** {outline.purpose}  ")
+        st.markdown(f"**核心论点：** {outline.thesis}")
+        if blockers:
+            st.warning("生成合同尚未就绪：" + "；".join(blockers))
+            st.page_link(
+                get_app_page("outline"),
+                label="返回大纲完成确认",
+                icon=":material/account_tree:",
+            )
+            return True
+
+        replace_confirmed = True
+        if context.slides:
+            st.warning(
+                f"当前已有 {len(context.slides)} 页。重新生成会先归档当前页面，再按批准输入生成新版本。"
+            )
+            replace_confirmed = st.checkbox(
+                "我已理解并确认归档当前页面后重新生成",
+                key=f"generate_replace_confirm_{context.presentation.id}",
+            )
+
+        if st.button(
+            "按批准输入生成页面",
+            type="primary",
+            width="stretch",
+            disabled=not replace_confirmed,
+            key=f"generate_from_contract_{context.presentation.id}",
+        ):
+            if not settings.llm_configured:
+                st.error("未配置 LLM API Key。请先前往设置。")
+                st.page_link(get_app_page("settings"), label="前往 AI 服务设置")
+                return True
+            request = build_presentation_request(
+                title=brief.title,
+                audience=brief.audience,
+                purpose=brief.purpose,
+                core_message=brief.core_message,
+                target_slide_count=outline.target_slide_count,
+                required_sections_text="\n".join(brief.required_sections),
+            )
+            if background_workflows_enabled(settings):
+                job = submit_presentation_workflow(
+                    project_id,
+                    request,
+                    settings=settings,
+                    export_json=True,
+                    export_marp=True,
+                    export_preview_images=True,
+                    require_brief_review=False,
+                    require_storyline_review=False,
+                    require_outline_review=False,
+                    require_slides_review=True,
+                    reuse_presentation_id=context.presentation.id,
+                )
+                st.session_state.selected_presentation_id = str(context.presentation.id)
+                set_active_job_id(project_id, job.job_id)
+                st.info("已锁定批准输入并开始生成页面。生成后将暂停，等待人工复核页面内容。")
+                render_workflow_progress_panel(project_id, job_id=job.job_id)
+            else:
+                warn_background_workflows_required()
+    return True
+
+
 def _render_generation_form(project_id: UUID) -> None:
     st.markdown("#### 生成汇报")
     settings = get_ui_effective_settings()
     if render_workflow_progress_panel(project_id):
+        return
+    if _render_approved_generation_contract(project_id, settings):
         return
 
     st.caption(

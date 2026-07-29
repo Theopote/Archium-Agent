@@ -27,7 +27,7 @@ class HeroLayoutGenerator(LayoutGenerator):
         tokens = self._layout_tokens(context)
         elements: list[LayoutElement] = []
 
-        title_h = self._title_band_height(context)
+        title_h = min(self._title_band_height(context), tokens.title_band_min_height)
         elements.append(
             LayoutElement(
                 id="title",
@@ -36,7 +36,7 @@ class HeroLayoutGenerator(LayoutGenerator):
                 text_content=context.content.title,
                 x=safe.x,
                 y=safe.y,
-                width=safe.width,
+                width=safe.width if variant != "split" else safe.width * 0.35,
                 height=title_h,
                 style_token="title",
                 z_index=2,
@@ -45,9 +45,9 @@ class HeroLayoutGenerator(LayoutGenerator):
 
         body = Rect(
             safe.x,
-            safe.y + title_h + spacing.md,
+            safe.y + title_h + spacing.xs,
             safe.width,
-            max(0.5, safe.bottom - (safe.y + title_h + spacing.md) - spacing.sm),
+            max(0.5, safe.bottom - (safe.y + title_h + spacing.xs) - spacing.xs),
         )
         lead: LayoutElement | None = None
 
@@ -68,21 +68,24 @@ class HeroLayoutGenerator(LayoutGenerator):
                 z_index=3,
             )
         else:
+            # Hero dominates on the left; text is a thin supporting panel — not a
+            # right-side postcard card with a large empty text column.
             text_ratio = compute_hero_split_text_ratio(body, tokens, gap=spacing.lg)
-            left, right = split_horizontal(body, left_ratio=text_ratio, gap=spacing.lg)
+            hero_ratio = max(0.55, 1.0 - text_ratio)
+            left, right = split_horizontal(body, left_ratio=hero_ratio, gap=spacing.lg)
+            hero_rect = left
             lead = LayoutElement(
                 id="lead",
                 role=LayoutElementRole.LEAD_STATEMENT,
                 content_type=LayoutContentType.TEXT,
                 text_content=context.content.message,
-                x=left.x,
-                y=left.y,
-                width=left.width,
-                height=left.height * tokens.lead_height_ratio,
+                x=right.x,
+                y=right.y,
+                width=right.width,
+                height=right.height * tokens.lead_height_ratio,
                 style_token="body",
                 z_index=2,
             )
-            hero_rect = right
 
         elements.append(
             LayoutElement(

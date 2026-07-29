@@ -53,39 +53,55 @@ def _merge_tokens(base: VariantLayoutTokens, override: VariantLayoutTokens) -> V
 
 _FAMILY_DEFAULTS: dict[LayoutFamily, VariantLayoutTokens] = {
     LayoutFamily.HERO: VariantLayoutTokens(
-        text_panel_max_width_ratio=0.35,
-        hero_min_body_area_ratio=0.58,
-        hero_min_safe_area_ratio=0.50,
+        text_panel_max_width_ratio=0.18,
+        hero_min_body_area_ratio=0.85,
+        hero_min_safe_area_ratio=0.65,
         caption_max_height_ratio=0.0,
         source_max_height_ratio=0.053,
         source_width_ratio=0.70,
+        title_band_min_height=0.42,
     ),
     LayoutFamily.DRAWING_FOCUS: VariantLayoutTokens(
-        primary_visual_width_ratio=0.72,
-        hero_min_body_area_ratio=0.72,
-        caption_max_height_ratio=0.059,
-        source_max_height_ratio=0.047,
+        primary_visual_width_ratio=0.82,
+        hero_min_body_area_ratio=0.82,
+        hero_min_safe_area_ratio=0.65,
+        caption_max_height_ratio=0.05,
+        source_max_height_ratio=0.04,
+        title_band_min_height=0.42,
     ),
 }
 
 _VARIANT_OVERRIDES: dict[tuple[LayoutFamily, str], VariantLayoutTokens] = {
     (LayoutFamily.HERO, "split"): VariantLayoutTokens(
-        text_panel_max_width_ratio=0.28,
-        hero_min_body_area_ratio=0.58,
+        text_panel_max_width_ratio=0.18,
+        hero_min_body_area_ratio=0.85,
+        hero_min_safe_area_ratio=0.65,
+        title_band_min_height=0.42,
     ),
     (LayoutFamily.HERO, "full_bleed"): VariantLayoutTokens(
         hero_min_body_area_ratio=1.0,
         hero_min_safe_area_ratio=0.65,
         text_panel_max_width_ratio=0.0,
+        title_band_min_height=0.42,
     ),
     (LayoutFamily.HERO, "overlay"): VariantLayoutTokens(
         hero_min_body_area_ratio=1.0,
-        hero_min_safe_area_ratio=0.55,
+        hero_min_safe_area_ratio=0.65,
         text_panel_max_width_ratio=0.0,
+        title_band_min_height=0.42,
     ),
     (LayoutFamily.DRAWING_FOCUS, "full_canvas"): VariantLayoutTokens(
         primary_visual_width_ratio=1.0,
         hero_min_body_area_ratio=1.0,
+        hero_min_safe_area_ratio=0.65,
+    ),
+    (LayoutFamily.DRAWING_FOCUS, "drawing_with_annotations"): VariantLayoutTokens(
+        primary_visual_width_ratio=0.92,
+        hero_min_body_area_ratio=0.92,
+        # Annotated callout strip trades ~3–5pp of area; still delivery-dominant.
+        hero_min_safe_area_ratio=0.60,
+        caption_max_height_ratio=0.065,
+        source_max_height_ratio=0.04,
     ),
 }
 
@@ -124,7 +140,7 @@ def compute_hero_split_text_ratio(
     usable_w = max(1e-6, body.width - gap)
     ratio_for_hero = 1.0 - tokens.hero_min_body_area_ratio * body.width / usable_w
     capped = min(tokens.text_panel_max_width_ratio, ratio_for_hero)
-    return max(0.15, min(0.45, capped))
+    return max(0.12, min(0.45, capped))
 
 
 def footer_band_heights(safe: Rect, tokens: VariantLayoutTokens) -> tuple[float, float]:
