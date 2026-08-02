@@ -429,9 +429,11 @@ def _render_interactive_canvas(
     except CanvasEditorUnavailableError as exc:
         reason = canvas_editor_unavailable_reason() or str(exc)
         st.warning(f"交互式画布不可用，已切换为静态预览。{reason}")
+        st.info("💡 提示：运行 `cd archium/ui/components/canvas_editor && bash build.sh` 可启用完整交互编辑功能")
         return False
     except Exception as exc:
         st.warning(f"交互式画布加载失败，已切换为静态预览：{exc}")
+        st.info("💡 提示：运行 `cd archium/ui/components/canvas_editor && bash build.sh` 可启用完整交互编辑功能")
         return False
 
     typed = parse_typed_event(canvas_event)
