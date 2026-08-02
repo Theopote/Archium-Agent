@@ -114,7 +114,6 @@ def _render_design_system_panel(
     """Render the professional design system panel in Studio."""
     from archium.infrastructure.database.session import get_session
     from archium.application.design_system_integration import DesignSystemIntegrationService
-    from archium.ui.template_selection_panel import render_design_quality_panel
     
     st.markdown("### 🎨 专业设计系统")
     st.caption("应用专业模板、优化布局、评估设计质量")
