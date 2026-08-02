@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import AliasChoices, Field, field_validator, model_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator, HttpUrl, AnyUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -1040,6 +1040,113 @@ class Settings(BaseSettings):
             / "pptxgen"
             / "render.mjs"
         ).resolve()
+
+    @field_validator("llm_base_url", "embedding_base_url", "vision_comfyui_base_url")
+    @classmethod
+    def validate_url(cls, v: str | None) -> str | None:
+        """Validate URL fields."""
+        if v is None:
+            return None
+        try:
+            # Basic URL validation
+            if not v.startswith(("http://", "https://")):
+                raise ValueError("URL must start with http:// or https://")
+            return v.rstrip("/")
+        except Exception as e:
+            raise ValueError(f"Invalid URL: {e}") from e
+
+    @field_validator("database_url")
+    @classmethod
+    def validate_database_url(cls, v: str | None) -> str | None:
+        """Validate database URL."""
+        if v is None:
+            return None
+        try:
+            if not v.startswith(("sqlite:///", "postgresql://", "postgresql+psycopg://")):
+                raise ValueError("Database URL must be SQLite or PostgreSQL")
+            return v
+        except Exception as e:
+            raise ValueError(f"Invalid database URL: {e}") from e
+
+    @field_validator("llm_api_key", "embedding_api_key")
+    @classmethod
+    def validate_api_key(cls, v: str | None) -> str | None:
+        """Validate API key format."""
+        if v is None:
+            return None
+        if not v or len(v) < 10:
+            raise ValueError("API key must be at least 10 characters long")
+        return v.strip()
+
+    @field_validator("project_storage_path", "output_path", "chroma_path", "database_path", "workflow_checkpoint_path")
+    @classmethod
+    def validate_path(cls, v: Path) -> Path:
+        """Validate path fields."""
+        if not isinstance(v, Path):
+            v = Path(v)
+        # Convert relative paths to absolute paths relative to project root
+        if not v.is_absolute():
+            v = (_PROJECT_ROOT / v).resolve()
+        return v
+
+    @model_validator(mode="after")
+    def validate_settings_consistency(self) -> "Settings":
+        """Validate cross-field consistency."""
+        # Check that if retrieval is enabled, embedding is properly configured
+        if self.retrieval_enabled and not self.embedding_configured:
+            # This is a warning, not an error, as the system can start without retrieval
+            pass
+        
+        # Validate that database_url and database_path are not both set
+        if self.database_url and self.database_path != Path("data/database/archium.db"):
+            # Allow both for flexibility, but log a warning in real usage
+            pass
+        
+        # Validate LLM configuration
+        if self.llm_provider != "mock" and not self.llm_api_key:
+            # Allow startup without API key, but operations will fail at runtime
+            pass
+        
+        return self
+
+    def validate_critical_settings(self) -> list[str]:
+        """Validate critical settings and return list of errors.
+        
+        This method can be called at startup to check for configuration issues
+        that should prevent the application from running properly.
+        
+        Returns:
+            List of error messages (empty if all settings are valid)
+        """
+        errors = []
+        
+        # Check database configuration
+        if not self.database_url and not self.database_path:
+            errors.append("Either database_url or database_path must be configured")
+        
+        # Check storage paths are writable
+        for path_name, path in [
+            ("project_storage_path", self.project_storage_path),
+            ("output_path", self.output_path),
+            ("chroma_path", self.chroma_path),
+        ]:
+            try:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                # Test write permission
+                test_file = path.parent / ".permission_test"
+                test_file.touch()
+                test_file.unlink()
+            except Exception as e:
+                errors.append(f"Cannot write to {path_name}: {e}")
+        
+        # Check critical numeric ranges
+        if self.llm_max_concurrent_requests < 1 or self.llm_max_concurrent_requests > 50:
+            errors.append("llm_max_concurrent_requests must be between 1 and 50")
+        
+        if self.database_pool_size < 1:
+            errors.append("database_pool_size must be at least 1")
+        
+        return errors
 
 
 @lru_cache

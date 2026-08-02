@@ -84,3 +84,65 @@ class SlideRevisionNotFoundError(ArchiumError):
 
 class UnsupportedOperationError(ArchiumError):
     """Raised when a deprecated or removed API surface is invoked incorrectly."""
+
+
+class ExternalServiceError(ArchiumError):
+    """Raised when an external service (API, database, etc.) fails."""
+    
+    def __init__(
+        self,
+        message: str,
+        *,
+        service_name: str | None = None,
+        status_code: int | None = None,
+        retryable: bool = False,
+    ) -> None:
+        super().__init__(message)
+        self.service_name = service_name
+        self.status_code = status_code
+        self.retryable = retryable
+
+
+class FileOperationError(ArchiumError):
+    """Raised when file operations fail."""
+    
+    def __init__(
+        self,
+        message: str,
+        *,
+        file_path: str | None = None,
+        operation: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.file_path = file_path
+        self.operation = operation
+
+
+class ConcurrencyError(ArchiumError):
+    """Raised when concurrent operations conflict."""
+    
+    def __init__(
+        self,
+        message: str = "Concurrent modification conflict",
+        *,
+        resource_type: str | None = None,
+        resource_id: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.resource_type = resource_type
+        self.resource_id = resource_id
+
+
+class RateLimitError(ArchiumError):
+    """Raised when rate limits are exceeded."""
+    
+    def __init__(
+        self,
+        message: str = "Rate limit exceeded",
+        *,
+        retry_after: int | None = None,
+        limit_type: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
+        self.limit_type = limit_type
