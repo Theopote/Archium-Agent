@@ -18,6 +18,7 @@ from archium.application.presentation_models import PresentationRequest
 from archium.application.review_service import PresentationReviewService
 from archium.application.workflow_models import WorkflowRunResult
 from archium.application.workflow_route_service import WorkflowRouteService
+from archium.application.design_system_integration import DesignSystemIntegrationService
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import PresentationWorkflowStep, WorkflowStatus
 from archium.domain.presentation import Presentation
@@ -52,6 +53,7 @@ class PresentationWorkflowService:
         settings: Settings | None = None,
         renderer: JsonPresentationRenderer | None = None,
         checkpointer_manager: WorkflowCheckpointerManager | None = None,
+        design_system_integration: DesignSystemIntegrationService | None = None,
     ) -> None:
         self._session = session
         self._settings = settings or get_settings()
@@ -71,6 +73,7 @@ class PresentationWorkflowService:
             self._runtime,
             checkpointer=self._checkpointer_manager.saver,
         )
+        self._design_system_integration = design_system_integration
 
     def close(self) -> None:
         """Close the LangGraph SQLite checkpointer when this service owns it."""
@@ -510,3 +513,83 @@ class PresentationWorkflowService:
                 }
             )
         return state
+
+    def apply_design_template(
+        self,
+        presentation_id: UUID,
+        template_id: str,
+        presentation_data: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Apply a design template to a presentation."""
+        if self._design_system_integration is None:
+            raise WorkflowError("Design system integration not available")
+        
+        return self._design_system_integration.apply_template_to_presentation(
+            presentation_id,
+            template_id,
+            presentation_data,
+        )
+    
+    def optimize_slide_layouts(
+        self,
+        presentation_id: UUID,
+        slides_data: list[dict[str, Any]],
+        constraints: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Optimize layouts for all slides in a presentation."""
+        if self._design_system_integration is None:
+            raise WorkflowError("Design system integration not available")
+        
+        optimized_slides = []
+        for slide_data in slides_data:
+            layout_result = self._design_system_integration.optimize_slide_layout(
+                slide_data,
+                constraints=constraints,
+            )
+            optimized_slides.append({
+                **slide_data,
+                "layout_optimization": layout_result,
+            })
+        
+        return optimized_slides
+    
+    def assess_presentation_quality(
+        self,
+        presentation_id: UUID,
+        slides_data: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Assess design quality of a presentation."""
+        if self._design_system_integration is None:
+            raise WorkflowError("Design system integration not available")
+        
+        quality_reports = self._design_system_integration.assess_presentation_quality(
+            presentation_id,
+            slides_data,
+        )
+        quality_summary = self._design_system_integration.get_quality_summary(quality_reports)
+        
+        return {
+            "quality_reports": quality_reports,
+            "summary": quality_summary,
+        }
+    
+    def get_available_templates(self) -> list[dict[str, Any]]:
+        """Get list of available design templates."""
+        if self._design_system_integration is None:
+            return []
+        
+        return self._design_system_integration.get_available_templates()
+    
+    def validate_design_compliance(
+        self,
+        presentation_id: UUID,
+        slides_data: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Validate presentation compliance with design system."""
+        if self._design_system_integration is None:
+            raise WorkflowError("Design system integration not available")
+        
+        return self._design_system_integration.validate_design_system_compliance(
+            presentation_id,
+            slides_data,
+        )

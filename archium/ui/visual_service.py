@@ -20,6 +20,8 @@ from archium.application.visual.visual_workflow_service import (
     VisualWorkflowResult,
     VisualWorkflowService,
 )
+from archium.application.design_system_integration import DesignSystemIntegrationService
+from archium.application.intelligent_layout import LayoutOptimizer, LayoutConsistencyChecker
 from archium.config.settings import Settings
 from archium.domain.export_fidelity import ChartExportMode
 from archium.domain.render import RenderResult
@@ -552,4 +554,114 @@ def replan_slide(
         candidates=saved_candidates or plans.list_by_slide(slide.id),
         validation=validation,
     )
+
+
+def optimize_slide_layout_with_intelligent_algorithm(
+    session: Session,
+    slide: SlideSpec,
+    design_system_integration: DesignSystemIntegrationService,
+    constraints: dict[str, any] | None = None,
+) -> dict[str, any]:
+    """Optimize slide layout using intelligent layout algorithm.
+    
+    This function integrates the new intelligent layout optimizer with the
+    existing visual workflow to provide enhanced layout recommendations.
+    
+    Args:
+        session: Database session
+        slide: Slide specification
+        design_system_integration: Design system integration service
+        constraints: Optional layout constraints
+    
+    Returns:
+        Layout optimization result with recommended layout and positions
+    """
+    # Convert slide data to format expected by intelligent layout optimizer
+    slide_data = {
+        "id": str(slide.id),
+        "title": slide.title,
+        "body": slide.body,
+        "image": slide.visual_requirements[0].image_path if slide.visual_requirements else None,
+        # Add more slide data as needed
+    }
+    
+    # Get available layouts from design system
+    from archium.domain.presentation_templates import SlideLayout
+    available_layouts = [
+        SlideLayout.TITLE,
+        SlideLayout.TITLE_CONTENT,
+        SlideLayout.TWO_COLUMN,
+        SlideLayout.THREE_COLUMN,
+        SlideLayout.IMAGE_TEXT,
+        SlideLayout.TEXT_IMAGE,
+        SlideLayout.FULL_IMAGE,
+    ]
+    
+    # Optimize layout
+    layout_result = design_system_integration.optimize_slide_layout(
+        slide_data,
+        available_layouts,
+        constraints,
+    )
+    
+    return layout_result
+
+
+def apply_intelligent_layout_to_visual_workflow(
+    session: Session,
+    presentation_id: UUID,
+    slides: list[SlideSpec],
+    design_system_integration: DesignSystemIntegrationService,
+) -> list[dict[str, any]]:
+    """Apply intelligent layout optimization to entire presentation.
+    
+    This function applies the intelligent layout algorithm to all slides
+    in a presentation to ensure consistency and optimal layouts.
+    
+    Args:
+        session: Database session
+        presentation_id: Presentation ID
+        slides: List of slide specifications
+        design_system_integration: Design system integration service
+    
+    Returns:
+        List of layout optimization results for each slide
+    """
+    consistency_checker = LayoutConsistencyChecker()
+    
+    optimization_results = []
+    for i, slide in enumerate(slides):
+        # Get previous slides for consistency checking
+        previous_slides_data = []
+        for prev_slide in slides[:i]:
+            previous_slides_data.append({
+                "id": str(prev_slide.id),
+                "title": prev_slide.title,
+                "body": prev_slide.body,
+            })
+        
+        # Optimize current slide
+        slide_data = {
+            "id": str(slide.id),
+            "title": slide.title,
+            "body": slide.body,
+            "image": slide.visual_requirements[0].image_path if slide.visual_requirements else None,
+        }
+        
+        layout_result = design_system_integration.optimize_slide_layout(slide_data)
+        
+        # Check consistency with previous slides
+        consistency_report = consistency_checker.check_consistency(
+            {"layout": layout_result["recommended_layout"]},
+            [{"layout": r["recommended_layout"]} for r in optimization_results],
+        )
+        
+        optimization_results.append({
+            "slide_id": str(slide.id),
+            "slide_number": i + 1,
+            "layout_optimization": layout_result,
+            "consistency_report": consistency_report,
+        })
+    
+    return optimization_results
 

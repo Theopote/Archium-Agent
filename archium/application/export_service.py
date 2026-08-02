@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from archium.application.pptxgen_renderer_factory import create_pptxgen_renderer
 from archium.application.render_export import export_marp_extras
+from archium.application.design_system_integration import DesignSystemIntegrationService
 from archium.config.settings import Settings, get_settings
 from archium.domain.render import RenderResult
 from archium.exceptions import WorkflowError
@@ -19,13 +20,20 @@ from archium.infrastructure.renderers.marp_renderer import MarpPresentationRende
 class PresentationExportService:
     """Export JSON / Marp / legacy Spec artifacts; formal PPTX prefers RenderScene."""
 
-    def __init__(self, session: Session, *, settings: Settings | None = None) -> None:
+    def __init__(
+        self,
+        session: Session,
+        *,
+        settings: Settings | None = None,
+        design_system_integration: DesignSystemIntegrationService | None = None,
+    ) -> None:
         self._session = session
         self._settings = settings or get_settings()
         self._presentations = PresentationRepository(session)
         self._json = JsonPresentationRenderer(self._settings)
         self._marp = MarpPresentationRenderer(self._settings)
         self._pptxgen = create_pptxgen_renderer(self._settings, session=session)
+        self._design_system_integration = design_system_integration
 
     def reexport(
         self,
@@ -119,4 +127,84 @@ class PresentationExportService:
                 result.pdf_path = marp_extras.pdf_path
                 result.preview_images = list(marp_extras.preview_images)
                 result.warnings.extend(marp_extras.warnings)
+        
+        # Add quality assessment if design system integration is available
+        if self._design_system_integration is not None:
+            try:
+                # Convert slides to format expected by quality assessor
+                slides_data = []
+                for slide in slides:
+                    slides_data.append({
+                        "id": str(slide.id),
+                        "title": slide.title,
+                        "body": slide.body,
+                        # Add more slide data as needed for quality assessment
+                    })
+                
+                quality_assessment = self._design_system_integration.assess_presentation_quality(
+                    presentation_id,
+                    slides_data,
+                )
+                quality_summary = self._design_system_integration.get_quality_summary(quality_assessment)
+                
+                # Add quality assessment to result metadata
+                result.metadata = {
+                    "quality_assessment": quality_assessment,
+                    "quality_summary": quality_summary,
+                }
+                
+                # Add quality warnings if score is below threshold
+                if quality_summary["average_score"] < 75:
+                    result.warnings.append(
+                        f"设计质量评分 {quality_summary['average_score']}/100 低于推荐阈值 75"
+                    )
+            except Exception as e:
+                # Don't fail export if quality assessment fails
+                result.warnings.append(f"质量评估失败: {str(e)}")
+        
         return result
+    
+    def assess_presentation_quality(
+        self,
+        presentation_id: UUID,
+    ) -> dict[str, any]:
+        """Assess design quality of a presentation.
+        
+        This is a separate method that can be called independently of export
+        to provide quality feedback without generating export files.
+        
+        Args:
+            presentation_id: Presentation ID to assess
+        
+        Returns:
+            Quality assessment report with summary and detailed metrics
+        """
+        if self._design_system_integration is None:
+            raise WorkflowError("Design system integration not available for quality assessment")
+        
+        presentation = self._presentations.get_presentation(presentation_id)
+        if presentation is None:
+            raise WorkflowError(f"Presentation {presentation_id} not found")
+        
+        slides = self._presentations.list_slides(presentation_id)
+        
+        # Convert slides to format expected by quality assessor
+        slides_data = []
+        for slide in slides:
+            slides_data.append({
+                "id": str(slide.id),
+                "title": slide.title,
+                "body": slide.body,
+                # Add more slide data as needed for quality assessment
+            })
+        
+        quality_assessment = self._design_system_integration.assess_presentation_quality(
+            presentation_id,
+            slides_data,
+        )
+        quality_summary = self._design_system_integration.get_quality_summary(quality_assessment)
+        
+        return {
+            "quality_reports": quality_assessment,
+            "summary": quality_summary,
+        }
