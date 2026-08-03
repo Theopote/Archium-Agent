@@ -241,7 +241,28 @@ def test_project_api_create_with_type_does_not_extra_commit(
     assert commits == [1]
 
 
-def test_delivery_api_list_empty(db_session: Session) -> None:
+def test_application_api_resource_surface_includes_planning_visual_jobs(
+    db_session: Session,
+) -> None:
+    """APP-029 surface must include planning/visual/jobs — not only the original ten."""
+    api = api_from_session(db_session)
+    for name in (
+        "project",
+        "documents",
+        "context",
+        "mission",
+        "planning",
+        "storyline",
+        "slides",
+        "scenes",
+        "visual",
+        "revisions",
+        "render",
+        "delivery",
+        "jobs",
+    ):
+        assert hasattr(api, name), f"missing ApiContext.{name}"
+
     project = ProjectRepository(db_session).create(Project(name="Delivery API", description=""))
     api = api_from_session(db_session)
     assert api.delivery.list_for_project(project.id) == []

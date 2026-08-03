@@ -125,26 +125,28 @@ Studio 的编辑闭环不是直接覆写导出文件：
 | Infrastructure 不依赖 Application / UI | `test_infrastructure_layering` |
 | Workflow 不依赖 UI | `test_workflow_layering` |
 | UI 不直接 import ORM models | `test_ui_layering` |
-| UI `pages/` 不 import `database.repositories`（走 Application API） | `test_ui_layering` |
+| UI（含 pages / 面板）不 import Repository；走 Application API | `test_ui_layering` |
 
 ### Application API 边界（APP-029）
 
-进程内稳定业务边界在 `archium/application/api/`，资源名对应产品路径（非 HTTP）：
+进程内稳定业务边界在 `archium/application/api/`，资源名对应产品路径（**非 HTTP**；未来 HTTP 只做薄适配）。
 
-`/project` `/documents` `/context` `/mission` `/planning` `/storyline` `/slides` `/scenes` `/visual` `/revisions` `/render` `/delivery` 以及 `/jobs`。
+**资源面（完整清单）：**
 
-约定：
+`/project` `/documents` `/context` `/mission` `/planning` `/storyline` `/slides` `/scenes` `/visual` `/revisions` `/render` `/delivery` `/jobs`
 
-- Streamlit 通过 `api_from_session(session)` 调用；**不**在 `ui/`（含 pages 与面板）直连 Repository
-- Studio / Visual / Planning 门面的高频读路径走 `SlidesApi` / `VisualApi` / `MissionApi` / `PlanningApi`（`load_presentation_visual`、`resolve_run` 等）
-- 交付与后台任务：pages / 导出面板走 `DeliveryApi` / `JobsApi` / `RevisionsApi`（不直接 new `DeliveryRecordService` / `JobProgressService`）
-- 同步导出：正式 PPTX/PDF → `RenderApi` / `DeliveryApi.export_formal_*`；多产物 reexport → `DeliveryApi.reexport`；UI 不直连 `FormalPptxExportService` / `PresentationExportService`
-- `ProjectApi` 写路径只 `flush`，由调用方 `get_session()` 提交（APP-003）
-- 长任务一律 `JobsApi.create`（支持 `idempotency_key`）；可 `get_progress` / `list_active` / `cancel`
-- 结果幂等：同 project + idempotency_key 返回同一 job；刷新后按 job_id / project 恢复
-- 事务仍遵守 APP-003：调用方 `get_session()`，UI 不 `commit`
-- 本波不引入 FastAPI HTTP；未来 HTTP 只做薄适配
-- Application 内部服务仍可直连 Repository（正常分层）；API 是对外稳定边界
+**对外契约（验收口径）：**
+
+1. **UI 不直连 Repository** — Streamlit 经 `api_from_session(session)` 调用；`archium/ui/` 禁 `repositories` / `mission_repositories` / `visual_repositories`。Application **内部服务仍可**直连 Repository（正常分层）。
+2. **Durable 长任务进 Jobs** — 跨刷新、需进度/取消/恢复的工作经 `JobsApi.create`（支持 `idempotency_key`）；可 `get_progress` / `list_active` / `cancel`。  
+   **不是**「一切耗时操作都必须 job」：
+   - **同步短路径**：正式 PPTX/PDF 等当场导出 → `RenderApi` / `DeliveryApi.export_*` / `reexport`
+   - **编排 run**：策划 / 视觉 / 生成等 LangGraph 路径可先落 `WorkflowRun` + `BackgroundWorkflowRunner`；与 `BackgroundJob` 双轨并存，逐步收敛，**不得假装已全部 job 化**
+3. **幂等范围** — 同 `project_id` + `idempotency_key` → **同一 BackgroundJob**；不承诺业务产物（文件、版式候选等）永不重复生成。
+4. **刷新恢复范围** — 活跃 Job 可按 `job_id` / project 拉回；**不**覆盖仅存于 Streamlit `session_state`、未落库的临时 UI 草稿。
+5. **事务** — 遵守 APP-003：调用方 `get_session()`；UI / API 门面不 `commit`（`ProjectApi` 类型补丁只 `flush`）。
+
+**UI 侧已落实的偏好路径：** Studio/Visual/Planning 读路径走对应 API；交付记录与任务进度走 `DeliveryApi` / `JobsApi`；同步导出不直连 `FormalPptxExportService` / `PresentationExportService`。
 
 ### Domain 对象准入
 

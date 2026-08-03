@@ -1,4 +1,10 @@
-"""/jobs — durable long-running work with progress, cancel, and idempotency."""
+"""/jobs — durable long-running work with progress, cancel, and idempotency.
+
+Scope: BackgroundJob only. Sync Render/Delivery exports and LangGraph
+WorkflowRun paths are separate (see APP-029 contract). Idempotency means
+the same (project_id, idempotency_key) returns the same job row — not that
+downstream artifacts are never regenerated.
+"""
 
 from __future__ import annotations
 
@@ -15,7 +21,7 @@ from archium.exceptions import ValidationError
 
 
 class JobsApi:
-    """Stable job boundary for UI and workers."""
+    """Durable job boundary for UI and workers (progress / cancel / refresh)."""
 
     def __init__(self, session: Session) -> None:
         self._session = session

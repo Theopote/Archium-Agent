@@ -1,7 +1,19 @@
 """Stable in-process Application API — Streamlit and future HTTP share this boundary.
 
-Resource modules mirror product paths: /project /documents /context /mission
-/storyline /slides /scenes /revisions /render /delivery (+ /jobs).
+Resource paths (product-facing names, not HTTP yet):
+
+    /project /documents /context /mission /planning /storyline
+    /slides /scenes /visual /revisions /render /delivery /jobs
+
+Contract summary (see docs/architecture/current-system.md §APP-029):
+
+- UI must not touch Repositories; Application services still may.
+- Durable cross-refresh work goes through JobsApi (progress / cancel /
+  idempotency_key / list_active). Sync export and LangGraph WorkflowRun
+  are explicit non-job paths — do not claim everything is a BackgroundJob.
+- Job idempotency is create-once per (project, idempotency_key), not
+  business-artifact uniqueness. Refresh recovery covers durable jobs, not
+  ephemeral Streamlit session_state drafts.
 """
 
 from __future__ import annotations

@@ -9,7 +9,11 @@ from sqlalchemy.orm import Session
 
 @dataclass
 class ApiContext:
-    """Bundle of resource APIs for one unit-of-work session."""
+    """Bundle of resource APIs for one unit-of-work session.
+
+    Callers own commit via ``get_session()`` (APP-003). This context is the
+    stable UI/worker entry; it is not an HTTP router.
+    """
 
     session: Session
 
