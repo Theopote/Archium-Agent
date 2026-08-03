@@ -14,11 +14,10 @@ from archium.domain.enums import WorkflowStatus
 from archium.domain.export_fidelity import FIDELITY_LABELS_ZH
 from archium.domain.slide_recovery import PAGE_KIND_LABELS_ZH, HybridRenderScene
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
 from archium.ui.delivery.export_policy_panel import EXPORT_POLICY_PRESETS
 from archium.ui.error_handlers import report_user_error
 from archium.ui.slide_recovery_region_panel import render_slide_recovery_region_editor
-from archium.application.unit_of_work import application_api
+from archium.application.unit_of_work import application_api, unit_of_work
 
 
 def render_slide_recovery_result_panel(
@@ -139,7 +138,8 @@ def _render_preview_row(
     if hybrid is None:
         return
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         delivery = SlideRecoveryDeliveryService(session, settings=settings)
         source_path = delivery.resolve_source_preview_path(result)
         try:
@@ -270,7 +270,8 @@ def _run_export(
     settings: Settings,
 ) -> None:
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             delivery = SlideRecoveryDeliveryService(session, settings=settings)
             export_result = delivery.export_pptx(
                 project_id,
@@ -314,7 +315,8 @@ def _run_import(
     settings: Settings,
 ) -> None:
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             delivery = SlideRecoveryDeliveryService(session, settings=settings)
             import_result = delivery.import_to_presentation(
                 project_id,
@@ -345,7 +347,8 @@ def _run_save_template(
     settings: Settings,
 ) -> None:
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             delivery = SlideRecoveryDeliveryService(session, settings=settings)
             template_result = delivery.save_as_template_reference(
                 project_id,

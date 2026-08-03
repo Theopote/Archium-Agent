@@ -8,6 +8,7 @@ import streamlit as st
 
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio.undo_stack import content_redo_depth, visual_redo_depth
 from archium.ui.studio_service import (
@@ -27,7 +28,8 @@ def render_undo_toolbar(*, slide_snapshot: SlideVisualSnapshot | None) -> None:
         return
 
     slide_id = slide_snapshot.slide.id
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         visual_undo_steps = count_visual_undo_steps(session, slide_id)
         content_undo_steps = count_content_undo_steps(session, slide_id)
     visual_redo_steps = visual_redo_depth(slide_id)

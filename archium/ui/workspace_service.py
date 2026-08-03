@@ -11,7 +11,7 @@ from archium.application.asset_vision_rag_service import (
     AssetVisionBackfillResult,
     AssetVisionBackfillService,
 )
-from archium.application.unit_of_work import SessionLike, api_bound, session_of
+from archium.application.unit_of_work import SessionLike, api_bound, session_of, unit_of_work
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.chunk_service import ChunkService
 from archium.application.ingestion_service import ImportItemResult
@@ -28,7 +28,6 @@ from archium.domain.project import Project
 from archium.domain.render import RenderResult
 from archium.domain.slide import SlideSpec
 from archium.exceptions import ProjectNotFoundError
-from archium.infrastructure.database.session import get_session
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
 
@@ -570,7 +569,8 @@ def continue_workflow_after_review(
 ) -> WorkflowRunResult:
     resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         service = _create_workflow_service(session, llm, resolved_settings)
         return service.continue_after_review(workflow_run_id)
 
@@ -583,7 +583,8 @@ def resume_workflow(
     """Continue a presentation workflow from its LangGraph interrupt/checkpoint (WF-004)."""
     resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         service = _create_workflow_service(session, llm, resolved_settings)
         return service.resume(workflow_run_id)
 
@@ -598,7 +599,8 @@ def regenerate_brief(
 
     resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         return RegenerationService(session, llm, settings=resolved_settings).regenerate_brief(
             presentation_id,
             workflow_run_id=workflow_run_id,
@@ -615,7 +617,8 @@ def regenerate_storyline(
 
     resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         return RegenerationService(session, llm, settings=resolved_settings).regenerate_storyline(
             presentation_id,
             workflow_run_id=workflow_run_id,
@@ -632,7 +635,8 @@ def regenerate_outline_plan(
 
     resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         return RegenerationService(session, llm, settings=resolved_settings).regenerate_outline_plan(
             presentation_id,
             workflow_run_id=workflow_run_id,
@@ -649,7 +653,8 @@ def regenerate_slide_plan(
 
     resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         return RegenerationService(session, llm, settings=resolved_settings).regenerate_slide_plan(
             presentation_id,
             workflow_run_id=workflow_run_id,

@@ -10,7 +10,7 @@ import streamlit as st
 
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Storyline
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.page_status_board_panel import status_badge
 from archium.ui.studio.slide_navigator import (
     _resolve_selected_index,
@@ -31,7 +31,8 @@ class StudioNarrativeBundle:
 def load_studio_narrative(presentation_id: UUID) -> StudioNarrativeBundle:
     from archium.application.review_service import PresentationReviewService
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         context = PresentationReviewService(session).get_review_context(presentation_id)
     if context is None:
         return StudioNarrativeBundle(outline=None, storyline=None)

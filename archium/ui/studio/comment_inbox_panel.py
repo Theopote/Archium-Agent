@@ -8,7 +8,7 @@ import streamlit as st
 
 from archium.domain.visual.element_comment import ElementComment, ElementCommentStatus
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.visual_service import SlideVisualSnapshot
 
@@ -32,7 +32,8 @@ def render_comment_inbox(
     current_slide_id = slide_snapshot.slide.id if slide_snapshot is not None else None
 
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             from archium.application.visual.element_comment_service import (
                 ElementCommentService,
             )
@@ -218,7 +219,8 @@ def _render_snapshot_diff(
 
 def _rebind(comment_id: UUID) -> None:
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             from archium.application.visual.element_comment_service import (
                 ElementCommentService,
             )
@@ -234,7 +236,8 @@ def _rebind(comment_id: UUID) -> None:
 
 def _resolve(comment_id: UUID) -> None:
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             from archium.application.visual.element_comment_service import (
                 ElementCommentService,
             )

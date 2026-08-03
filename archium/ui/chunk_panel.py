@@ -7,7 +7,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.chunk_service import ChunkService
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.workspace_service import list_project_documents
 
 
@@ -16,7 +16,8 @@ def render_chunk_panel(project_id: UUID) -> None:
     st.markdown("#### 资料片段")
     st.caption("预览并编辑语义分块结果；保存后会同步更新向量索引。")
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         documents = list_project_documents(session, project_id)
 
     if not documents:
@@ -32,7 +33,8 @@ def render_chunk_panel(project_id: UUID) -> None:
     )
     document_id = UUID(selected_id)
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         chunks = ChunkService(session).list_document_chunks(document_id)
 
     if not chunks:
@@ -76,7 +78,8 @@ def render_chunk_panel(project_id: UUID) -> None:
             if not content.strip():
                 st.error("片段内容不能为空。")
                 return
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 ChunkService(session).update_chunk(
                     UUID(chunk_id),
                     content=content,

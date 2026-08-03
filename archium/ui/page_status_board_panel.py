@@ -18,7 +18,7 @@ from archium.domain.page_pipeline_status import (
     PageStatusBoard,
 )
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.label_map import entity_label
 
@@ -110,7 +110,8 @@ def load_page_status_board(
     *,
     workflow_step: str | None = None,
 ) -> PageStatusBoard:
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         return PageStatusBoardService(session).build_board(
             presentation_id,
             workflow_step=workflow_step,
@@ -267,7 +268,8 @@ def _handle_action(
         st.session_state["review_focus_asset_board"] = True
         st.session_state["review_focus_slide_id"] = str(slide_id)
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 PageStatusBoardService(session).run_action(
                     presentation_id,
                     slide_id,
@@ -281,7 +283,8 @@ def _handle_action(
         return
 
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             PageStatusBoardService(session).run_action(
                 presentation_id,
                 slide_id,

@@ -7,7 +7,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.visual.visual_workflow_service import VisualWorkflowResult
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.app_navigation import get_app_page
 from archium.ui.pages.flow import render_stage_header, render_stage_nav
 from archium.ui.studio.export_panel import render_export_panel
@@ -36,7 +36,8 @@ def _load_context(
     presentation_id: UUID,
 ) -> StudioPresentationContext | None:
     critics, deck_qa, previews, workflow_output_dir = _workflow_artifacts()
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         return load_studio_context(
             session,
             project_id=project_id,
@@ -53,7 +54,8 @@ def _resolve_deliver_context() -> StudioPresentationContext | None:
     from archium.ui.pages.workspace import ensure_workspace_session
 
     ensure_workspace_session()
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         projects = list_studio_projects(session)
     if not projects:
         return None
@@ -66,7 +68,8 @@ def _resolve_deliver_context() -> StudioPresentationContext | None:
         st.session_state.selected_project_id = selected_project
     project_id = UUID(str(selected_project))
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         presentations = list_studio_presentations(session, project_id)
     if not presentations:
         st.caption(f"项目「{project_labels[str(project_id)]}」尚无汇报可导出。")
@@ -90,7 +93,8 @@ def _resolve_deliver_context() -> StudioPresentationContext | None:
     presentation_options = list(presentation_labels.keys())
     selected_presentation = st.session_state.get("selected_presentation_id")
     if selected_presentation not in presentation_options:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             from archium.application.presentation_selection import select_presentation
 
             auto_picked = select_presentation(session, presentations)

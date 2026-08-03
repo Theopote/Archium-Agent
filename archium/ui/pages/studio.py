@@ -12,6 +12,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.visual.visual_workflow_service import VisualWorkflowResult
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.studio.ai_workspace_panel import render_ai_workspace
 from archium.ui.studio.content_adaptation_panel import render_content_adaptation_panel
 from archium.ui.studio.export_panel import render_studio_toolbar
@@ -108,13 +109,13 @@ def _render_design_system_panel(
     slide_snapshot: SlideVisualSnapshot | None,
 ) -> None:
     """Render the professional design system panel in Studio."""
-    from archium.infrastructure.database.session import get_session
     from archium.application.design_system_integration import DesignSystemIntegrationService
-    
+
     st.markdown("### 🎨 专业设计系统")
     st.caption("应用专业模板、优化布局、评估设计质量")
-    
-    with get_session() as session:
+
+    with unit_of_work() as uow:
+        session = uow.session
         design_system_service = DesignSystemIntegrationService(session)
     
     # Template selection
@@ -602,10 +603,10 @@ def _render_wireframe_mode_banner(context: StudioPresentationContext) -> None:
             get_genesis_starter_state,
             presentation_has_formal_visual_previews,
         )
-        from archium.infrastructure.database.session import get_session
         from archium.ui.app_navigation import get_app_page
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             starter = get_genesis_starter_state(session, context.project.id)
             if starter is None:
                 return

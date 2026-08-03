@@ -22,6 +22,7 @@ from archium.domain.visual.scene_change_proposal import (
 )
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.visual_service import SlideVisualSnapshot
 
@@ -38,7 +39,8 @@ def get_stored_proposal(slide_id: UUID) -> SceneChangeProposal | None:
         except Exception:
             st.session_state.pop(_proposal_session_key(slide_id), None)
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         from archium.application.visual.scene_proposal_service import SceneProposalService
 
         settings = get_settings()
@@ -49,7 +51,8 @@ def get_stored_proposal(slide_id: UUID) -> SceneChangeProposal | None:
 
 
 def store_proposal(proposal: SceneChangeProposal) -> None:
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         from archium.application.visual.scene_proposal_service import SceneProposalService
 
         settings = get_settings()
@@ -141,7 +144,8 @@ def _render_before_after_previews(
     proposal: SceneChangeProposal,
     settings: Settings,
 ) -> None:
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         studio_scene = StudioSceneService(session, settings=settings)
         before_path = _preview_path(
             studio_scene,
@@ -272,7 +276,8 @@ def _render_decision_buttons(
         use_container_width=True,
         key=f"studio_reject_proposal_{proposal.proposal_id}",
     ):
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             from archium.application.visual.scene_proposal_service import SceneProposalService
 
             rejected = SceneProposalService(session, settings=settings).reject_proposal(proposal)

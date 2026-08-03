@@ -15,18 +15,18 @@ from archium.application.asset_provenance import (
 from archium.config.settings import get_settings
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
 from archium.ui.asset_metadata_panel import render_plan_overlay_editor_for_asset
 from archium.ui.label_map import entity_label
 from archium.ui.web_image_preview_panel import render_web_image_preview_panel
-from archium.application.unit_of_work import application_api
+from archium.application.unit_of_work import application_api, unit_of_work
 
 
 def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None:
     st.markdown(f"#### 资料库")
     st.caption("逐页视觉需求 · 候选素材匹配 · 人工确认")
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         service = AssetBoardService(session)
         board = service.build_board(project_id, presentation_id)
         assets = service.list_project_assets(project_id)
@@ -38,7 +38,8 @@ def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None
     summary[3].metric("待确认", board.pending_count)
 
     if st.button("重新匹配资料", key=f"rematch_assets_{presentation_id}", use_container_width=True):
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             AssetBoardService(session).rematch(project_id, presentation_id)
         st.success("资料匹配已更新（已确认项保持不变）。")
         st.rerun()
@@ -115,7 +116,8 @@ def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None
             st.error("请先选择素材。")
         else:
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     AssetBoardService(session).assign_asset(
                         selected.slide_id,
                         selected.requirement_index,
@@ -128,7 +130,8 @@ def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None
 
     if btn2.button("确认匹配", key=f"confirm_asset_{selected_key}", use_container_width=True):
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 board_service = AssetBoardService(session)
                 if picked_asset and picked_asset != current_asset:
                     board_service.assign_asset(
@@ -150,7 +153,8 @@ def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None
 
     if btn3.button("保存处理标记", key=f"save_flags_{selected_key}", use_container_width=True):
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 AssetBoardService(session).update_assignment_flags(
                     selected.slide_id,
                     selected.requirement_index,

@@ -10,7 +10,7 @@ from archium.application.deliverable_execution import supports_auto_generation
 from archium.domain.deliverable import DeliverablePlan, PlannedDeliverable
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.availability_labels import format_availability_suffix
 from archium.ui.error_handlers import report_user_error
 from archium.ui.planning_service import set_deliverable_selected
@@ -98,7 +98,8 @@ def _source_labels(item: PlannedDeliverable, by_id: dict[UUID, Workstream]) -> l
 
 def _toggle(plan_id: UUID, deliverable_id: str, selected: bool) -> None:
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             set_deliverable_selected(session, plan_id, deliverable_id, selected)
         st.rerun()
     except WorkflowError as exc:

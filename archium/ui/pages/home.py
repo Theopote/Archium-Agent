@@ -8,8 +8,7 @@ from pathlib import Path
 import streamlit as st
 
 from archium.domain.delivery_record import DeliveryRecord
-from archium.application.unit_of_work import application_api
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import application_api, unit_of_work
 from archium.ui.app_navigation import get_app_page
 from archium.ui.project_progress_card import (
     ProjectProgressSnapshot,
@@ -33,7 +32,8 @@ def _apply_studio_overview_for_wireframe_deck(snapshot: ProjectProgressSnapshot)
             presentation_has_formal_visual_previews,
         )
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             starter = get_genesis_starter_state(session, snapshot.project_id)
             if starter is None:
                 return
@@ -178,7 +178,8 @@ def _render_pending_issues(snapshot: ProjectProgressSnapshot) -> None:
 def _render_recent_versions(snapshot: ProjectProgressSnapshot) -> None:
     st.markdown("**最近版本**")
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             presentations = list_project_presentations(session, snapshot.project_id)
     except Exception:
         logger.exception("Failed to list presentations for home")
@@ -254,7 +255,7 @@ def _render_recent_design_changes(snapshot: ProjectProgressSnapshot) -> None:
     """Partner-facing design timeline snippet for Project Home."""
     st.markdown("**最近设计变化**")
     try:
-                from archium.ui.intent_evolution_panel import (
+        from archium.ui.intent_evolution_panel import (
             format_intent_event_time,
             intent_evolution_kind_label,
         )
@@ -313,7 +314,8 @@ def _render_home_starter_preview(snapshot: ProjectProgressSnapshot) -> None:
         )
         from archium.ui.components.genesis_draft_card import render_genesis_draft_card
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             starter = get_genesis_starter_state(session, snapshot.project_id)
             formal_previews = False
             if starter is not None:

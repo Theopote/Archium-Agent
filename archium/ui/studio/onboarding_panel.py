@@ -8,7 +8,7 @@ import streamlit as st
 
 from archium.config.settings import Settings
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.app_navigation import get_app_page
 from archium.ui.error_handlers import report_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
@@ -38,7 +38,8 @@ def render_studio_onboarding() -> None:
                 st.error("请填写项目名称。")
                 return
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     project = create_studio_project(
                         session,
                         name=name,
@@ -57,7 +58,8 @@ def render_studio_onboarding() -> None:
 
 def render_studio_import_panel(*, project_id: UUID, expanded: bool = False) -> None:
     """Render document upload for the selected studio project."""
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         overview = get_studio_project_overview(session, project_id)
     if overview is None:
         return
@@ -99,7 +101,8 @@ def render_studio_no_presentation_hint(*, project_id: UUID) -> None:
 def _run_import(project_id: UUID, uploads: list, *, settings: Settings) -> None:
     results = []
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             for upload in uploads:
                 results.append(
                     import_studio_file(

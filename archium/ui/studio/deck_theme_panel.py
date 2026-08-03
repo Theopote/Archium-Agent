@@ -18,6 +18,7 @@ from archium.domain.visual.proposal_status import ProposalStatus
 from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio_service import (
     accept_theme_proposal,
@@ -55,7 +56,8 @@ def render_deck_theme_panel(
         "不会把主题颜色批量写死进每个节点的 SceneRevision。"
     )
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         design = load_presentation_design_system(session, presentation_id)
         active = get_active_theme_proposal(session, presentation_id)
 
@@ -282,7 +284,8 @@ def render_deck_theme_panel(
         key=f"theme_reject_{proposal.proposal_id}",
     ):
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 rejected = reject_theme_proposal(session, proposal)
             _store_theme_proposal(rejected)
             st.info("已拒绝风格提案，正式 DesignSystem 未改动。")

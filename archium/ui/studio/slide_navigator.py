@@ -8,7 +8,7 @@ import streamlit as st
 
 from archium.domain.page_pipeline_status import PagePipelineStatus
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.layout_family_ui import format_layout_family_label
 from archium.ui.page_status_board_panel import (
@@ -35,7 +35,8 @@ def _set_selected_slide(index: int) -> None:
 
 def _move_slide(context: StudioPresentationContext, from_index: int, to_index: int) -> None:
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             reorder_studio_slide(
                 session,
                 context.presentation.id,
@@ -109,7 +110,8 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
             use_container_width=True,
         ):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     new_slide = add_studio_slide(
                         session,
                         context.presentation.id,
@@ -131,7 +133,8 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
             disabled=len(slides) <= 1,
         ):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     delete_studio_slide(session, current.slide.id)
                 st.session_state.studio_selected_slide_index = max(0, selected_index - 1)
                 st.success("已删除当前页。")

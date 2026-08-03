@@ -47,7 +47,7 @@ from archium.domain.workflow import WorkflowRun
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
 from archium.application.api.mission import MissionApi
-from archium.application.unit_of_work import SessionLike, api_bound, session_of
+from archium.application.unit_of_work import SessionLike, api_bound, session_of, unit_of_work
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
 from archium.ui.workspace_service import _resolve_runtime_settings
@@ -566,11 +566,11 @@ def assess_entry_context(
 ):
     """Assess before a project exists (no persistence)."""
     from archium.application.context import ContextAnalyzer
-    from archium.infrastructure.database.session import get_session
-
+    
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         return ContextAnalyzer(session, llm, settings=runtime).assess_text(
             user_text, project_name=project_name
         )

@@ -10,6 +10,7 @@ from archium.application.slide_diff import change_source_label
 from archium.domain.revision import EntityRevision
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio_service import (
     list_slide_content_revisions,
@@ -33,7 +34,8 @@ def render_visual_revision_panel(*, slide_snapshot: SlideVisualSnapshot | None) 
     if slide_snapshot is None:
         return
     slide_id = slide_snapshot.slide.id
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         revisions = list_slide_visual_revisions(session, slide_id)
     if not revisions:
         return
@@ -56,7 +58,8 @@ def render_content_revision_panel(*, slide_snapshot: SlideVisualSnapshot | None)
     if slide_snapshot is None:
         return
     slide_id = slide_snapshot.slide.id
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         revisions = list_slide_content_revisions(session, slide_id)
     if not revisions:
         return

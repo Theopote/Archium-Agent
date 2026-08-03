@@ -23,12 +23,11 @@ from archium.domain.project_mission import (
     Stakeholder,
 )
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
 from archium.ui.components.design_rationale_details import render_design_rationale
 from archium.ui.components.spatial_design_details import render_spatial_design_layer
 from archium.ui.error_handlers import report_user_error
 from archium.ui.planning_service import update_mission_fields
-from archium.application.unit_of_work import application_api
+from archium.application.unit_of_work import application_api, unit_of_work
 
 TASK_NATURE_LABELS = {
     TaskNature.NEW_BUILD: "新建",
@@ -215,7 +214,8 @@ def _truncate_statement(statement: str, *, max_chars: int = 160) -> str:
 def _render_research_knowledge_preview(project_id: UUID, *, key_prefix: str) -> None:
     from archium.application.project_knowledge_service import ProjectKnowledgeService
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         items = ProjectKnowledgeService(session).list_research_knowledge_items(
             project_id,
             pending_only=True,
@@ -236,11 +236,13 @@ def _render_research_knowledge_preview(project_id: UUID, *, key_prefix: str) -> 
                 st.caption(f"来源：{title}")
         cols = st.columns(2)
         if cols[0].button("确认", key=f"{key_prefix}_confirm_research_{item.id}"):
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 ProjectKnowledgeService(session).confirm_item(item.id)
             st.rerun()
         if cols[1].button("驳回", key=f"{key_prefix}_reject_research_{item.id}"):
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 ProjectKnowledgeService(session).reject_item(item.id)
             st.rerun()
 
@@ -273,7 +275,8 @@ def _render_mission_reapproval_prompt(mission: ProjectMission, *, key_prefix: st
         use_container_width=True,
     ):
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 from archium.ui.session_actor import get_current_actor_id
 
                 ProjectMissionService(
@@ -298,7 +301,8 @@ def _render_mission_reapproval_prompt(mission: ProjectMission, *, key_prefix: st
         use_container_width=True,
     ):
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 from archium.ui.session_actor import get_current_actor_id
 
                 approve_mission_and_continue(
@@ -324,7 +328,8 @@ def _render_written_back_research_summary(mission: ProjectMission, *, key_prefix
     from archium.ui.llm_settings import get_ui_effective_settings
 
     settings = get_ui_effective_settings()
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         written = MissionResearchEnrichmentService(
             session,
             create_llm_provider(settings) if settings.llm_configured else None,
@@ -352,7 +357,8 @@ def _render_mission_revision_action(mission: ProjectMission, *, key_prefix: str)
     if not settings.llm_configured:
         return
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         service = MissionResearchEnrichmentService(
             session,
             create_llm_provider(settings),
@@ -368,7 +374,8 @@ def _render_mission_revision_action(mission: ProjectMission, *, key_prefix: str)
         help="基于已写回公开研究，轻量更新任务陈述与开放问题。",
     ):
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 service = MissionResearchEnrichmentService(
                     session,
                     create_llm_provider(settings),
@@ -393,7 +400,8 @@ def _render_research_enrichment_action(mission: ProjectMission, *, key_prefix: s
     from archium.ui.llm_settings import get_ui_effective_settings
 
     settings = get_ui_effective_settings()
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         pending = MissionResearchEnrichmentService(
             session,
             create_llm_provider(settings) if settings.llm_configured else None,
@@ -410,7 +418,8 @@ def _render_research_enrichment_action(mission: ProjectMission, *, key_prefix: s
         use_container_width=True,
     ):
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 service = MissionResearchEnrichmentService(
                     session,
                     create_llm_provider(settings) if settings.llm_configured else None,
@@ -457,7 +466,8 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
 
     def _apply_revise(direction_id: UUID) -> None:
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 selection = select_concept_direction(
                     session, direction_id, revise_action="apply"
                 )
@@ -480,7 +490,8 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
 
     def _reject_revise(direction_id: UUID) -> None:
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 selection = select_concept_direction(
                     session, direction_id, revise_action="reject"
                 )
@@ -550,7 +561,8 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
                 return
             with st.spinner("正在推演概念方向…"):
                 try:
-                    with get_session() as session:
+                    with unit_of_work() as uow:
+                        session = uow.session
                         result = generate_concept_directions(
                             session,
                             mission.id,
@@ -582,7 +594,8 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
             use_container_width=True,
         ):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     request = preview_presentation_request_from_mission(session, mission.id)
                 st.session_state[f"{key_prefix}_direction_request_preview"] = request
                 st.success("已生成预览（含当前概念方向与视觉简报）。")
@@ -599,7 +612,8 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
             help="用当前已选方向与视觉简报覆盖 planning 中的 PresentationRequest 草稿。",
         ):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     bridge = refresh_presentation_request_draft(
                         session, UUID(str(run_id_raw))
                     )
@@ -641,7 +655,8 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
         action, direction_id = clicked
         if action == "select":
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     selection = select_concept_direction(session, direction_id)
                 if store_pending_revise_from_selection(selection):
                     st.info("批判建议修订 — 请在上方确认应用或拒绝。")
@@ -661,7 +676,8 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
                 st.error(report_user_error(exc))
         elif action == "archive":
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     archive_concept_direction(session, direction_id)
                 st.rerun()
             except WorkflowError as exc:
@@ -722,7 +738,8 @@ def _render_autonomous_research_section(mission: ProjectMission, *, key_prefix: 
         st.warning("配置 LLM 后可启动自主研究。")
         return
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         prefs = WebResearchSettingsService(session).get_preferences(base_settings=settings)
     effective_settings = apply_web_research_preferences(settings, prefs)
 
@@ -745,7 +762,8 @@ def _render_autonomous_research_section(mission: ProjectMission, *, key_prefix: 
         use_container_width=True,
     ):
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 service = AutonomousResearchService(
                     session,
                     create_llm_provider(settings),
@@ -826,7 +844,8 @@ def _render_research_vision_seeds(mission: ProjectMission, *, key_prefix: str) -
             use_container_width=True,
         ):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     updated = apply_vision_bundles_to_directions(
                         session,
                         mission.project_id,
@@ -1102,7 +1121,8 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
             evaluation_criteria=_parse_criteria(criteria_text),
         )
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 update_mission_fields(session, mission.id, patch)
             st.success("任务理解已更新。")
             st.rerun()

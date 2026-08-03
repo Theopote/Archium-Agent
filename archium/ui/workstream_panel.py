@@ -9,7 +9,7 @@ import streamlit as st
 from archium.domain.enums import EffortLevel, Priority
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.planning_service import set_workstream_selected
 
@@ -90,7 +90,8 @@ def render_workstream_panel(
 
 def _toggle(workstream_id: UUID, selected: bool) -> None:
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             set_workstream_selected(session, workstream_id, selected)
         st.rerun()
     except WorkflowError as exc:

@@ -9,6 +9,7 @@ import streamlit as st
 from archium.domain.visual.layout import LayoutPlan
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.label_map import entity_label
 from archium.ui.layout_family_ui import (
@@ -95,7 +96,8 @@ def render_layout_candidates_panel(*, slide_snapshot: SlideVisualSnapshot | None
         key=f"studio_select_plan_{slide_id}",
     ):
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 select_layout_candidate(
                     session,
                     slide_id=slide_id,
@@ -125,7 +127,8 @@ def _render_template_match_controls(slide_snapshot: SlideVisualSnapshot) -> None
     from archium.application.visual.template_composition_service import TemplateCompositionService
 
     slide_id = slide_snapshot.slide.id
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         templates = TemplateCompositionService(session).list_published_templates()
     if not templates:
         st.caption("尚无可用 ArchitecturalTemplate。请先在「模板工作室」发布模板。")

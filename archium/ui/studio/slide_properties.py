@@ -12,7 +12,7 @@ from archium.domain.visual.element_lock import canvas_geometry_locked, is_drawin
 from archium.domain.visual.enums import LayoutContentType
 from archium.domain.visual.layout_evidence_item import EvidenceItemRole, LayoutEvidenceItem
 from archium.domain.visual.render_scene import TextNode
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.label_map import entity_label, field_label
 from archium.ui.layout_family_ui import format_layout_family_label, layout_family_implemented
@@ -91,7 +91,8 @@ def _run_lock(
     locked: bool,
 ) -> None:
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             from archium.ui.studio_service import apply_slide_element_lock
 
             apply_slide_element_lock(
@@ -112,7 +113,8 @@ def _run_reorder(
     direction: str,
 ) -> None:
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             from archium.ui.studio_service import apply_slide_element_reorder
 
             apply_slide_element_reorder(
@@ -140,7 +142,8 @@ def _run_visibility(
     visible: bool,
 ) -> None:
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             from archium.ui.studio_service import apply_slide_element_visibility
 
             apply_slide_element_visibility(
@@ -163,7 +166,8 @@ def _run_align(
     reference_element_id: str | None = None,
 ) -> None:
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             from archium.ui.studio_service import apply_slide_element_align
 
             apply_slide_element_align(
@@ -277,7 +281,8 @@ def render_slide_properties(
                     help="在页面中心附近创建 FreeformNode 多边形（V1 导出为描边折线）",
                 ):
                     try:
-                        with get_session() as session:
+                        with unit_of_work() as uow:
+                            session = uow.session
                             from archium.ui.studio_service import apply_slide_create_freeform
 
                             result = apply_slide_create_freeform(
@@ -507,7 +512,8 @@ def _render_vision_illustration_panel(
         key=f"studio_vision_generate_{slide.id}",
     ):
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 result = generate_slide_vision_illustration(
                     session,
                     slide.id,
@@ -578,7 +584,8 @@ def _render_evidence_items_panel(
 
     asset_options: dict[str, str] = {}
     if project_id is not None:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             assets = AssetBoardService(session).list_project_assets(project_id)
         asset_options = {str(asset.id): asset.filename for asset in assets}
 
@@ -656,7 +663,8 @@ def _render_evidence_items_panel(
         key=f"studio_save_evidence_items_{slide.id}",
     ):
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 result = apply_slide_evidence_items(session, slide.id, items=edited)
             note = "已同步预览图注与照片。" if result.scene_patched else "已保存页面证据（预览节点未找到）。"
             st.success(note)
@@ -811,7 +819,8 @@ def _render_element_properties(
             key=f"studio_save_element_text_{slide_snapshot.slide.id}_{element.id}",
         ):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     apply_slide_element_text(
                         session,
                         slide_snapshot.slide.id,
@@ -829,7 +838,8 @@ def _render_element_properties(
             key=f"studio_save_element_style_{slide_snapshot.slide.id}_{element.id}",
         ):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     apply_slide_element_style(
                         session,
                         slide_snapshot.slide.id,
@@ -932,7 +942,8 @@ def _render_element_properties(
                         }
                     )
                 try:
-                    with get_session() as session:
+                    with unit_of_work() as uow:
+                        session = uow.session
                         from archium.ui.studio_service import apply_slide_element_text_runs
 
                         apply_slide_element_text_runs(
@@ -954,7 +965,8 @@ def _render_element_properties(
             st.write(f"裁切策略：`{element.crop_policy.value}`")
 
         if project_id is not None and element.content_type == LayoutContentType.IMAGE:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 assets = AssetBoardService(session).list_project_assets(project_id)
             asset_options = {str(asset.id): asset.filename for asset in assets}
             if asset_options:
@@ -976,7 +988,8 @@ def _render_element_properties(
                     key=f"studio_apply_element_asset_{slide_snapshot.slide.id}_{element.id}",
                 ):
                     try:
-                        with get_session() as session:
+                        with unit_of_work() as uow:
+                            session = uow.session
                             apply_slide_element_asset(
                                 session,
                                 slide_snapshot.slide.id,
@@ -999,7 +1012,8 @@ def _render_element_properties(
                 help="为图片叠加线性渐隐（GradientFill，导出为分段半透明近似）",
             ):
                 try:
-                    with get_session() as session:
+                    with unit_of_work() as uow:
+                        session = uow.session
                         from archium.ui.studio_service import apply_slide_element_gradient_fill
 
                         apply_slide_element_gradient_fill(
@@ -1019,7 +1033,8 @@ def _render_element_properties(
                 help="标记 silhouette 并叠加 Freeform 菱形分析框（非真图片剪裁）",
             ):
                 try:
-                    with get_session() as session:
+                    with unit_of_work() as uow:
+                        session = uow.session
                         from archium.ui.studio_service import apply_slide_element_silhouette
 
                         apply_slide_element_silhouette(
@@ -1062,7 +1077,8 @@ def _render_element_properties(
                 key=f"studio_apply_fill_{slide_snapshot.slide.id}_{element.id}",
             ):
                 try:
-                    with get_session() as session:
+                    with unit_of_work() as uow:
+                        session = uow.session
                         apply_slide_element_style(
                             session,
                             slide_snapshot.slide.id,
@@ -1103,7 +1119,8 @@ def _render_element_properties(
                     key=f"studio_apply_grad_{slide_snapshot.slide.id}_{element.id}",
                 ):
                     try:
-                        with get_session() as session:
+                        with unit_of_work() as uow:
+                            session = uow.session
                             from archium.ui.studio_service import (
                                 apply_slide_element_gradient_fill,
                             )
@@ -1230,7 +1247,8 @@ def _render_element_properties(
                 help="将多选元素组成一个可整体拖动的 GroupNode",
             ):
                 try:
-                    with get_session() as session:
+                    with unit_of_work() as uow:
+                        session = uow.session
                         from archium.ui.studio_service import apply_slide_element_group
 
                         result = apply_slide_element_group(
@@ -1255,7 +1273,8 @@ def _render_element_properties(
                 help="在两个选中元素之间创建分析连接线",
             ):
                 try:
-                    with get_session() as session:
+                    with unit_of_work() as uow:
+                        session = uow.session
                         from archium.ui.studio_service import apply_slide_element_connect
 
                         result = apply_slide_element_connect(
@@ -1281,7 +1300,8 @@ def _render_element_properties(
             key=f"studio_ungroup_{slide_snapshot.slide.id}_{element.id}",
         ):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     from archium.ui.studio_service import apply_slide_element_ungroup
 
                     apply_slide_element_ungroup(
@@ -1353,7 +1373,8 @@ def _render_element_properties(
             key=f"studio_duplicate_element_{slide_snapshot.slide.id}_{element.id}",
         ):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     from archium.ui.studio_service import apply_slide_element_duplicate
 
                     result = apply_slide_element_duplicate(
@@ -1378,7 +1399,8 @@ def _render_element_properties(
             key=f"studio_delete_element_{slide_snapshot.slide.id}_{element.id}",
         ):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     from archium.ui.studio_service import apply_slide_element_delete
 
                     apply_slide_element_delete(
