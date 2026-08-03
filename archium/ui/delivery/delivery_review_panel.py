@@ -172,9 +172,10 @@ def estimate_delivery_quality_score(
 
 
 def render_delivery_review_panel(*, context: StudioPresentationContext) -> ExportVerdict:
-    """Render delivery checklist and estimated quality before export actions."""
+    """Render delivery checklist and product QA buckets before export actions."""
     deck_qa = _deck_qa_report(context)
     critique = st.session_state.get("last_presentation_critique")
+    critic = _merged_critic_report(context)
     verdict = resolve_export_verdict_safe(
         project_id=context.project.id,
         presentation_id=context.presentation.id,
@@ -182,7 +183,7 @@ def render_delivery_review_panel(*, context: StudioPresentationContext) -> Expor
         presentation_critique=critique if isinstance(critique, dict) else None,
     )
     checklist = build_delivery_checklist(context=context, verdict=verdict)
-    quality = estimate_delivery_quality_score(
+    readiness = estimate_delivery_quality_score(
         context=context,
         verdict=verdict,
         checklist=checklist,
@@ -191,8 +192,9 @@ def render_delivery_review_panel(*, context: StudioPresentationContext) -> Expor
     st.markdown("#### 交付检查")
     cols = st.columns([1.2, 2.8])
     with cols[0]:
-        st.metric("预计质量", f"{quality}/100")
+        st.metric("导出就绪度", f"{readiness}/100")
         st.caption(verdict.partner_summary())
+        st.caption("就绪度只表示能否导出，不代替下方分类问题。")
     with cols[1]:
         for item in checklist:
             mark = "✓" if item.passed else "○"
@@ -206,6 +208,16 @@ def render_delivery_review_panel(*, context: StudioPresentationContext) -> Expor
                 unsafe_allow_html=True,
             )
 
+    review_payload = _open_review_issue_payloads(context.presentation.id)
+    from archium.ui.components.product_qa_buckets import render_product_qa_from_reports
+
+    render_product_qa_from_reports(
+        review_issues=review_payload,
+        deck_qa_report=deck_qa if isinstance(deck_qa, dict) else None,
+        critic_report=critic if isinstance(critic, dict) else None,
+        title="问题分类（事实 / 表达 / 渲染）",
+    )
+
     if verdict.blockers:
         st.warning("阻塞项：" + "；".join(verdict.blockers[:3]))
     elif verdict.warnings:
@@ -217,3 +229,60 @@ def render_delivery_review_panel(*, context: StudioPresentationContext) -> Expor
         st.page_link(get_app_page("edit"), label="回工作室处理问题页 →")
 
     return verdict
+
+
+def _merged_critic_report(context: StudioPresentationContext) -> dict | None:
+    reports: list[dict] = []
+    raw = st.session_state.get("last_visual_critic_report")
+    if isinstance(raw, dict):
+        reports.append(raw)
+    result = st.session_state.get("last_visual_workflow_result")
+    if isinstance(result, VisualWorkflowResult):
+        reports.extend(
+            item for item in (result.visual_critic_reports or []) if isinstance(item, dict)
+        )
+    snapshot_reports = getattr(context.snapshot, "visual_critic_reports", None)
+    if isinstance(snapshot_reports, list):
+        reports.extend(item for item in snapshot_reports if isinstance(item, dict))
+    if not reports:
+        return None
+    findings: list[dict] = []
+    total_scores: list[float] = []
+    for report in reports:
+        for item in report.get("findings") or []:
+            if isinstance(item, dict):
+                findings.append(item)
+        score = report.get("total_score")
+        if isinstance(score, (int, float)):
+            total_scores.append(float(score))
+    merged: dict = {"findings": findings}
+    if total_scores:
+        merged["total_score"] = sum(total_scores) / len(total_scores)
+    return merged
+
+
+def _open_review_issue_payloads(presentation_id) -> list[dict]:
+    try:
+        from archium.application.review_service import PresentationReviewService
+        from archium.domain.enums import ReviewStatus
+        from archium.infrastructure.database.session import get_session
+
+        with get_session() as session:
+            issues = PresentationReviewService(session).list_review_issues(presentation_id)
+        open_like = {ReviewStatus.OPEN, ReviewStatus.ACKNOWLEDGED}
+        payloads: list[dict] = []
+        for issue in issues:
+            if issue.status not in open_like:
+                continue
+            payloads.append(
+                {
+                    "rule_code": issue.rule_code,
+                    "title": issue.title,
+                    "description": issue.description,
+                    "suggestion": issue.suggestion,
+                    "severity": getattr(issue.severity, "value", str(issue.severity)),
+                }
+            )
+        return payloads
+    except Exception:
+        return []

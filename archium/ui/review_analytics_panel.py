@@ -105,4 +105,25 @@ def render_project_review_quality_dashboard(project_id: UUID) -> None:
     col3.metric("规则种类", len(stats))
     col4.metric("高误报规则", high_dismiss_rules, help="忽略占比 ≥ 50% 且已有 ≥ 2 次人工处理")
 
+    from archium.ui.components.product_qa_buckets import render_product_qa_from_reports
+
+    open_like = [
+        issue
+        for issue in issues
+        if issue.status in {ReviewStatus.OPEN, ReviewStatus.ACKNOWLEDGED}
+    ]
+    render_product_qa_from_reports(
+        review_issues=[
+            {
+                "rule_code": issue.rule_code,
+                "title": issue.title,
+                "description": issue.description,
+                "suggestion": issue.suggestion,
+                "severity": getattr(issue.severity, "value", str(issue.severity)),
+            }
+            for issue in open_like
+        ],
+        title="待处理问题分类（事实 / 表达 / 渲染）",
+    )
+
     render_rule_code_stats(issues)

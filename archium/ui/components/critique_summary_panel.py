@@ -11,29 +11,22 @@ from archium.infrastructure.database.session import get_session
 
 
 def render_visual_critic_findings(critic: dict[str, Any] | None) -> None:
-    """Show actionable Visual Critic findings (not score-only)."""
+    """Show Visual Critic findings grouped into product QA buckets."""
     if not isinstance(critic, dict):
         return
+    from archium.ui.components.product_qa_buckets import render_product_qa_from_reports
+
     total = critic.get("total_score")
     score_label = f"{total:.2f}" if isinstance(total, (int, float)) else "—"
-    st.markdown(f"**视觉批判** · 评分 {score_label}")
+    st.markdown(f"**视觉批判** · 参考分 {score_label}（请以下方分类问题为准）")
     findings = critic.get("findings") or []
     if not isinstance(findings, list) or not findings:
         st.caption("暂无具体发现。")
         return
-    for item in findings[:8]:
-        if not isinstance(item, dict):
-            continue
-        severity = str(item.get("severity") or "warning")
-        message = str(item.get("message") or "").strip()
-        suggestion = str(item.get("suggestion") or "").strip()
-        code = str(item.get("rule_code") or "").strip()
-        if not message:
-            continue
-        head = f"`{code}` · {severity}" if code else severity
-        st.markdown(f"- **{head}** — {message}")
-        if suggestion:
-            st.caption(f"建议：{suggestion}")
+    render_product_qa_from_reports(
+        critic_report=critic,
+        title="问题分类（事实 / 表达 / 渲染）",
+    )
 
 
 def render_design_critique_card(
