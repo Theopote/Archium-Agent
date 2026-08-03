@@ -13,10 +13,11 @@ from archium.application.asset_vision_rag_service import (
     AssetVisionBackfillResult,
     AssetVisionBackfillService,
 )
+from archium.application.api.session import api_from_session
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.chunk_service import ChunkService
 from archium.application.export_service import PresentationExportService
-from archium.application.ingestion_service import ImportItemResult, IngestionService
+from archium.application.ingestion_service import ImportItemResult
 from archium.application.llm_settings_resolver import get_effective_settings
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_workflow_service import PresentationWorkflowService
@@ -29,11 +30,7 @@ from archium.domain.presentation import Presentation, PresentationBrief, Storyli
 from archium.domain.project import Project
 from archium.domain.render import RenderResult
 from archium.domain.slide import SlideSpec
-from archium.infrastructure.database.repositories import (
-    DocumentRepository,
-    PresentationRepository,
-    ProjectRepository,
-)
+from archium.exceptions import ProjectNotFoundError
 from archium.infrastructure.database.session import get_session
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
@@ -121,8 +118,10 @@ def resolve_generation_form_defaults(session: Session, project_id: UUID) -> Gene
         sections="背景与语境\n设计策略\n空间与效果",
         target_slide_count=12,
     )
-    project = ProjectRepository(session).get_by_id(project_id)
-    if project is None:
+    project = None
+    try:
+        project = api_from_session(session).project.get(project_id)
+    except ProjectNotFoundError:
         return base
 
     title = (project.name or "").strip() or base.title
@@ -153,6 +152,8 @@ def resolve_generation_form_defaults(session: Session, project_id: UUID) -> Gene
                 if purpose == base.purpose or _looks_like_internal_assessment(purpose):
                     purpose = "形成前期策划与概念设计汇报，明确重建定位与决策路径"
             break
+
+    from archium.infrastructure.database.repositories import PresentationRepository
 
     presentations = PresentationRepository(session)
     deck_rows = list_project_presentations(session, project_id)
@@ -237,29 +238,26 @@ def create_project(
     origin_mode: ProjectOriginMode = ProjectOriginMode.EXISTING_PROJECT,
     actor_id: str | None = None,
 ) -> Project:
-    from archium.domain.access import LOCAL_ACTOR_ID
-
-    project = Project(
-        name=name.strip(),
-        project_type=project_type,
-        description=description.strip() or None,
+    return api_from_session(session).project.create(
+        name.strip(),
+        description.strip() or None,
         origin_mode=origin_mode,
+        actor_id=actor_id,
+        project_type=project_type,
     )
-    resolved = (actor_id or LOCAL_ACTOR_ID).strip() or LOCAL_ACTOR_ID
-    return ProjectRepository(session).create(project, actor_id=resolved)
 
 
 def get_project_overview(session: Session, project_id: UUID) -> ProjectOverview | None:
-    documents = DocumentRepository(session)
-    presentations = PresentationRepository(session)
-    project = ProjectRepository(session).get_by_id(project_id)
-    if project is None:
+    api = api_from_session(session)
+    try:
+        project = api.project.get(project_id)
+    except ProjectNotFoundError:
         return None
     return ProjectOverview(
         project=project,
-        document_count=documents.count_by_project(project_id),
-        chunk_count=documents.count_chunks_by_project(project_id),
-        presentation_count=presentations.count_by_project(project_id),
+        document_count=api.documents.count(project_id),
+        chunk_count=api.documents.count_chunks(project_id),
+        presentation_count=api.project.count_presentations(project_id),
     )
 
 
@@ -278,7 +276,7 @@ def _parse_required_sections(required_sections_text: str) -> list[str]:
 
 
 def list_project_documents(session: Session, project_id: UUID) -> list[SourceDocument]:
-    return DocumentRepository(session).list_by_project(project_id)
+    return api_from_session(session).documents.list(project_id)
 
 
 def list_document_chunks(session: Session, document_id: UUID) -> list[DocumentChunk]:
@@ -300,7 +298,7 @@ def update_document_chunk(
 
 
 def list_project_presentations(session: Session, project_id: UUID) -> list[Presentation]:
-    return PresentationRepository(session).list_by_project(project_id)
+    return api_from_session(session).project.list_presentations(project_id)
 
 
 @dataclass(frozen=True)
@@ -330,9 +328,10 @@ def import_uploaded_file(
         temp_file.write(data)
         temp_path = Path(temp_file.name)
     try:
+        from archium.application.api.documents import DocumentsApi
         from archium.ui.session_actor import get_current_actor_id
 
-        result = IngestionService(session, settings=settings).import_file(
+        result = DocumentsApi(session, settings=settings).upload_file(
             project_id, temp_path, actor_id=get_current_actor_id()
         )
         # Keep user-facing filename (temp path is opaque).

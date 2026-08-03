@@ -230,7 +230,6 @@ def _render_intent_evidence_summary(project_id: str) -> None:
     from uuid import UUID
 
     from archium.application.api.session import api_from_session
-    from archium.infrastructure.database.mission_repositories import MissionRepository
 
     try:
         project_uuid = UUID(project_id)
@@ -239,12 +238,13 @@ def _render_intent_evidence_summary(project_id: str) -> None:
 
     evidence_rows = []
     with get_session() as session:
-        missions = MissionRepository(session).list_missions_by_project(project_uuid)
+        api = api_from_session(session)
+        missions = api.mission.list_for_project(project_uuid)
         if missions and missions[0].design_intent is not None:
             evidence_rows = list(missions[0].design_intent.evidence[-6:])
         if not evidence_rows:
             try:
-                project = api_from_session(session).project.get(project_uuid)
+                project = api.project.get(project_uuid)
             except Exception:
                 project = None
             if project and project.intent_evolution:

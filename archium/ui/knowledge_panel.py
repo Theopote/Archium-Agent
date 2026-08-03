@@ -6,10 +6,10 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.api.session import api_from_session
 from archium.application.project_knowledge_service import ProjectKnowledgeService
 from archium.domain.enums import DocumentPurpose, InformationOrigin, InformationReliability
 from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
-from archium.infrastructure.database.repositories import DocumentRepository
 from archium.infrastructure.database.session import get_session
 
 ORIGIN_LABELS = {
@@ -44,7 +44,7 @@ def render_knowledge_panel(project_id: UUID) -> None:
     with get_session() as session:
         service = ProjectKnowledgeService(session)
         view = service.get_view(project_id)
-        documents = DocumentRepository(session).list_by_project(project_id)
+        documents = api_from_session(session).documents.list(project_id)
         from archium.application.mission_context_bridge import resolve_project_mission
         from archium.application.mission_research_enrichment_service import (
             MissionResearchEnrichmentService,

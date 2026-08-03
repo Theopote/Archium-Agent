@@ -6,11 +6,12 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.api.session import api_from_session
 from archium.application.cultural_narrative_service import (
     is_cultural_village_scenario,
     validate_narrative,
 )
-from archium.infrastructure.database.repositories import ProjectRepository
+from archium.exceptions import ProjectNotFoundError
 from archium.infrastructure.database.session import get_session
 
 
@@ -19,9 +20,12 @@ def render_cultural_narrative_panel(project_id: UUID) -> None:
     st.caption("文化名村/遗产类项目的结构化故事框架，供 Storyline 与 Outline 引用。")
 
     with get_session() as session:
-        projects = ProjectRepository(session)
-        project = projects.get_by_id(project_id)
-        narratives = projects.list_cultural_narratives(project_id)
+        api = api_from_session(session)
+        try:
+            project = api.project.get(project_id)
+        except ProjectNotFoundError:
+            project = None
+        narratives = api.project.list_cultural_narratives(project_id)
 
     if project is None:
         st.warning("项目不存在")

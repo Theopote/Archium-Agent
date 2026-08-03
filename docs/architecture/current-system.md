@@ -131,11 +131,12 @@ Studio 的编辑闭环不是直接覆写导出文件：
 
 进程内稳定业务边界在 `archium/application/api/`，资源名对应产品路径（非 HTTP）：
 
-`/project` `/documents` `/context` `/mission` `/storyline` `/slides` `/scenes` `/revisions` `/render` `/delivery` 以及 `/jobs`。
+`/project` `/documents` `/context` `/mission` `/storyline` `/slides` `/scenes` `/visual` `/revisions` `/render` `/delivery` 以及 `/jobs`。
 
 约定：
 
 - Streamlit 通过 `api_from_session(session)` 调用；**不**在 `ui/pages` 直连 Repository
+- Studio / Visual / Planning 门面的高频读路径走 `SlidesApi` / `VisualApi` / `MissionApi`（`load_presentation_visual` 等）
 - 长任务一律 `JobsApi.create`（支持 `idempotency_key`）；可 `get_progress` / `list_active` / `cancel`
 - 结果幂等：同 project + idempotency_key 返回同一 job；刷新后按 job_id / project 恢复
 - 事务仍遵守 APP-003：调用方 `get_session()`，UI 不 `commit`

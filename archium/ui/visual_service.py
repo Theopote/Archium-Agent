@@ -35,14 +35,8 @@ from archium.domain.visual.preferences import VisualPreferences
 from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent
+from archium.application.api.session import api_from_session
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.repositories import PresentationRepository
-from archium.infrastructure.database.visual_repositories import (
-    ArtDirectionRepository,
-    DesignSystemRepository,
-    LayoutPlanRepository,
-    VisualIntentRepository,
-)
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
@@ -102,12 +96,11 @@ def run_visual_workflow(
 ) -> VisualWorkflowResult:
     from archium.application.slide_design_brief_service import design_briefs_ready
     from archium.exceptions import WorkflowError
-    from archium.infrastructure.database.repositories import PresentationRepository
 
-    presentations = PresentationRepository(session)
-    presentation = presentations.get_presentation(presentation_id)
+    api = api_from_session(session)
+    presentation = api.slides.get_presentation(presentation_id)
     if presentation is not None and presentation.current_outline_id is not None:
-        outline = presentations.get_outline(presentation.current_outline_id)
+        outline = api.slides.get_outline(presentation.current_outline_id)
         if outline is not None:
             ready, missing = design_briefs_ready(outline)
             if not ready:
@@ -226,28 +219,9 @@ def get_presentation_visual_snapshot(
     deck_qa_report: dict | None = None,
     preview_paths: list[str] | None = None,
 ) -> PresentationVisualSnapshot:
-    presentations = PresentationRepository(session)
-    intents = VisualIntentRepository(session)
-    plans = LayoutPlanRepository(session)
-    art_repo = ArtDirectionRepository(session)
-    design_repo = DesignSystemRepository(session)
-
-    presentation = presentations.get_presentation(presentation_id)
-    slides = presentations.list_slides(presentation_id)
-    art_direction = None
-    design_system = None
-
-    if presentation is not None:
-        for art in art_repo.list_by_project(presentation.project_id):
-            if art.presentation_id == presentation_id:
-                art_direction = art
-                break
-        if art_direction is None:
-            arts = art_repo.list_by_project(presentation.project_id)
-            art_direction = arts[0] if arts else None
-
-    if art_direction is not None and art_direction.design_system_id is not None:
-        design_system = design_repo.get(art_direction.design_system_id)
+    loaded = api_from_session(session).visual.load_presentation_visual(presentation_id)
+    design_system = loaded.design_system
+    art_direction = loaded.art_direction
 
     critic_by_slide: dict[str, dict] = {}
     for report in visual_critic_reports or []:
@@ -259,21 +233,9 @@ def get_presentation_visual_snapshot(
 
     slide_snapshots: list[SlideVisualSnapshot] = []
     validator = LayoutValidationService()
-    for index, slide in enumerate(slides):
-        intent = (
-            intents.get(slide.visual_intent_id)
-            if slide.visual_intent_id is not None
-            else intents.get_by_slide(slide.id)
-        )
-        plan = (
-            plans.get(slide.layout_plan_id)
-            if slide.layout_plan_id is not None
-            else None
-        )
-        if plan is None:
-            listed = plans.list_by_slide(slide.id)
-            plan = listed[0] if listed else None
-        candidates = plans.list_by_slide(slide.id)
+    for index, item in enumerate(loaded.slides):
+        slide = item.slide
+        plan = item.layout_plan
         validation = None
         if plan is not None and design_system is not None:
             validation = validator.validate(
@@ -288,9 +250,9 @@ def get_presentation_visual_snapshot(
         slide_snapshots.append(
             SlideVisualSnapshot(
                 slide=slide,
-                visual_intent=intent,
+                visual_intent=item.visual_intent,
                 layout_plan=plan,
-                candidates=candidates,
+                candidates=item.candidates,
                 validation=validation,
                 visual_critic=critic,
                 preview_image=preview_by_index.get(index),
@@ -342,11 +304,10 @@ def select_layout_candidate(
     from archium.application.visual.visual_history_service import VisualHistoryService
     from archium.domain.enums import RevisionSource
 
-    presentations = PresentationRepository(session)
-    plans = LayoutPlanRepository(session)
-    intents = VisualIntentRepository(session)
-    slide = presentations.get_slide(slide_id)
-    plan = plans.get(layout_plan_id)
+    visual = api_from_session(session).visual
+    slides = api_from_session(session).slides
+    slide = slides.get(slide_id)
+    plan = visual.get_layout_plan(layout_plan_id)
     if slide is None:
         raise ValueError(f"Slide {slide_id} not found")
     if plan is None:
@@ -361,19 +322,15 @@ def select_layout_candidate(
         )
     previous_plan = None
     if slide.layout_plan_id is not None:
-        previous_plan = plans.get(slide.layout_plan_id)
+        previous_plan = visual.get_layout_plan(slide.layout_plan_id)
     merged = preserve_locked_elements(plan, previous_plan)
     if merged is not plan:
-        merged = plans.save(merged)
+        merged = visual.save_layout_plan(merged)
         plan = merged
     slide.layout_plan_id = plan.id
-    presentations.save_slide(slide)
+    slides.save(slide)
 
-    intent = (
-        intents.get(slide.visual_intent_id)
-        if slide.visual_intent_id is not None
-        else intents.get_by_slide(slide.id)
-    )
+    intent = visual.resolve_visual_intent_for_slide(slide)
     VisualHistoryService(session).record_state(
         slide=slide,
         visual_intent=intent,
@@ -411,16 +368,11 @@ def apply_template_to_slide(
         candidate_count=candidate_count,
         select_best=True,
     )
-    presentations = PresentationRepository(session)
-    intents = VisualIntentRepository(session)
-    slide = presentations.get_slide(slide_id)
+    api = api_from_session(session)
+    slide = api.slides.get(slide_id)
     if slide is None:
         raise WorkflowError(f"页面不存在：{slide_id}")
-    intent = (
-        intents.get(slide.visual_intent_id)
-        if slide.visual_intent_id is not None
-        else intents.get_by_slide(slide.id)
-    )
+    intent = api.visual.resolve_visual_intent_for_slide(slide)
     VisualHistoryService(session).record_state(
         slide=slide,
         visual_intent=intent,
@@ -463,62 +415,49 @@ def replan_slide(
 ) -> SlideVisualSnapshot:
     """Re-plan a single slide; optional preset tweaks VisualIntent before planning."""
     resolved = _resolve_runtime_settings(settings)
-    presentations = PresentationRepository(session)
-    intents = VisualIntentRepository(session)
-    plans = LayoutPlanRepository(session)
-    design_repo = DesignSystemRepository(session)
+    api = api_from_session(session)
+    visual = api.visual
+    slides = api.slides
 
-    slide = presentations.get_slide(slide_id)
+    slide = slides.get(slide_id)
     if slide is None:
         raise ValueError(f"Slide {slide_id} not found")
 
-    intent = (
-        intents.get(slide.visual_intent_id)
-        if slide.visual_intent_id is not None
-        else intents.get_by_slide(slide.id)
-    )
+    intent = visual.resolve_visual_intent_for_slide(slide)
     if intent is None:
         llm = create_llm_provider(resolved) if use_llm and resolved.llm_configured else None
         intent = VisualIntentService(session, llm=llm).generate_for_slide(
             slide, use_llm=use_llm and resolved.llm_configured
         )
         slide.visual_intent_id = intent.id
-        presentations.save_slide(slide)
+        slides.save(slide)
 
     intent = apply_visual_intent_preset(intent, preset)
-    intent = intents.save(intent)
+    intent = visual.save_visual_intent(intent)
 
-    presentation = presentations.get_presentation(slide.presentation_id)
+    presentation = slides.get_presentation(slide.presentation_id)
     art = None
     design = None
     art_id = intent.art_direction_id
     if art_id is not None:
-        art = ArtDirectionRepository(session).get(art_id)
+        art = visual.get_art_direction(art_id)
         if art is not None and art.design_system_id is not None:
-            design = design_repo.get(art.design_system_id)
+            design = visual.get_design_system(art.design_system_id)
     if design is None and presentation is not None:
-        arts = ArtDirectionRepository(session).list_by_project(presentation.project_id)
-        for item in arts:
-            if item.presentation_id == slide.presentation_id and item.design_system_id:
-                design = design_repo.get(item.design_system_id)
-                art = item
-                break
-        if design is None and arts and arts[0].design_system_id:
-            design = design_repo.get(arts[0].design_system_id)
-            art = arts[0]
+        art = visual.resolve_art_direction_for_presentation(
+            project_id=presentation.project_id,
+            presentation_id=slide.presentation_id,
+        )
+        if art is not None and art.design_system_id is not None:
+            design = visual.get_design_system(art.design_system_id)
     if design is None:
         from archium.domain.visual.defaults import default_presentation_design_system
 
-        design = design_repo.save(default_presentation_design_system())
+        design = visual.save_design_system(default_presentation_design_system())
 
     llm = create_llm_provider(resolved) if use_llm and resolved.llm_configured else None
     planner = LayoutPlanningService(session, llm=llm, settings=resolved)
-    previous_plan = None
-    if slide.layout_plan_id is not None:
-        previous_plan = plans.get(slide.layout_plan_id)
-    if previous_plan is None:
-        listed = plans.list_by_slide(slide.id)
-        previous_plan = listed[0] if listed else None
+    previous_plan = visual.resolve_layout_plan_for_slide(slide)
     project_id = presentation.project_id if presentation is not None else None
     candidates = planner.generate_candidates(
         slide=slide,
@@ -531,15 +470,15 @@ def replan_slide(
     )
     saved_candidates: list[LayoutPlan] = []
     for plan, _report in candidates:
-        saved_candidates.append(plans.save(plan))
+        saved_candidates.append(visual.save_layout_plan(plan))
     best = planner.select_best(
         candidates,
         previous_layout_plan=previous_plan,
         style_preference=planner.last_style_preference,
     )
-    best = plans.save(best)
+    best = visual.save_layout_plan(best)
     slide.layout_plan_id = best.id
-    presentations.save_slide(slide)
+    slides.save(slide)
 
     validation = LayoutValidationService().validate(
         best,
@@ -551,7 +490,7 @@ def replan_slide(
         slide=slide,
         visual_intent=intent,
         layout_plan=best,
-        candidates=saved_candidates or plans.list_by_slide(slide.id),
+        candidates=saved_candidates or visual.list_layout_plans_for_slide(slide.id),
         validation=validation,
     )
 

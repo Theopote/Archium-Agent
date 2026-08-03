@@ -104,12 +104,14 @@ def render_project_knowledge_and_evolution(
     title: str = "知识状态与意图演进",
 ) -> None:
     """Load project and show KnowledgeState + IntentEvolution timeline."""
-    from archium.infrastructure.database.repositories import ProjectRepository
+    from archium.application.api.session import api_from_session
+    from archium.exceptions import ProjectNotFoundError
 
     with get_session() as session:
-        project = ProjectRepository(session).get_by_id(project_id)
-    if project is None:
-        return
+        try:
+            project = api_from_session(session).project.get(project_id)
+        except ProjectNotFoundError:
+            return
     render_knowledge_and_evolution(
         project,
         expanded=expanded,

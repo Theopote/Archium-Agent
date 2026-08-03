@@ -12,19 +12,28 @@ from archium.application.ingestion_service import ImportItemResult, IngestionSer
 from archium.config.settings import Settings
 from archium.domain.background_job import BackgroundJob, BackgroundJobKind
 from archium.domain.document import SourceDocument
+from archium.infrastructure.database.repositories import DocumentRepository
 
 
 class DocumentsApi:
     def __init__(self, session: Session, *, settings: Settings | None = None) -> None:
         self._session = session
+        self._settings = settings
         self._ingestion = IngestionService(session, settings=settings)
         self._jobs = JobsApi(session)
+        self._documents = DocumentRepository(session)
 
     def list(self, project_id: UUID) -> list[SourceDocument]:
         return self._ingestion.list_documents(project_id)
 
     def get(self, document_id: UUID) -> SourceDocument | None:
         return self._ingestion.get_document(document_id)
+
+    def count(self, project_id: UUID) -> int:
+        return self._documents.count_by_project(project_id)
+
+    def count_chunks(self, project_id: UUID) -> int:
+        return self._documents.count_chunks_by_project(project_id)
 
     def upload_file(
         self,

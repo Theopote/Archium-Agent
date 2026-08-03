@@ -18,6 +18,7 @@ from archium.application.api.scenes import ScenesApi
 from archium.application.api.session import ApiContext, api_from_session
 from archium.application.api.slides import SlidesApi
 from archium.application.api.storyline import StorylineApi
+from archium.application.api.visual import VisualApi
 
 __all__ = [
     "ApiContext",
@@ -32,5 +33,6 @@ __all__ = [
     "ScenesApi",
     "SlidesApi",
     "StorylineApi",
+    "VisualApi",
     "api_from_session",
 ]

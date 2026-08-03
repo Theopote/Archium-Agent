@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from archium.application.project_management_service import ProjectManagementService
-from archium.domain.enums import ProjectOriginMode, ProjectStatus
+from archium.domain.enums import ProjectOriginMode, ProjectStatus, ProjectType
 from archium.domain.presentation import Presentation
 from archium.domain.project import Project
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -16,6 +16,7 @@ from archium.infrastructure.database.repositories import PresentationRepository
 
 class ProjectApi:
     def __init__(self, session: Session) -> None:
+        self._session = session
         self._service = ProjectManagementService(session)
         self._presentations = PresentationRepository(session)
 
@@ -38,14 +39,22 @@ class ProjectApi:
         origin_mode: ProjectOriginMode = ProjectOriginMode.EXISTING_PROJECT,
         actor_id: str | None = None,
         organization_id: UUID | None = None,
+        project_type: ProjectType | None = None,
     ) -> Project:
-        return self._service.create_project(
+        project = self._service.create_project(
             name,
             description,
             origin_mode=origin_mode,
             actor_id=actor_id,
             organization_id=organization_id,
         )
+        if project_type is not None and project.project_type != project_type:
+            project.project_type = project_type
+            from archium.infrastructure.database.repositories import ProjectRepository
+
+            project = ProjectRepository(self._session).update(project)
+            self._session.commit()
+        return project
 
     def update(
         self,
@@ -64,3 +73,21 @@ class ProjectApi:
 
     def list_presentations(self, project_id: UUID) -> list[Presentation]:
         return self._presentations.list_by_project(project_id)
+
+    def count_presentations(self, project_id: UUID) -> int:
+        return self._presentations.count_by_project(project_id)
+
+    def list_cultural_narratives(self, project_id: UUID):
+        from archium.infrastructure.database.repositories import ProjectRepository
+
+        return ProjectRepository(self._session).list_cultural_narratives(project_id)
+
+    def list_renovation_issue_maps(self, project_id: UUID):
+        from archium.infrastructure.database.repositories import ProjectRepository
+
+        return ProjectRepository(self._session).list_renovation_issue_maps(project_id)
+
+    def list_reference_style_profiles(self, project_id: UUID):
+        from archium.infrastructure.database.repositories import ProjectRepository
+
+        return ProjectRepository(self._session).list_reference_style_profiles(project_id)

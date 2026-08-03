@@ -265,12 +265,9 @@ def _snapshot_for_project(
         resolve_project_evidence,
     )
     from archium.application.project_context_routing import skips_default_clarification
+    from archium.application.api.session import api_from_session
     from archium.domain.enums import ApprovalStatus
-    from archium.infrastructure.database.mission_repositories import MissionRepository
-    from archium.infrastructure.database.repositories import (
-        PlanningSessionRepository,
-        PresentationRepository,
-    )
+    from archium.infrastructure.database.repositories import PlanningSessionRepository
     from archium.ui.visual_service import presentation_has_visual_layout
 
     try:
@@ -283,7 +280,7 @@ def _snapshot_for_project(
             document_count=0,
         )
 
-    presentations = PresentationRepository(session).list_by_project(project.id)
+    presentations = api_from_session(session).project.list_presentations(project.id)
 
     from archium.application.presentation_selection import select_presentation
 
@@ -312,18 +309,22 @@ def _snapshot_for_project(
     updated_at = project.updated_at
 
     if presentation is not None:
-        slides = PresentationRepository(session).list_slides(presentation.id)
+        api = api_from_session(session)
+        slides = api.slides.list_for_presentation(presentation.id)
         slide_count = len(slides)
         layout_ready_count = sum(1 for slide in slides if slide.layout_plan_id is not None)
-        briefs = PresentationRepository(session).list_briefs(presentation.id)
+        from archium.infrastructure.database.repositories import PresentationRepository
+
+        presentations_repo = PresentationRepository(session)
+        briefs = presentations_repo.list_briefs(presentation.id)
         has_brief = len(briefs) > 0
         if briefs:
             presentation_type = briefs[0].presentation_type.value
         outline = None
         if presentation.current_outline_id is not None:
-            outline = PresentationRepository(session).get_outline(presentation.current_outline_id)
+            outline = presentations_repo.get_outline(presentation.current_outline_id)
         if outline is None:
-            outlines = PresentationRepository(session).list_outlines(presentation.id)
+            outlines = presentations_repo.list_outlines(presentation.id)
             outline = outlines[0] if outlines else None
         if outline is not None:
             has_outline = True
@@ -351,7 +352,7 @@ def _snapshot_for_project(
         export_blocker_count = readiness.export_blocker_count
         updated_at = max(project.updated_at, presentation.updated_at)
 
-    missions = MissionRepository(session).list_missions_by_project(project.id)
+    missions = api_from_session(session).mission.list_for_project(project.id)
     planning_sessions = PlanningSessionRepository(session).list_by_project(project.id)
     has_mission_or_task = bool(missions) or any(
         session_item.user_task_description.strip() for session_item in planning_sessions

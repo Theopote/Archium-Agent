@@ -743,15 +743,15 @@ def get_design_iteration_progress(session: Session, mission_id: UUID):
 
 def preview_presentation_request_from_mission(session: Session, mission_id: UUID):
     """Build a PresentationRequest preview from mission + selected direction/visual brief."""
+    from archium.application.api.session import api_from_session
     from archium.application.context.mission_cognition import load_project_knowledge_state
     from archium.application.mission_context_bridge import (
         resolve_selected_concept_direction,
         resolve_visual_concept_brief_for_mission,
     )
     from archium.application.mission_to_presentation_request import build_presentation_request
-    from archium.infrastructure.database.mission_repositories import MissionRepository
 
-    mission = MissionRepository(session).get_mission(mission_id)
+    mission = api_from_session(session).mission.get(mission_id)
     if mission is None:
         raise WorkflowError(f"Mission {mission_id} not found")
     return build_presentation_request(

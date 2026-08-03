@@ -32,7 +32,7 @@ from archium.domain.visual.slide_capacity_budget import SlideCapacityBudget
 from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
 from archium.domain.visual.vision_generation import VisionGenerationResult
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.repositories import PresentationRepository
+from archium.application.api.session import api_from_session
 from archium.infrastructure.renderers.pptx_pdf import convert_pptx_to_pdf
 from archium.ui.visual_service import (
     PresentationVisualSnapshot,
@@ -285,8 +285,8 @@ def add_studio_slide(
     after_index: int | None = None,
 ) -> SlideSpec:
     """Insert a blank slide after ``after_index`` (or append when None)."""
-    presentations = PresentationRepository(session)
-    slides = presentations.list_slides(presentation_id)
+    slides_api = api_from_session(session).slides
+    slides = slides_api.list_for_presentation(presentation_id)
     if not slides:
         chapter_id = "ch1"
         order = 0
@@ -301,7 +301,7 @@ def add_studio_slide(
         order = anchor.order + 1
         for slide in reversed(slides):
             if slide.order >= order:
-                presentations.save_slide(
+                slides_api.save(
                     slide.model_copy(
                         update={
                             "order": slide.order + 1,
@@ -322,19 +322,19 @@ def add_studio_slide(
         slide_type=SlideType.CONTENT,
         status=SlideStatus.PLANNED,
     )
-    return presentations.save_slide(new_slide)
+    return slides_api.save(new_slide)
 
 
 def delete_studio_slide(session: Session, slide_id: UUID) -> None:
     """Delete one slide; raises when it is the last page in the deck."""
-    presentations = PresentationRepository(session)
-    slide = presentations.get_slide(slide_id)
+    slides_api = api_from_session(session).slides
+    slide = slides_api.get(slide_id)
     if slide is None:
         raise WorkflowError("页面不存在。")
-    remaining = presentations.list_slides(slide.presentation_id)
+    remaining = slides_api.list_for_presentation(slide.presentation_id)
     if len(remaining) <= 1:
         raise WorkflowError("至少保留一页，无法删除。")
-    presentations.delete_slide(slide_id)
+    slides_api.delete(slide_id)
 
 
 def reorder_studio_slide(
@@ -345,8 +345,8 @@ def reorder_studio_slide(
     to_index: int,
 ) -> None:
     """Move one slide from ``from_index`` to ``to_index`` (0-based list positions)."""
-    presentations = PresentationRepository(session)
-    slides = presentations.list_slides(presentation_id)
+    slides_api = api_from_session(session).slides
+    slides = slides_api.list_for_presentation(presentation_id)
     if not slides:
         raise WorkflowError("当前汇报没有页面。")
     if from_index == to_index:
@@ -360,7 +360,7 @@ def reorder_studio_slide(
     for order, slide in enumerate(reordered):
         if slide.order == order:
             continue
-        presentations.save_slide(
+        slides_api.save(
             slide.model_copy(
                 update={
                     "order": order,
@@ -426,22 +426,17 @@ def load_presentation_design_system(
     presentation_id: UUID,
 ) -> DesignSystem | None:
     """Return the DesignSystem bound to this presentation's ArtDirection, if any."""
-    from archium.infrastructure.database.repositories import PresentationRepository
-    from archium.infrastructure.database.visual_repositories import (
-        ArtDirectionRepository,
-        DesignSystemRepository,
-    )
-
-    presentation = PresentationRepository(session).get_presentation(presentation_id)
+    api = api_from_session(session)
+    presentation = api.slides.get_presentation(presentation_id)
     if presentation is None:
         return None
-    arts = ArtDirectionRepository(session).list_by_project(presentation.project_id)
-    art = next((item for item in arts if item.presentation_id == presentation_id), None)
-    if art is None and arts:
-        art = arts[0]
+    art = api.visual.resolve_art_direction_for_presentation(
+        project_id=presentation.project_id,
+        presentation_id=presentation_id,
+    )
     if art is None or art.design_system_id is None:
         return None
-    return DesignSystemRepository(session).get(art.design_system_id)
+    return api.visual.get_design_system(art.design_system_id)
 
 
 def create_theme_proposal(
@@ -748,12 +743,11 @@ def generate_slide_vision_illustration(
     )
     from archium.infrastructure.database.repositories import (
         AssetRepository,
-        PresentationRepository,
     )
     from archium.infrastructure.database.visual_repositories import RenderSceneRepository
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
-    slide = PresentationRepository(session).get_slide(slide_id)
+    slide = api_from_session(session).slides.get(slide_id)
     if slide is None:
         raise WorkflowError("页面不存在。")
 
@@ -1171,11 +1165,9 @@ def restore_slide_content_adaptation(session: Session, slide_id: UUID) -> object
 def undo_slide_content_adaptation(session: Session, slide_id: UUID) -> object:
     from archium.application.content_adaptation_service import ContentAdaptationService
     from archium.application.slide_history_service import SlideHistoryService
-    from archium.infrastructure.database.repositories import PresentationRepository
     from archium.ui.studio.undo_stack import push_content_redo_revision
 
-    presentations = PresentationRepository(session)
-    slide = presentations.get_slide(slide_id)
+    slide = api_from_session(session).slides.get(slide_id)
     if slide is None:
         raise WorkflowError("页面不存在。")
     redo_revision_id = SlideHistoryService(session).revision_id_matching_current(slide)
@@ -1205,16 +1197,11 @@ def undo_slide_visual_edit(
     from archium.application.visual.scene_undo_service import SceneUndoService
     from archium.application.visual.visual_edit_service import VisualEditService
     from archium.application.visual.visual_history_service import VisualHistoryService
-    from archium.infrastructure.database.repositories import PresentationRepository
-    from archium.infrastructure.database.visual_repositories import (
-        LayoutPlanRepository,
-        VisualIntentRepository,
-    )
     from archium.ui.studio.canvas_command_bridge import bump_canvas_generation
     from archium.ui.studio.undo_stack import push_visual_redo_revision
 
-    presentations = PresentationRepository(session)
-    slide = presentations.get_slide(slide_id)
+    api = api_from_session(session)
+    slide = api.slides.get(slide_id)
     if slide is None:
         raise WorkflowError("页面不存在。")
 
@@ -1228,10 +1215,12 @@ def undo_slide_visual_edit(
         return undo_result
 
     history = VisualHistoryService(session)
-    intents = VisualIntentRepository(session)
-    plans = LayoutPlanRepository(session)
-    intent = intents.get(slide.visual_intent_id) if slide.visual_intent_id else None
-    plan = plans.get(slide.layout_plan_id) if slide.layout_plan_id else None
+    intent = api.visual.resolve_visual_intent_for_slide(slide)
+    plan = (
+        api.visual.get_layout_plan(slide.layout_plan_id)
+        if slide.layout_plan_id is not None
+        else None
+    )
     redo_revision_id = history.revision_id_matching_current(
         slide,
         visual_intent=intent,
@@ -1256,8 +1245,7 @@ def redo_slide_visual_edit(session: Session, slide_id: UUID) -> object:
     if revision_id is None:
         raise WorkflowError("没有可重做的视觉修改。")
 
-    presentations = PresentationRepository(session)
-    slide = presentations.get_slide(slide_id)
+    slide = api_from_session(session).slides.get(slide_id)
     if slide is None:
         raise WorkflowError("页面不存在。")
 
@@ -1331,9 +1319,8 @@ def restore_slide_content_at_revision(
 
 def list_slide_visual_revisions(session: Session, slide_id: UUID) -> list[EntityRevision]:
     from archium.application.visual.visual_history_service import VisualHistoryService
-    from archium.infrastructure.database.repositories import PresentationRepository
 
-    slide = PresentationRepository(session).get_slide(slide_id)
+    slide = api_from_session(session).slides.get(slide_id)
     if slide is None:
         return []
     return VisualHistoryService(session).list_slide_visual_revisions(slide)
@@ -1347,9 +1334,8 @@ def list_slide_content_revisions(session: Session, slide_id: UUID) -> list[Entit
 
 def count_visual_revisions(session: Session, slide_id: UUID) -> int:
     from archium.application.visual.visual_history_service import VisualHistoryService
-    from archium.infrastructure.database.repositories import PresentationRepository
 
-    slide = PresentationRepository(session).get_slide(slide_id)
+    slide = api_from_session(session).slides.get(slide_id)
     if slide is None:
         return 0
     return VisualHistoryService(session).count_slide_visual_revisions(slide)
@@ -1357,9 +1343,8 @@ def count_visual_revisions(session: Session, slide_id: UUID) -> int:
 
 def count_scene_revisions(session: Session, slide_id: UUID) -> int:
     from archium.application.scene_revision_timeline_service import SceneRevisionTimelineService
-    from archium.infrastructure.database.repositories import PresentationRepository
 
-    slide = PresentationRepository(session).get_slide(slide_id)
+    slide = api_from_session(session).slides.get(slide_id)
     if slide is None:
         return 0
     return SceneRevisionTimelineService(session).count_summaries(
@@ -1371,9 +1356,8 @@ def count_scene_revisions(session: Session, slide_id: UUID) -> int:
 def count_visual_undo_steps(session: Session, slide_id: UUID) -> int:
     from archium.application.visual.scene_undo_service import SceneUndoService
     from archium.application.visual.visual_edit_service import VisualEditService
-    from archium.infrastructure.database.repositories import PresentationRepository
 
-    slide = PresentationRepository(session).get_slide(slide_id)
+    slide = api_from_session(session).slides.get(slide_id)
     if slide is None:
         return 0
     settings = _resolve_runtime_settings(None)
@@ -1384,9 +1368,8 @@ def count_visual_undo_steps(session: Session, slide_id: UUID) -> int:
 
 def count_content_undo_steps(session: Session, slide_id: UUID) -> int:
     from archium.application.slide_history_service import SlideHistoryService
-    from archium.infrastructure.database.repositories import PresentationRepository
 
-    slide = PresentationRepository(session).get_slide(slide_id)
+    slide = api_from_session(session).slides.get(slide_id)
     if slide is None:
         return 0
     return SlideHistoryService(session).count_available_undo_steps(slide)

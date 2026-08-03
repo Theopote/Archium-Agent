@@ -79,6 +79,12 @@ class ApiContext:
 
         return DeliveryApi(self.session)
 
+    @property
+    def visual(self):
+        from archium.application.api.visual import VisualApi
+
+        return VisualApi(self.session)
+
 
 def api_from_session(session: Session) -> ApiContext:
     return ApiContext(session=session)

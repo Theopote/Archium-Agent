@@ -169,7 +169,7 @@ class IngestionService:
                 document = self._documents.update_document(document)
 
             self._materialize_cad_spatial_facts(project_id, document, parsed.metadata)
-            document = self._enqueue_cad_analyze_if_needed(project_id, document, stored_path)
+            document = self._enqueue_analyze_after_ingest(project_id, document, stored_path)
 
             result.document = document
             result.chunks = saved_chunks
@@ -183,42 +183,35 @@ class IngestionService:
                 self._documents.update_document(result.document)
             return result
 
-    def _enqueue_cad_analyze_if_needed(
+    def _enqueue_analyze_after_ingest(
         self,
         project_id: UUID,
         document: SourceDocument,
         stored_path: Path,
     ) -> SourceDocument:
-        """Queue durable CAD/BIM analysis after ingest (best-effort)."""
-        from archium.application.background_job_service import BackgroundJobService
-        from archium.application.cad_bim_analysis import is_cad_bim_path
-        from archium.domain.background_job import BackgroundJobKind
+        """Queue durable document analysis after ingest (idempotent; best-effort)."""
+        from archium.application.api.documents import DocumentsApi
 
         path = Path(stored_path)
-        if not is_cad_bim_path(path) and not is_cad_bim_path(Path(document.filename)):
-            return document
         try:
-            job = BackgroundJobService(self._session).enqueue(
+            job = DocumentsApi(self._session).enqueue_analyze(
                 project_id,
-                BackgroundJobKind.DOCUMENT_ANALYZE,
-                label=f"CAD/BIM · {document.filename}",
-                payload={
-                    "path": str(path),
-                    "document_id": str(document.id),
-                    "filename": document.filename,
-                    "file_type": document.file_type.value,
-                },
-                message="queued after ingest",
+                path=str(path),
+                document_id=document.id,
+                filename=document.filename,
+                idempotency_key=f"document_analyze:{document.id}",
             )
             document.metadata = {
                 **dict(document.metadata or {}),
                 "background_job_id": str(job.id),
+                "analyze_queued": True,
+                # Compat alias for older CAD ingest assertions.
                 "cad_analyze_queued": True,
             }
             return self._documents.update_document(document)
         except Exception:
             logger.exception(
-                "Failed to enqueue CAD/BIM analyze for %s", document.filename
+                "Failed to enqueue document analyze for %s", document.filename
             )
             return document
 

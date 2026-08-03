@@ -6,11 +6,12 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.api.session import api_from_session
 from archium.application.reference_style_service import (
     has_reference_style_documents,
     validate_reference_style_profile,
 )
-from archium.infrastructure.database.repositories import ProjectRepository
+from archium.exceptions import ProjectNotFoundError
 from archium.infrastructure.database.session import get_session
 
 
@@ -19,9 +20,12 @@ def render_reference_style_panel(project_id: UUID) -> None:
     st.caption("从标记为「参考风格」的资料中提炼视觉语言，供 ArtDirection 借鉴（非项目事实）。")
 
     with get_session() as session:
-        projects = ProjectRepository(session)
-        project = projects.get_by_id(project_id)
-        profiles = projects.list_reference_style_profiles(project_id)
+        api = api_from_session(session)
+        try:
+            project = api.project.get(project_id)
+        except ProjectNotFoundError:
+            project = None
+        profiles = api.project.list_reference_style_profiles(project_id)
         has_style_docs = has_reference_style_documents(session, project_id)
 
     if project is None:

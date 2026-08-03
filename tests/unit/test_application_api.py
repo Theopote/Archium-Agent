@@ -142,3 +142,76 @@ def test_documents_api_enqueue_analyze(db_session: Session, tmp_path: Path) -> N
     )
     assert job.id == again.id
     assert job.kind == BackgroundJobKind.DOCUMENT_ANALYZE
+
+
+def test_ingest_enqueues_analyze_job(db_session: Session, tmp_path: Path) -> None:
+    from archium.application.ingestion_service import IngestionService
+
+    project = ProjectRepository(db_session).create(Project(name="Ingest Job", description=""))
+    path = tmp_path / "plan.dxf"
+    path.write_text("0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\nEOF\n", encoding="utf-8")
+    result = IngestionService(db_session).import_file(project.id, path)
+    assert result.error is None
+    assert result.document is not None
+    assert result.document.metadata.get("analyze_queued") is True
+    job_id = result.document.metadata.get("background_job_id")
+    assert job_id
+    api = api_from_session(db_session)
+    from uuid import UUID
+
+    job = api.jobs.get(UUID(str(job_id)))
+    assert job is not None
+    assert job.kind == BackgroundJobKind.DOCUMENT_ANALYZE
+
+
+def test_slides_and_visual_api_load_presentation(db_session: Session) -> None:
+    from archium.domain.enums import SlideStatus, SlideType
+    from archium.domain.presentation import Presentation
+    from archium.domain.slide import SlideSpec
+    from archium.infrastructure.database.repositories import PresentationRepository
+
+    project = ProjectRepository(db_session).create(Project(name="Visual API", description=""))
+    presentations = PresentationRepository(db_session)
+    presentation = presentations.create_presentation(
+        Presentation(project_id=project.id, title="视觉门面")
+    )
+    slide = presentations.save_slide(
+        SlideSpec(
+            presentation_id=presentation.id,
+            chapter_id="ch1",
+            order=0,
+            title="首页",
+            message="核心信息",
+            slide_type=SlideType.CONTENT,
+            status=SlideStatus.PLANNED,
+        )
+    )
+    api = api_from_session(db_session)
+    assert api.slides.get(slide.id) is not None
+    listed = api.slides.list_for_presentation(presentation.id)
+    assert len(listed) == 1
+    loaded = api.visual.load_presentation_visual(presentation.id)
+    assert loaded.presentation_id == presentation.id
+    assert len(loaded.slides) == 1
+    assert loaded.slides[0].slide.id == slide.id
+    assert loaded.slides[0].visual_intent is None
+    assert loaded.slides[0].layout_plan is None
+
+
+def test_mission_api_get(db_session: Session) -> None:
+    from archium.domain.project_mission import ProjectMission
+    from archium.infrastructure.database.mission_repositories import MissionRepository
+
+    project = ProjectRepository(db_session).create(Project(name="Mission API", description=""))
+    mission = MissionRepository(db_session).save_mission(
+        ProjectMission(
+            project_id=project.id,
+            title="任务",
+            task_statement="澄清任务边界",
+        )
+    )
+    api = api_from_session(db_session)
+    got = api.mission.get(mission.id)
+    assert got is not None
+    assert got.id == mission.id
+    assert got.title == "任务"

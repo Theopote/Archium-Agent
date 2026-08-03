@@ -435,8 +435,9 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
     if critique_warnings:
         st.warning("设计批判（选定前独立质疑）\n\n" + "\n\n".join(critique_warnings))
 
+    from archium.application.api.session import api_from_session
     from archium.domain.enums import ConceptDirectionStatus
-    from archium.infrastructure.database.repositories import ProjectRepository
+    from archium.exceptions import ProjectNotFoundError
     from archium.ui.app_navigation import get_app_page
     from archium.ui.components.design_revise_ask_panel import (
         clear_pending_revise_state,
@@ -505,7 +506,10 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
     )
 
     with get_session() as session:
-        project = ProjectRepository(session).get_by_id(mission.project_id)
+        try:
+            project = api_from_session(session).project.get(mission.project_id)
+        except ProjectNotFoundError:
+            project = None
         from archium.application.project_context_routing import is_concept_leaning
 
         concept_origin = project is not None and is_concept_leaning(session, project)
