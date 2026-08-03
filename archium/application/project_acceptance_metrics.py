@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.studio_human_review_store import (
     load_presentation_reviews,
@@ -52,7 +53,7 @@ def derive_acceptance_slide_review(
 
 
 def seed_acceptance_reviews_from_layout(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
     slides: list[SlideSpec],
     validation_reports: list[dict[str, Any]],
@@ -60,6 +61,7 @@ def seed_acceptance_reviews_from_layout(
     settings: Settings | None = None,
 ) -> int:
     """Persist derived per-slide reviews when Studio reviews are not yet available."""
+    session = session_of(session)
     if load_presentation_reviews(session, presentation_id, settings=settings):
         return 0
     reports_by_slide = {

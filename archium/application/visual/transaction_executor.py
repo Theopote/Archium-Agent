@@ -8,6 +8,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.visual.element_geometry import (
     compute_element_placement,
@@ -99,9 +100,10 @@ class TransactionExecutor:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         history_service: VisualHistoryService,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._history = history_service
 

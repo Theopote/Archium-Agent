@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_service import PresentationService
@@ -36,11 +37,12 @@ class RegenerationService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         llm: LLMProvider,
         *,
         settings: Settings | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._llm = llm
         self._settings = settings or get_settings()

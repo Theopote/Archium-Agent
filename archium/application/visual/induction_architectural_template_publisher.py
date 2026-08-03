@@ -9,6 +9,7 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema
 from archium.domain.visual.architectural_template import (
@@ -189,7 +190,7 @@ class InductionArchitecturalTemplatePublisher:
 
     def publish_to_database(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         induction: TemplateInductionResult,
         presentation: ReferencePresentation,

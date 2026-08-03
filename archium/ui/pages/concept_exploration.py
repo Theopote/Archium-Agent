@@ -46,9 +46,8 @@ def render() -> None:
     def _apply_revise(direction_id: UUID) -> None:
         try:
             with unit_of_work() as uow:
-                session = uow.session
                 selection = select_exploration_direction(
-                    session, direction_id, revise_action="apply"
+                    uow, direction_id, revise_action="apply"
                 )
             clear_pending_revise_state()
             if store_pending_revise_from_selection(selection):
@@ -70,9 +69,8 @@ def render() -> None:
     def _reject_revise(direction_id: UUID) -> None:
         try:
             with unit_of_work() as uow:
-                session = uow.session
                 selection = select_exploration_direction(
-                    session, direction_id, revise_action="reject"
+                    uow, direction_id, revise_action="reject"
                 )
             clear_pending_revise_state()
             st.session_state["design_critique_warnings"] = list(
@@ -89,8 +87,7 @@ def render() -> None:
             st.error(report_user_error(exc))
 
     with unit_of_work() as uow:
-        session = uow.session
-        projects = list_projects(session)
+        projects = list_projects(uow)
     if not projects:
         st.info("请先在「开始项目」创建概念探索项目。")
         st.page_link(get_app_page("project-genesis"), label="去开始项目", icon=":material/add:")
@@ -118,8 +115,7 @@ def render() -> None:
     )
 
     with unit_of_work() as uow:
-        session = uow.session
-        exploration = get_latest_exploration_for_project(session, project_id)
+        exploration = get_latest_exploration_for_project(uow, project_id)
 
     if exploration is None:
         st.warning("当前项目尚无探索会话。请从「开始项目」重新描述想法进入。")
@@ -182,9 +178,8 @@ def render() -> None:
         with st.spinner("正在合成设计使命并生成 Mission…"):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
                     result = commit_exploration_to_mission(
-                        session,
+                        uow,
                         exploration.id,
                         settings=settings,
                     )
@@ -223,9 +218,8 @@ def _render_thinking_rail(exploration: ExplorationSession, project_id: UUID, *, 
             with st.spinner("正在重新评估知识状态…"):
                 try:
                     with unit_of_work() as uow:
-                        session = uow.session
                         result = reassess_project_context(
-                            session,
+                            uow,
                             project_id,
                             user_text=exploration.idea_text,
                             settings=settings,
@@ -253,9 +247,8 @@ def _render_thinking_rail(exploration: ExplorationSession, project_id: UUID, *, 
             with st.spinner("正在解读想法…"):
                 try:
                     with unit_of_work() as uow:
-                        session = uow.session
                         result = enrich_exploration_idea_seed(
-                            session, exploration.id, settings=settings
+                            uow, exploration.id, settings=settings
                         )
                     for warning in result.warnings:
                         st.warning(warning)
@@ -279,9 +272,8 @@ def _render_thinking_rail(exploration: ExplorationSession, project_id: UUID, *, 
             with st.spinner("正在推演概念方向…"):
                 try:
                     with unit_of_work() as uow:
-                        session = uow.session
                         result = generate_exploration_directions(
-                            session,
+                            uow,
                             exploration.id,
                             count=3,
                             settings=settings,
@@ -311,8 +303,7 @@ def _render_artifact_rail(exploration: ExplorationSession, *, settings) -> list:
     """Artifact side — comparable concept direction cards."""
     st.markdown("### 设计成果")
     with unit_of_work() as uow:
-        session = uow.session
-        directions = list_exploration_directions(session, exploration.id)
+        directions = list_exploration_directions(uow, exploration.id)
 
     if not directions:
         st.caption("尚未生成概念方向。在左侧推演后，这里会出现可比较的方案卡片。")
@@ -328,8 +319,7 @@ def _render_artifact_rail(exploration: ExplorationSession, *, settings) -> list:
     if clicked and clicked[0] == "select":
         try:
             with unit_of_work() as uow:
-                session = uow.session
-                selection = select_exploration_direction(session, clicked[1])
+                selection = select_exploration_direction(uow, clicked[1])
             from archium.ui.components.design_revise_ask_panel import (
                 store_pending_revise_from_selection,
             )

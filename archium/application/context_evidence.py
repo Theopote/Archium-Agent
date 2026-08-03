@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application._helpers import _format_fact_line
 from archium.application.knowledge_gap_detection import (
@@ -23,14 +24,16 @@ from archium.infrastructure.database.repositories import (
 )
 
 
-def _project_name(session: Session, project_id: UUID) -> str:
+def _project_name(session: SessionLike, project_id: UUID) -> str:
+    session = session_of(session)
     from archium.infrastructure.database.repositories import ProjectRepository
 
     project = ProjectRepository(session).get_by_id(project_id)
     return project.name if project is not None else ""
 
 
-def _project_description(session: Session, project_id: UUID) -> str:
+def _project_description(session: SessionLike, project_id: UUID) -> str:
+    session = session_of(session)
     from archium.infrastructure.database.repositories import ProjectRepository
 
     project = ProjectRepository(session).get_by_id(project_id)
@@ -39,7 +42,8 @@ def _project_description(session: Session, project_id: UUID) -> str:
     return project.description
 
 
-def _project_lightweight(session: Session, project_id: UUID) -> bool:
+def _project_lightweight(session: SessionLike, project_id: UUID) -> bool:
+    session = session_of(session)
     from archium.infrastructure.database.repositories import ProjectRepository
 
     project = ProjectRepository(session).get_by_id(project_id)
@@ -97,7 +101,7 @@ ProjectEvidencePack = ContextMaterialsPack
 
 
 def gather_project_evidence(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     max_documents: int = 12,
@@ -108,6 +112,7 @@ def gather_project_evidence(
     max_knowledge_lines: int = 10,
 ) -> ContextMaterialsPack:
     """Collect filenames, facts, knowledge items, chunks, and gaps for CI."""
+    session = session_of(session)
     documents = DocumentRepository(session).list_by_project(project_id)
     doc_lines = [
         f"- {doc.filename}"
@@ -180,13 +185,14 @@ def gather_project_evidence(
 
 
 def build_verified_constraints_block(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     max_lines: int = 6,
     max_chars: int = 400,
 ) -> str:
     """Short hard-constraint block for exploration direction prompts."""
+    session = session_of(session)
     facts = FactRepository(session).list_by_project(project_id)
     preferred = [
         fact

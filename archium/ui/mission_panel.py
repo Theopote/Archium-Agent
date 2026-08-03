@@ -215,8 +215,7 @@ def _render_research_knowledge_preview(project_id: UUID, *, key_prefix: str) -> 
     from archium.application.project_knowledge_service import ProjectKnowledgeService
 
     with unit_of_work() as uow:
-        session = uow.session
-        items = ProjectKnowledgeService(session).list_research_knowledge_items(
+        items = ProjectKnowledgeService(uow).list_research_knowledge_items(
             project_id,
             pending_only=True,
             limit=5,
@@ -237,13 +236,11 @@ def _render_research_knowledge_preview(project_id: UUID, *, key_prefix: str) -> 
         cols = st.columns(2)
         if cols[0].button("确认", key=f"{key_prefix}_confirm_research_{item.id}"):
             with unit_of_work() as uow:
-                session = uow.session
-                ProjectKnowledgeService(session).confirm_item(item.id)
+                ProjectKnowledgeService(uow).confirm_item(item.id)
             st.rerun()
         if cols[1].button("驳回", key=f"{key_prefix}_reject_research_{item.id}"):
             with unit_of_work() as uow:
-                session = uow.session
-                ProjectKnowledgeService(session).reject_item(item.id)
+                ProjectKnowledgeService(uow).reject_item(item.id)
             st.rerun()
 
 
@@ -276,7 +273,6 @@ def _render_mission_reapproval_prompt(mission: ProjectMission, *, key_prefix: st
     ):
         try:
             with unit_of_work() as uow:
-                session = uow.session
                 from archium.ui.session_actor import get_current_actor_id
 
                 ProjectMissionService(
@@ -302,7 +298,6 @@ def _render_mission_reapproval_prompt(mission: ProjectMission, *, key_prefix: st
     ):
         try:
             with unit_of_work() as uow:
-                session = uow.session
                 from archium.ui.session_actor import get_current_actor_id
 
                 approve_mission_and_continue(
@@ -329,9 +324,8 @@ def _render_written_back_research_summary(mission: ProjectMission, *, key_prefix
 
     settings = get_ui_effective_settings()
     with unit_of_work() as uow:
-        session = uow.session
         written = MissionResearchEnrichmentService(
-            session,
+            uow,
             create_llm_provider(settings) if settings.llm_configured else None,
             settings=settings,
         ).list_written_back_items(mission.id)
@@ -358,9 +352,8 @@ def _render_mission_revision_action(mission: ProjectMission, *, key_prefix: str)
         return
 
     with unit_of_work() as uow:
-        session = uow.session
         service = MissionResearchEnrichmentService(
-            session,
+            uow,
             create_llm_provider(settings),
             settings=settings,
         )
@@ -375,9 +368,8 @@ def _render_mission_revision_action(mission: ProjectMission, *, key_prefix: str)
     ):
         try:
             with unit_of_work() as uow:
-                session = uow.session
                 service = MissionResearchEnrichmentService(
-                    session,
+                    uow,
                     create_llm_provider(settings),
                     settings=settings,
                 )
@@ -401,9 +393,8 @@ def _render_research_enrichment_action(mission: ProjectMission, *, key_prefix: s
 
     settings = get_ui_effective_settings()
     with unit_of_work() as uow:
-        session = uow.session
         pending = MissionResearchEnrichmentService(
-            session,
+            uow,
             create_llm_provider(settings) if settings.llm_configured else None,
             settings=settings,
         ).list_pending_items(mission.id)
@@ -419,9 +410,8 @@ def _render_research_enrichment_action(mission: ProjectMission, *, key_prefix: s
     ):
         try:
             with unit_of_work() as uow:
-                session = uow.session
                 service = MissionResearchEnrichmentService(
-                    session,
+                    uow,
                     create_llm_provider(settings) if settings.llm_configured else None,
                     settings=settings,
                 )
@@ -467,9 +457,8 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
     def _apply_revise(direction_id: UUID) -> None:
         try:
             with unit_of_work() as uow:
-                session = uow.session
                 selection = select_concept_direction(
-                    session, direction_id, revise_action="apply"
+                    uow, direction_id, revise_action="apply"
                 )
             clear_pending_revise_state(mission.project_id)
             if store_pending_revise_from_selection(selection):
@@ -491,9 +480,8 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
     def _reject_revise(direction_id: UUID) -> None:
         try:
             with unit_of_work() as uow:
-                session = uow.session
                 selection = select_concept_direction(
-                    session, direction_id, revise_action="reject"
+                    uow, direction_id, revise_action="reject"
                 )
             clear_pending_revise_state(mission.project_id)
             st.session_state["design_critique_warnings"] = list(
@@ -562,9 +550,8 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
             with st.spinner("正在推演概念方向…"):
                 try:
                     with unit_of_work() as uow:
-                        session = uow.session
                         result = generate_concept_directions(
-                            session,
+                            uow,
                             mission.id,
                             count=3,
                             settings=settings,
@@ -595,8 +582,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
         ):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
-                    request = preview_presentation_request_from_mission(session, mission.id)
+                    request = preview_presentation_request_from_mission(uow, mission.id)
                 st.session_state[f"{key_prefix}_direction_request_preview"] = request
                 st.success("已生成预览（含当前概念方向与视觉简报）。")
             except WorkflowError as exc:
@@ -613,9 +599,8 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
         ):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
                     bridge = refresh_presentation_request_draft(
-                        session, UUID(str(run_id_raw))
+                        uow, UUID(str(run_id_raw))
                     )
                 st.session_state[f"{key_prefix}_direction_request_preview"] = bridge.request
                 st.success(
@@ -656,8 +641,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
         if action == "select":
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
-                    selection = select_concept_direction(session, direction_id)
+                    selection = select_concept_direction(uow, direction_id)
                 if store_pending_revise_from_selection(selection):
                     st.info("批判建议修订 — 请在上方确认应用或拒绝。")
                     st.rerun()
@@ -677,8 +661,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
         elif action == "archive":
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
-                    archive_concept_direction(session, direction_id)
+                    archive_concept_direction(uow, direction_id)
                 st.rerun()
             except WorkflowError as exc:
                 st.error(str(exc))
@@ -739,8 +722,7 @@ def _render_autonomous_research_section(mission: ProjectMission, *, key_prefix: 
         return
 
     with unit_of_work() as uow:
-        session = uow.session
-        prefs = WebResearchSettingsService(session).get_preferences(base_settings=settings)
+        prefs = WebResearchSettingsService(uow).get_preferences(base_settings=settings)
     effective_settings = apply_web_research_preferences(settings, prefs)
 
     if not prefs.enabled:
@@ -763,9 +745,8 @@ def _render_autonomous_research_section(mission: ProjectMission, *, key_prefix: 
     ):
         try:
             with unit_of_work() as uow:
-                session = uow.session
                 service = AutonomousResearchService(
-                    session,
+                    uow,
                     create_llm_provider(settings),
                     settings=effective_settings,
                     web_research=WebResearchSearchService(
@@ -845,9 +826,8 @@ def _render_research_vision_seeds(mission: ProjectMission, *, key_prefix: str) -
         ):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
                     updated = apply_vision_bundles_to_directions(
-                        session,
+                        uow,
                         mission.project_id,
                         bundles,
                         mission_id=mission.id,
@@ -1122,8 +1102,7 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
         )
         try:
             with unit_of_work() as uow:
-                session = uow.session
-                update_mission_fields(session, mission.id, patch)
+                update_mission_fields(uow, mission.id, patch)
             st.success("任务理解已更新。")
             st.rerun()
         except WorkflowError as exc:

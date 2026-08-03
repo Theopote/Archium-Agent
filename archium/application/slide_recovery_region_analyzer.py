@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.model_role_router import (
     ModelRoleRegistryService,
@@ -48,11 +49,12 @@ class SlideRecoveryRegionAnalyzer:
 
     def __init__(
         self,
-        session: Session | None = None,
+        session: SessionLike | None = None,
         *,
         settings: Settings | None = None,
         vlm_analyzer: VlmRegionAnalyzer | None = None,
     ) -> None:
+        session = session_of(session)
         self._settings = settings or get_settings()
         self._router: ModelRoleRouter | None = None
         if session is not None:

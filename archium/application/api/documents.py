@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.api.jobs import JobsApi
 from archium.application.ingestion_service import ImportItemResult, IngestionService
@@ -16,7 +17,8 @@ from archium.infrastructure.database.repositories import DocumentRepository
 
 
 class DocumentsApi:
-    def __init__(self, session: Session, *, settings: Settings | None = None) -> None:
+    def __init__(self, session: SessionLike, *, settings: Settings | None = None) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings
         self._ingestion = IngestionService(session, settings=settings)

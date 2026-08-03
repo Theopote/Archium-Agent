@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.context.legacy_origin import apply_legacy_origin
 from archium.domain.context.project_context import ProjectContext
@@ -12,7 +13,8 @@ from archium.domain.enums import ProjectOriginMode
 from archium.domain.project import Project
 
 
-def project_context_for(session: Session, project: Project | UUID) -> ProjectContext | None:
+def project_context_for(session: SessionLike, project: Project | UUID) -> ProjectContext | None:
+    session = session_of(session)
     from archium.application.project_context_builder import build_project_context
 
     ctx = build_project_context(session, project)
@@ -21,7 +23,8 @@ def project_context_for(session: Session, project: Project | UUID) -> ProjectCon
     return apply_legacy_origin(ctx)
 
 
-def legacy_origin_for_project(session: Session, project: Project | UUID) -> ProjectOriginMode:
+def legacy_origin_for_project(session: SessionLike, project: Project | UUID) -> ProjectOriginMode:
+    session = session_of(session)
     ctx = project_context_for(session, project)
     if ctx is not None:
         return ctx.suggested_origin_mode
@@ -35,15 +38,18 @@ def legacy_origin_for_project(session: Session, project: Project | UUID) -> Proj
     return project.origin_mode
 
 
-def skips_default_clarification(session: Session, project: Project | UUID) -> bool:
+def skips_default_clarification(session: SessionLike, project: Project | UUID) -> bool:
+    session = session_of(session)
     return legacy_origin_for_project(session, project).skips_default_clarification
 
 
-def is_research_programming(session: Session, project: Project | UUID) -> bool:
+def is_research_programming(session: SessionLike, project: Project | UUID) -> bool:
+    session = session_of(session)
     return (
         legacy_origin_for_project(session, project) == ProjectOriginMode.RESEARCH_PROGRAMMING
     )
 
 
-def is_concept_leaning(session: Session, project: Project | UUID) -> bool:
+def is_concept_leaning(session: SessionLike, project: Project | UUID) -> bool:
+    session = session_of(session)
     return skips_default_clarification(session, project)

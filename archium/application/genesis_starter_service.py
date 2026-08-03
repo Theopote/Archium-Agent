@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.outline_service import infer_audience_mode
 from archium.application.outline_templates import detect_scenario_template, template_sections
@@ -216,8 +217,9 @@ _STARTER_CITATION_ROLES = frozenset(
 )
 
 
-def seed_starter_citations_from_documents(session: Session, project_id: UUID) -> int:
+def seed_starter_citations_from_documents(session: SessionLike, project_id: UUID) -> int:
     """Attach the latest imported document as a placeholder citation on starter analysis pages."""
+    session = session_of(session)
     from archium.domain.enums import ProcessingStatus
     from archium.domain.project_knowledge import SourceCitation
     from archium.infrastructure.database.repositories import (
@@ -264,12 +266,13 @@ def seed_starter_citations_from_documents(session: Session, project_id: UUID) ->
 
 
 def sync_starter_deck_after_materials(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     commit: bool = True,
 ) -> tuple[int, int]:
     """After documents import: seed placeholder citations and text-only wireframes when needed."""
+    session = session_of(session)
     from archium.application.genesis_cover_layout_service import (
         repair_placeholder_wireframes_for_project,
     )
@@ -363,7 +366,8 @@ def _thesis_from(*, prompt: str, understanding: str, project_name: str) -> str:
     return "建筑汇报核心论点待补充"
 
 
-def _existing_starter(session: Session, project_id: UUID) -> GenesisStarterResult | None:
+def _existing_starter(session: SessionLike, project_id: UUID) -> GenesisStarterResult | None:
+    session = session_of(session)
     presentations = PresentationRepository(session).list_by_project(project_id)
     if not presentations:
         return None
@@ -444,18 +448,20 @@ def _existing_starter(session: Session, project_id: UUID) -> GenesisStarterResul
 
 
 def get_genesis_starter_state(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
 ) -> GenesisStarterResult | None:
     """Return starter draft metadata when the project has a genesis outline."""
+    session = session_of(session)
     return _existing_starter(session, project_id)
 
 
 def presentation_has_formal_visual_previews(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
 ) -> bool:
     """True when any slide has scene or PPTX screenshot preview (not wireframe-only)."""
+    session = session_of(session)
     from archium.application.visual.slide_preview_service import SlidePreviewService
     from archium.config.settings import get_settings
     from archium.domain.visual.layout import LayoutPlan
@@ -488,7 +494,7 @@ def presentation_has_formal_visual_previews(
 
 
 def ensure_genesis_starter_draft(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     prompt: str,
@@ -499,6 +505,7 @@ def ensure_genesis_starter_draft(
 
     Idempotent: returns existing draft when the project already has an outline.
     """
+    session = session_of(session)
     existing = _existing_starter(session, project_id)
     if existing is not None:
         return existing

@@ -6,6 +6,7 @@ from typing import cast
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.revision_service import RevisionService
 from archium.domain.enums import RevisionEntityType, RevisionSource
@@ -21,7 +22,8 @@ SCENE_STATE_SNAPSHOT_KIND = "slide_scene_state"
 class SceneHistoryService:
     """Record and query RenderScene revisions per slide lineage."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._revisions = RevisionService(session)
 
     def record_scene(

@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.review.export_gating import export_blocking_open_issues
 from archium.application.review_service import PresentationReviewService
@@ -111,7 +112,8 @@ _ANALYSIS_ROLES = frozenset(
 )
 
 
-def resolve_project_evidence(session: Session, project_id: UUID) -> ProjectEvidenceStatus:
+def resolve_project_evidence(session: SessionLike, project_id: UUID) -> ProjectEvidenceStatus:
+    session = session_of(session)
     from archium.infrastructure.database.repositories import DocumentRepository
 
     documents = DocumentRepository(session).list_by_project(project_id)
@@ -141,13 +143,14 @@ def resolve_project_evidence_safe(project_id: UUID) -> ProjectEvidenceStatus:
 
 
 def resolve_delivery_readiness(
-    session: Session,
+    session: SessionLike,
     *,
     project_id: UUID,
     presentation_id: UUID | None,
     deck_qa_report: dict | None = None,
     presentation_critique: dict | None = None,
 ) -> DeliveryReadinessReport:
+    session = session_of(session)
     from archium.application.visual.layout_readiness import presentation_has_visual_layout
 
     evidence = resolve_project_evidence(session, project_id)
@@ -276,7 +279,7 @@ def resolve_delivery_readiness_safe(
 
 
 def resolve_export_verdict(
-    session: Session,
+    session: SessionLike,
     *,
     project_id: UUID,
     presentation_id: UUID | None,
@@ -285,6 +288,7 @@ def resolve_export_verdict(
     round_trip_status: str | None = None,
 ) -> ExportVerdict:
     """Single partner-facing verdict for Studio + Deliver."""
+    session = session_of(session)
     report = resolve_delivery_readiness(
         session,
         project_id=project_id,
@@ -345,10 +349,11 @@ def assert_formal_export_allowed(
 
 
 def latest_presentation_revision_id(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
 ) -> UUID | None:
     """Best-effort link from export audit row to latest outline revision."""
+    session = session_of(session)
     from archium.application.artifact_history_service import OutlineHistoryService
     from archium.infrastructure.database.repositories import PresentationRepository
 
@@ -410,8 +415,9 @@ def _citation_display_label(citation: object) -> str:
     return ""
 
 
-def _citation_gap_messages(session: Session, presentation_id: UUID) -> list[str]:
+def _citation_gap_messages(session: SessionLike, presentation_id: UUID) -> list[str]:
     """Analysis pages must carry source citations / grammar evidence slots."""
+    session = session_of(session)
     from archium.application.visual.visual_grammar_slots import missing_evidence_slots
     from archium.infrastructure.database.repositories import PresentationRepository
 
@@ -437,7 +443,7 @@ def _citation_gap_messages(session: Session, presentation_id: UUID) -> list[str]
 
 
 def _scene_export_blocker_messages(
-    session: Session,
+    session: SessionLike,
     *,
     presentation_id: UUID,
     project_id: UUID,
@@ -447,6 +453,7 @@ def _scene_export_blocker_messages(
     Resolves asset paths the same way formal PPTX export does, so stale
     ``asset_unresolved`` flags do not block when files are actually available.
     """
+    session = session_of(session)
     try:
         from archium.application.visual.asset_path_resolver import (
             AssetPathResolveContext,

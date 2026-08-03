@@ -7,6 +7,7 @@ from datetime import timedelta
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.project_access_service import ProjectAccessService
 from archium.domain._base import utc_now
@@ -33,7 +34,8 @@ def _new_code() -> str:
 class ProjectInviteService:
     """Invite codes for multi-seat without full auth stack."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._repo = ProjectInviteRepository(session)
         self._access = ProjectAccessService(session)

@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.presentation import Presentation
 from archium.infrastructure.database.repositories import PresentationRepository
@@ -22,7 +23,7 @@ def _as_uuid(value: UUID | str | None) -> UUID | None:
 
 
 def select_presentation(
-    session: Session,
+    session: SessionLike,
     presentations: list[Presentation],
     *,
     preferred_id: UUID | str | None = None,
@@ -34,6 +35,7 @@ def select_presentation(
     newly created empty shell when an older deck has content). Explicit empty
     preferred ids are kept only when ``keep_empty_preferred`` is True.
     """
+    session = session_of(session)
     if not presentations:
         return None
 

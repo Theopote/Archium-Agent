@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.architecture_case import ArchitectureCase
 from archium.domain.design_knowledge import DesignKnowledge
@@ -56,10 +57,11 @@ class ArchitectureCaseLibraryService:
         self,
         cases: list[ArchitectureCase] | None = None,
         *,
-        session: Session | None = None,
+        session: SessionLike | None = None,
         project_id: UUID | None = None,
         include_drafts: bool = False,
     ) -> None:
+        session = session_of(session)
         if cases is not None:
             self._cases = list(cases)
             return

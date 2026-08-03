@@ -34,12 +34,11 @@ def render_web_image_preview_panel(
     cache_key = f"{preview_key}_result"
 
     with unit_of_work() as uow:
-        session = uow.session
-        preferences = ImageSearchSettingsService(session).get_preferences(
+        preferences = ImageSearchSettingsService(uow).get_preferences(
             base_settings=get_settings(),
         )
         preview_service = WebImagePreviewService(
-            session,
+            uow,
             pexels_session_api_key=session_pexels_api_key(),
             unsplash_session_api_key=session_unsplash_api_key(),
             image_search_preferences=preferences,
@@ -52,12 +51,11 @@ def render_web_image_preview_panel(
 
     if st.button("检索预览", key=f"{preview_key}_search", use_container_width=True):
         with unit_of_work() as uow:
-            session = uow.session
             service = WebImagePreviewService(
-                session,
+                uow,
                 pexels_session_api_key=session_pexels_api_key(),
                 unsplash_session_api_key=session_unsplash_api_key(),
-                image_search_preferences=ImageSearchSettingsService(session).get_preferences(
+                image_search_preferences=ImageSearchSettingsService(uow).get_preferences(
                     base_settings=get_settings(),
                 ),
             )
@@ -90,12 +88,11 @@ def render_web_image_preview_panel(
             ):
                 try:
                     with unit_of_work() as uow:
-                        session = uow.session
                         service = WebImagePreviewService(
-                            session,
+                            uow,
                             pexels_session_api_key=session_pexels_api_key(),
                             unsplash_session_api_key=session_unsplash_api_key(),
-                            image_search_preferences=ImageSearchSettingsService(session).get_preferences(
+                            image_search_preferences=ImageSearchSettingsService(uow).get_preferences(
                                 base_settings=get_settings(),
                             ),
                         )

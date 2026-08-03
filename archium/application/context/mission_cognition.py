@@ -13,6 +13,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.context.project_context import ProjectContext
 from archium.domain.intent.knowledge_state import KnowledgeState
@@ -76,10 +77,11 @@ def cognition_confidence(
 
 
 def load_project_knowledge_state(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
 ) -> KnowledgeState | None:
     """Load live KnowledgeState for Mission-adjacent readers."""
+    session = session_of(session)
     from archium.infrastructure.database.repositories import ProjectRepository
 
     project = ProjectRepository(session).get_by_id(project_id)

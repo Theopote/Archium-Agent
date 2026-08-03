@@ -17,8 +17,7 @@ def render_chunk_panel(project_id: UUID) -> None:
     st.caption("预览并编辑语义分块结果；保存后会同步更新向量索引。")
 
     with unit_of_work() as uow:
-        session = uow.session
-        documents = list_project_documents(session, project_id)
+        documents = list_project_documents(uow, project_id)
 
     if not documents:
         st.caption("导入资料后可在此查看与编辑文本片段。")
@@ -34,8 +33,7 @@ def render_chunk_panel(project_id: UUID) -> None:
     document_id = UUID(selected_id)
 
     with unit_of_work() as uow:
-        session = uow.session
-        chunks = ChunkService(session).list_document_chunks(document_id)
+        chunks = ChunkService(uow).list_document_chunks(document_id)
 
     if not chunks:
         st.info("该文件尚无文本片段。")
@@ -79,8 +77,7 @@ def render_chunk_panel(project_id: UUID) -> None:
                 st.error("片段内容不能为空。")
                 return
             with unit_of_work() as uow:
-                session = uow.session
-                ChunkService(session).update_chunk(
+                ChunkService(uow).update_chunk(
                     UUID(chunk_id),
                     content=content,
                     section_title=section_title,

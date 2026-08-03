@@ -50,8 +50,7 @@ def render_visual_thinking_panel(
                 st.caption(f"对应意图字段：{slot.intent_field}（尚空，将用方向标题）")
 
             with unit_of_work() as uow:
-                session = uow.session
-                brief = get_visual_concept_brief_for_slot(session, direction.id, slot.key)
+                brief = get_visual_concept_brief_for_slot(uow, direction.id, slot.key)
             if brief is not None:
                 st.caption(
                     f"{visual_brief_status_label(brief.status)} · {brief.title}"
@@ -139,9 +138,8 @@ def _run_slot_synthesize(direction, *, slot_key: str, generate_image: bool, sett
     with st.spinner(f"正在探索「{slot.label}」…"):
         try:
             with unit_of_work() as uow:
-                session = uow.session
                 result = synthesize_visual_concept_brief(
-                    session,
+                    uow,
                     direction.id,
                     generate_image=generate_image,
                     settings=settings,
@@ -175,9 +173,8 @@ def _run_refine(direction, feedback: str, *, generate_image: bool, settings) -> 
     with st.spinner("正在根据反馈修订方向…"):
         try:
             with unit_of_work() as uow:
-                session = uow.session
                 loop = refine_visual_concept_brief(
-                    session,
+                    uow,
                     direction.id,
                     feedback,
                     generate_image=generate_image,

@@ -36,9 +36,8 @@ def _set_selected_slide(index: int) -> None:
 def _move_slide(context: StudioPresentationContext, from_index: int, to_index: int) -> None:
     try:
         with unit_of_work() as uow:
-            session = uow.session
             reorder_studio_slide(
-                session,
+                uow,
                 context.presentation.id,
                 from_index=from_index,
                 to_index=to_index,
@@ -111,9 +110,8 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
         ):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
                     new_slide = add_studio_slide(
-                        session,
+                        uow,
                         context.presentation.id,
                         after_index=selected_index,
                     )
@@ -134,8 +132,7 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
         ):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
-                    delete_studio_slide(session, current.slide.id)
+                    delete_studio_slide(uow, current.slide.id)
                 st.session_state.studio_selected_slide_index = max(0, selected_index - 1)
                 st.success("已删除当前页。")
                 st.rerun()

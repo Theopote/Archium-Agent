@@ -361,8 +361,7 @@ def _render_regenerate_actions(
 
 def _render_brief_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
     with unit_of_work() as uow:
-        session = uow.session
-        review_service = PresentationReviewService(session)
+        review_service = PresentationReviewService(uow)
         context = review_service.get_review_context(
             context_presentation_id,
             workflow_run_id=workflow_run_id,
@@ -426,8 +425,7 @@ def _render_brief_editor(context_presentation_id: UUID, workflow_run_id: UUID | 
 
     if save_clicked or approve_clicked or reject_clicked:
         with unit_of_work() as uow:
-            session = uow.session
-            review_service = PresentationReviewService(session)
+            review_service = PresentationReviewService(uow)
             review_service.update_brief(brief.id, update)
             if approve_clicked:
                 review_service.approve_brief(brief.id)
@@ -449,8 +447,7 @@ def _manuscript_status_badge(status: ManuscriptStatus) -> str:
 
 def _render_manuscript_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
     with unit_of_work() as uow:
-        session = uow.session
-        review_service = PresentationReviewService(session)
+        review_service = PresentationReviewService(uow)
         context = review_service.get_review_context(
             context_presentation_id,
             workflow_run_id=workflow_run_id,
@@ -493,16 +490,14 @@ def _render_manuscript_editor(context_presentation_id: UUID, workflow_run_id: UU
     )
     if approve_clicked:
         with unit_of_work() as uow:
-            session = uow.session
-            PresentationReviewService(session).approve_manuscript(manuscript.id)
+            PresentationReviewService(uow).approve_manuscript(manuscript.id)
         st.success(f"{_MANUSCRIPT_LABEL} 已批准。")
         st.rerun()
 
 
 def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
     with unit_of_work() as uow:
-        session = uow.session
-        review_service = PresentationReviewService(session)
+        review_service = PresentationReviewService(uow)
         context = review_service.get_review_context(
             context_presentation_id,
             workflow_run_id=workflow_run_id,
@@ -613,8 +608,7 @@ def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUI
             ),
         )
         with unit_of_work() as uow:
-            session = uow.session
-            review_service = PresentationReviewService(session)
+            review_service = PresentationReviewService(uow)
             review_service.update_storyline(storyline.id, update)
             if approve_clicked:
                 review_service.approve_storyline(storyline.id)
@@ -628,8 +622,7 @@ def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUI
 
 def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
     with unit_of_work() as uow:
-        session = uow.session
-        review_service = PresentationReviewService(session)
+        review_service = PresentationReviewService(uow)
         context = review_service.get_review_context(
             context_presentation_id,
             workflow_run_id=workflow_run_id,
@@ -750,8 +743,7 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
             expected_version=outline.version,
         )
         with unit_of_work() as uow:
-            session = uow.session
-            review_service = PresentationReviewService(session)
+            review_service = PresentationReviewService(uow)
             saved = review_service.update_outline(outline.id, update)
             if reorder_clicked:
                 saved = apply_audience_mode(saved, audience_mode)
@@ -819,8 +811,7 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
 
 def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
     with unit_of_work() as uow:
-        session = uow.session
-        review_service = PresentationReviewService(session)
+        review_service = PresentationReviewService(uow)
         context = review_service.get_review_context(
             context_presentation_id,
             workflow_run_id=workflow_run_id,
@@ -884,8 +875,7 @@ def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID |
 
     if save_clicked:
         with unit_of_work() as uow:
-            session = uow.session
-            review_service = PresentationReviewService(session)
+            review_service = PresentationReviewService(uow)
             for row in edited.to_dict(orient="records"):
                 slide_id = row.get("id")
                 if not slide_id:
@@ -906,8 +896,7 @@ def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID |
 
     if approve_all_clicked:
         with unit_of_work() as uow:
-            session = uow.session
-            review_service = PresentationReviewService(session)
+            review_service = PresentationReviewService(uow)
             review_service.approve_all_slides(context_presentation_id)
         st.success("全部页面已批准。")
         st.rerun()
@@ -1052,8 +1041,7 @@ def _render_slide_evidence_items_section(
             ):
                 try:
                     with unit_of_work() as uow:
-                        session = uow.session
-                        PresentationReviewService(session).update_slide_evidence_items(
+                        PresentationReviewService(uow).update_slide_evidence_items(
                             slide.id,
                             edited,
                         )
@@ -1073,8 +1061,7 @@ def _render_review_issues_panel(
     settings = get_settings()
     slides_by_id = _slide_lookup(slides)
     with unit_of_work() as uow:
-        session = uow.session
-        review_service = PresentationReviewService(session)
+        review_service = PresentationReviewService(uow)
         all_issues = review_service.list_review_issues(presentation_id)
 
     if not all_issues:
@@ -1194,13 +1181,11 @@ def _render_review_issues_panel(
             st.rerun()
         if cols[2].button("标记已解决", key=f"resolve_issue_{issue.id}"):
             with unit_of_work() as uow:
-                session = uow.session
-                PresentationReviewService(session).resolve_review_issue(issue.id)
+                PresentationReviewService(uow).resolve_review_issue(issue.id)
             st.rerun()
         if cols[3].button("忽略", key=f"dismiss_issue_{issue.id}"):
             with unit_of_work() as uow:
-                session = uow.session
-                PresentationReviewService(session).dismiss_review_issue(issue.id)
+                PresentationReviewService(uow).dismiss_review_issue(issue.id)
             st.rerun()
 
 
@@ -1209,8 +1194,7 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
         return
 
     with unit_of_work() as uow:
-        session = uow.session
-        review_service = PresentationReviewService(session)
+        review_service = PresentationReviewService(uow)
         context = review_service.get_review_context(
             presentation_id,
             workflow_run_id=workflow_run_id,
@@ -1496,8 +1480,7 @@ def _render_page_asset_binding_editor(*, outline: OutlinePlan, project_id: UUID)
                 if str(index) != remove_key
             ]
             with unit_of_work() as uow:
-                session = uow.session
-                PresentationReviewService(session).update_page_asset_bindings(
+                PresentationReviewService(uow).update_page_asset_bindings(
                     outline.id,
                     [
                         SlideAssetBindingUpdate(
@@ -1565,8 +1548,7 @@ def _render_page_asset_binding_editor(*, outline: OutlinePlan, project_id: UUID)
             )
         )
         with unit_of_work() as uow:
-            session = uow.session
-            PresentationReviewService(session).update_page_asset_bindings(
+            PresentationReviewService(uow).update_page_asset_bindings(
                 outline.id,
                 updates,
             )

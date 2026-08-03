@@ -46,9 +46,8 @@ def render_rag_preview_panel(project_id: UUID) -> None:
 
     settings = get_ui_effective_settings()
     with unit_of_work() as uow:
-        session = uow.session
         bundle = preview_project_retrieval(
-            session,
+            uow,
             project_id,
             query.strip(),
             settings=settings,
@@ -57,7 +56,7 @@ def render_rag_preview_panel(project_id: UUID) -> None:
         fusion_refs = []
         if getattr(settings, "knowledge_fusion_enabled", True):
             try:
-                fusion_refs = KnowledgeFusionService(session, settings=settings).retrieve(
+                fusion_refs = KnowledgeFusionService(uow, settings=settings).retrieve(
                     project_id,
                     query.strip(),
                     top_k=min(16, top_k + 4),

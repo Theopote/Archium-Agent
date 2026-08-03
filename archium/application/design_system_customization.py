@@ -13,6 +13,7 @@ from pathlib import Path
 import json
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.design_system import (
     DesignSystem,
@@ -217,9 +218,10 @@ class DesignSystemCustomizationService:
     
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         settings: Settings | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._custom_systems: dict[UUID, CustomDesignSystem] = {}

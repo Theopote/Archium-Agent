@@ -32,8 +32,7 @@ def load_studio_narrative(presentation_id: UUID) -> StudioNarrativeBundle:
     from archium.application.review_service import PresentationReviewService
 
     with unit_of_work() as uow:
-        session = uow.session
-        context = PresentationReviewService(session).get_review_context(presentation_id)
+        context = PresentationReviewService(uow).get_review_context(presentation_id)
     if context is None:
         return StudioNarrativeBundle(outline=None, storyline=None)
     storyline = context.storyline

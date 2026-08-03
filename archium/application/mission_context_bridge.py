@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.enums import ConceptDirectionStatus
@@ -25,12 +26,13 @@ _VISUAL_CONCEPT_HEADER = "【视觉概念简报】"
 
 
 def resolve_project_mission(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     presentation_id: UUID | None = None,
 ) -> ProjectMission | None:
     """Resolve the active mission for a project or linked presentation."""
+    session = session_of(session)
     missions = MissionRepository(session)
     if presentation_id is not None:
         planning = PlanningSessionRepository(session).get_by_presentation_id(presentation_id)
@@ -41,7 +43,7 @@ def resolve_project_mission(
 
 
 def resolve_selected_concept_direction(
-    session: Session,
+    session: SessionLike,
     mission_id: UUID,
 ) -> ConceptDirection | None:
     """Return the selected concept direction for a mission, if any.
@@ -49,6 +51,7 @@ def resolve_selected_concept_direction(
     Prefers SELECTED rows on the mission; if none, falls back to the project's
     latest ExplorationSession.selected_direction_id (pre-mission or just-committed).
     """
+    session = session_of(session)
     directions = ConceptDirectionRepository(session)
     for item in directions.list_by_mission(mission_id):
         if item.status == ConceptDirectionStatus.SELECTED:
@@ -69,10 +72,11 @@ def resolve_selected_concept_direction(
 
 
 def resolve_visual_concept_brief_for_direction(
-    session: Session,
+    session: SessionLike,
     concept_direction_id: UUID,
 ) -> VisualConceptBrief | None:
     """Return canonical visual concept brief for a direction (prefer non-slot)."""
+    session = session_of(session)
     from archium.application.visual.vision.deck_illustrative_style_lock import (
         pick_canonical_visual_concept_brief,
     )
@@ -82,10 +86,11 @@ def resolve_visual_concept_brief_for_direction(
 
 
 def resolve_visual_concept_brief_for_mission(
-    session: Session,
+    session: SessionLike,
     mission_id: UUID,
 ) -> VisualConceptBrief | None:
     """Return the latest visual brief for the selected concept direction, if any."""
+    session = session_of(session)
     direction = resolve_selected_concept_direction(session, mission_id)
     if direction is None:
         return None
@@ -93,10 +98,11 @@ def resolve_visual_concept_brief_for_mission(
 
 
 def resolve_visual_concept_brief_for_presentation(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
 ) -> VisualConceptBrief | None:
     """Resolve selected-direction visual brief via presentation → project → mission."""
+    session = session_of(session)
     from archium.infrastructure.database.repositories import PresentationRepository
 
     presentation = PresentationRepository(session).get_presentation(presentation_id)
@@ -185,11 +191,12 @@ def merge_visual_concept_brief_context(
 
 
 def enrich_mission_generation_context(
-    session: Session,
+    session: SessionLike,
     base_context: str,
     mission: ProjectMission | None,
 ) -> str:
     """Merge mission, design_intent, selected direction, and its visual brief."""
+    session = session_of(session)
     context = merge_mission_project_context(base_context, mission)
     context = merge_design_intent_context(context, mission)
     if mission is None:

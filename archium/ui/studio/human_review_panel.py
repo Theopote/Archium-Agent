@@ -54,9 +54,8 @@ def get_stored_human_review(
                 # Invalid cached review data, ignore and load from DB
                 pass
     with unit_of_work() as uow:
-        session = uow.session
         return load_slide_review(
-            session,
+            uow,
             presentation_id,
             slide_id,
             settings=get_ui_effective_settings(),
@@ -66,9 +65,8 @@ def get_stored_human_review(
 def store_human_review(review: HumanVisualReview, *, presentation_id: UUID, slide_id: UUID) -> Path:
     settings = get_ui_effective_settings()
     with unit_of_work() as uow:
-        session = uow.session
         path = save_slide_review(
-            session,
+            uow,
             presentation_id,
             slide_id,
             review,

@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.visual.comment_to_command_planner import CommentToCommandPlanner
 from archium.application.visual.scene_history_service import SceneHistoryService
@@ -29,11 +30,12 @@ class ElementCommentService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         settings: Settings | None = None,
         use_llm: bool = False,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._comments = ElementCommentRepository(session)

@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.enums import VerificationStatus
 from archium.domain.fact import FactValue, ProjectFact
@@ -25,7 +26,8 @@ class FactValidationResult:
 class FactValidationService:
     """Rule-based validation for project fact quality and conflicts."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._facts = FactRepository(session)
 
     def validate(self, project_id: UUID) -> FactValidationResult:

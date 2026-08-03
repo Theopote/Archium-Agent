@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.design_artifact import (
     DesignArtifact,
@@ -28,12 +29,13 @@ class DesignArtifactRow:
 
 
 def list_design_artifacts(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     limit: int = 24,
 ) -> list[DesignArtifactRow]:
     """Return newest DesignArtifact rows (illustrative Vision outputs)."""
+    session = session_of(session)
     assets = AssetRepository(session).list_by_project(project_id)
     rows: list[DesignArtifactRow] = []
     for asset in assets:

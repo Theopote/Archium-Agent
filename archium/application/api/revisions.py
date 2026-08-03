@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.revision_service import RevisionService
 from archium.domain.enums import RevisionEntityType
@@ -12,7 +13,8 @@ from archium.domain.revision import EntityRevision
 
 
 class RevisionsApi:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._service = RevisionService(session)
 
     def list_by_lineage(self, lineage_id: UUID) -> list[EntityRevision]:

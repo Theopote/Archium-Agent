@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.reasoning_artifact import ensure_direction_reasoning
 from archium.config.settings import Settings, get_settings
@@ -90,11 +91,12 @@ class DesignCritiqueService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         llm: LLMProvider,
         *,
         settings: Settings | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._llm = llm
         self._settings = settings or get_settings()

@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.enums import RevisionEntityType, RevisionSource
 from archium.domain.revision import EntityRevision
@@ -14,7 +15,8 @@ from archium.infrastructure.database.repositories import EntityRevisionRepositor
 class RevisionService:
     """Record and query entity revisions by stable lineage ID."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._revisions = EntityRevisionRepository(session)
 
     def record(

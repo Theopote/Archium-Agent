@@ -29,8 +29,7 @@ def _render_presentation_binding_selector(*, key_prefix: str = "induction") -> U
     from archium.ui.workspace_service import list_project_presentations, list_projects
 
     with unit_of_work() as uow:
-        session = uow.session
-        projects = list_projects(session)
+        projects = list_projects(uow)
     if not projects:
         st.caption("未找到项目，Phase 6 将仅使用 outline 内容填充。")
         return None
@@ -46,8 +45,7 @@ def _render_presentation_binding_selector(*, key_prefix: str = "induction") -> U
     project_id = UUID(selected_project)
 
     with unit_of_work() as uow:
-        session = uow.session
-        presentations = list_project_presentations(session, project_id)
+        presentations = list_project_presentations(uow, project_id)
     if not presentations:
         st.caption("该项目尚无汇报，无法启用页面级上下文。")
         return None
@@ -74,8 +72,7 @@ def _describe_template_editing_context(workspace: Path) -> str:
         return "页面上下文：缺少 outline_plan.json"
 
     with unit_of_work() as uow:
-        session = uow.session
-        bundle = service.resolve_template_editing_context(session, outline)
+        bundle = service.resolve_template_editing_context(uow, outline)
     if bundle is None:
         return (
             "页面上下文：outline 未关联数据库汇报 "
@@ -832,7 +829,6 @@ def _render_template_editing_panel(workspace: Path, co_plan: OutlineTemplateCoPl
                 outline = service.bind_outline_to_presentation(workspace, bound_presentation_id)
 
             with unit_of_work() as uow:
-                session = uow.session
                 batch, updated = service.execute_co_plan_template_editing(
                     induction,
                     outline,
@@ -840,7 +836,7 @@ def _render_template_editing_panel(workspace: Path, co_plan: OutlineTemplateCoPl
                     presentation,
                     template=template,
                     workspace=workspace,
-                    session=session,
+                    uow=uow,
                 )
         except Exception as exc:  # noqa: BLE001
             st.error(report_user_error(exc))

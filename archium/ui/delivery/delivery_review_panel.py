@@ -269,8 +269,7 @@ def _open_review_issue_payloads(presentation_id) -> list[dict]:
         from archium.application.unit_of_work import unit_of_work
 
         with unit_of_work() as uow:
-            session = uow.session
-            issues = PresentationReviewService(session).list_review_issues(presentation_id)
+            issues = PresentationReviewService(uow).list_review_issues(presentation_id)
         open_like = {ReviewStatus.OPEN, ReviewStatus.ACKNOWLEDGED}
         payloads: list[dict] = []
         for issue in issues:

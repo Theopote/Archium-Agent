@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.artifact_executors import (
     ArtifactOutput,
@@ -54,10 +55,11 @@ class ArtifactJobService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         settings: Settings | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._jobs = ArtifactJobRepository(session)

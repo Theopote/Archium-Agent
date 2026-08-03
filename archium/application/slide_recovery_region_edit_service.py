@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.slide_recovery_service import SlideRecoveryRequest, SlideRecoveryService
 from archium.application.slide_recovery_workflow_service import (
@@ -89,7 +90,8 @@ def new_region(*, region_type: RegionType = "unknown") -> RecoveredPageRegion:
 class SlideRecoveryRegionEditService:
     """Re-run recovery after manual region edits."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._workflow_runs = WorkflowRunRepository(session)
         self._recovery = SlideRecoveryService(session)

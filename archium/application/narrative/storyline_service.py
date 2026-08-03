@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.agents.narrative_architect import NarrativeArchitect
 from archium.application._helpers import (
@@ -32,11 +33,12 @@ class StorylineService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         llm: LLMProvider,
         *,
         settings: Settings | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._presentations = PresentationRepository(session)

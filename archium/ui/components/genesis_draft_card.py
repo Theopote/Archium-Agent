@@ -42,7 +42,7 @@ def _resolve_cover_preview_path(result: GenesisStarterResult) -> str | None:
     from archium.application.unit_of_work import unit_of_work
 
     with unit_of_work() as uow:
-        return cover_wireframe_preview_path(uow.session, result.presentation_id)
+        return cover_wireframe_preview_path(uow, result.presentation_id)
 
 
 def _load_slide_wireframe_rows(

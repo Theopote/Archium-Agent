@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.template_usage_brief import TemplateUsageBrief
@@ -104,10 +105,11 @@ def prompt_block_from_brief(brief: TemplateUsageBrief) -> str:
 
 
 def load_brief_for_art_direction(
-    session: Session,
+    session: SessionLike,
     art: ArtDirection | None,
 ) -> TemplateUsageBrief | None:
     """Load the **bound** brief version — not the latest induction for the template."""
+    session = session_of(session)
     if art is None or art.template_usage_brief_id is None:
         return None
     brief = TemplateUsageBriefRepository(session).get(art.template_usage_brief_id)
@@ -118,11 +120,12 @@ def load_brief_for_art_direction(
 
 
 def resolve_brief_for_presentation(
-    session: Session,
+    session: SessionLike,
     *,
     project_id: UUID,
     presentation_id: UUID | None,
 ) -> TemplateUsageBrief | None:
+    session = session_of(session)
     arts = ArtDirectionRepository(session).list_by_project(project_id)
     selected: ArtDirection | None = None
     for art in arts:
@@ -135,11 +138,12 @@ def resolve_brief_for_presentation(
 
 
 def resolve_constraints_for_presentation(
-    session: Session,
+    session: SessionLike,
     *,
     project_id: UUID,
     presentation_id: UUID | None,
 ) -> TemplateUsageConstraints | None:
+    session = session_of(session)
     brief = resolve_brief_for_presentation(
         session, project_id=project_id, presentation_id=presentation_id
     )

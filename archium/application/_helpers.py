@@ -6,6 +6,7 @@ import json
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.citation_resolution import citation_from_draft, enrich_slide_citations
@@ -73,7 +74,7 @@ def build_retrieval_query_from_storyline(brief: PresentationBrief, storyline: St
 
 
 def build_retrieval_context_text(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     query: str | None = None,
@@ -81,6 +82,7 @@ def build_retrieval_context_text(
     settings: Settings | None = None,
 ) -> str:
     """RAG prompt text from chunks/facts — not domain ``ProjectContext``."""
+    session = session_of(session)
     return build_retrieval_context_bundle(
         session,
         project_id,
@@ -91,7 +93,7 @@ def build_retrieval_context_text(
 
 
 def build_project_context(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     query: str | None = None,
@@ -104,6 +106,7 @@ def build_project_context(
     (``archium.domain.context.project_context``) or
     ``archium.application.context.build_project_context``.
     """
+    session = session_of(session)
     return build_retrieval_context_text(
         session,
         project_id,
@@ -114,7 +117,7 @@ def build_project_context(
 
 
 def build_retrieval_context_bundle(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     query: str | None = None,
@@ -122,6 +125,7 @@ def build_retrieval_context_bundle(
     settings: Settings | None = None,
 ) -> ProjectContextBundle:
     """RAG context bundle (text + chunk metadata) — not domain ProjectContext."""
+    session = session_of(session)
     from archium.application.fact_retrieval import (
         match_fact_keys_from_query,
         rank_facts_for_context,
@@ -244,7 +248,7 @@ def build_retrieval_context_bundle(
 
 
 def build_project_context_bundle(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     query: str | None = None,
@@ -252,6 +256,7 @@ def build_project_context_bundle(
     settings: Settings | None = None,
 ) -> ProjectContextBundle:
     """Deprecated alias for ``build_retrieval_context_bundle``."""
+    session = session_of(session)
     return build_retrieval_context_bundle(
         session,
         project_id,
@@ -262,7 +267,7 @@ def build_project_context_bundle(
 
 
 def resolve_design_context_bundle(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     manuscript: PresentationManuscript | None,
@@ -272,6 +277,7 @@ def resolve_design_context_bundle(
     settings: Settings | None = None,
 ) -> ProjectContextBundle:
     """Design-stage context: manuscript when pipeline active, else legacy RAG."""
+    session = session_of(session)
     if use_manuscript_pipeline and manuscript is not None:
         from archium.application.manuscript_prompt import context_bundle_from_manuscript
 
@@ -286,7 +292,7 @@ def resolve_design_context_bundle(
 
 
 def resolve_design_context_text(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     manuscript: PresentationManuscript | None,
@@ -294,6 +300,7 @@ def resolve_design_context_text(
     query: str | None = None,
     settings: Settings | None = None,
 ) -> str:
+    session = session_of(session)
     return resolve_design_context_bundle(
         session,
         project_id,
@@ -460,11 +467,12 @@ def _narrative_arc_from_draft(draft: NarrativeArcDraft | None) -> NarrativeArc |
 
 def _citation_from_draft(
     item: CitationDraft,
-    session: Session,
+    session: SessionLike,
     *,
     document_names: dict[UUID, str] | None = None,
     context_chunks: list[DocumentChunk] | None = None,
 ) -> SourceCitation | None:
+    session = session_of(session)
     citation = citation_from_draft(
         item,
         session,
@@ -513,11 +521,12 @@ def slide_from_draft(
     draft: SlideDraft,
     *,
     presentation_id: UUID,
-    session: Session,
+    session: SessionLike,
     document_names: dict[UUID, str] | None = None,
     context_chunks: list[DocumentChunk] | None = None,
     version: int = 1,
 ) -> SlideSpec:
+    session = session_of(session)
     from archium.application.presentation_intent_layer import ensure_slide_role_layer
 
     slide = SlideSpec(
@@ -554,12 +563,13 @@ def slides_from_plan(
     plan: SlidePlanDraft,
     *,
     presentation_id: UUID,
-    session: Session,
+    session: SessionLike,
     context_bundle: ProjectContextBundle | None = None,
     project_id: UUID | None = None,
     settings: Settings | None = None,
     version: int = 1,
 ) -> list[SlideSpec]:
+    session = session_of(session)
     names = context_bundle.document_names if context_bundle is not None else None
     chunks = context_bundle.chunks if context_bundle is not None else None
     slides = [

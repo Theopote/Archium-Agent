@@ -9,6 +9,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.orchestration.models import OrchestrationStage, OrchestrationStageStatus
 from archium.domain.orchestration.plan_builder import page_key_for_stage
@@ -32,10 +33,11 @@ _DESIGN_ORCH_STAGES = frozenset(
 
 
 def page_for_unresolved_design(
-    session: Session,
+    session: SessionLike,
     pointer: ProcessPointer,
 ) -> str | None:
     """Return concept-exploration / project-mission while directions are open."""
+    session = session_of(session)
     focus = pointer.design_focus()
     if focus not in _UNRESOLVED_DESIGN:
         return None
@@ -48,10 +50,11 @@ def page_for_unresolved_design(
 
 
 def page_for_active_design_orchestration(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
 ) -> str | None:
     """If orchestration is mid design/mission stages, resume that page."""
+    session = session_of(session)
     from archium.domain.enums import WorkflowStatus
     from archium.domain.orchestration.models import OrchestrationPlan
     from archium.infrastructure.database.repositories import WorkflowRunRepository
@@ -82,13 +85,14 @@ def page_for_active_design_orchestration(
 
 
 def page_for_starter_draft(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     slide_count: int,
     layout_ready_count: int,
 ) -> str | None:
     """When genesis seeded slides exist, prefer outline confirm / studio preview."""
+    session = session_of(session)
     if slide_count <= 0:
         return None
     from archium.application.genesis_starter_service import (
@@ -132,7 +136,7 @@ def page_for_starter_draft(
 
 
 def resolve_continue_work_page_key(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     presentation_stage_id: str,
@@ -145,6 +149,7 @@ def resolve_continue_work_page_key(
     Role navigation applies only when ``actor_id`` is explicitly passed.
     Callers that omit it keep the design/orchestration heuristic (tests, tools).
     """
+    session = session_of(session)
     from archium.application.context.workflow_navigation import workflow_entry_for_project
     from archium.application.design_revise_persistence import load_pending_design_revise
     from archium.application.process.design_process_pointer import build_design_pointer

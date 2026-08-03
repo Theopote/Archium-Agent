@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.asset import Asset
 from archium.domain.plan_overlay import (
@@ -30,7 +31,8 @@ _PLAN_OVERLAY_KEYS = (
 class AssetMetadataService:
     """Update non-file asset metadata such as verified plan overlays."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._assets = AssetRepository(session)
 
     def list_project_assets(self, project_id: UUID) -> list[Asset]:

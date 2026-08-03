@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.visual.vision.concept_direction_visual_seed import (
     apply_direction_seed_to_request,
@@ -83,13 +84,14 @@ class VisualConceptBriefService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         llm: LLMProvider,
         *,
         settings: Settings | None = None,
         compiler: VisionPromptCompiler | None = None,
         image_service: VisionImageGenerationService | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._llm = llm
         self._settings = settings or get_settings()

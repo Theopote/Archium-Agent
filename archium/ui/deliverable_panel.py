@@ -99,8 +99,7 @@ def _source_labels(item: PlannedDeliverable, by_id: dict[UUID, Workstream]) -> l
 def _toggle(plan_id: UUID, deliverable_id: str, selected: bool) -> None:
     try:
         with unit_of_work() as uow:
-            session = uow.session
-            set_deliverable_selected(session, plan_id, deliverable_id, selected)
+            set_deliverable_selected(uow, plan_id, deliverable_id, selected)
         st.rerun()
     except WorkflowError as exc:
         st.error(report_user_error(exc))

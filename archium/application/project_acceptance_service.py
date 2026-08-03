@@ -9,6 +9,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.presentation_workflow_service import PresentationWorkflowService
 from archium.application.project_acceptance_metrics import (
@@ -55,11 +56,12 @@ class ProjectAcceptanceService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         llm: LLMProvider,
         *,
         settings: Settings | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._llm = llm
         self._settings = settings
@@ -265,10 +267,11 @@ _ASSET_VISUAL_TYPES: dict[AssetType, VisualType] = {
 
 
 def _count_review_issue_buckets(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
 ) -> tuple[int, int, int]:
     """Count automated review issues by fact / citation / image buckets."""
+    session = session_of(session)
     issues = ReviewRepository(session).list_by_presentation(presentation_id)
     fact_errors = 0
     citation_errors = 0
@@ -353,13 +356,14 @@ def _asset_utilization_rate(slides: list[SlideSpec], assets: list[Asset]) -> flo
 
 
 def _seed_rehearsal_reviews_if_missing(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
     slides: list[SlideSpec],
     validation_reports: list[dict[str, Any]],
     *,
     settings: Settings | None,
 ) -> None:
+    session = session_of(session)
     seed_acceptance_reviews_from_layout(
         session,
         presentation_id,

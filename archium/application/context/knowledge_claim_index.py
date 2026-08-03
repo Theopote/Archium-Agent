@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.context_evidence import ProjectEvidencePack, gather_project_evidence
 from archium.application.knowledge_gap_detection import KnowledgeGapEntry
@@ -80,13 +81,14 @@ def merge_claim_index_into_state(
 
 
 def refresh_claim_index_only(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     mark_stale: bool = False,
     history_reason: str = "index_refresh",
 ) -> KnowledgeState | None:
     """Deterministic claim-index refresh without LLM (incremental / fallback path)."""
+    session = session_of(session)
     from archium.infrastructure.database.repositories import ProjectRepository
 
     project = ProjectRepository(session).get_by_id(project_id)

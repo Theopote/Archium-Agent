@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.fact import ProjectFact
@@ -92,7 +93,7 @@ def evidence_from_user_assumption(statement: str) -> IntentEvidence | None:
 
 
 def record_intent_evidence(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *items: IntentEvidence,
     summary: str,
@@ -100,6 +101,7 @@ def record_intent_evidence(
     write_to_mission: bool = True,
 ) -> list[IntentEvidence]:
     """Append IntentEvolution and optionally merge evidence into latest Mission DesignIntent."""
+    session = session_of(session)
     from archium.infrastructure.database.mission_repositories import MissionRepository
     from archium.infrastructure.database.repositories import ProjectRepository
 

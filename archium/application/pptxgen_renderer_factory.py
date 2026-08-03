@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.image_search_settings_service import ImageSearchSettingsService
 from archium.application.visual.asset_reference import build_asset_reference_context
@@ -29,12 +30,13 @@ def _session_api_key(name: str) -> str | None:
 def create_pptxgen_renderer(
     settings: Settings | None = None,
     *,
-    session: Session | None = None,
+    session: SessionLike | None = None,
     theme: str = "architecture-board",
     pexels_session_api_key: str | None = None,
     unsplash_session_api_key: str | None = None,
 ) -> PptxGenPresentationRenderer:
     """Construct a PptxGen renderer with fallback / asset-ref / fact ports when session is set."""
+    session = session_of(session)
     resolved = settings or get_settings()
     fallback_resolver = None
     content_ref_resolver = None

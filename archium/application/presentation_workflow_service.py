@@ -9,6 +9,7 @@ from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.generation_contract import (
     build_generation_contract,
@@ -47,7 +48,7 @@ class PresentationWorkflowService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         llm: LLMProvider,
         *,
         settings: Settings | None = None,
@@ -55,6 +56,7 @@ class PresentationWorkflowService:
         checkpointer_manager: WorkflowCheckpointerManager | None = None,
         design_system_integration: DesignSystemIntegrationService | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._runtime = PresentationWorkflowRuntime.create(

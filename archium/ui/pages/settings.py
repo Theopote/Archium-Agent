@@ -223,8 +223,7 @@ def render() -> None:
             st.error("首次保存需要输入 API Key。")
         else:
             with unit_of_work() as uow:
-                session = uow.session
-                save_service = LLMProfileService(session)
+                save_service = LLMProfileService(uow)
                 save_service.save_default_profile(draft_profile)
                 if api_key_input.strip():
                     from archium.infrastructure.llm.connection_test import normalize_api_key
@@ -284,8 +283,7 @@ def _render_model_role_mapping(draft_profile: LLMProfile) -> None:
     )
 
     with unit_of_work() as uow:
-        session = uow.session
-        registry = ModelRoleRegistryService(session)
+        registry = ModelRoleRegistryService(uow)
         profiles = registry.list_profiles()
         assignments = registry.list_role_assignments()
 
@@ -323,8 +321,7 @@ def _render_model_role_mapping(draft_profile: LLMProfile) -> None:
 
         if st.button("保存角色映射", key="save_model_role_mapping"):
             with unit_of_work() as uow:
-                session = uow.session
-                save_registry = ModelRoleRegistryService(session)
+                save_registry = ModelRoleRegistryService(uow)
                 save_registry.save_profiles(profiles)
                 save_registry.save_role_assignments(new_assignments)
             st.success("模型角色映射已保存")
@@ -374,8 +371,7 @@ def _render_web_research_settings() -> None:
 
     base_settings = get_settings()
     with unit_of_work() as uow:
-        session = uow.session
-        prefs = WebResearchSettingsService(session).get_preferences(base_settings=base_settings)
+        prefs = WebResearchSettingsService(uow).get_preferences(base_settings=base_settings)
 
     enabled = st.toggle("启用联网研究", value=prefs.enabled)
     auto_on_concept = st.toggle(
@@ -426,8 +422,7 @@ def _render_web_research_settings() -> None:
 
     if save_clicked:
         with unit_of_work() as uow:
-            session = uow.session
-            WebResearchSettingsService(session).save_preferences(
+            WebResearchSettingsService(uow).save_preferences(
                 enabled=enabled,
                 provider=provider,
                 auto_on_concept_planning=auto_on_concept,
@@ -475,8 +470,7 @@ def _render_image_search_settings() -> None:
 
     base_settings = get_settings()
     with unit_of_work() as uow:
-        session = uow.session
-        prefs_service = ImageSearchSettingsService(session)
+        prefs_service = ImageSearchSettingsService(uow)
         prefs = prefs_service.get_preferences(base_settings=base_settings)
 
     enabled = st.toggle("启用网络搜图", value=prefs.enabled)
@@ -536,8 +530,7 @@ def _render_image_search_settings() -> None:
             st.error("请至少配置 Pexels 或 Unsplash 其中一个 API Key。")
         else:
             with unit_of_work() as uow:
-                session = uow.session
-                ImageSearchSettingsService(session).save_preferences(
+                ImageSearchSettingsService(uow).save_preferences(
                     enabled=enabled,
                     persist_to_library=persist_to_library,
                 )

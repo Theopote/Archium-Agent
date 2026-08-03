@@ -7,6 +7,7 @@ from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.context.next_action_selector import resolve_workflow_entry
 from archium.application.context.project_context_builder import build_project_context
@@ -23,9 +24,10 @@ def as_session_state(state: object) -> SessionStateLike:
 
 
 def workflow_entry_for_project(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
 ) -> WorkflowEntryDispatch | None:
+    session = session_of(session)
     context = build_project_context(session, project_id)
     if context is None:
         return None
@@ -50,8 +52,9 @@ def apply_workflow_entry(session_state: SessionStateLike, dispatch: WorkflowEntr
     }
 
 
-def sync_mission_step_from_context(session: Session, project_id: UUID, session_state: SessionStateLike) -> None:
+def sync_mission_step_from_context(session: SessionLike, project_id: UUID, session_state: SessionStateLike) -> None:
     """On mission page load, jump to the step implied by ProjectContext when unset."""
+    session = session_of(session)
     if session_state.get("mission_step", 1) > 1:
         return
     entry = workflow_entry_for_project(session, project_id)

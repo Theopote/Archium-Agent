@@ -57,9 +57,8 @@ def render_fact_ledger_panel(
 
     settings = get_ui_effective_settings()
     with unit_of_work() as uow:
-        session = uow.session
         service = FactLedgerService(
-            session,
+            uow,
             llm=create_llm_provider(settings) if settings.llm_configured else None,
             settings=settings,
         )
@@ -178,8 +177,7 @@ def render_fact_ledger_panel(
     btn1, btn2, btn3 = st.columns(3)
     if btn1.button("保存修正", key=f"save_fact_{selected.id}", use_container_width=True):
         with unit_of_work() as uow:
-            session = uow.session
-            FactLedgerService(session).update_fact(
+            FactLedgerService(uow).update_fact(
                 selected.id,
                 value=new_value.strip(),
                 unit=new_unit.strip() or None,
@@ -189,9 +187,8 @@ def render_fact_ledger_panel(
 
     if btn2.button("确认事实", key=f"confirm_fact_{selected.id}", use_container_width=True):
         with unit_of_work() as uow:
-            session = uow.session
             result = FactLedgerService(
-                session,
+                uow,
                 llm=create_llm_provider(settings) if settings.llm_configured else None,
                 settings=settings,
             ).confirm_fact(selected.id)
@@ -206,7 +203,6 @@ def render_fact_ledger_panel(
 
     if btn3.button("驳回事实", key=f"reject_fact_{selected.id}", use_container_width=True):
         with unit_of_work() as uow:
-            session = uow.session
-            FactLedgerService(session).reject_fact(selected.id)
+            FactLedgerService(uow).reject_fact(selected.id)
         st.warning("事实已驳回，后续生成将不再引用。")
         st.rerun()

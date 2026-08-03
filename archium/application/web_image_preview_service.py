@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.asset_board_service import AssetBoardService
 from archium.application.image_search_settings_service import ImageSearchPreferences
@@ -40,7 +41,7 @@ class WebImagePreviewService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         settings: Settings | None = None,
         pexels_session_api_key: str | None = None,
@@ -48,6 +49,7 @@ class WebImagePreviewService:
         image_search_preferences: ImageSearchPreferences | None = None,
         web_search: WebImageSearchService | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._preferences = image_search_preferences

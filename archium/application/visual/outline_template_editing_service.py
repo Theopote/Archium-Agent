@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.slide_generation_context_service import SlideGenerationContextService
 from archium.application.visual.outline_template_co_planning_service import (
@@ -62,11 +63,12 @@ class OutlineTemplateEditingService:
         assets: list[Asset] | None = None,
         design_system: DesignSystem | None = None,
         workspace: Path | None = None,
-        session: Session | None = None,
+        session: SessionLike | None = None,
         project_id: UUID | None = None,
         manuscript: PresentationManuscript | None = None,
         storyline: Storyline | None = None,
     ) -> tuple[OutlineTemplateEditingBatch, OutlineTemplateCoPlan]:
+        session = session_of(session)
         ds = design_system or default_presentation_design_system()
         project_assets = list(assets or [])
         schema_by_id = {schema.id: schema for schema in schemas}

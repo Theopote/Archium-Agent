@@ -28,7 +28,6 @@ from archium.ui.workspace_service import list_project_presentations
 def _selected_presentation_id(project_id: UUID) -> UUID | None:
     selected = st.session_state.get("selected_presentation_id")
     with unit_of_work() as uow:
-        session = uow.session
         from archium.application.presentation_selection import select_presentation
 
         presentations = list_project_presentations(session, project_id)
@@ -68,8 +67,7 @@ def _render_project_context_readiness(project_id: UUID) -> None:
 
     try:
         with unit_of_work() as uow:
-            session = uow.session
-            context = build_project_context(session, project_id)
+            context = build_project_context(uow, project_id)
         readiness = presentation_readiness_from_context(context)
     except Exception:
         st.caption("项目理解状态暂不可用")
@@ -187,8 +185,7 @@ def _render_starter_content_banner(project_id: UUID) -> None:
     from archium.application.genesis_starter_service import get_genesis_starter_state
 
     with unit_of_work() as uow:
-        session = uow.session
-        starter = get_genesis_starter_state(session, project_id)
+        starter = get_genesis_starter_state(uow, project_id)
     if starter is None:
         return
     if starter.slides_ready_count < starter.page_count:

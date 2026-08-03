@@ -92,7 +92,6 @@ def _run_lock(
 ) -> None:
     try:
         with unit_of_work() as uow:
-            session = uow.session
             from archium.ui.studio_service import apply_slide_element_lock
 
             apply_slide_element_lock(
@@ -114,7 +113,6 @@ def _run_reorder(
 ) -> None:
     try:
         with unit_of_work() as uow:
-            session = uow.session
             from archium.ui.studio_service import apply_slide_element_reorder
 
             apply_slide_element_reorder(
@@ -143,7 +141,6 @@ def _run_visibility(
 ) -> None:
     try:
         with unit_of_work() as uow:
-            session = uow.session
             from archium.ui.studio_service import apply_slide_element_visibility
 
             apply_slide_element_visibility(
@@ -167,7 +164,6 @@ def _run_align(
 ) -> None:
     try:
         with unit_of_work() as uow:
-            session = uow.session
             from archium.ui.studio_service import apply_slide_element_align
 
             apply_slide_element_align(
@@ -282,7 +278,6 @@ def render_slide_properties(
                 ):
                     try:
                         with unit_of_work() as uow:
-                            session = uow.session
                             from archium.ui.studio_service import apply_slide_create_freeform
 
                             result = apply_slide_create_freeform(
@@ -513,9 +508,8 @@ def _render_vision_illustration_panel(
     ):
         try:
             with unit_of_work() as uow:
-                session = uow.session
                 result = generate_slide_vision_illustration(
-                    session,
+                    uow,
                     slide.id,
                     project_id=project_id,
                     subject=subject,
@@ -585,8 +579,7 @@ def _render_evidence_items_panel(
     asset_options: dict[str, str] = {}
     if project_id is not None:
         with unit_of_work() as uow:
-            session = uow.session
-            assets = AssetBoardService(session).list_project_assets(project_id)
+            assets = AssetBoardService(uow).list_project_assets(project_id)
         asset_options = {str(asset.id): asset.filename for asset in assets}
 
     role_labels = {
@@ -664,8 +657,7 @@ def _render_evidence_items_panel(
     ):
         try:
             with unit_of_work() as uow:
-                session = uow.session
-                result = apply_slide_evidence_items(session, slide.id, items=edited)
+                result = apply_slide_evidence_items(uow, slide.id, items=edited)
             note = "已同步预览图注与照片。" if result.scene_patched else "已保存页面证据（预览节点未找到）。"
             st.success(note)
             st.rerun()
@@ -820,9 +812,8 @@ def _render_element_properties(
         ):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
                     apply_slide_element_text(
-                        session,
+                        uow,
                         slide_snapshot.slide.id,
                         element_id=element.id,
                         text=edited_text,
@@ -839,9 +830,8 @@ def _render_element_properties(
         ):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
                     apply_slide_element_style(
-                        session,
+                        uow,
                         slide_snapshot.slide.id,
                         element_id=element.id,
                         color=color_value,
@@ -943,7 +933,6 @@ def _render_element_properties(
                     )
                 try:
                     with unit_of_work() as uow:
-                        session = uow.session
                         from archium.ui.studio_service import apply_slide_element_text_runs
 
                         apply_slide_element_text_runs(
@@ -966,8 +955,7 @@ def _render_element_properties(
 
         if project_id is not None and element.content_type == LayoutContentType.IMAGE:
             with unit_of_work() as uow:
-                session = uow.session
-                assets = AssetBoardService(session).list_project_assets(project_id)
+                assets = AssetBoardService(uow).list_project_assets(project_id)
             asset_options = {str(asset.id): asset.filename for asset in assets}
             if asset_options:
                 current_ref = str(element.content_ref) if element.content_ref else None
@@ -989,9 +977,8 @@ def _render_element_properties(
                 ):
                     try:
                         with unit_of_work() as uow:
-                            session = uow.session
                             apply_slide_element_asset(
-                                session,
+                                uow,
                                 slide_snapshot.slide.id,
                                 element_id=element.id,
                                 asset_id=UUID(selected_asset),
@@ -1013,7 +1000,6 @@ def _render_element_properties(
             ):
                 try:
                     with unit_of_work() as uow:
-                        session = uow.session
                         from archium.ui.studio_service import apply_slide_element_gradient_fill
 
                         apply_slide_element_gradient_fill(
@@ -1034,7 +1020,6 @@ def _render_element_properties(
             ):
                 try:
                     with unit_of_work() as uow:
-                        session = uow.session
                         from archium.ui.studio_service import apply_slide_element_silhouette
 
                         apply_slide_element_silhouette(
@@ -1078,9 +1063,8 @@ def _render_element_properties(
             ):
                 try:
                     with unit_of_work() as uow:
-                        session = uow.session
                         apply_slide_element_style(
-                            session,
+                            uow,
                             slide_snapshot.slide.id,
                             element_id=element.id,
                             fill_color=fill_value,
@@ -1120,7 +1104,6 @@ def _render_element_properties(
                 ):
                     try:
                         with unit_of_work() as uow:
-                            session = uow.session
                             from archium.ui.studio_service import (
                                 apply_slide_element_gradient_fill,
                             )
@@ -1248,7 +1231,6 @@ def _render_element_properties(
             ):
                 try:
                     with unit_of_work() as uow:
-                        session = uow.session
                         from archium.ui.studio_service import apply_slide_element_group
 
                         result = apply_slide_element_group(
@@ -1274,7 +1256,6 @@ def _render_element_properties(
             ):
                 try:
                     with unit_of_work() as uow:
-                        session = uow.session
                         from archium.ui.studio_service import apply_slide_element_connect
 
                         result = apply_slide_element_connect(
@@ -1301,7 +1282,6 @@ def _render_element_properties(
         ):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
                     from archium.ui.studio_service import apply_slide_element_ungroup
 
                     apply_slide_element_ungroup(
@@ -1374,7 +1354,6 @@ def _render_element_properties(
         ):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
                     from archium.ui.studio_service import apply_slide_element_duplicate
 
                     result = apply_slide_element_duplicate(
@@ -1400,7 +1379,6 @@ def _render_element_properties(
         ):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
                     from archium.ui.studio_service import apply_slide_element_delete
 
                     apply_slide_element_delete(

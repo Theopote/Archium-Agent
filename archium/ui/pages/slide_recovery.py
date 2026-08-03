@@ -47,8 +47,7 @@ def _init_session_state() -> None:
 
 def _render_project_selector() -> UUID | None:
     with unit_of_work() as uow:
-        session = uow.session
-        projects = list_projects(session)
+        projects = list_projects(uow)
     if not projects:
         st.info("请先创建项目，以便记录页面复活工作流。")
         return None

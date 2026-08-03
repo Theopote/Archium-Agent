@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application._helpers import to_json
 from archium.application.mission_history_service import MissionHistoryService
@@ -55,12 +56,13 @@ class MissionResearchEnrichmentService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         llm: LLMProvider | None = None,
         *,
         settings: Settings | None = None,
         mission_service: ProjectMissionService | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._llm = llm
         self._settings = settings or get_settings()

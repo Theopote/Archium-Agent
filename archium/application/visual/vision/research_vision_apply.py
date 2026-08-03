@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.research_vision import ResearchVisionBundle
@@ -15,7 +16,7 @@ logger = get_logger(__name__, operation="research_vision_apply")
 
 
 def apply_vision_bundles_to_directions(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     bundles: list[ResearchVisionBundle],
     *,
@@ -27,6 +28,7 @@ def apply_vision_bundles_to_directions(
 
     Does not generate pixels. Skips archived directions when listing.
     """
+    session = session_of(session)
     if not bundles:
         return []
     repo = ConceptDirectionRepository(session)

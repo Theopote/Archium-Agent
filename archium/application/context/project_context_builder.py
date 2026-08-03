@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.context.knowledge_claim_index import merge_claim_index_into_state
 from archium.application.context.next_action_selector import default_actions_for_stage
@@ -19,7 +20,7 @@ from archium.domain.project import Project
 
 
 def build_project_context(
-    session: Session,
+    session: SessionLike,
     project: Project | UUID,
 ) -> ProjectContext | None:
     """Reconstruct ProjectContext from knowledge_state and current evidence.
@@ -27,6 +28,7 @@ def build_project_context(
     Refreshes the claim index deterministically (no LLM) so Fact / KnowledgeItem
     changes appear even before the next full reassess.
     """
+    session = session_of(session)
     from archium.infrastructure.database.repositories import ProjectRepository
 
     if isinstance(project, UUID):

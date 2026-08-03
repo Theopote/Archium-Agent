@@ -65,8 +65,7 @@ def _append_cognition_gate_warnings(project_id: UUID, warnings: list[str]) -> No
         if mode == "off":
             return
         with unit_of_work() as uow:
-            session = uow.session
-            readiness = evaluate_presentation_cognition(session, project_id)
+            readiness = evaluate_presentation_cognition(uow, project_id)
         if readiness.verdict == PresentationGateVerdict.PROCEED:
             return
         for msg in readiness.warnings[:3]:
@@ -90,8 +89,7 @@ def _append_unresolved_design_warning(project_id: UUID, warnings: list[str]) -> 
         from archium.application.product_continue_work import design_loop_open
 
         with unit_of_work() as uow:
-            session = uow.session
-            pointer = build_design_pointer(session, project_id)
+            pointer = build_design_pointer(uow, project_id)
             if not design_loop_open(pointer):
                 return
             label = pointer.label or "概念方向尚未选定"
@@ -109,9 +107,8 @@ def _append_role_edit_warning(project_id: UUID, warnings: list[str]) -> None:
         from archium.ui.session_actor import get_current_actor_id
 
         with unit_of_work() as uow:
-            session = uow.session
             hint = resolve_role_navigation(
-                session,
+                uow,
                 project_id,
                 actor_id=get_current_actor_id(),
             )
@@ -502,9 +499,8 @@ def render_design_context_strip(project_id: UUID) -> None:
         from archium.ui.session_actor import get_current_actor_id
 
         with unit_of_work() as uow:
-            session = uow.session
             hint = resolve_role_navigation(
-                session,
+                uow,
                 project_id,
                 actor_id=get_current_actor_id(),
             )
@@ -535,11 +531,10 @@ def render_design_context_strip(project_id: UUID) -> None:
         )
 
         with unit_of_work() as uow:
-            session = uow.session
-            pending = load_pending_design_revise(session, project_id)
-            pointer = build_design_pointer(session, project_id)
+            pending = load_pending_design_revise(uow, project_id)
+            pointer = build_design_pointer(uow, project_id)
             open_loop = design_loop_open(pointer)
-            resume_page = page_for_unresolved_design(session, pointer)
+            resume_page = page_for_unresolved_design(uow, pointer)
     except Exception:
         return
 
@@ -661,8 +656,7 @@ def render_flow_project_context(
 
     ensure_workspace_session()
     with unit_of_work() as uow:
-        session = uow.session
-        projects = list_projects(session)
+        projects = list_projects(uow)
     if not projects:
         if allow_create:
             from archium.ui.pages.workspace import render_project_picker

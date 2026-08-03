@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.background_job_service import BackgroundJobService
 from archium.application.cad_bim_analysis import analyze_cad_bim_file, is_cad_bim_path
@@ -20,7 +21,8 @@ from archium.infrastructure.database.repositories import DocumentRepository
 class BackgroundJobWorker:
     """Inline / process worker. Call ``process_once`` from a loop or test."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._jobs = BackgroundJobService(session)
 

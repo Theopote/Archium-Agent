@@ -45,8 +45,7 @@ def resolve_ui_workspace_mode(project_id: UUID) -> ArchitecturalWorkspaceMode:
         except ValueError:
             override = None
     with unit_of_work() as uow:
-        session = uow.session
-        return WorkspaceModeService(session).resolve_mode(project_id, override=override)
+        return WorkspaceModeService(uow).resolve_mode(project_id, override=override)
 
 
 def render_workspace_mode_chrome(project_id: UUID, *, key_prefix: str = "ws_mode") -> None:
@@ -74,11 +73,10 @@ def render_workspace_mode_chrome(project_id: UUID, *, key_prefix: str = "ws_mode
 
     try:
         with unit_of_work() as uow:
-            session = uow.session
-            service = WorkspaceModeService(session)
+            service = WorkspaceModeService(uow)
             profile = service.resolve_profile(project_id, override=override)
             available = service.available_modes(project_id)
-            entry = workflow_entry_for_project(session, project_id)
+            entry = workflow_entry_for_project(uow, project_id)
     except WorkflowError as exc:
         st.caption(str(exc))
         return

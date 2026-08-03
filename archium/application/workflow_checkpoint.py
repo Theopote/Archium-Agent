@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.workflow_progress import append_step_log
 from archium.config.settings import Settings, get_settings
@@ -17,8 +18,9 @@ def finalize_run_state(run: WorkflowRun, state_snapshot: dict[str, Any]) -> None
     append_step_log(run.state)
 
 
-def commit_workflow_checkpoint(session: Session, settings: Settings | None = None) -> None:
+def commit_workflow_checkpoint(session: SessionLike, settings: Settings | None = None) -> None:
     """Flush and optionally commit so other sessions (e.g. Streamlit) can poll."""
+    session = session_of(session)
     resolved = settings or get_settings()
     session.flush()
     if resolved.workflow_checkpoint_commit_enabled:

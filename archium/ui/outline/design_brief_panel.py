@@ -72,8 +72,7 @@ def render_design_brief_panel(
         if st.button("生成全部设计摘要", type="primary", key="brief_generate_all"):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
-                    SlideDesignBriefService(session).generate_all(outline.id)
+                    SlideDesignBriefService(uow).generate_all(outline.id)
                 st.success("已生成全部页面设计摘要。")
                 st.rerun()
             except WorkflowError as exc:
@@ -88,8 +87,7 @@ def render_design_brief_panel(
         if st.button("生成本页设计摘要", key=f"brief_regen_{page_order}"):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
-                    SlideDesignBriefService(session).regenerate_page(outline.id, page_order)
+                    SlideDesignBriefService(uow).regenerate_page(outline.id, page_order)
                 st.rerun()
             except WorkflowError as exc:
                 st.error(report_user_error(exc))
@@ -120,8 +118,7 @@ def render_design_brief_panel(
         ):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
-                    SlideDesignBriefService(session).approve_page(
+                    SlideDesignBriefService(uow).approve_page(
                         outline.id,
                         page_order,
                         expected_version=outline.version,
@@ -137,16 +134,14 @@ def render_design_brief_panel(
         ):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
-                    SlideDesignBriefService(session).regenerate_page(outline.id, page_order)
+                    SlideDesignBriefService(uow).regenerate_page(outline.id, page_order)
                 st.rerun()
             except WorkflowError as exc:
                 st.error(report_user_error(exc))
         if st.button("批量批准", key="brief_approve_all", width="stretch"):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
-                    SlideDesignBriefService(session).approve_all(
+                    SlideDesignBriefService(uow).approve_all(
                         outline.id,
                         expected_version=outline.version,
                     )
@@ -157,8 +152,7 @@ def render_design_brief_panel(
         if st.button("重新生成全部", key="brief_regen_all", width="stretch"):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
-                    SlideDesignBriefService(session).generate_all(outline.id)
+                    SlideDesignBriefService(uow).generate_all(outline.id)
                 st.rerun()
             except WorkflowError as exc:
                 st.error(report_user_error(exc))
@@ -272,8 +266,7 @@ def _render_brief_editor(outline_id: UUID, brief: SlideDesignBrief) -> SlideDesi
         )
         try:
             with unit_of_work() as uow:
-                session = uow.session
-                saved = SlideDesignBriefService(session).update_brief(outline_id, update)
+                saved = SlideDesignBriefService(uow).update_brief(outline_id, update)
             st.success("设计摘要已保存。")
             if saved.status == ApprovalStatus.CHANGES_PENDING:
                 st.warning("已批准页面被修改，状态变为「待重新确认」。")

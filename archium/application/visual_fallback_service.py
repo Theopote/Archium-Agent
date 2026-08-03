@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.asset_matching_service import rank_assets_for_requirement
 from archium.application.image_search_settings_service import ImageSearchPreferences
@@ -33,13 +34,14 @@ class VisualFallbackService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         settings: Settings | None = None,
         pexels_session_api_key: str | None = None,
         unsplash_session_api_key: str | None = None,
         image_search_preferences: ImageSearchPreferences | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._image_search_preferences = image_search_preferences

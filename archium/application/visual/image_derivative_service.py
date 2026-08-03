@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.visual.asset_path_resolver import (
     AssetPathResolveContext,
@@ -50,7 +51,7 @@ class ImageDerivativeService:
 
     def __init__(
         self,
-        session: Session | None = None,
+        session: SessionLike | None = None,
         *,
         settings: Settings | None = None,
         planner: ImageTreatmentSpecPlanner | None = None,
@@ -60,6 +61,7 @@ class ImageDerivativeService:
         processor: ImageProcessor | None = None,
         style_matcher: ImageStyleMatcher | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._processor = processor or ImageProcessor()

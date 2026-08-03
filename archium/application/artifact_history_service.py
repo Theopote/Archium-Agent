@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.artifact_snapshots import brief_to_snapshot, storyline_to_snapshot
 from archium.application.revision_service import RevisionService
@@ -21,7 +22,8 @@ from archium.domain.revision import EntityRevision
 class BriefHistoryService:
     """Brief-specific facade over the unified revision service."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._revisions = RevisionService(session)
 
@@ -84,7 +86,8 @@ class BriefHistoryService:
 class StorylineHistoryService:
     """Storyline-specific facade over the unified revision service."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._revisions = RevisionService(session)
 
@@ -147,7 +150,8 @@ class StorylineHistoryService:
 class OutlineHistoryService:
     """Outline-specific facade over the unified revision service."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._revisions = RevisionService(session)
 
@@ -212,7 +216,8 @@ class OutlineHistoryService:
 class CulturalNarrativeHistoryService:
     """Cultural narrative facade over the unified revision service."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._revisions = RevisionService(session)
 
@@ -264,7 +269,8 @@ class CulturalNarrativeHistoryService:
 class RenovationIssueMapHistoryService:
     """Renovation issue map facade over the unified revision service."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._revisions = RevisionService(session)
 
@@ -316,7 +322,8 @@ class RenovationIssueMapHistoryService:
 class ReferenceStyleProfileHistoryService:
     """Reference style profile facade over the unified revision service."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._revisions = RevisionService(session)
 

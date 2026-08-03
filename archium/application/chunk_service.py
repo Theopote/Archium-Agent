@@ -6,6 +6,7 @@ import contextlib
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.retrieval_service import RetrievalService, create_retrieval_service
 from archium.config.settings import Settings, get_settings
@@ -19,11 +20,12 @@ class ChunkService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         settings: Settings | None = None,
         retrieval: RetrievalService | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._documents = DocumentRepository(session)

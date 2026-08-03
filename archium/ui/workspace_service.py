@@ -570,8 +570,7 @@ def continue_workflow_after_review(
     resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
     with unit_of_work() as uow:
-        session = uow.session
-        service = _create_workflow_service(session, llm, resolved_settings)
+        service = _create_workflow_service(uow, llm, resolved_settings)
         return service.continue_after_review(workflow_run_id)
 
 
@@ -584,8 +583,7 @@ def resume_workflow(
     resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
     with unit_of_work() as uow:
-        session = uow.session
-        service = _create_workflow_service(session, llm, resolved_settings)
+        service = _create_workflow_service(uow, llm, resolved_settings)
         return service.resume(workflow_run_id)
 
 
@@ -600,8 +598,7 @@ def regenerate_brief(
     resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
     with unit_of_work() as uow:
-        session = uow.session
-        return RegenerationService(session, llm, settings=resolved_settings).regenerate_brief(
+        return RegenerationService(uow, llm, settings=resolved_settings).regenerate_brief(
             presentation_id,
             workflow_run_id=workflow_run_id,
         )
@@ -618,8 +615,7 @@ def regenerate_storyline(
     resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
     with unit_of_work() as uow:
-        session = uow.session
-        return RegenerationService(session, llm, settings=resolved_settings).regenerate_storyline(
+        return RegenerationService(uow, llm, settings=resolved_settings).regenerate_storyline(
             presentation_id,
             workflow_run_id=workflow_run_id,
         )
@@ -636,8 +632,7 @@ def regenerate_outline_plan(
     resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
     with unit_of_work() as uow:
-        session = uow.session
-        return RegenerationService(session, llm, settings=resolved_settings).regenerate_outline_plan(
+        return RegenerationService(uow, llm, settings=resolved_settings).regenerate_outline_plan(
             presentation_id,
             workflow_run_id=workflow_run_id,
         )
@@ -654,8 +649,7 @@ def regenerate_slide_plan(
     resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
     with unit_of_work() as uow:
-        session = uow.session
-        return RegenerationService(session, llm, settings=resolved_settings).regenerate_slide_plan(
+        return RegenerationService(uow, llm, settings=resolved_settings).regenerate_slide_plan(
             presentation_id,
             workflow_run_id=workflow_run_id,
         )

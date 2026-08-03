@@ -149,8 +149,7 @@ def _init_state() -> None:
 
 def _project_selector(*, key: str = "mission_project_selector") -> UUID | None:
     with unit_of_work() as uow:
-        session = uow.session
-        projects = list_projects(session)
+        projects = list_projects(uow)
     if not projects:
         st.info("还没有项目。")
         if st.button("开始描述项目", type="primary"):
@@ -190,9 +189,8 @@ def _load_snapshot(project_id: UUID) -> PlanningSnapshot:
         else None
     )
     with unit_of_work() as uow:
-        session = uow.session
         snapshot = get_planning_snapshot(
-            session,
+            uow,
             planning_session_id=session_id,
             workflow_run_id=run_id,
             mission_id=mission_id,
@@ -290,7 +288,7 @@ def _render_describe(project_id: UUID) -> None:
         if project_for_examples is not None:
             from archium.application.project_context_routing import is_research_programming
 
-            if is_research_programming(uow.session, project_for_examples):
+            if is_research_programming(uow, project_for_examples):
                 example_pool = PROGRAMMING_TASK_EXAMPLE_PROMPTS
     example = st.selectbox(
         "示例（可选，不会限制你的描述）",
@@ -553,9 +551,8 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
                     with st.spinner(spinner_text):
                         try:
                             with unit_of_work() as uow:
-                                session = uow.session
                                 output = generator(
-                                    session,
+                                    uow,
                                     mission_id,
                                     deliverable_id=deliverable_id,
                                 )
@@ -584,8 +581,7 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
                             st.caption(f"DOCX：{cached.docx_path}")
 
         with unit_of_work() as uow:
-            session = uow.session
-            recent_jobs = list_artifact_jobs(session, mission_id, limit=8)
+            recent_jobs = list_artifact_jobs(uow, mission_id, limit=8)
         if recent_jobs:
             st.markdown("**最近成果作业**")
             for job in recent_jobs:

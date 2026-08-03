@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.background_job import (
     BackgroundJob,
@@ -18,7 +19,8 @@ from archium.infrastructure.database.repositories import BackgroundJobRepository
 class BackgroundJobService:
     """Process-agnostic job queue API (Streamlit runner remains a separate adapter)."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._repo = BackgroundJobRepository(session)
 
     def enqueue(

@@ -100,8 +100,7 @@ def render_slide_recovery_region_editor(
         return None
 
     with unit_of_work() as uow:
-        session = uow.session
-        delivery = SlideRecoveryDeliveryService(session, settings=settings)
+        delivery = SlideRecoveryDeliveryService(uow, settings=settings)
         source_path = delivery.resolve_source_preview_path(result)
 
     st.markdown("#### 区域校正")
@@ -198,8 +197,7 @@ def render_slide_recovery_region_editor(
     if apply_clicked:
         try:
             with unit_of_work() as uow:
-                session = uow.session
-                service = SlideRecoveryRegionEditService(session)
+                service = SlideRecoveryRegionEditService(uow)
                 updated = service.apply_region_edits(run.id, regions)
         except WorkflowError as exc:
             st.error(report_user_error(exc))

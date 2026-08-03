@@ -39,9 +39,8 @@ def render_studio_onboarding() -> None:
                 return
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
                     project = create_studio_project(
-                        session,
+                        uow,
                         name=name,
                         project_type=project_type,
                         description=description,
@@ -59,8 +58,7 @@ def render_studio_onboarding() -> None:
 def render_studio_import_panel(*, project_id: UUID, expanded: bool = False) -> None:
     """Render document upload for the selected studio project."""
     with unit_of_work() as uow:
-        session = uow.session
-        overview = get_studio_project_overview(session, project_id)
+        overview = get_studio_project_overview(uow, project_id)
     if overview is None:
         return
 
@@ -102,11 +100,10 @@ def _run_import(project_id: UUID, uploads: list, *, settings: Settings) -> None:
     results = []
     try:
         with unit_of_work() as uow:
-            session = uow.session
             for upload in uploads:
                 results.append(
                     import_studio_file(
-                        session,
+                        uow,
                         project_id,
                         filename=upload.name,
                         data=upload.getvalue(),

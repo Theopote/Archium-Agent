@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.enums import (
     KnowledgeItemStatus,
@@ -21,10 +22,11 @@ from archium.domain.process import (
 
 
 def build_project_process_board(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
 ) -> ProjectProcessBoard:
     """Derive process phases — does not persist; does not touch ProjectContext."""
+    session = session_of(session)
     return ProjectProcessBoard(
         research=_research_pointer(session, project_id),
         design=_design_pointer(session, project_id),
@@ -32,7 +34,8 @@ def build_project_process_board(
     )
 
 
-def _research_pointer(session: Session, project_id: UUID) -> ProcessPointer:
+def _research_pointer(session: SessionLike, project_id: UUID) -> ProcessPointer:
+    session = session_of(session)
     from archium.infrastructure.database.repositories import (
         DocumentRepository,
         FactRepository,
@@ -91,13 +94,15 @@ def _research_pointer(session: Session, project_id: UUID) -> ProcessPointer:
     )
 
 
-def _design_pointer(session: Session, project_id: UUID) -> ProcessPointer:
+def _design_pointer(session: SessionLike, project_id: UUID) -> ProcessPointer:
+    session = session_of(session)
     from archium.application.process.design_process_pointer import build_design_pointer
 
     return build_design_pointer(session, project_id)
 
 
-def _presentation_pointer(session: Session, project_id: UUID) -> ProcessPointer:
+def _presentation_pointer(session: SessionLike, project_id: UUID) -> ProcessPointer:
+    session = session_of(session)
     from archium.infrastructure.database.repositories import PresentationRepository
 
     presentations = PresentationRepository(session).list_by_project(project_id)

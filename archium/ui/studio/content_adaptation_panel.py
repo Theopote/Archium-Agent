@@ -171,8 +171,7 @@ def _render_capacity_gauge(slide_id: UUID) -> None:
 def _load_capacity(slide_id: UUID) -> SlideCapacityBudget | None:
     try:
         with unit_of_work() as uow:
-            session = uow.session
-            return estimate_slide_capacity(session, slide_id)
+            return estimate_slide_capacity(uow, slide_id)
     except WorkflowError as exc:
         st.caption(report_user_error(exc))
         return None
@@ -246,9 +245,8 @@ def _accept_split(proposal: SlideSplitProposal) -> None:
 def _load_suggestions(slide_snapshot: SlideVisualSnapshot) -> list[ContentAdaptationSuggestion]:
     try:
         with unit_of_work() as uow:
-            session = uow.session
             return analyze_slide_content_adaptation(
-                session,
+                uow,
                 slide_snapshot.slide.id,
                 layout_report=slide_snapshot.validation,
             )

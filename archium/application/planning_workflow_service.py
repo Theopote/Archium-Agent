@@ -8,6 +8,7 @@ from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.deliverable_planning_service import (
     DeliverablePlanningService,
@@ -101,12 +102,13 @@ class PlanningWorkflowService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         llm: LLMProvider,
         *,
         settings: Settings | None = None,
         checkpointer_manager: WorkflowCheckpointerManager | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._runtime = PlanningWorkflowRuntime(session, llm, settings=self._settings)

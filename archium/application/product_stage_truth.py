@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.orchestration.models import (
     OrchestrationPlan,
@@ -68,10 +69,11 @@ def product_stage_id_for_orchestration(stage: OrchestrationStage) -> str:
 
 
 def active_orchestration_product_stage(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
 ) -> ProductStageTruth | None:
     """If an orchestration run is active, return its mapped product stage."""
+    session = session_of(session)
     from archium.domain.enums import WorkflowStatus
     from archium.infrastructure.database.repositories import WorkflowRunRepository
 
@@ -100,12 +102,13 @@ def active_orchestration_product_stage(
 
 
 def resolve_product_stage_truth(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     presentation_stage_id: str,
 ) -> ProductStageTruth:
     """SSOT for main chrome: prefer active orchestration, else presentation heuristic."""
+    session = session_of(session)
     orch = active_orchestration_product_stage(session, project_id)
     if orch is not None:
         return orch

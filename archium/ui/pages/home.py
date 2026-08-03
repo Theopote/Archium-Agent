@@ -33,13 +33,12 @@ def _apply_studio_overview_for_wireframe_deck(snapshot: ProjectProgressSnapshot)
         )
 
         with unit_of_work() as uow:
-            session = uow.session
-            starter = get_genesis_starter_state(session, snapshot.project_id)
+            starter = get_genesis_starter_state(uow, snapshot.project_id)
             if starter is None:
                 return
             if starter.layout_ready_count < max(1, starter.page_count):
                 return
-            if presentation_has_formal_visual_previews(session, starter.presentation_id):
+            if presentation_has_formal_visual_previews(uow, starter.presentation_id):
                 return
         st.session_state.studio_center_mode = "overview"
         st.session_state.studio_selected_slide_index = 0
@@ -179,8 +178,7 @@ def _render_recent_versions(snapshot: ProjectProgressSnapshot) -> None:
     st.markdown("**最近版本**")
     try:
         with unit_of_work() as uow:
-            session = uow.session
-            presentations = list_project_presentations(session, snapshot.project_id)
+            presentations = list_project_presentations(uow, snapshot.project_id)
     except Exception:
         logger.exception("Failed to list presentations for home")
         presentations = []
@@ -315,12 +313,11 @@ def _render_home_starter_preview(snapshot: ProjectProgressSnapshot) -> None:
         from archium.ui.components.genesis_draft_card import render_genesis_draft_card
 
         with unit_of_work() as uow:
-            session = uow.session
-            starter = get_genesis_starter_state(session, snapshot.project_id)
+            starter = get_genesis_starter_state(uow, snapshot.project_id)
             formal_previews = False
             if starter is not None:
                 formal_previews = presentation_has_formal_visual_previews(
-                    session, starter.presentation_id
+                    uow, starter.presentation_id
                 )
         if starter is None or not starter.has_first_slide:
             return

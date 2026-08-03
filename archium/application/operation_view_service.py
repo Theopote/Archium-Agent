@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.job_progress_service import JobProgressService
 from archium.domain.job_progress import JobKind, JobProgressView
@@ -83,7 +84,8 @@ def operation_from_workflow_run(run: WorkflowRun) -> OperationView:
 class OperationViewService:
     """Product-facing operation list; persistence stays dual-track underneath."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._progress = JobProgressService(session)
         self._runs = WorkflowRunRepository(session)
 

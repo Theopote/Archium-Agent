@@ -115,8 +115,7 @@ def _render_design_system_panel(
     st.caption("应用专业模板、优化布局、评估设计质量")
 
     with unit_of_work() as uow:
-        session = uow.session
-        design_system_service = DesignSystemIntegrationService(session)
+        design_system_service = DesignSystemIntegrationService(uow)
     
     # Template selection
     st.markdown("#### 📋 模板选择")
@@ -606,11 +605,10 @@ def _render_wireframe_mode_banner(context: StudioPresentationContext) -> None:
         from archium.ui.app_navigation import get_app_page
 
         with unit_of_work() as uow:
-            session = uow.session
-            starter = get_genesis_starter_state(session, context.project.id)
+            starter = get_genesis_starter_state(uow, context.project.id)
             if starter is None:
                 return
-            if presentation_has_formal_visual_previews(session, starter.presentation_id):
+            if presentation_has_formal_visual_previews(uow, starter.presentation_id):
                 return
     except Exception:
         return

@@ -8,6 +8,7 @@ from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.visual.layout_planning_service import LayoutPlanningService
 from archium.application.visual.layout_validation_service import LayoutValidationService
@@ -50,8 +51,9 @@ _MEDIA_LAYOUT_TYPES = frozenset(
 )
 
 
-def project_has_usable_visual_assets(session: Session, project_id: UUID) -> bool:
+def project_has_usable_visual_assets(session: SessionLike, project_id: UUID) -> bool:
     """True when the project has on-disk image/drawing assets usable in layouts."""
+    session = session_of(session)
     from archium.infrastructure.database.repositories import AssetRepository
 
     for asset in AssetRepository(session).list_by_project(project_id):
@@ -139,10 +141,11 @@ def _fallback_textual_layout(
 
 
 def cover_wireframe_preview_path(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
 ) -> str | None:
     """Return cached wireframe PNG for the first slide when a layout exists."""
+    session = session_of(session)
     presentations = PresentationRepository(session)
     slides = sorted(
         presentations.list_slides(presentation_id),
@@ -159,7 +162,8 @@ def cover_wireframe_preview_path(
     return None
 
 
-def _resolve_design_system(session: Session) -> DesignSystem:
+def _resolve_design_system(session: SessionLike) -> DesignSystem:
+    session = session_of(session)
     design_repo = DesignSystemRepository(session)
     design = design_repo.get(default_presentation_design_system().id)
     if design is None:
@@ -168,7 +172,7 @@ def _resolve_design_system(session: Session) -> DesignSystem:
 
 
 def _ensure_slide_wireframe_layout(
-    session: Session,
+    session: SessionLike,
     *,
     project_id: UUID,
     presentation_id: UUID,
@@ -178,6 +182,7 @@ def _ensure_slide_wireframe_layout(
     commit: bool,
 ) -> GenesisSlideWireframeResult:
     """Rule-based VisualIntent + LayoutPlan + wireframe PNG for one slide."""
+    session = session_of(session)
     presentations = PresentationRepository(session)
     plans = LayoutPlanRepository(session)
     preview_service = SlidePreviewService(settings)
@@ -274,13 +279,14 @@ def _ensure_slide_wireframe_layout(
 
 
 def ensure_cover_wireframe_layout(
-    session: Session,
+    session: SessionLike,
     *,
     project_id: UUID,
     presentation_id: UUID,
     settings: Settings | None = None,
 ) -> GenesisSlideWireframeResult:
     """Rule-based wireframe for the cover slide only."""
+    session = session_of(session)
     resolved = settings or get_settings()
     presentations = PresentationRepository(session)
     slides = sorted(
@@ -308,7 +314,7 @@ def ensure_cover_wireframe_layout(
 
 
 def ensure_deck_wireframe_layouts(
-    session: Session,
+    session: SessionLike,
     *,
     project_id: UUID,
     presentation_id: UUID,
@@ -316,6 +322,7 @@ def ensure_deck_wireframe_layouts(
     max_slides: int | None = None,
 ) -> GenesisDeckWireframeResult:
     """Generate rule-based wireframes for all slides missing LayoutPlan."""
+    session = session_of(session)
     resolved = settings or get_settings()
     presentations = PresentationRepository(session)
     slides = sorted(
@@ -401,13 +408,14 @@ def ensure_deck_wireframe_layouts(
 
 
 def repair_placeholder_wireframes_for_project(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     settings: Settings | None = None,
     commit: bool = True,
 ) -> int:
     """Replace genesis media-placeholder wireframes with text-only layouts when no assets exist."""
+    session = session_of(session)
     from archium.application.genesis_starter_service import presentation_has_formal_visual_previews
     from archium.application.visual.studio_scene_service import StudioSceneService
     from archium.infrastructure.database.repositories import PresentationRepository

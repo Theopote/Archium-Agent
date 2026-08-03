@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
@@ -55,11 +56,12 @@ class AssetVisionRagService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         llm: LLMProvider | None = None,
         settings: Settings | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._assets = AssetRepository(session)
@@ -230,11 +232,12 @@ class AssetVisionBackfillService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         llm: LLMProvider | None = None,
         settings: Settings | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._assets = AssetRepository(session)

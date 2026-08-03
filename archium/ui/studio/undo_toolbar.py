@@ -28,9 +28,8 @@ def render_undo_toolbar(*, slide_snapshot: SlideVisualSnapshot | None) -> None:
 
     slide_id = slide_snapshot.slide.id
     with unit_of_work() as uow:
-        session = uow.session
-        visual_undo_steps = count_visual_undo_steps(session, slide_id)
-        content_undo_steps = count_content_undo_steps(session, slide_id)
+        visual_undo_steps = count_visual_undo_steps(uow, slide_id)
+        content_undo_steps = count_content_undo_steps(uow, slide_id)
     visual_redo_steps = visual_redo_depth(slide_id)
     content_redo_steps = content_redo_depth(slide_id)
 

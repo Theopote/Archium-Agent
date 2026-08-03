@@ -33,8 +33,7 @@ def render_template_selection_panel(
     
     # Initialize design system integration
     with unit_of_work() as uow:
-        session = uow.session
-        design_system_service = DesignSystemIntegrationService(session)
+        design_system_service = DesignSystemIntegrationService(uow)
     
     # Get available templates
     templates = list_templates()
@@ -236,8 +235,7 @@ def render_design_quality_panel(
     
     # Initialize design system integration
     with unit_of_work() as uow:
-        session = uow.session
-        design_system_service = DesignSystemIntegrationService(session)
+        design_system_service = DesignSystemIntegrationService(uow)
     
     # Assess quality
     with st.spinner("正在评估设计质量..."):
@@ -331,8 +329,7 @@ def render_visual_elements_panel(
     
     # Initialize visual elements library
     with unit_of_work() as uow:
-        session = uow.session
-        design_system_service = DesignSystemIntegrationService(session)
+        design_system_service = DesignSystemIntegrationService(uow)
     
     # Search interface
     search_col1, search_col2 = st.columns([3, 1])

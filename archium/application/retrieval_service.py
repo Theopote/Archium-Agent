@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.retrieval_filters import RetrievalFilters
 from archium.application.retrieval_hybrid import rerank_retrieved_chunks
@@ -25,12 +26,13 @@ class RetrievalService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         settings: Settings | None = None,
         embedder: EmbeddingProvider | None = None,
         store: ChromaVectorStore | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._embedder = embedder if embedder is not None else create_embedding_provider(self._settings)
@@ -185,8 +187,9 @@ class RetrievalService:
 
 
 def create_retrieval_service(
-    session: Session,
+    session: SessionLike,
     settings: Settings | None = None,
 ) -> RetrievalService:
     """Build a retrieval service from application settings."""
+    session = session_of(session)
     return RetrievalService(session, settings=settings)

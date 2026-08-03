@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.architecture_case_library import ArchitectureCaseLibraryService
 from archium.application.retrieval_credibility import rank_relevance
@@ -43,11 +44,12 @@ class KnowledgeGraphService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         settings: Settings | None = None,
         case_library: ArchitectureCaseLibraryService | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._facts = FactRepository(session)

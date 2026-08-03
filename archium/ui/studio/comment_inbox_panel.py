@@ -33,7 +33,6 @@ def render_comment_inbox(
 
     try:
         with unit_of_work() as uow:
-            session = uow.session
             from archium.application.visual.element_comment_service import (
                 ElementCommentService,
             )
@@ -220,7 +219,6 @@ def _render_snapshot_diff(
 def _rebind(comment_id: UUID) -> None:
     try:
         with unit_of_work() as uow:
-            session = uow.session
             from archium.application.visual.element_comment_service import (
                 ElementCommentService,
             )
@@ -237,7 +235,6 @@ def _rebind(comment_id: UUID) -> None:
 def _resolve(comment_id: UUID) -> None:
     try:
         with unit_of_work() as uow:
-            session = uow.session
             from archium.application.visual.element_comment_service import (
                 ElementCommentService,
             )

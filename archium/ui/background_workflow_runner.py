@@ -208,9 +208,8 @@ def _run_presentation_job(
     _set_job_status(job, BackgroundJobStatus.RUNNING)
     try:
         with unit_of_work(scoped=False) as uow:
-            session = uow.session
             llm = create_llm_provider(settings)
-            service = _create_presentation_service(session, llm, settings)
+            service = _create_presentation_service(uow, llm, settings)
             try:
                 workflow_run = service.prepare_run(job.project_id, request, **export_kwargs)
                 job.workflow_run_id = workflow_run.id
@@ -234,9 +233,8 @@ def _run_continue_job(job: BackgroundWorkflowJob, *, settings: Settings) -> None
     _set_job_status(job, BackgroundJobStatus.RUNNING)
     try:
         with unit_of_work(scoped=False) as uow:
-            session = uow.session
             llm = create_llm_provider(settings)
-            service = _create_presentation_service(session, llm, settings)
+            service = _create_presentation_service(uow, llm, settings)
             try:
                 result = service.continue_after_review(job.workflow_run_id)
                 _set_presentation_job_result(job, result)
@@ -339,9 +337,8 @@ def _run_resume_job(job: BackgroundWorkflowJob, *, settings: Settings) -> None:
     _set_job_status(job, BackgroundJobStatus.RUNNING)
     try:
         with unit_of_work(scoped=False) as uow:
-            session = uow.session
             llm = create_llm_provider(settings)
-            service = _create_presentation_service(session, llm, settings)
+            service = _create_presentation_service(uow, llm, settings)
             try:
                 result = service.resume(job.workflow_run_id)
                 _set_presentation_job_result(job, result)
@@ -392,8 +389,7 @@ def _run_planning_job(
         job.workflow_run_id = workflow_run_id
     try:
         with unit_of_work(scoped=False) as uow:
-            session = uow.session
-            service = _create_planning_service(session, settings)
+            service = _create_planning_service(uow, settings)
             try:
                 if action == PlanningJobAction.START:
                     if not task_description:
@@ -490,8 +486,7 @@ def _run_visual_job(
     use_llm = bool(run_kwargs.get("use_llm", False))
     try:
         with unit_of_work(scoped=False) as uow:
-            session = uow.session
-            service = _create_visual_service(session, settings, use_llm=use_llm)
+            service = _create_visual_service(uow, settings, use_llm=use_llm)
             try:
                 if action == VisualJobAction.RUN:
                     result = service.run(job.project_id, presentation_id, **run_kwargs)
@@ -566,8 +561,7 @@ def _run_slide_recovery_job(
         job.workflow_run_id = workflow_run_id
     try:
         with unit_of_work(scoped=False) as uow:
-            session = uow.session
-            service = _create_slide_recovery_service(session, settings)
+            service = _create_slide_recovery_service(uow, settings)
             if action == SlideRecoveryJobAction.RUN:
                 result = service.run(job.project_id, request)
                 _set_slide_recovery_job_result(job, result)
@@ -663,9 +657,8 @@ def load_workflow_result(
     """Load a presentation WorkflowRunResult from persisted DB state."""
     resolved = _resolve_settings(settings)
     with unit_of_work(scoped=False) as uow:
-        session = uow.session
         llm = create_llm_provider(resolved)
-        service = _create_presentation_service(session, llm, resolved)
+        service = _create_presentation_service(uow, llm, resolved)
         try:
             return cast(WorkflowRunResult, service.result_from_run(workflow_run_id))
         finally:
@@ -678,8 +671,7 @@ def load_planning_result(
     """Load a planning workflow result from persisted DB state."""
     resolved = _resolve_settings(settings)
     with unit_of_work(scoped=False) as uow:
-        session = uow.session
-        service = _create_planning_service(session, resolved)
+        service = _create_planning_service(uow, resolved)
         try:
             return cast(PlanningWorkflowResult, service.result_from_run(workflow_run_id))
         finally:
@@ -692,8 +684,7 @@ def load_slide_recovery_result(
     """Load a slide recovery workflow result from persisted DB state."""
     resolved = _resolve_settings(settings)
     with unit_of_work(scoped=False) as uow:
-        session = uow.session
-        service = _create_slide_recovery_service(session, resolved)
+        service = _create_slide_recovery_service(uow, resolved)
         return service.result_from_run(workflow_run_id)
 
 
@@ -703,8 +694,7 @@ def load_visual_result(
     """Load a visual workflow result from persisted DB state."""
     resolved = _resolve_settings(settings)
     with unit_of_work(scoped=False) as uow:
-        session = uow.session
-        service = _create_visual_service(session, resolved, use_llm=False)
+        service = _create_visual_service(uow, resolved, use_llm=False)
         try:
             return cast(VisualWorkflowResult, service.result_from_run(workflow_run_id))
         finally:

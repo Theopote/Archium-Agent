@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.slide_recovery_region_analyzer import SlideRecoveryRegionAnalyzer
 from archium.config.settings import Settings, get_settings
@@ -63,11 +64,12 @@ class SlideRecoveryService:
 
     def __init__(
         self,
-        session: Session | None = None,
+        session: SessionLike | None = None,
         *,
         settings: Settings | None = None,
         region_analyzer: SlideRecoveryRegionAnalyzer | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._region_analyzer = region_analyzer or SlideRecoveryRegionAnalyzer(

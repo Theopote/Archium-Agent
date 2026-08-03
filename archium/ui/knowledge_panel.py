@@ -41,7 +41,7 @@ def render_knowledge_panel(project_id: UUID) -> None:
     st.caption("区分项目事实、公开资料、参考案例与系统推测；确认后才优先进入正式汇报生成。")
 
     with unit_of_work() as uow:
-        service = ProjectKnowledgeService(uow.session)
+        service = ProjectKnowledgeService(uow)
         view = service.get_view(project_id)
         documents = uow.api.documents.list(project_id)
         from archium.application.mission_context_bridge import resolve_project_mission
@@ -49,10 +49,10 @@ def render_knowledge_panel(project_id: UUID) -> None:
             MissionResearchEnrichmentService,
         )
 
-        mission = resolve_project_mission(uow.session, project_id)
+        mission = resolve_project_mission(uow, project_id)
         enriched_item_ids: set[str] = set()
         if mission is not None:
-            enriched_item_ids = MissionResearchEnrichmentService(uow.session).get_enriched_item_ids(
+            enriched_item_ids = MissionResearchEnrichmentService(uow).get_enriched_item_ids(
                 mission.id
             )
 
@@ -102,8 +102,7 @@ def render_knowledge_panel(project_id: UUID) -> None:
         )
         if st.button("保存资料角色", key="save_doc_purpose"):
             with unit_of_work() as uow:
-                session = uow.session
-                ProjectKnowledgeService(session).set_document_purpose(selected_id, purpose)
+                ProjectKnowledgeService(uow).set_document_purpose(selected_id, purpose)
             st.success("资料角色已更新")
             st.rerun()
 
@@ -132,8 +131,7 @@ def render_knowledge_panel(project_id: UUID) -> None:
                     )
                 )
             with unit_of_work() as uow:
-                session = uow.session
-                ProjectKnowledgeService(session).create_item(
+                ProjectKnowledgeService(uow).create_item(
                     project_id,
                     statement=statement,
                     origin=origin,
@@ -167,7 +165,6 @@ def _render_item_row(
         cols = st.columns(2)
         if cols[0].button("确认", key=f"confirm_ki_{item.id}"):
             with unit_of_work() as uow:
-                session = uow.session
                 from archium.application.fact_ledger_service import FactLedgerService
                 from archium.infrastructure.llm.factory import create_llm_provider
                 from archium.ui.llm_settings import get_ui_effective_settings
@@ -187,7 +184,6 @@ def _render_item_row(
             st.rerun()
         if cols[1].button("驳回", key=f"reject_ki_{item.id}"):
             with unit_of_work() as uow:
-                session = uow.session
                 from archium.application.fact_ledger_service import FactLedgerService
 
                 FactLedgerService(session).reject_fact(item.linked_fact_id)
@@ -196,11 +192,9 @@ def _render_item_row(
         cols = st.columns(2)
         if cols[0].button("确认", key=f"confirm_ki_{item.id}"):
             with unit_of_work() as uow:
-                session = uow.session
-                ProjectKnowledgeService(session).confirm_item(item.id)
+                ProjectKnowledgeService(uow).confirm_item(item.id)
             st.rerun()
         if cols[1].button("驳回", key=f"reject_ki_{item.id}"):
             with unit_of_work() as uow:
-                session = uow.session
-                ProjectKnowledgeService(session).reject_item(item.id)
+                ProjectKnowledgeService(uow).reject_item(item.id)
             st.rerun()

@@ -54,8 +54,7 @@ def _render_diff_result(
 def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]) -> None:
     """Render revision timeline and diff tools for SlideSpec."""
     with unit_of_work() as uow:
-        session = uow.session
-        history = SlideHistoryService(session)
+        history = SlideHistoryService(uow)
         revisions = history.list_presentation_revisions(presentation_id)
         lineage_options = history.list_lineage_options(presentation_id, slides)
 
@@ -94,8 +93,7 @@ def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]
     lineage_id = UUID(selected_lineage_id)
 
     with unit_of_work() as uow:
-        session = uow.session
-        history = SlideHistoryService(session)
+        history = SlideHistoryService(uow)
         slide_revisions = history.list_revisions_by_lineage(lineage_id)
         current_slide = next(
             (slide for slide in slides if slide.lineage_id == lineage_id),
@@ -129,8 +127,7 @@ def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]
             use_container_width=True,
         ):
             with unit_of_work() as uow:
-                session = uow.session
-                SlideHistoryService(session).restore_at_revision(UUID(restore_id))
+                SlideHistoryService(uow).restore_at_revision(UUID(restore_id))
             st.success("页面内容已恢复到所选版本。")
             st.rerun()
 
@@ -142,8 +139,7 @@ def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]
     )
 
     with unit_of_work() as uow:
-        session = uow.session
-        history = SlideHistoryService(session)
+        history = SlideHistoryService(uow)
         if compare_mode == "与上一版对比":
             if len(slide_revisions) < 2:
                 st.caption("至少需要两次修订才能对比。")

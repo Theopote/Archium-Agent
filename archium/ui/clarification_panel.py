@@ -421,8 +421,7 @@ def _fact_value(fact: ProjectFact) -> str:
 def _run(action: Callable) -> None:
     try:
         with unit_of_work() as uow:
-            session = uow.session
-            action(session)
+            action(uow)
         st.rerun()
     except WorkflowError as exc:
         st.error(report_user_error(exc))

@@ -66,8 +66,7 @@ def render_studio_selection(
     advanced = bool(st.session_state.studio_advanced_mode)
 
     with unit_of_work() as uow:
-        session = uow.session
-        projects = list_studio_projects(session)
+        projects = list_studio_projects(uow)
     if not projects:
         render_studio_onboarding()
         return None
@@ -100,8 +99,7 @@ def render_studio_selection(
     project_id = UUID(selected_project)
 
     with unit_of_work() as uow:
-        session = uow.session
-        presentations = list_studio_presentations(session, project_id)
+        presentations = list_studio_presentations(uow, project_id)
     if not presentations:
         if compact:
             st.caption("当前项目尚无汇报")
@@ -122,7 +120,6 @@ def render_studio_selection(
         )
     else:
         with unit_of_work() as uow:
-            session = uow.session
             from archium.application.presentation_selection import select_presentation
 
             picked = select_presentation(session, presentations)
@@ -176,9 +173,8 @@ def render_studio_selection(
     presentation_id = UUID(selected_presentation)
 
     with unit_of_work() as uow:
-        session = uow.session
         context = load_studio_context(
-            session,
+            uow,
             project_id,
             presentation_id,
             visual_critic_reports=visual_critic_reports,

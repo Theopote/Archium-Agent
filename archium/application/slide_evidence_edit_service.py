@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.slide_history_service import SlideHistoryService
 from archium.config.settings import Settings, get_settings
@@ -27,7 +28,8 @@ class SlideEvidenceEditService:
 
     _PHOTO_TYPES = frozenset({VisualType.SITE_PHOTO, VisualType.REFERENCE_CASE})
 
-    def __init__(self, session: Session, *, settings: Settings | None = None) -> None:
+    def __init__(self, session: SessionLike, *, settings: Settings | None = None) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._presentations = PresentationRepository(session)

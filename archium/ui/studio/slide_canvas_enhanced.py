@@ -342,7 +342,6 @@ def _load_comment_anchors(
 
     try:
         with unit_of_work() as uow:
-            session = uow.session
             from archium.application.visual.element_comment_service import (
                 ElementCommentService,
             )
@@ -401,8 +400,7 @@ def _render_interactive_canvas(
             from archium.application.asset_board_service import AssetBoardService
 
             with unit_of_work() as uow:
-                session = uow.session
-                for asset in AssetBoardService(session).list_project_assets(UUID(str(project_id))):
+                for asset in AssetBoardService(uow).list_project_assets(UUID(str(project_id))):
                     assets.append(
                         {
                             "id": str(asset.id),

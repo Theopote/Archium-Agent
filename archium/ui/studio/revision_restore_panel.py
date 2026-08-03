@@ -34,8 +34,7 @@ def render_visual_revision_panel(*, slide_snapshot: SlideVisualSnapshot | None) 
         return
     slide_id = slide_snapshot.slide.id
     with unit_of_work() as uow:
-        session = uow.session
-        revisions = list_slide_visual_revisions(session, slide_id)
+        revisions = list_slide_visual_revisions(uow, slide_id)
     if not revisions:
         return
     with st.expander("视觉修订历史", expanded=False):
@@ -58,8 +57,7 @@ def render_content_revision_panel(*, slide_snapshot: SlideVisualSnapshot | None)
         return
     slide_id = slide_snapshot.slide.id
     with unit_of_work() as uow:
-        session = uow.session
-        revisions = list_slide_content_revisions(session, slide_id)
+        revisions = list_slide_content_revisions(uow, slide_id)
     if not revisions:
         return
     with st.expander("内容适配修订", expanded=False):

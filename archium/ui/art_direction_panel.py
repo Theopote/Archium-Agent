@@ -242,9 +242,8 @@ def render_art_direction_panel(
             else:
                 try:
                     with unit_of_work() as uow:
-                        session = uow.session
                         regenerate_art_direction(
-                            session,
+                            uow,
                             art_direction.id,
                             feedback.strip(),
                             use_llm=use_llm,

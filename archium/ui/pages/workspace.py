@@ -96,7 +96,6 @@ def _resolve_active_presentation_id(project_id: UUID) -> UUID | None:
         else st.session_state.get("selected_presentation_id")
     )
     with unit_of_work() as uow:
-        session = uow.session
         from archium.application.presentation_selection import select_presentation
 
         presentations = list_project_presentations(session, project_id)
@@ -119,8 +118,7 @@ def _store_pptx_export_result(result: RenderResult) -> None:
 
 def _render_project_selector() -> UUID | None:
     with unit_of_work() as uow:
-        session = uow.session
-        projects = list_projects(session)
+        projects = list_projects(uow)
 
     if not projects:
         st.info("还没有项目。请在下方创建第一个项目。")
@@ -160,7 +158,6 @@ def _render_create_project() -> None:
                 st.error("请填写项目名称")
                 return
             with unit_of_work() as uow:
-                session = uow.session
                 from archium.ui.session_actor import get_current_actor_id
 
                 project = create_project(
@@ -177,8 +174,7 @@ def _render_create_project() -> None:
 
 def _render_overview(project_id: UUID) -> None:
     with unit_of_work() as uow:
-        session = uow.session
-        overview = get_project_overview(session, project_id)
+        overview = get_project_overview(uow, project_id)
     if overview is None:
         st.warning("项目不存在或已被删除。")
         return
@@ -193,8 +189,7 @@ def _render_overview(project_id: UUID) -> None:
 def _render_documents(project_id: UUID, *, show_uploader: bool = True) -> None:
     st.markdown("#### 项目资料")
     with unit_of_work() as uow:
-        session = uow.session
-        documents = list_project_documents(session, project_id)
+        documents = list_project_documents(uow, project_id)
 
     if documents:
         rows = [
@@ -218,11 +213,11 @@ def _render_documents(project_id: UUID, *, show_uploader: bool = True) -> None:
                 project = uow.api.project.get(project_id)
             except Exception:
                 project = None
-            if project is not None and is_concept_leaning(uow.session, project) and not is_research_programming(
+            if project is not None and is_concept_leaning(uow, project) and not is_research_programming(
                 uow.session, project
             ):
                 st.caption("概念探索中 — 资料可后续补充 enrich 任务理解。")
-            elif project is not None and is_research_programming(uow.session, project):
+            elif project is not None and is_research_programming(uow, project):
                 st.caption("策划与可研中 — 资料可后续补充 enrich 任务理解。")
             else:
                 st.caption("尚未导入资料。上传任务书、图纸说明或调研文档后再生成汇报。")
@@ -294,8 +289,7 @@ def _consume_upload_feedback(project_id: UUID, *, key_prefix: str) -> None:
                 from archium.application.fact_ledger_service import FactLedgerService
 
                 with unit_of_work() as uow:
-                    session = uow.session
-                    ledger = FactLedgerService(session).get_ledger(project_id)
+                    ledger = FactLedgerService(uow).get_ledger(project_id)
                 pending = ledger.pending_count
                 conflicts = ledger.conflict_count
             except Exception:
@@ -354,11 +348,10 @@ def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
         knowledge_tip: UploadKnowledgeTip | None = None
         settings = get_ui_effective_settings()
         with unit_of_work() as uow:
-            session = uow.session
             for upload in uploads:
                 results.append(
                     import_uploaded_file(
-                        session,
+                        uow,
                         project_id,
                         filename=upload.name,
                         data=upload.getvalue(),
@@ -368,7 +361,7 @@ def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
                 )
             if any(not result.error for result in results):
                 knowledge_tip = reassess_knowledge_after_upload(
-                    session, project_id, settings=settings
+                    uow, project_id, settings=settings
                 )
 
         file_messages: list[dict[str, str]] = []
@@ -418,9 +411,8 @@ def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
         if st.button("补建图档语义索引", key=f"backfill_vision_{project_id}"):
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
                     backfill_result = backfill_project_asset_vision(
-                        session, project_id, settings=settings
+                        uow, project_id, settings=settings
                     )
                 if backfill_result.chunks_created:
                     st.success(
@@ -444,7 +436,7 @@ def _load_generation_contract(project_id: UUID):
         if preferred:
             presentations.sort(key=lambda item: str(item.id) != str(preferred))
         for presentation in presentations:
-            context = PresentationReviewService(uow.session).get_review_context(presentation.id)
+            context = PresentationReviewService(uow).get_review_context(presentation.id)
             if context is not None and context.outline is not None:
                 return context
     return None
@@ -576,8 +568,7 @@ def _render_generation_form(project_id: UUID) -> None:
     )
 
     with unit_of_work() as uow:
-        session = uow.session
-        defaults = _resolve_form_defaults(session, project_id)
+        defaults = _resolve_form_defaults(uow, project_id)
 
     with st.form("presentation_form"):
         title = st.text_input("汇报标题", value=defaults.title)
@@ -697,8 +688,7 @@ def _render_review_section(project_id: UUID) -> None:
 
     if presentation_id is None:
         with unit_of_work() as uow:
-            session = uow.session
-            presentations = list_project_presentations(session, project_id)
+            presentations = list_project_presentations(uow, project_id)
         if not presentations:
             st.caption(
                 f"生成汇报后，可在此编辑{entity_label('PresentationBrief')}与"
@@ -730,7 +720,6 @@ def _render_last_result() -> None:
 
     if result.presentation is not None:
         with unit_of_work() as uow:
-            session = uow.session
             from archium.application.review_service import PresentationReviewService
             from archium.domain.enums import ReviewSeverity, ReviewStatus
 
@@ -809,8 +798,7 @@ def _render_pptx_export_section(project_id: UUID) -> None:
     )
 
     with unit_of_work() as uow:
-        session = uow.session
-        has_visual_layout = presentation_has_visual_layout(session, presentation_id)
+        has_visual_layout = presentation_has_visual_layout(uow, presentation_id)
 
     prompt_key = _pptx_export_prompt_key(presentation_id)
     show_prompt = bool(st.session_state.get(prompt_key))
@@ -925,8 +913,7 @@ def _render_pptx_export_section(project_id: UUID) -> None:
 def _render_history(project_id: UUID) -> None:
     st.markdown("#### 历史汇报")
     with unit_of_work() as uow:
-        session = uow.session
-        presentations = list_project_presentations(session, project_id)
+        presentations = list_project_presentations(uow, project_id)
 
     if not presentations:
         st.caption("暂无历史汇报。")
@@ -1000,8 +987,7 @@ def render_materials_stage(project_id: UUID) -> None:
     from archium.ui.materials_summary import load_materials_summary
 
     with unit_of_work() as uow:
-        session = uow.session
-        summary = load_materials_summary(session, project_id)
+        summary = load_materials_summary(uow, project_id)
 
     st.markdown(
         f"**{summary.file_count} 个文件**　"

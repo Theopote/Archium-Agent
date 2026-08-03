@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.architecture_case_library import ArchitectureCaseLibraryService
 from archium.domain.case_ref import normalize_case_id_list
@@ -13,13 +14,14 @@ def enrich_direction_case_refs(
     direction: ConceptDirection,
     *,
     library: ArchitectureCaseLibraryService | None = None,
-    session: Session | None = None,
+    session: SessionLike | None = None,
     limit: int = 2,
 ) -> ConceptDirection:
     """Keep existing ids; if empty, search library from direction text.
 
     Ensures selected directions can resolve to ArchitectureCase (KN-009).
     """
+    session = session_of(session)
     existing = normalize_case_id_list(direction.reference_case_ids)
     lib = library or ArchitectureCaseLibraryService(
         session=session,

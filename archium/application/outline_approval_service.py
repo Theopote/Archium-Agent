@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.review_service import PresentationReviewService
 from archium.domain.enums import ApprovalStatus
@@ -65,7 +66,8 @@ def outline_ready_for_approval(outline: OutlinePlan) -> tuple[bool, list[str]]:
 class OutlineApprovalService:
     """Persist outline approval so「确认大纲」is not only a page switch."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._presentations = PresentationRepository(session)
         self._reviews = PresentationReviewService(session)

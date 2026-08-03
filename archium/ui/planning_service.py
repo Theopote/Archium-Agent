@@ -570,8 +570,7 @@ def assess_entry_context(
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     with unit_of_work() as uow:
-        session = uow.session
-        return ContextAnalyzer(session, llm, settings=runtime).assess_text(
+        return ContextAnalyzer(uow, llm, settings=runtime).assess_text(
             user_text, project_name=project_name
         )
 

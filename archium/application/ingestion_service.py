@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.asset_vision_rag_service import AssetVisionRagResult, AssetVisionRagService
 from archium.application.retrieval_service import RetrievalService, create_retrieval_service
@@ -52,12 +53,13 @@ class IngestionService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         settings: Settings | None = None,
         parsers: list[DocumentParser] | None = None,
         retrieval: RetrievalService | None = None,
     ) -> None:
+        session = session_of(session)
         self._settings = settings or get_settings()
         self._session = session
         self._documents = DocumentRepository(session)

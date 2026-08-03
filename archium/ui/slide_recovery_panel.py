@@ -139,8 +139,7 @@ def _render_preview_row(
         return
 
     with unit_of_work() as uow:
-        session = uow.session
-        delivery = SlideRecoveryDeliveryService(session, settings=settings)
+        delivery = SlideRecoveryDeliveryService(uow, settings=settings)
         source_path = delivery.resolve_source_preview_path(result)
         try:
             scene_preview = delivery.render_hybrid_preview(project_id, hybrid)
@@ -271,8 +270,7 @@ def _run_export(
 ) -> None:
     try:
         with unit_of_work() as uow:
-            session = uow.session
-            delivery = SlideRecoveryDeliveryService(session, settings=settings)
+            delivery = SlideRecoveryDeliveryService(uow, settings=settings)
             export_result = delivery.export_pptx(
                 project_id,
                 hybrid,
@@ -316,8 +314,7 @@ def _run_import(
 ) -> None:
     try:
         with unit_of_work() as uow:
-            session = uow.session
-            delivery = SlideRecoveryDeliveryService(session, settings=settings)
+            delivery = SlideRecoveryDeliveryService(uow, settings=settings)
             import_result = delivery.import_to_presentation(
                 project_id,
                 hybrid,
@@ -348,8 +345,7 @@ def _run_save_template(
 ) -> None:
     try:
         with unit_of_work() as uow:
-            session = uow.session
-            delivery = SlideRecoveryDeliveryService(session, settings=settings)
+            delivery = SlideRecoveryDeliveryService(uow, settings=settings)
             template_result = delivery.save_as_template_reference(
                 project_id,
                 hybrid,

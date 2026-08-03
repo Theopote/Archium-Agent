@@ -32,6 +32,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.ingestion_service import IngestionService
 from archium.application.presentation_models import PresentationRequest
@@ -118,12 +119,13 @@ class E2EBenchmarkService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         benchmark_data_dir: Path,
         *,
         llm: LLMProvider | None = None,
         settings: Settings | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._data_dir = benchmark_data_dir
         self._llm = llm

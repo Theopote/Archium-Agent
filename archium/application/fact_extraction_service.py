@@ -6,6 +6,7 @@ from typing import Literal
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.citation_resolution import citation_from_draft
@@ -44,11 +45,12 @@ class FactExtractionService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         llm: LLMProvider | None = None,
         settings: Settings | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._facts = FactRepository(session)
         self._llm = llm

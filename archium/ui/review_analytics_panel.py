@@ -56,9 +56,8 @@ def render_rule_code_stats(issues: list[ReviewIssue]) -> None:
 def render_project_review_quality_dashboard(project_id: UUID) -> None:
     """Aggregate review issues across all presentations in a project."""
     with unit_of_work() as uow:
-        session = uow.session
-        presentations = list_project_presentations(session, project_id)
-        review_service = PresentationReviewService(session)
+        presentations = list_project_presentations(uow, project_id)
+        review_service = PresentationReviewService(uow)
         all_issues = review_service.list_review_issues_by_project(project_id)
 
     st.markdown("#### 质量规则概览")

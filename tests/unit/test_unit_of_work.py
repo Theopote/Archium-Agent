@@ -86,6 +86,7 @@ def test_api_bound_accepts_session_or_uow(db_session: Session) -> None:
 
 
 def test_session_of_and_session_like(db_session: Session) -> None:
+    from archium.application.project_knowledge_service import ProjectKnowledgeService
     from archium.application.unit_of_work import SessionLike, session_of
 
     uow = UnitOfWork.bind(db_session)
@@ -93,6 +94,9 @@ def test_session_of_and_session_like(db_session: Session) -> None:
     assert session_of(uow) is db_session
     bound: SessionLike = uow
     assert api_bound(bound) is uow.api
+    # Application services accept UnitOfWork directly
+    service = ProjectKnowledgeService(uow)
+    assert service._session is db_session
 
 
 def test_api_from_session_delegates_to_uow(db_session: Session) -> None:

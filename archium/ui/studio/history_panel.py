@@ -59,9 +59,8 @@ def render_history_panel(
 
     if slide_snapshot is not None:
         with unit_of_work() as uow:
-            session = uow.session
-            scene_revision_count = count_scene_revisions(session, slide_snapshot.slide.id)
-            layout_revision_count = count_visual_revisions(session, slide_snapshot.slide.id)
+            scene_revision_count = count_scene_revisions(uow, slide_snapshot.slide.id)
+            layout_revision_count = count_visual_revisions(uow, slide_snapshot.slide.id)
         st.caption(
             f"RenderScene 版本：{scene_revision_count} 条 · "
             f"版式/意图修订：{layout_revision_count} 条"

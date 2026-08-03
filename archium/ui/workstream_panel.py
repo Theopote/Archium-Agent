@@ -91,8 +91,7 @@ def render_workstream_panel(
 def _toggle(workstream_id: UUID, selected: bool) -> None:
     try:
         with unit_of_work() as uow:
-            session = uow.session
-            set_workstream_selected(session, workstream_id, selected)
+            set_workstream_selected(uow, workstream_id, selected)
         st.rerun()
     except WorkflowError as exc:
         st.error(report_user_error(exc))

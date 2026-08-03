@@ -26,8 +26,7 @@ def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None
     st.caption("逐页视觉需求 · 候选素材匹配 · 人工确认")
 
     with unit_of_work() as uow:
-        session = uow.session
-        service = AssetBoardService(session)
+        service = AssetBoardService(uow)
         board = service.build_board(project_id, presentation_id)
         assets = service.list_project_assets(project_id)
 
@@ -39,8 +38,7 @@ def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None
 
     if st.button("重新匹配资料", key=f"rematch_assets_{presentation_id}", use_container_width=True):
         with unit_of_work() as uow:
-            session = uow.session
-            AssetBoardService(session).rematch(project_id, presentation_id)
+            AssetBoardService(uow).rematch(project_id, presentation_id)
         st.success("资料匹配已更新（已确认项保持不变）。")
         st.rerun()
 
@@ -117,8 +115,7 @@ def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None
         else:
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
-                    AssetBoardService(session).assign_asset(
+                    AssetBoardService(uow).assign_asset(
                         selected.slide_id,
                         selected.requirement_index,
                         UUID(picked_asset),
@@ -131,8 +128,7 @@ def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None
     if btn2.button("确认匹配", key=f"confirm_asset_{selected_key}", use_container_width=True):
         try:
             with unit_of_work() as uow:
-                session = uow.session
-                board_service = AssetBoardService(session)
+                board_service = AssetBoardService(uow)
                 if picked_asset and picked_asset != current_asset:
                     board_service.assign_asset(
                         selected.slide_id,
@@ -154,8 +150,7 @@ def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None
     if btn3.button("保存处理标记", key=f"save_flags_{selected_key}", use_container_width=True):
         try:
             with unit_of_work() as uow:
-                session = uow.session
-                AssetBoardService(session).update_assignment_flags(
+                AssetBoardService(uow).update_assignment_flags(
                     selected.slide_id,
                     selected.requirement_index,
                     needs_crop=needs_crop,

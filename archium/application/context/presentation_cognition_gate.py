@@ -11,6 +11,7 @@ from typing import Literal
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.context.presentation_readiness import (
     PresentationContextReadiness,
@@ -52,10 +53,11 @@ class PresentationCognitionGateResult:
 
 
 def evaluate_presentation_cognition(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
 ) -> PresentationContextReadiness:
     """Build ProjectContext and map to presentation readiness / gate verdict."""
+    session = session_of(session)
     try:
         context = build_project_context(session, project_id)
     except Exception as exc:  # noqa: BLE001 — gate must not crash entry for builder glitches
@@ -65,7 +67,7 @@ def evaluate_presentation_cognition(
 
 
 def enforce_presentation_cognition_gate(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     llm: LLMProvider | None = None,
@@ -82,6 +84,7 @@ def enforce_presentation_cognition_gate(
       run one RESEARCH via NBA executor, reassess, then proceed with warnings
       (hard-block only if still BLOCK *and* you switch to ``block``; auto mode stays soft)
     """
+    session = session_of(session)
     cfg = settings or get_settings()
     mode = (cfg.presentation_cognition_gate or "warn").strip().lower()
     if mode not in {"off", "warn", "block", "auto_research"}:
@@ -127,13 +130,14 @@ def enforce_presentation_cognition_gate(
 
 
 def _maybe_auto_research(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     llm: LLMProvider,
     settings: Settings,
     result: PresentationCognitionGateResult,
 ) -> PresentationCognitionGateResult:
+    session = session_of(session)
     readiness = result.readiness
     if readiness.suggested_action != NextBestActionType.RESEARCH:
         return result
@@ -169,8 +173,9 @@ def _maybe_auto_research(
     return result
 
 
-def _reasoning_node_warnings(session: Session, project_id: UUID) -> list[str]:
+def _reasoning_node_warnings(session: SessionLike, project_id: UUID) -> list[str]:
     """Soft warnings when selected direction lacks a verified ReasoningArtifact (R3)."""
+    session = session_of(session)
     try:
         from archium.domain.enums import ConceptDirectionStatus
         from archium.infrastructure.database.repositories import ConceptDirectionRepository

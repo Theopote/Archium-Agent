@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.review_models import (
     OutlineSectionUpdate,
@@ -111,7 +112,8 @@ def summarize_design_briefs(outline: OutlinePlan) -> DesignBriefSummary:
 
 
 class SlideDesignBriefService:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._presentations = PresentationRepository(session)
         self._reviews = PresentationReviewService(session)

@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.narrative.brief_service import BriefService
 from archium.application.narrative.outline_plan_service import OutlinePlanService
@@ -44,13 +45,14 @@ class PresentationService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         llm: LLMProvider,
         *,
         settings: Settings | None = None,
         renderer: JsonPresentationRenderer | None = None,
         marp_renderer: MarpPresentationRenderer | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._llm = llm
         self._settings = settings or get_settings()

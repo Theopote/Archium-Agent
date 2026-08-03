@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 
 @dataclass(frozen=True)
@@ -54,7 +55,8 @@ class ProjectUsageRollup:
 class UsageRollupService:
     """Sum LLMTrace tokens by project — soft budget warn only (no hard block)."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
 
     def rollup_for_project(

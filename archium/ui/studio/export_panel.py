@@ -402,7 +402,7 @@ def _append_delivery_record(
                 latest_presentation_revision_id,
             )
 
-            revision_id = latest_presentation_revision_id(uow.session, presentation_id)
+            revision_id = latest_presentation_revision_id(uow, presentation_id)
             record = uow.api.delivery.record_export(
                 project_id=project_id,
                 presentation_id=presentation_id,

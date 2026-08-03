@@ -6,6 +6,7 @@ from typing import cast
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.retrieval_credibility import score_knowledge_credibility
 from archium.config.settings import Settings, get_settings
@@ -70,12 +71,13 @@ class KnowledgeVectorIndexService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         settings: Settings | None = None,
         embedder: EmbeddingProvider | None = None,
         store: ChromaVectorStore | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._embedder = embedder if embedder is not None else create_embedding_provider(self._settings)
@@ -184,8 +186,9 @@ class KnowledgeVectorIndexService:
         ][:top_k]
 
 
-def best_effort_index_knowledge_item(session: Session, item: ProjectKnowledgeItem) -> None:
+def best_effort_index_knowledge_item(session: SessionLike, item: ProjectKnowledgeItem) -> None:
     """Never fail callers (research / UI) on vector index errors."""
+    session = session_of(session)
     try:
         KnowledgeVectorIndexService(session).index_item(item)
     except Exception as exc:  # noqa: BLE001

@@ -96,9 +96,8 @@ def render_layout_candidates_panel(*, slide_snapshot: SlideVisualSnapshot | None
     ):
         try:
             with unit_of_work() as uow:
-                session = uow.session
                 select_layout_candidate(
-                    session,
+                    uow,
                     slide_id=slide_id,
                     layout_plan_id=UUID(selected),
                 )
@@ -127,8 +126,7 @@ def _render_template_match_controls(slide_snapshot: SlideVisualSnapshot) -> None
 
     slide_id = slide_snapshot.slide.id
     with unit_of_work() as uow:
-        session = uow.session
-        templates = TemplateCompositionService(session).list_published_templates()
+        templates = TemplateCompositionService(uow).list_published_templates()
     if not templates:
         st.caption("尚无可用 ArchitecturalTemplate。请先在「模板工作室」发布模板。")
         return

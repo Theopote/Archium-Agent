@@ -48,8 +48,7 @@ def render_project_llm_tier_selector(
     from archium.application.unit_of_work import unit_of_work
 
     with unit_of_work() as uow:
-        session = uow.session
-        service = ProjectLLMTierService(session)
+        service = ProjectLLMTierService(uow)
         current = service.get_tier(project_id)
     options = [ProjectLLMTier.FAST, ProjectLLMTier.QUALITY]
     index = options.index(current) if current in options else 1
@@ -63,7 +62,6 @@ def render_project_llm_tier_selector(
     )
     if choice != current:
         with unit_of_work() as uow:
-            session = uow.session
-            ProjectLLMTierService(session).set_tier(project_id, choice)
+            ProjectLLMTierService(uow).set_tier(project_id, choice)
         st.caption(f"已切换为「{tier_label(choice)}」。")
         st.rerun()

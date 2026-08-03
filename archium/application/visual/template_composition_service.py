@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.visual.layout_locked import preserve_locked_elements
 from archium.application.visual.layout_validation_service import LayoutValidationService
@@ -44,11 +45,12 @@ class TemplateCompositionService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         settings: Settings | None = None,
         matcher: TemplateLayoutMatcher | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._matcher = matcher or TemplateLayoutMatcher()

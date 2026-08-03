@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.human_visual_review_service import HumanVisualReviewService
 from archium.config.settings import Settings, get_settings
@@ -59,11 +60,12 @@ def _write_json_reviews(
 
 
 def load_presentation_reviews(
-    session: Session | None,
+    session: SessionLike | None,
     presentation_id: UUID,
     *,
     settings: Settings | None = None,
 ) -> dict[str, HumanVisualReview]:
+    session = session_of(session)
     if session is not None:
         db_reviews = HumanVisualReviewService(session).load_for_presentation(presentation_id)
         if db_reviews:
@@ -72,12 +74,13 @@ def load_presentation_reviews(
 
 
 def load_slide_review(
-    session: Session | None,
+    session: SessionLike | None,
     presentation_id: UUID,
     slide_id: UUID,
     *,
     settings: Settings | None = None,
 ) -> HumanVisualReview | None:
+    session = session_of(session)
     if session is not None:
         review = HumanVisualReviewService(session).load_for_slide(presentation_id, slide_id)
         if review is not None:
@@ -86,13 +89,14 @@ def load_slide_review(
 
 
 def save_slide_review(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
     slide_id: UUID,
     review: HumanVisualReview,
     *,
     settings: Settings | None = None,
 ) -> Path:
+    session = session_of(session)
     HumanVisualReviewService(session).save(
         presentation_id=presentation_id,
         slide_id=slide_id,

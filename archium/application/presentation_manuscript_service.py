@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.fact_knowledge_manuscript_mapping import (
     knowledge_item_to_evidence,
@@ -90,7 +91,8 @@ def outline_plan_from_manuscript(
 class PresentationManuscriptService:
     """Research middle layer: ProjectKnowledge → Manuscript → OutlinePlan."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._manuscripts = PresentationManuscriptRepository(session)
         self._knowledge = ProjectKnowledgeRepository(session)

@@ -65,8 +65,7 @@ def render_scene_version_timeline_panel(
     slide = slide_snapshot.slide
     settings = get_settings()
     with unit_of_work() as uow:
-        session = uow.session
-        service = SceneRevisionTimelineService(session, settings=settings)
+        service = SceneRevisionTimelineService(uow, settings=settings)
         summaries = service.list_summaries(slide)
 
     if not summaries:
@@ -109,8 +108,7 @@ def _render_timeline_row(
     thumb_col, meta_col, action_col = st.columns([1.2, 3, 1.3])
     with thumb_col:
         with unit_of_work() as uow:
-            session = uow.session
-            service = SceneRevisionTimelineService(session, settings=settings)
+            service = SceneRevisionTimelineService(uow, settings=settings)
             preview_path = service.preview_cache_path(presentation_id, item.revision_id)
         if preview_path is not None and preview_path.is_file():
             st.image(str(preview_path), use_container_width=True)
@@ -122,8 +120,7 @@ def _render_timeline_row(
                 use_container_width=True,
             ):
                 with unit_of_work() as uow:
-                    session = uow.session
-                    service = SceneRevisionTimelineService(session, settings=settings)
+                    service = SceneRevisionTimelineService(uow, settings=settings)
                     service.render_preview(presentation_id, item.revision_id)
                 st.rerun()
 
@@ -174,8 +171,7 @@ def _render_compare_view(
     st.markdown("**版本对比**")
     try:
         with unit_of_work() as uow:
-            session = uow.session
-            service = service_cls(session, settings=settings)
+            service = service_cls(uow, settings=settings)
             left_scene, right_scene = service.compare_revisions(
                 left_revision_id,
                 right_revision_id,
@@ -203,7 +199,7 @@ def _restore_scene_revision(*, slide_id: UUID, revision_id: UUID) -> None:
             slide = uow.api.slides.get(slide_id)
             if slide is None:
                 raise WorkflowError("页面不存在。")
-            result = SceneRevisionTimelineService(uow.session, settings=settings).restore_revision(
+            result = SceneRevisionTimelineService(uow, settings=settings).restore_revision(
                 slide=slide,
                 source_revision_id=revision_id,
             )

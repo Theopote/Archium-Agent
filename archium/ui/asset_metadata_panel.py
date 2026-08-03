@@ -60,8 +60,7 @@ def render_asset_metadata_panel(project_id: UUID) -> None:
     )
 
     with unit_of_work() as uow:
-        session = uow.session
-        assets = AssetMetadataService(session).list_project_assets(project_id)
+        assets = AssetMetadataService(uow).list_project_assets(project_id)
 
     if not assets:
         st.info("导入资料并提取素材后，可在此标注图纸元数据。")
@@ -80,8 +79,7 @@ def render_asset_metadata_panel(project_id: UUID) -> None:
     asset = next(item for item in assets if str(item.id) == selected_id)
 
     with unit_of_work() as uow:
-        session = uow.session
-        overlay = AssetMetadataService(session).get_plan_overlay(asset.id)
+        overlay = AssetMetadataService(uow).get_plan_overlay(asset.id)
 
     show_north = st.checkbox(
         "显示指北针（已核实）",
@@ -121,15 +119,13 @@ def render_asset_metadata_panel(project_id: UUID) -> None:
             legend_items=_parse_legend_lines(legend_text),
         )
         with unit_of_work() as uow:
-            session = uow.session
-            AssetMetadataService(session).save_plan_overlay(asset.id, draft)
+            AssetMetadataService(uow).save_plan_overlay(asset.id, draft)
         st.success("图纸标注已保存。导出 PPTX 时将按核实内容渲染。")
         st.rerun()
 
     if clear_col.button("清除标注", key=f"clear_plan_overlay_{asset.id}", use_container_width=True):
         with unit_of_work() as uow:
-            session = uow.session
-            AssetMetadataService(session).clear_plan_overlay(asset.id)
+            AssetMetadataService(uow).clear_plan_overlay(asset.id)
         st.warning("已清除该素材的图纸标注。")
         st.rerun()
 
@@ -145,8 +141,7 @@ def render_plan_overlay_editor_for_asset(
         return
 
     with unit_of_work() as uow:
-        session = uow.session
-        service = AssetMetadataService(session)
+        service = AssetMetadataService(uow)
         overlay = service.get_plan_overlay(asset_id)
 
     st.markdown("**图纸标注（导出 PPTX 时使用）**")
@@ -181,7 +176,6 @@ def render_plan_overlay_editor_for_asset(
             legend_items=_parse_legend_lines(legend_text),
         )
         with unit_of_work() as uow:
-            session = uow.session
-            AssetMetadataService(session).save_plan_overlay(asset_id, draft)
+            AssetMetadataService(uow).save_plan_overlay(asset_id, draft)
         st.success("图纸标注已保存。")
         st.rerun()

@@ -8,6 +8,7 @@ from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
@@ -61,10 +62,11 @@ class AssetReferenceResolver:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         settings: Settings | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._assets = AssetRepository(session)
@@ -102,7 +104,7 @@ def resolve_asset_storage_path(
 
 
 def assert_studio_asset_reference(
-    session: Session,
+    session: SessionLike,
     *,
     project_id: UUID,
     content_ref: str,
@@ -110,6 +112,7 @@ def assert_studio_asset_reference(
     settings: Settings | None = None,
 ) -> ResolvedAssetReference:
     """Validate asset integrity before binding to a layout element."""
+    session = session_of(session)
     resolved_settings = settings or get_settings()
     ref = str(content_ref).strip()
     if not ref:
@@ -175,7 +178,8 @@ def assert_studio_asset_reference(
     )
 
 
-def _asset_is_ready(session: Session, asset: Asset) -> bool:
+def _asset_is_ready(session: SessionLike, asset: Asset) -> bool:
+    session = session_of(session)
     if asset.document_id is None:
         return True
     document = DocumentRepository(session).get_document(asset.document_id)
@@ -297,7 +301,7 @@ def is_technical_drawing_asset_type(asset_type: str | None) -> bool:
 
 
 def build_asset_reference_context(
-    session: Session,
+    session: SessionLike,
     *,
     project_id: UUID,
     content_refs: Iterable[str | None],
@@ -308,6 +312,7 @@ def build_asset_reference_context(
     Absolute filesystem paths are kept in ``absolute_paths`` for runtime
     resolution only — they must not be persisted into RenderScene JSON.
     """
+    session = session_of(session)
     from archium.application.visual.asset_path_resolver import (
         project_asset_uri,
         storage_asset_uri,

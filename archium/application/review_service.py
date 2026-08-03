@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.artifact_history_service import (
     BriefHistoryService,
@@ -86,7 +87,7 @@ def _select_review_workflow_run(runs: list[WorkflowRun]) -> WorkflowRun | None:
 
 
 def _manuscript_from_workflow_state(
-    session: Session,
+    session: SessionLike,
     state: dict[str, object] | None,
 ) -> PresentationManuscript | None:
     """Resolve manuscript from raw checkpoint state without full domain restore.
@@ -94,6 +95,7 @@ def _manuscript_from_workflow_state(
     Visual composition snapshots store ``presentation: null`` and must not go through
     ``restore_domain_artifacts`` for this UI path.
     """
+    session = session_of(session)
     if not isinstance(state, dict) or _is_visual_workflow_state(state):
         return None
     payload = state.get("manuscript")
@@ -113,7 +115,8 @@ def _manuscript_from_workflow_state(
 class PresentationReviewService:
     """Load, edit, and approve presentation planning artifacts."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._presentations = PresentationRepository(session)
         self._workflow_runs = WorkflowRunRepository(session)

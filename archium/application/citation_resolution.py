@@ -9,6 +9,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.retrieval_service import create_retrieval_service
@@ -23,7 +24,7 @@ from archium.infrastructure.llm.presentation_schemas import CitationDraft
 
 def citation_from_draft(
     item: CitationDraft,
-    session: Session,
+    session: SessionLike,
     *,
     document_names: dict[UUID, str] | None = None,
     context_chunks: list[DocumentChunk] | None = None,
@@ -32,6 +33,7 @@ def citation_from_draft(
 
     Returns None when the document/chunk cannot be resolved — never fabricates ids.
     """
+    session = session_of(session)
     repo = DocumentRepository(session)
     names = document_names or {}
 
@@ -75,7 +77,7 @@ def citation_from_draft(
 def enrich_slide_citations(
     slide: SlideSpec,
     *,
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     context_bundle: ProjectContextBundle,
     settings: Settings | None = None,
@@ -84,6 +86,7 @@ def enrich_slide_citations(
 
     Mutates the in-memory ``SlideSpec`` only; caller owns persistence.
     """
+    session = session_of(session)
     resolved_settings = settings or get_settings()
     names = context_bundle.document_names
     chunks = context_bundle.chunks

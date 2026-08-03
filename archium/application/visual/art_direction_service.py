@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.agent_skills import apply_skills_to_request
 from archium.application.reference_style_service import format_reference_style_for_prompt
@@ -31,10 +32,11 @@ class ArtDirectionService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         llm: LLMProvider | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._llm = llm
         self._art_directions = ArtDirectionRepository(session)

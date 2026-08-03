@@ -43,8 +43,7 @@ def _render_revision_table(
 def render_brief_history_panel(*, brief_id: UUID) -> None:
     with st.expander(revision_history_label("PresentationBrief"), expanded=False):
         with unit_of_work() as uow:
-            session = uow.session
-            history = BriefHistoryService(session)
+            history = BriefHistoryService(uow)
             revisions = history.list_revisions(brief_id)
         _render_revision_table(
             revisions,
@@ -55,8 +54,7 @@ def render_brief_history_panel(*, brief_id: UUID) -> None:
 def render_storyline_history_panel(*, storyline_id: UUID) -> None:
     with st.expander(revision_history_label("Storyline"), expanded=False):
         with unit_of_work() as uow:
-            session = uow.session
-            history = StorylineHistoryService(session)
+            history = StorylineHistoryService(uow)
             revisions = history.list_revisions(storyline_id)
         _render_revision_table(
             revisions,

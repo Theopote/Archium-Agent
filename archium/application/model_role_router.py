@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.llm_profile_service import LLMProfileService
 from archium.domain.llm_profile import LLMProfile
@@ -42,7 +43,8 @@ class ModelCallAudit:
 class ModelRoleRegistryService:
     """Load/save model profiles and role assignments from user preferences."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._preferences = UserPreferenceRepository(session)
         self._llm_profiles = LLMProfileService(session)
@@ -153,7 +155,7 @@ class ModelRoleRouter:
 
 
 def resolve_model_role(
-    session: Session,
+    session: SessionLike,
     role: ModelRole,
     *,
     require_local: bool = False,
@@ -161,6 +163,7 @@ def resolve_model_role(
     require_vision: bool = False,
 ) -> ModelProfile:
     """Convenience entry point for services that need a routed model profile."""
+    session = session_of(session)
     registry = ModelRoleRegistryService(session)
     router = ModelRoleRouter(registry)
     return router.resolve(

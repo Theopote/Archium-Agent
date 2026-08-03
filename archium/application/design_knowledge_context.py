@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.architecture_case_library import ArchitectureCaseLibraryService
 from archium.domain.design_knowledge import DesignKnowledge
@@ -15,12 +16,13 @@ from archium.infrastructure.database.repositories import ProjectKnowledgeReposit
 
 
 def list_design_knowledge_for_project(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     limit: int = 8,
 ) -> list[DesignKnowledge]:
     """Active research items that carry structured DesignKnowledge."""
+    session = session_of(session)
     items = ProjectKnowledgeRepository(session).list_by_project(project_id)
     results: list[DesignKnowledge] = []
     for item in items:
@@ -38,7 +40,7 @@ def list_design_knowledge_for_project(
 
 
 def format_design_knowledge_block(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     limit: int = 6,
@@ -49,6 +51,7 @@ def format_design_knowledge_block(
     case_limit: int = 2,
 ) -> str:
     """Prompt section for concept / critique injection."""
+    session = session_of(session)
     parts: list[str] = []
     entries = list_design_knowledge_for_project(session, project_id, limit=limit)
     if entries:
@@ -79,10 +82,11 @@ def format_architecture_case_block(
     research_questions: list[ResearchQuestion] | None = None,
     query_hint: str = "",
     limit: int = 2,
-    session: Session | None = None,
+    session: SessionLike | None = None,
     project_id: UUID | None = None,
 ) -> str:
     """Semantic case references (cross-type); merges project cases when session given."""
+    session = session_of(session)
     library = ArchitectureCaseLibraryService(session=session, project_id=project_id)
     matches = []
     if research_questions:
@@ -99,12 +103,13 @@ def format_architecture_case_block(
 
 
 def design_knowledge_summary_lines(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     limit: int = 8,
 ) -> list[str]:
     """Short lines for critic research_summaries (structured when available)."""
+    session = session_of(session)
     lines: list[str] = []
     for knowledge in list_design_knowledge_for_project(session, project_id, limit=limit):
         compact = " | ".join(

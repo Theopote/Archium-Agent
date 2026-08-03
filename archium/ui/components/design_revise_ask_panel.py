@@ -25,8 +25,7 @@ def hydrate_pending_revise_from_db(project_id: UUID | None) -> None:
         from archium.application.unit_of_work import unit_of_work
 
         with unit_of_work() as uow:
-            session = uow.session
-            pending = load_pending_design_revise(session, project_id)
+            pending = load_pending_design_revise(uow, project_id)
         if pending:
             st.session_state["pending_design_revise"] = pending
             critique = pending.get("critique")
@@ -53,8 +52,7 @@ def clear_pending_revise_state(project_id: UUID | None = None) -> None:
         )
 
         with unit_of_work() as uow:
-            session = uow.session
-            clear_pending_design_revise(session, project_id)
+            clear_pending_design_revise(uow, project_id)
     except Exception:
         return
 
@@ -171,8 +169,7 @@ def store_pending_revise_from_selection(selection: object) -> bool:
         )
 
         with unit_of_work() as uow:
-            session = uow.session
-            persist_pending_design_revise(session, project_id, payload)
+            persist_pending_design_revise(uow, project_id, payload)
     except Exception:
         from archium.logging import get_logger
 

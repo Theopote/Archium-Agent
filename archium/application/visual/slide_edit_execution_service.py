@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.content_adaptation_heuristics import parse_content_adaptation_text
 from archium.application.content_adaptation_service import ContentAdaptationService
@@ -17,14 +18,14 @@ from archium.exceptions import WorkflowError
 class SlideEditExecutionService:
     """Route Studio edit commands to the correct application service."""
 
-    def execute(self, session: Session, command: SlideEditCommand) -> object:
+    def execute(self, session: SessionLike, command: SlideEditCommand) -> object:
         if command.scope == SlideEditScope.VISUAL:
             return self._apply_visual(session, command)
         if command.scope == SlideEditScope.CONTENT:
             return self._apply_content(session, command)
         raise WorkflowError(f"Unsupported edit scope: {command.scope}")
 
-    def _apply_visual(self, session: Session, command: SlideEditCommand) -> object:
+    def _apply_visual(self, session: SessionLike, command: SlideEditCommand) -> object:
         service = VisualEditService(session, settings=get_settings())
         if command.text:
             return service.apply_text(command.slide_id, command.text)
@@ -37,7 +38,7 @@ class SlideEditExecutionService:
             params=dict(command.params),
         )
 
-    def _apply_content(self, session: Session, command: SlideEditCommand) -> object:
+    def _apply_content(self, session: SessionLike, command: SlideEditCommand) -> object:
         service = ContentAdaptationService(session)
         if command.text:
             resolved = parse_content_adaptation_text(command.text)

@@ -69,8 +69,7 @@ def _render_upload_panel() -> None:
 def _render_template_list() -> None:
     st.markdown("#### 已保存模板")
     with unit_of_work() as uow:
-        session = uow.session
-        templates = TemplateStudioService(session).list_templates()
+        templates = TemplateStudioService(uow).list_templates()
     if not templates:
         st.info("尚无模板。请先上传 PPTX。")
         return
@@ -122,8 +121,7 @@ def _render_slot_overlay(layout: ArchitecturalTemplateLayout) -> None:
 
 def _render_layout_editor(template_id: UUID) -> None:
     with unit_of_work() as uow:
-        session = uow.session
-        template = TemplateStudioService(session).get_template(template_id)
+        template = TemplateStudioService(uow).get_template(template_id)
     if template is None:
         st.warning("模板不存在。")
         return
@@ -163,8 +161,7 @@ def _render_layout_editor(template_id: UUID) -> None:
         )
         if st.button("保存页面分类", use_container_width=True):
             with unit_of_work() as uow:
-                session = uow.session
-                TemplateStudioService(session).update_page_type(
+                TemplateStudioService(uow).update_page_type(
                     template_id,
                     layout_id,
                     TemplatePageType(page_type),
@@ -216,8 +213,7 @@ def _render_layout_editor(template_id: UUID) -> None:
                         }
                     )
                     with unit_of_work() as uow:
-                        session = uow.session
-                        TemplateStudioService(session).upsert_slot(
+                        TemplateStudioService(uow).upsert_slot(
                             template_id,
                             layout_id,
                             updated,
@@ -226,8 +222,7 @@ def _render_layout_editor(template_id: UUID) -> None:
                     st.rerun()
                 if st.button("删除槽位", key=f"del_slot_{layout_id}_{slot.id}"):
                     with unit_of_work() as uow:
-                        session = uow.session
-                        TemplateStudioService(session).delete_slot(
+                        TemplateStudioService(uow).delete_slot(
                             template_id,
                             layout_id,
                             slot.id,
@@ -257,8 +252,7 @@ def _render_layout_editor(template_id: UUID) -> None:
                     label=new_role,
                 )
                 with unit_of_work() as uow:
-                    session = uow.session
-                    TemplateStudioService(session).upsert_slot(template_id, layout_id, new_slot)
+                    TemplateStudioService(uow).upsert_slot(template_id, layout_id, new_slot)
                 st.rerun()
 
     st.markdown("#### 5. 测试内容填充")
@@ -280,9 +274,8 @@ def _render_layout_editor(template_id: UUID) -> None:
     if template.status != TemplateStatus.PUBLISHED:
         if st.button("发布 ArchitecturalTemplate", type="secondary"):
             with unit_of_work() as uow:
-                session = uow.session
                 try:
-                    published = TemplateStudioService(session).publish(template_id)
+                    published = TemplateStudioService(uow).publish(template_id)
                 except WorkflowError as exc:
                     st.error(report_user_error(exc))
                     return

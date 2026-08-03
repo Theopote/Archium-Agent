@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.access import (
     LOCAL_ACTOR_ID,
@@ -31,7 +32,7 @@ class RoleNavigationHint:
 
 
 def resolve_role_navigation(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     actor_id: str | None = None,
@@ -39,6 +40,7 @@ def resolve_role_navigation(
     presentation_stage_id: str = "materials",
 ) -> RoleNavigationHint:
     """Map membership role → primary page + soft chrome message."""
+    session = session_of(session)
     from archium.application.project_access_service import ProjectAccessService
 
     resolved = (actor_id or "").strip() or LOCAL_ACTOR_ID

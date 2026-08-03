@@ -6,6 +6,7 @@ import json
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.knowledge_isolation import document_purpose_from_metadata
 from archium.domain.document import DocumentChunk, SourceDocument
@@ -21,7 +22,8 @@ from archium.infrastructure.database.repositories import DocumentRepository
 from archium.infrastructure.llm.presentation_schemas import ReferenceStyleProfileDraft
 
 
-def list_reference_style_documents(session: Session, project_id: UUID) -> list[SourceDocument]:
+def list_reference_style_documents(session: SessionLike, project_id: UUID) -> list[SourceDocument]:
+    session = session_of(session)
     documents = DocumentRepository(session).list_by_project(project_id)
     return [
         doc
@@ -30,17 +32,19 @@ def list_reference_style_documents(session: Session, project_id: UUID) -> list[S
     ]
 
 
-def has_reference_style_documents(session: Session, project_id: UUID) -> bool:
+def has_reference_style_documents(session: SessionLike, project_id: UUID) -> bool:
+    session = session_of(session)
     return bool(list_reference_style_documents(session, project_id))
 
 
 def build_reference_style_context(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     max_chunks: int = 20,
 ) -> tuple[str, list[str]]:
     """Return compact text from reference-style chunks and source document ids."""
+    session = session_of(session)
     style_docs = list_reference_style_documents(session, project_id)
     if not style_docs:
         return "", []

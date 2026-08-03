@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.config.settings import Settings
 from archium.domain.project_llm_tier import (
@@ -20,7 +21,8 @@ from archium.infrastructure.database.user_preference_repository import (
 class ProjectLLMTierService:
     """Persist and apply per-project model tier preferences."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._preferences = UserPreferenceRepository(session)
 
     def get_tier(self, project_id: UUID) -> ProjectLLMTier:

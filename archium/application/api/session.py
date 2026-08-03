@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session
 
-from archium.application.unit_of_work import UnitOfWork
+from archium.application.unit_of_work import UnitOfWork, SessionLike, session_of
 
 if TYPE_CHECKING:
     from archium.application.api.context import ContextApi
@@ -43,8 +43,8 @@ class ApiContext:
         return cls(_uow=uow)
 
     @classmethod
-    def from_session(cls, session: Session) -> ApiContext:
-        return UnitOfWork.bind(session).api
+    def from_session(cls, session: SessionLike) -> ApiContext:
+        return UnitOfWork.bind(session_of(session)).api
 
     @property
     def uow(self) -> UnitOfWork:
@@ -137,6 +137,7 @@ class ApiContext:
         return PlanningApi(self.session)
 
 
-def api_from_session(session: Session) -> ApiContext:
+def api_from_session(session: SessionLike) -> ApiContext:
     """Compatibility alias for ``UnitOfWork.bind(session).api``."""
+    session = session_of(session)
     return UnitOfWork.bind(session).api

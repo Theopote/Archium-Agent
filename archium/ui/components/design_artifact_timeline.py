@@ -20,8 +20,7 @@ def render_design_artifact_timeline(
         from archium.application.design_artifact_catalog import list_design_artifacts
 
         with unit_of_work() as uow:
-            session = uow.session
-            rows = list_design_artifacts(session, project_id, limit=limit)
+            rows = list_design_artifacts(uow, project_id, limit=limit)
     except Exception:
         return
     if not rows:

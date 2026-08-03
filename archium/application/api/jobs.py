@@ -12,6 +12,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.background_job_service import BackgroundJobService
 from archium.application.job_progress_service import JobProgressService
@@ -25,7 +26,8 @@ from archium.exceptions import ValidationError
 class JobsApi:
     """Durable job boundary for UI and workers (progress / cancel / refresh)."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._jobs = BackgroundJobService(session)
         self._progress = JobProgressService(session)

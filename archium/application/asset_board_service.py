@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.asset_matching_service import (
     AssetMatchingService,
@@ -61,7 +62,8 @@ class AssetBoardView:
 class AssetBoardService:
     """Build and update the presentation asset board."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._assets = AssetRepository(session)
         self._documents = DocumentRepository(session)

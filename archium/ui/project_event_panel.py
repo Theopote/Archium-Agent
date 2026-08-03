@@ -38,8 +38,7 @@ def render_project_event_log(
         from archium.application.project_event_service import ProjectEventService
 
         with unit_of_work() as uow:
-            session = uow.session
-            events = ProjectEventService(session).list_for_project(
+            events = ProjectEventService(uow).list_for_project(
                 project_id, limit=limit
             )
     except Exception:
@@ -69,8 +68,7 @@ def render_project_usage_strip(
         from archium.application.usage_rollup_service import UsageRollupService
 
         with unit_of_work() as uow:
-            session = uow.session
-            rollup = UsageRollupService(session).rollup_for_project(project_id)
+            rollup = UsageRollupService(uow).rollup_for_project(project_id)
     except Exception:
         return
     with st.expander(title, expanded=expanded):
@@ -142,8 +140,7 @@ def render_job_progress_strip(
                 from archium.application.background_job_worker import BackgroundJobWorker
 
                 with unit_of_work() as uow:
-                    session = uow.session
-                    done = BackgroundJobWorker(session).process_once()
+                    done = BackgroundJobWorker(uow).process_once()
                 if done is None:
                     st.info("队列为空。")
                 else:

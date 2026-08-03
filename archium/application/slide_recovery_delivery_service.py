@@ -9,6 +9,7 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.artifact_policy_service import (
     ArtifactMutationOperation,
@@ -72,7 +73,8 @@ class SlideRecoveryImportResult:
 class SlideRecoveryDeliveryService:
     """Preview, export, and import recovered hybrid scenes."""
 
-    def __init__(self, session: Session, *, settings: Settings | None = None) -> None:
+    def __init__(self, session: SessionLike, *, settings: Settings | None = None) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._presentations = PresentationRepository(session)

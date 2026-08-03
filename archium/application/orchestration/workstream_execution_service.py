@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.orchestration.workstream_handlers import SimpleHandlerRuntime
 from archium.application.orchestration.workstream_node_registry import (
@@ -49,12 +50,13 @@ class WorkstreamExecutionService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         llm: LLMProvider,
         *,
         settings: Settings | None = None,
         checkpointer_manager: WorkflowCheckpointerManager | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._llm = llm
         self._settings = settings or get_settings()

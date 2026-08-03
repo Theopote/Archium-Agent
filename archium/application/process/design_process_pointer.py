@@ -7,6 +7,7 @@ from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.enums import (
@@ -25,8 +26,9 @@ from archium.domain.project_mission import ProjectMission
 from archium.domain.visual.visual_concept_brief import VisualConceptBrief
 
 
-def build_design_pointer(session: Session, project_id: UUID) -> ProcessPointer:
+def build_design_pointer(session: SessionLike, project_id: UUID) -> ProcessPointer:
     """Derive Design process focus from exploration → direction → visual → mission."""
+    session = session_of(session)
     from archium.infrastructure.database.mission_repositories import MissionRepository
     from archium.infrastructure.database.repositories import (
         ConceptDirectionRepository,

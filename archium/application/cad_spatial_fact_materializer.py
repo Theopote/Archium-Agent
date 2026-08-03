@@ -8,6 +8,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.cad_bim_analysis import CadAssetAnalysis
 from archium.domain.citation import Citation
@@ -22,7 +23,7 @@ logger = get_logger(__name__, operation="cad_spatial_facts")
 
 
 def materialize_cad_spatial_facts(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     document: SourceDocument,
     *,
@@ -30,6 +31,7 @@ def materialize_cad_spatial_facts(
     metadata: dict[str, object] | None = None,
 ) -> int:
     """Write EXTRACTED spatial inventory facts from CAD/BIM metadata. Returns created count."""
+    session = session_of(session)
     meta = dict(metadata or {})
     if analysis is not None:
         meta = {**analysis.as_metadata(), **meta}

@@ -6,6 +6,7 @@ import re
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.organization import Organization
 from archium.domain.project import Project
@@ -32,7 +33,8 @@ def _normalize_slug(slug: str | None) -> str | None:
 class OrganizationService:
     """Create / attach projects to an Organization (no Org-level RBAC yet)."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._orgs = OrganizationRepository(session)
         self._projects = ProjectRepository(session)

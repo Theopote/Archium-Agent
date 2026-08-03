@@ -111,8 +111,7 @@ def load_page_status_board(
     workflow_step: str | None = None,
 ) -> PageStatusBoard:
     with unit_of_work() as uow:
-        session = uow.session
-        return PageStatusBoardService(session).build_board(
+        return PageStatusBoardService(uow).build_board(
             presentation_id,
             workflow_step=workflow_step,
         )
@@ -269,8 +268,7 @@ def _handle_action(
         st.session_state["review_focus_slide_id"] = str(slide_id)
         try:
             with unit_of_work() as uow:
-                session = uow.session
-                PageStatusBoardService(session).run_action(
+                PageStatusBoardService(uow).run_action(
                     presentation_id,
                     slide_id,
                     PageStatusAction.REBIND_ASSETS,
@@ -284,8 +282,7 @@ def _handle_action(
 
     try:
         with unit_of_work() as uow:
-            session = uow.session
-            PageStatusBoardService(session).run_action(
+            PageStatusBoardService(uow).run_action(
                 presentation_id,
                 slide_id,
                 action,

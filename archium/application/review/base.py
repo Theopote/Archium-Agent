@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import ReviewCategory, ReviewLayer, ReviewSeverity, SlideType
@@ -22,11 +23,12 @@ class ReviewRunnerBase:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         llm: LLMProvider | None = None,
         settings: Settings | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._reviews = ReviewRepository(session)
         self._assets = AssetRepository(session)

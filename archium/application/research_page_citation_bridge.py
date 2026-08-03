@@ -12,6 +12,7 @@ import re
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.project_knowledge import ProjectKnowledgeItem
 from archium.domain.slide import SlideSpec
@@ -31,7 +32,7 @@ _ANALYSIS_ROLES = frozenset(
 
 
 def attach_research_citations_to_slide(
-    session: Session,
+    session: SessionLike,
     *,
     project_id: UUID,
     slide: SlideSpec,
@@ -41,6 +42,7 @@ def attach_research_citations_to_slide(
 
     Returns number of citations appended. No-op when slide already has cites.
     """
+    session = session_of(session)
     if slide.source_citations:
         return 0
 
@@ -80,7 +82,8 @@ def attach_research_citations_to_slide(
     return appended
 
 
-def _confirmed_research(session: Session, project_id: UUID) -> list[ProjectKnowledgeItem]:
+def _confirmed_research(session: SessionLike, project_id: UUID) -> list[ProjectKnowledgeItem]:
+    session = session_of(session)
     from archium.application.project_knowledge_service import ProjectKnowledgeService
 
     return [

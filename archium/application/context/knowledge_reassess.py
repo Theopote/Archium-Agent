@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.context.types import ContextAssessment
 from archium.config.settings import Settings, get_settings
@@ -40,7 +41,7 @@ def classify_reassess_mode(reason: str | None) -> ReassessMode:
     return ReassessMode.FULL
 
 def best_effort_reassess_knowledge(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     llm: LLMProvider | None = None,
@@ -54,6 +55,7 @@ def best_effort_reassess_knowledge(
     refresh. Larger lifecycle events run full LLM reassess; on failure fall
     back to claim-index and mark cognition_stale.
     """
+    session = session_of(session)
     resolved_mode = _resolve_mode(mode, reason)
     if resolved_mode == ReassessMode.INDEX:
         return _best_effort_index_refresh(session, project_id, reason=reason)
@@ -80,11 +82,12 @@ def _resolve_mode(
     return ReassessMode.FULL
 
 def _best_effort_index_refresh(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     reason: str = "",
 ) -> ContextAssessment | None:
+    session = session_of(session)
     try:
         from archium.application.context.knowledge_claim_index import (
             refresh_claim_index_only,
@@ -133,13 +136,14 @@ def _best_effort_index_refresh(
         return None
 
 def _best_effort_full_reassess(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     llm: LLMProvider | None = None,
     settings: Settings | None = None,
     reason: str = "",
 ) -> ContextAssessment | None:
+    session = session_of(session)
     try:
         from archium.application.context.context_analyzer import ContextAnalyzer
         from archium.infrastructure.llm.factory import create_llm_provider

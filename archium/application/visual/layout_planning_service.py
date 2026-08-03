@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.agent_skills import apply_skills_to_request
 from archium.application.visual.asset_reference import (
@@ -90,13 +91,14 @@ class LayoutPlanningService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         llm: LLMProvider | None = None,
         validator: LayoutValidationService | None = None,
         solver: LayoutSolver | None = None,
         settings: Settings | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._llm = llm
         self._validator = validator or LayoutValidationService()

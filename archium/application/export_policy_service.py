@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.powerpoint_contract_service import PowerPointContractService
 from archium.application.visual.studio_scene_service import StudioSceneService
@@ -327,7 +328,7 @@ def _node_area(node: object, page_area: float) -> float:
 
 
 def build_pre_export_manifest(
-    session: Session,
+    session: SessionLike,
     *,
     presentation_id: UUID,
     policy: ExportPolicy,
@@ -336,6 +337,7 @@ def build_pre_export_manifest(
     settings: Settings | None = None,
 ) -> DeckExportManifest:
     """Compile RenderScenes and assess fidelity before writing export files."""
+    session = session_of(session)
     scene_service = StudioSceneService(session, settings=settings or get_settings())
     scene_results = scene_service.ensure_scenes_for_presentation(
         presentation_id,

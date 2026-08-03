@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.llm_profile import (
     DEFAULT_CREDENTIAL_KEY,
@@ -34,10 +35,11 @@ class LLMProfileService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         credential_store: CredentialStore | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._preferences = UserPreferenceRepository(session)
         self._credentials = credential_store or CredentialStore()

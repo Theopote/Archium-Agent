@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.content_adaptation_heuristics import suggest_content_adaptations
 from archium.application.slide_history_service import SlideHistoryService
@@ -63,7 +64,8 @@ class ContentAdaptationResult:
 class ContentAdaptationService:
     """Shorten, bulletize, split, or promote slide content with revision tracking."""
 
-    def __init__(self, session: Session, settings: Settings | None = None) -> None:
+    def __init__(self, session: SessionLike, settings: Settings | None = None) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings
         self._presentations = PresentationRepository(session)

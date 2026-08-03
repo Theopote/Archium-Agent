@@ -85,12 +85,11 @@ def _load_outline_storyline(
     project_id: UUID,
 ) -> tuple[OutlinePlan | None, Storyline | None, list]:
     with unit_of_work() as uow:
-        session = uow.session
-        presentations = list_project_presentations(session, project_id)
+        presentations = list_project_presentations(uow, project_id)
         if not presentations:
             return None, None, []
         latest = presentations[0]
-        context = PresentationReviewService(session).get_review_context(latest.id)
+        context = PresentationReviewService(uow).get_review_context(latest.id)
         if context is None:
             return None, None, []
         return context.outline, context.storyline, list(context.slides or [])
@@ -180,8 +179,7 @@ def _outline_update_from(
 
 def _save_outline(outline_id: UUID, update: OutlineUpdate) -> OutlinePlan:
     with unit_of_work() as uow:
-        session = uow.session
-        saved = PresentationReviewService(session).update_outline(outline_id, update)
+        saved = PresentationReviewService(uow).update_outline(outline_id, update)
         return saved
 
 
@@ -822,8 +820,7 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
 
                     try:
                         with unit_of_work() as uow:
-                            session = uow.session
-                            SlideDesignBriefService(session).generate_all(outline.id)
+                            SlideDesignBriefService(uow).generate_all(outline.id)
                         st.rerun()
                     except WorkflowError as exc:
                         st.error(report_user_error(exc))
@@ -884,8 +881,7 @@ def _confirm_outline(project_id: UUID, *, outline: OutlinePlan | None) -> None:
 
     try:
         with unit_of_work() as uow:
-            session = uow.session
-            result = OutlineApprovalService(session).approve_for_project(
+            result = OutlineApprovalService(uow).approve_for_project(
                 project_id,
                 approved_by="user",
                 expected_revision=outline.version if outline is not None else None,

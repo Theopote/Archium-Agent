@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.knowledge_isolation import document_purpose_from_metadata
 from archium.domain.architectural_asset import (
@@ -51,10 +52,11 @@ class VisualEvidencePack:
 
 
 def build_visual_evidence_pack(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
 ) -> VisualEvidencePack:
     """List project assets + CAD/BIM documents as ArchitecturalAsset facades (no LLM)."""
+    session = session_of(session)
     from archium.domain.architectural_asset import architectural_asset_from_document
 
     documents = DocumentRepository(session).list_by_project(project_id)

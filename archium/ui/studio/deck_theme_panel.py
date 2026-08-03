@@ -56,9 +56,8 @@ def render_deck_theme_panel(
     )
 
     with unit_of_work() as uow:
-        session = uow.session
-        design = load_presentation_design_system(session, presentation_id)
-        active = get_active_theme_proposal(session, presentation_id)
+        design = load_presentation_design_system(uow, presentation_id)
+        active = get_active_theme_proposal(uow, presentation_id)
 
     if design is None:
         st.warning("当前汇报尚无 DesignSystem / ArtDirection，请先完成视觉编排。")
@@ -286,8 +285,7 @@ def render_deck_theme_panel(
     ):
         try:
             with unit_of_work() as uow:
-                session = uow.session
-                rejected = reject_theme_proposal(session, proposal)
+                rejected = reject_theme_proposal(uow, proposal)
             _store_theme_proposal(rejected)
             st.info("已拒绝风格提案，正式 DesignSystem 未改动。")
             st.rerun()

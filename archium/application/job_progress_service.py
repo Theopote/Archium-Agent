@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.background_job import BackgroundJobStatus
 from archium.domain.enums import ArtifactJobStatus, WorkflowStatus
@@ -68,7 +69,8 @@ def _workflow_label(state: dict, status: WorkflowStatus) -> str:
 class JobProgressService:
     """Read-model over existing job stores for partner progress UI."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._workflows = WorkflowRunRepository(session)
         self._artifacts = ArtifactJobRepository(session)
         self._background = BackgroundJobRepository(session)

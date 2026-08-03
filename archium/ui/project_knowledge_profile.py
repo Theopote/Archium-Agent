@@ -19,12 +19,11 @@ def load_project_knowledge_display(project_id: UUID) -> ProjectKnowledgeDisplay 
     from archium.application.unit_of_work import unit_of_work
 
     with unit_of_work() as uow:
-        session = uow.session
-        context = build_project_context(session, project_id)
+        context = build_project_context(uow, project_id)
         if context is None:
             return None
         display = build_project_knowledge_display(context)
-        return _apply_fresh_gap_report(session, project_id, display)
+        return _apply_fresh_gap_report(uow, project_id, display)
 
 
 def _apply_fresh_gap_report(
@@ -79,12 +78,11 @@ def render_ai_understanding_panel(
     from archium.application.project_context_builder import build_project_context
 
     with unit_of_work() as uow:
-        session = uow.session
-        context = build_project_context(session, project_id)
+        context = build_project_context(uow, project_id)
         if context is None:
             return None
         display = build_project_knowledge_display(context)
-        display = _apply_fresh_gap_report(session, project_id, display)
+        display = _apply_fresh_gap_report(uow, project_id, display)
 
     st.markdown(f"**{title}**")
     st.info(display.partner_headline or display.headline)
@@ -141,14 +139,12 @@ def render_project_knowledge_strip(
     from archium.application.project_context_builder import build_project_context
 
     with unit_of_work() as uow:
-        session = uow.session
-        context = build_project_context(session, project_id)
+        context = build_project_context(uow, project_id)
     if context is None:
         return None
     with unit_of_work() as uow:
-        session = uow.session
         display = build_project_knowledge_display(context)
-        display = _apply_fresh_gap_report(session, project_id, display)
+        display = _apply_fresh_gap_report(uow, project_id, display)
 
     st.info(display.partner_headline or display.headline)
     if display.cognition_stale:
@@ -238,8 +234,7 @@ def _render_process_board(project_id: UUID) -> None:
         from archium.domain.process import design_focus_label
 
         with unit_of_work() as uow:
-            session = uow.session
-            board = build_project_process_board(session, project_id)
+            board = build_project_process_board(uow, project_id)
         st.caption(f"过程板：{board.summary_line()}")
         details = []
         for pointer in (board.research, board.design, board.presentation):
@@ -282,8 +277,7 @@ def render_project_knowledge_action_buttons(
     from archium.ui.llm_settings import get_ui_effective_settings
 
     with unit_of_work() as uow:
-        session = uow.session
-        context = build_project_context(session, project_id)
+        context = build_project_context(uow, project_id)
         if context is None or not context.next_actions:
             display = load_project_knowledge_display(project_id)
             if display is not None:
@@ -291,7 +285,7 @@ def render_project_knowledge_action_buttons(
                     display, key_prefix=key_prefix, max_items=max_items
                 )
             return
-        pending, conflicts = pending_fact_counts(session, project_id)
+        pending, conflicts = pending_fact_counts(uow, project_id)
         actions = list(context.next_actions[:max_items])
 
     st.caption("下一步行动")

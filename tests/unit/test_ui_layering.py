@@ -117,3 +117,37 @@ def test_ui_pages_prefer_application_api_entry() -> None:
         "pages should use application_api()/unit_of_work(), not api_from_session:\n"
         + "\n".join(hits)
     )
+
+
+def test_ui_does_not_import_get_session() -> None:
+    """APP-029: UI opens transactions via unit_of_work/application_api only."""
+    root = Path(__file__).resolve().parents[2] / "archium" / "ui"
+    package_root = root.parent.parent
+    pattern = re.compile(
+        r"^\s*(?:from|import)\s+archium\.infrastructure\.database\.session\b"
+        r".*\bget_session\b"
+    )
+    call_pattern = re.compile(r"\bget_session\s*\(")
+    hits: list[str] = []
+    for path in root.rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        for match in pattern.finditer(text):
+            line_no = text.count("\n", 0, match.start()) + 1
+            hits.append(
+                f"{path.relative_to(package_root)}:{line_no}: {match.group(0).strip()}"
+            )
+        for match in call_pattern.finditer(text):
+            # allow unrelated names like get_session_export_policy / get_session_for_run
+            start = match.start()
+            line_start = text.rfind("\n", 0, start) + 1
+            line = text[line_start : text.find("\n", start)]
+            if "get_session_export_policy" in line or "get_session_for_run" in line:
+                continue
+            if re.search(r"\bget_session\s*\(", line):
+                # Exact factory call
+                if re.search(r"(?<![A-Za-z0-9_])get_session\s*\(", line):
+                    line_no = text.count("\n", 0, start) + 1
+                    hits.append(
+                        f"{path.relative_to(package_root)}:{line_no}: {line.strip()}"
+                    )
+    assert hits == [], "ui must not call get_session():\n" + "\n".join(hits)

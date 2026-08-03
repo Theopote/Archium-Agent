@@ -7,6 +7,7 @@ from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.visual.architectural_template import (
     ArchitecturalTemplate,
@@ -204,7 +205,7 @@ class TemplateUsageBriefService:
         *,
         design_system: DesignSystem | None = None,
         induction: TemplateInductionResult | None = None,
-        session: Session | None = None,
+        session: SessionLike | None = None,
         bind_art_direction_id: UUID | None = None,
     ) -> tuple[TemplateUsageBrief, dict[str, Path]]:
         brief = self.build_brief(
@@ -230,7 +231,7 @@ class TemplateUsageBriefService:
 
     def persist_and_bind(
         self,
-        session: Session,
+        session: SessionLike,
         brief: TemplateUsageBrief,
         *,
         art_direction_id: UUID | None = None,

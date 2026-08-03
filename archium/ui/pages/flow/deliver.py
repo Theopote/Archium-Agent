@@ -37,9 +37,8 @@ def _load_context(
 ) -> StudioPresentationContext | None:
     critics, deck_qa, previews, workflow_output_dir = _workflow_artifacts()
     with unit_of_work() as uow:
-        session = uow.session
         return load_studio_context(
-            session,
+            uow,
             project_id=project_id,
             presentation_id=presentation_id,
             visual_critic_reports=critics,
@@ -55,8 +54,7 @@ def _resolve_deliver_context() -> StudioPresentationContext | None:
 
     ensure_workspace_session()
     with unit_of_work() as uow:
-        session = uow.session
-        projects = list_studio_projects(session)
+        projects = list_studio_projects(uow)
     if not projects:
         return None
 
@@ -69,8 +67,7 @@ def _resolve_deliver_context() -> StudioPresentationContext | None:
     project_id = UUID(str(selected_project))
 
     with unit_of_work() as uow:
-        session = uow.session
-        presentations = list_studio_presentations(session, project_id)
+        presentations = list_studio_presentations(uow, project_id)
     if not presentations:
         st.caption(f"项目「{project_labels[str(project_id)]}」尚无汇报可导出。")
         with st.expander("切换项目", expanded=True):
@@ -94,7 +91,6 @@ def _resolve_deliver_context() -> StudioPresentationContext | None:
     selected_presentation = st.session_state.get("selected_presentation_id")
     if selected_presentation not in presentation_options:
         with unit_of_work() as uow:
-            session = uow.session
             from archium.application.presentation_selection import select_presentation
 
             auto_picked = select_presentation(session, presentations)

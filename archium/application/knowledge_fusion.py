@@ -9,6 +9,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.architecture_case_library import ArchitectureCaseLibraryService
 from archium.application.fact_retrieval import match_fact_keys_from_query, rank_facts_for_context
@@ -56,10 +57,11 @@ class KnowledgeFusionService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         settings: Settings | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._facts = FactRepository(session)

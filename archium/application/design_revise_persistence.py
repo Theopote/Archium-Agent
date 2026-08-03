@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.intent.intent_evolution import IntentEvolution
 from archium.infrastructure.database.repositories import ProjectRepository
@@ -14,11 +15,12 @@ _MAX_OFFER_CHARS = 120_000
 
 
 def persist_pending_design_revise(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     offer: dict[str, Any],
 ) -> None:
     """Stamp Ask offer onto Project.intent_evolution (survives refresh)."""
+    session = session_of(session)
     project = ProjectRepository(session).get_by_id(project_id)
     if project is None:
         return
@@ -40,7 +42,8 @@ def persist_pending_design_revise(
     ProjectRepository(session).update(project)
 
 
-def clear_pending_design_revise(session: Session, project_id: UUID) -> None:
+def clear_pending_design_revise(session: SessionLike, project_id: UUID) -> None:
+    session = session_of(session)
     project = ProjectRepository(session).get_by_id(project_id)
     if project is None:
         return
@@ -53,9 +56,10 @@ def clear_pending_design_revise(session: Session, project_id: UUID) -> None:
 
 
 def load_pending_design_revise(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
 ) -> dict[str, Any] | None:
+    session = session_of(session)
     project = ProjectRepository(session).get_by_id(project_id)
     if project is None:
         return None
@@ -69,10 +73,11 @@ def load_pending_design_revise(
 
 
 def load_latest_design_critique_report(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
 ) -> dict[str, Any] | None:
     """Hydrate DesignCritiqueReport-shaped dict from IntentEvolution or pending Ask."""
+    session = session_of(session)
     project = ProjectRepository(session).get_by_id(project_id)
     if project is None:
         return None

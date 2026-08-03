@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.domain.enums import ConceptDirectionStatus
 from archium.domain.visual.visual_concept_brief import VisualConceptBrief
@@ -72,9 +73,10 @@ def format_vision_user_warning(warning: str) -> str:
 
 
 def summarize_design_iteration(
-    session: Session,
+    session: SessionLike,
     mission_id: UUID,
 ) -> DesignIterationProgress:
+    session = session_of(session)
     directions = ConceptDirectionRepository(session).list_by_mission(mission_id)
     selected = next(
         (item for item in directions if item.status == ConceptDirectionStatus.SELECTED),

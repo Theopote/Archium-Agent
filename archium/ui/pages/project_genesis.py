@@ -100,7 +100,6 @@ def _render_entry_form() -> None:
 
             project_name = name.strip() or _default_name_from_prompt(prompt.strip())
             with unit_of_work() as uow:
-                session = uow.session
                 from archium.ui.session_actor import get_current_actor_id
 
                 project = ProjectManagementService(session).create_project(
@@ -517,8 +516,7 @@ def _pending_fact_counts() -> tuple[int, int]:
         return 0, 0
     try:
         with unit_of_work() as uow:
-            session = uow.session
-            ledger = FactLedgerService(session).get_ledger(UUID(str(project_raw)))
+            ledger = FactLedgerService(uow).get_ledger(UUID(str(project_raw)))
         return ledger.pending_count, ledger.conflict_count
     except Exception:
         return 0, 0

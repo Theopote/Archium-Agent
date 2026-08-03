@@ -6,6 +6,7 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.project_management_service import ProjectManagementService
 from archium.domain.enums import ProjectOriginMode, ProjectStatus, ProjectType
@@ -15,7 +16,8 @@ from archium.infrastructure.database.repositories import PresentationRepository
 
 
 class ProjectApi:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._service = ProjectManagementService(session)
         self._presentations = PresentationRepository(session)

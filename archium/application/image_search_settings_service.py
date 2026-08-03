@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.config.settings import Settings, get_settings
 from archium.infrastructure.database.user_preference_repository import UserPreferenceRepository
@@ -23,7 +24,8 @@ class ImageSearchPreferences:
 class ImageSearchSettingsService:
     """Load and save non-secret web image search preferences."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._preferences = UserPreferenceRepository(session)
 
     def get_preferences(self, *, base_settings: Settings | None = None) -> ImageSearchPreferences:

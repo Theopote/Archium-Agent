@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.mission_snapshots import (
     ArtifactDiffResult,
@@ -29,7 +30,8 @@ from archium.infrastructure.database.mission_repositories import MissionReposito
 class MissionHistoryService:
     """Mission-specific facade over the unified revision service."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._revisions = RevisionService(session)
         self._missions = MissionRepository(session)
@@ -106,7 +108,8 @@ class MissionHistoryService:
 class DeliverablePlanHistoryService:
     """DeliverablePlan revision facade."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._revisions = RevisionService(session)
         self._missions = MissionRepository(session)
 
@@ -166,7 +169,8 @@ class DeliverablePlanHistoryService:
 class WorkstreamHistoryService:
     """Per-workstream revision facade (lineage on each workstream row)."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._revisions = RevisionService(session)
         self._missions = MissionRepository(session)
 

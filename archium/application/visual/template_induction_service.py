@@ -10,6 +10,7 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.visual.architectural_content_schema_extractor import (
     ArchitecturalContentSchemaExtractor,
@@ -504,10 +505,11 @@ class TemplateInductionService:
         *,
         schemas: list[ArchitecturalContentSchema] | None = None,
         source_pptx: Path | None = None,
-        session: Session | None = None,
+        session: SessionLike | None = None,
         project_id: UUID | None = None,
     ) -> InductionTemplatePublishResult:
         """Write architectural_template.json (+ optional DB persist) from published induction."""
+        session = session_of(session)
         if induction.status != TemplateInductionStatus.PUBLISHED:
             raise WorkflowError("请先完成 Schema 正式发布（status=published）。")
         schema_list = schemas or [
@@ -649,7 +651,7 @@ class TemplateInductionService:
 
     def resolve_template_editing_context(
         self,
-        session: Session,
+        session: SessionLike,
         outline: OutlinePlan,
     ) -> TemplateEditingContextBundle | None:
         """Load manuscript/storyline/assets when outline.presentation_id exists in DB."""
@@ -703,7 +705,7 @@ class TemplateInductionService:
         assets: list[Asset] | None = None,
         design_system: DesignSystem | None = None,
         workspace: Path | None = None,
-        session: Session | None = None,
+        session: SessionLike | None = None,
         project_id: UUID | None = None,
         manuscript: PresentationManuscript | None = None,
         storyline: Storyline | None = None,

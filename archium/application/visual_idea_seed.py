@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.knowledge_isolation import document_purpose_from_metadata
 from archium.application.visual_evidence_service import document_purpose_for_asset
@@ -51,7 +52,7 @@ class VisualIdeaSeedResult:
 
 
 def maybe_attach_visual_idea_seed(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     assets: list[Asset],
@@ -59,6 +60,7 @@ def maybe_attach_visual_idea_seed(
     settings: Settings | None = None,
 ) -> VisualIdeaSeedResult:
     """Create or merge a weak IdeaSeed from evidence-grade site photos/drawings."""
+    session = session_of(session)
     resolved = settings or get_settings()
     if not getattr(resolved, "visual_idea_seed_on_upload", True):
         return VisualIdeaSeedResult(message="visual idea seed disabled")
@@ -151,12 +153,13 @@ def build_visual_seed_raw_input(
 
 
 def build_visual_evidence_prompt_block(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     max_lines: int = 8,
 ) -> str:
     """Soft prompt block for explicit direction generation (not auto-harden)."""
+    session = session_of(session)
     from archium.application.visual_evidence_service import build_visual_evidence_pack
 
     pack = build_visual_evidence_pack(session, project_id)
@@ -169,13 +172,14 @@ def build_visual_evidence_prompt_block(
 
 
 def _merge_into_open_session(
-    session: Session,
+    session: SessionLike,
     exploration: ExplorationSession,
     *,
     raw_input: str,
     session_source: str,
     explorations: ExplorationSessionRepository,
 ) -> VisualIdeaSeedResult:
+    session = session_of(session)
     existing_seed = exploration.idea_seed or IdeaSeed.from_raw(
         exploration.idea_text or "（空）",
         source=exploration.source or "user",

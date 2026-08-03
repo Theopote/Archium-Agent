@@ -12,6 +12,7 @@ from uuid import UUID
 
 from pydantic import Field
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.retrieval_credibility import rank_relevance, score_chunk_credibility
 from archium.application.retrieval_filters import RetrievalFilters
@@ -127,11 +128,12 @@ class MultimodalRetrievalService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         settings: Settings | None = None,
         image_embedder: ImageEmbeddingProvider | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         self._documents = DocumentRepository(session)

@@ -9,6 +9,7 @@ from uuid import UUID
 
 from pydantic import Field
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application._helpers import build_project_context, to_json
 from archium.application.fact_ledger_service import FactLedgerService
@@ -111,11 +112,12 @@ class ProjectMissionService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         llm: LLMProvider,
         *,
         settings: Settings | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._llm = llm
         self._settings = settings or get_settings()

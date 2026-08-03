@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.knowledge_gap_detection import KnowledgeGapReport, detect_knowledge_gaps
 from archium.application.knowledge_isolation import (
@@ -58,7 +59,8 @@ class ProjectKnowledgeView:
 class ProjectKnowledgeService:
     """Manage provenance-tracked project knowledge and generation eligibility."""
 
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: SessionLike) -> None:
+        session = session_of(session)
         self._session = session
         self._facts = FactRepository(session)
         self._knowledge = ProjectKnowledgeRepository(session)

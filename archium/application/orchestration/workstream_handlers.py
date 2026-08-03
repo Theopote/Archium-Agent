@@ -7,6 +7,7 @@ from typing import Any, Protocol
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.orchestration.workstream_node_registry import (
     HANDLER_PRESENTATION_SIGNAL,
@@ -31,7 +32,7 @@ class WorkstreamNodeResult:
 
 
 class WorkstreamHandlerRuntime(Protocol):
-    session: Session
+    session: SessionLike
     llm: LLMProvider
     settings: Settings
     project_id: UUID
@@ -187,7 +188,7 @@ def _run_strategy_note_handler(
 
 @dataclass
 class SimpleHandlerRuntime:
-    session: Session
+    session: SessionLike
     llm: LLMProvider
     project_id: UUID
     mission_id: UUID | None = None

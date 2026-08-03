@@ -8,6 +8,7 @@ from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.artifact_policy_service import save_render_scene
 from archium.application.visual.asset_reference import (
@@ -57,13 +58,14 @@ class VisualSceneRepairWorkflowService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         settings: Settings | None = None,
         compiler: RenderSceneCompiler | None = None,
         compiler_chain: SceneCompilerChain | None = None,
         scene_repair: SceneRepairService | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._settings = settings or get_settings()
         inner = compiler or RenderSceneCompiler()

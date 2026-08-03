@@ -8,6 +8,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.visual.art_direction_service import ArtDirectionService
 from archium.config.settings import Settings, get_settings
@@ -84,12 +85,13 @@ class VisualWorkflowService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         llm: LLMProvider | None = None,
         settings: Settings | None = None,
         checkpointer_manager: WorkflowCheckpointerManager | None = None,
     ) -> None:
+        session = session_of(session)
         self._session = session
         self._llm = llm
         self._settings = settings or get_settings()

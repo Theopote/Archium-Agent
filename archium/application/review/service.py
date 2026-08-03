@@ -6,6 +6,7 @@ from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.review.architectural import ArchitecturalReviewer
@@ -32,11 +33,12 @@ class AutomatedReviewService:
 
     def __init__(
         self,
-        session: Session,
+        session: SessionLike,
         *,
         llm: LLMProvider | None = None,
         settings: Settings | None = None,
     ) -> None:
+        session = session_of(session)
         resolved_settings = settings or get_settings()
         self._content = ContentReviewer(session, llm=llm, settings=resolved_settings)
         self._evidence = EvidenceReviewer(session, llm=llm, settings=resolved_settings)

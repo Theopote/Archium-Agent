@@ -31,11 +31,10 @@ def render_project_members_panel(
     from archium.exceptions import AccessDeniedError, ValidationError
 
     with unit_of_work() as uow:
-        session = uow.session
-        access = ProjectAccessService(session)
+        access = ProjectAccessService(uow)
         access.ensure_default_owner(project_id)
         members = access.list_members(project_id)
-        invites = ProjectInviteService(session).list_for_project(project_id, limit=8)
+        invites = ProjectInviteService(uow).list_for_project(project_id, limit=8)
 
     with st.expander("项目成员与角色", expanded=expanded):
         from archium.ui.session_actor import get_current_actor_id
@@ -71,9 +70,8 @@ def render_project_members_panel(
             else:
                 try:
                     with unit_of_work() as uow:
-                        session = uow.session
                         assert role is not None
-                        ProjectAccessService(session).add_member(
+                        ProjectAccessService(uow).add_member(
                             project_id,
                             actor,
                             role,
@@ -116,8 +114,7 @@ def render_project_members_panel(
         if create_invite:
             try:
                 with unit_of_work() as uow:
-                    session = uow.session
-                    invite = ProjectInviteService(session).create_invite(
+                    invite = ProjectInviteService(uow).create_invite(
                         project_id,
                         invite_role,
                         actor_id=LOCAL_ACTOR_ID,
@@ -149,8 +146,7 @@ def render_project_members_panel(
 
                 joined_actor = (redeem_actor or "").strip() or "guest-user"
                 with unit_of_work() as uow:
-                    session = uow.session
-                    invite, member = ProjectInviteService(session).redeem(
+                    invite, member = ProjectInviteService(uow).redeem(
                         redeem_code,
                         actor_id=joined_actor,
                         display_name=(redeem_name or "").strip(),
