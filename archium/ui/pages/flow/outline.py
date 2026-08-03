@@ -820,14 +820,14 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
                         SlideDesignBriefService,
                     )
                     from archium.exceptions import WorkflowError
-                    from archium.ui.error_handlers import format_user_error
+                    from archium.ui.error_handlers import report_user_error
 
                     try:
                         with get_session() as session:
                             SlideDesignBriefService(session).generate_all(outline.id)
                         st.rerun()
                     except WorkflowError as exc:
-                        st.error(format_user_error(exc))
+                        st.error(report_user_error(exc))
         elif outline is None:
             task_ready = has_request or has_mission or bool(cards)
             if not task_ready:
@@ -895,9 +895,9 @@ def _confirm_outline(project_id: UUID, *, outline: OutlinePlan | None) -> None:
         st.success(result.message + " 请继续确认各页设计摘要。")
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _render_outline_draft_banner(outline: OutlinePlan | None, *, slide_count: int) -> None:

@@ -18,7 +18,7 @@ from archium.domain.visual.template_induction import (
     VisualLayoutPattern,
 )
 from archium.exceptions import WorkflowError
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.pipeline_role_ui import role_button_label, role_caption
 
 
@@ -138,10 +138,10 @@ def _render_upload() -> None:
                     name=name.strip() or Path(uploaded.name).stem,
                 )
             except WorkflowError as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
                 return
             except Exception as exc:  # noqa: BLE001
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
                 return
         st.session_state.template_induction_workspace = str(result.workspace)
         st.success(
@@ -274,7 +274,7 @@ def _render_review() -> None:
     try:
         presentation, induction = service.load_workspace(workspace)
     except Exception as exc:  # noqa: BLE001
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return
 
     st.markdown("#### 2. 人工快速修正（非评分）")
@@ -757,7 +757,7 @@ def _render_co_plan() -> None:
     try:
         _presentation, induction = service.load_workspace(workspace)
     except Exception as exc:  # noqa: BLE001
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return
 
     sections = (
@@ -840,7 +840,7 @@ def _render_template_editing_panel(workspace: Path, co_plan: OutlineTemplateCoPl
                     session=session,
                 )
         except Exception as exc:  # noqa: BLE001
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
             return
         st.success(
             f"模板编辑完成：生成 {batch.generated_count} · "

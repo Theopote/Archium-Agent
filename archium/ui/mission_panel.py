@@ -26,7 +26,7 @@ from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.components.design_rationale_details import render_design_rationale
 from archium.ui.components.spatial_design_details import render_spatial_design_layer
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.planning_service import update_mission_fields
 
 TASK_NATURE_LABELS = {
@@ -289,7 +289,7 @@ def _render_mission_reapproval_prompt(mission: ProjectMission, *, key_prefix: st
         except WorkflowError as exc:
             st.error(str(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
     if workflow_run_id and continue_col.button(
         "批准并继续规划",
@@ -312,7 +312,7 @@ def _render_mission_reapproval_prompt(mission: ProjectMission, *, key_prefix: st
         except WorkflowError as exc:
             st.error(str(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
 
 def _render_written_back_research_summary(mission: ProjectMission, *, key_prefix: str) -> None:
@@ -381,7 +381,7 @@ def _render_mission_revision_action(mission: ProjectMission, *, key_prefix: str)
         except WorkflowError as exc:
             st.error(str(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
 
 def _render_research_enrichment_action(mission: ProjectMission, *, key_prefix: str) -> None:
@@ -426,7 +426,7 @@ def _render_research_enrichment_action(mission: ProjectMission, *, key_prefix: s
         except WorkflowError as exc:
             st.error(str(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
 
 def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: str) -> None:
@@ -475,7 +475,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
         except WorkflowError as exc:
             st.error(str(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
     def _reject_revise(direction_id: UUID) -> None:
         try:
@@ -495,7 +495,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
         except WorkflowError as exc:
             st.error(str(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
     render_pending_revise_ask(
         key_prefix=key_prefix,
@@ -560,7 +560,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
                 except WorkflowError as exc:
                     st.error(str(exc))
                 except Exception as exc:
-                    st.error(format_user_error(exc))
+                    st.error(report_user_error(exc))
 
         if not directions:
             st.caption("尚未生成概念方向。")
@@ -585,7 +585,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
             except WorkflowError as exc:
                 st.error(str(exc))
             except Exception as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
 
         run_id_raw = st.session_state.get("planning_workflow_run_id")
         if run_id_raw and action_cols[1].button(
@@ -607,7 +607,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
             except WorkflowError as exc:
                 st.error(str(exc))
             except Exception as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
 
     preview = st.session_state.get(f"{key_prefix}_direction_request_preview")
     if preview is not None:
@@ -654,7 +654,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
             except WorkflowError as exc:
                 st.error(str(exc))
             except Exception as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
         elif action == "archive":
             try:
                 with get_session() as session:
@@ -663,7 +663,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
             except WorkflowError as exc:
                 st.error(str(exc))
             except Exception as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
 
     settings = get_ui_effective_settings()
     from archium.ui.components.visual_thinking_panel import render_visual_thinking_panel
@@ -779,7 +779,7 @@ def _render_autonomous_research_section(mission: ProjectMission, *, key_prefix: 
         except WorkflowError as exc:
             st.error(str(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
     _render_research_vision_seeds(mission, key_prefix=key_prefix)
 
@@ -836,7 +836,7 @@ def _render_research_vision_seeds(mission: ProjectMission, *, key_prefix: str) -
                 else:
                     st.info("没有可写入的空视觉种子方向（可能已有种子或尚无方向草稿）。")
             except Exception as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
 
 
 def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission") -> None:
@@ -1103,6 +1103,6 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
             st.success("任务理解已更新。")
             st.rerun()
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))

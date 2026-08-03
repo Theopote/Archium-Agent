@@ -14,7 +14,7 @@ from archium.application.visual.vision.visual_thinking_slots import (
 from archium.domain.concept_direction import ConceptDirection
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error, report_user_error
+from archium.ui.error_handlers import report_user_error
 
 
 def render_visual_thinking_panel(
@@ -190,4 +190,4 @@ def _run_refine(direction, feedback: str, *, generate_image: bool, settings) -> 
         except WorkflowError as exc:
             st.error(str(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))

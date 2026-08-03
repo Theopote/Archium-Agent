@@ -11,9 +11,8 @@ from archium.application.visual.element_geometry import (
     layout_coords_from_percent,
 )
 from archium.domain.visual.layout import LayoutPlan
-from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 
 
 def canvas_component_key(slide_id: UUID) -> str:
@@ -69,11 +68,8 @@ def apply_canvas_move_event(
                 x=x,
                 y=y,
             )
-    except WorkflowError as exc:
-        st.error(format_user_error(exc))
-        return False
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return False
 
     _mark_applied(slide_id, fingerprint)
@@ -109,11 +105,8 @@ def apply_canvas_move_many_event(
 
         with get_session() as session:
             apply_slide_element_moves(session, slide_id, moves=resolved)
-    except WorkflowError as exc:
-        st.error(format_user_error(exc))
-        return False
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return False
 
     _mark_applied(slide_id, fingerprint)
@@ -167,11 +160,8 @@ def apply_canvas_resize_event(
                 height=height,
                 preserve_aspect_ratio=preserve_aspect_ratio,
             )
-    except WorkflowError as exc:
-        st.error(format_user_error(exc))
-        return False
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return False
 
     _mark_applied(slide_id, fingerprint)
@@ -201,11 +191,8 @@ def apply_canvas_commit_text_event(
                 element_id=element_id,
                 text=text,
             )
-    except WorkflowError as exc:
-        st.error(format_user_error(exc))
-        return False
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return False
 
     _mark_applied(slide_id, fingerprint)
@@ -237,11 +224,8 @@ def apply_canvas_commit_replace_asset_event(
                 element_id=element_id,
                 asset_id=_UUID(asset_id),
             )
-    except WorkflowError as exc:
-        st.error(format_user_error(exc))
-        return False
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return False
 
     _mark_applied(slide_id, fingerprint)
@@ -265,11 +249,8 @@ def apply_canvas_delete_event(
 
         with get_session() as session:
             apply_slide_element_delete(session, slide_id, element_id=element_id)
-    except WorkflowError as exc:
-        st.error(format_user_error(exc))
-        return False
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return False
 
     _mark_applied(slide_id, fingerprint)
@@ -296,11 +277,8 @@ def apply_canvas_duplicate_event(
 
         with get_session() as session:
             result = apply_slide_element_duplicate(session, slide_id, element_ids=ids)
-    except WorkflowError as exc:
-        st.error(format_user_error(exc))
-        return False
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return False
 
     _mark_applied(slide_id, fingerprint)

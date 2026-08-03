@@ -7,7 +7,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.visual_service import SlideVisualSnapshot, replan_slide
 
 
@@ -31,7 +31,7 @@ def run_studio_replan(slide_id: UUID) -> None:
         st.success("已重新生成候选版式。")
         st.rerun()
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def show_studio_validation_feedback(slide_snapshot: SlideVisualSnapshot | None) -> None:

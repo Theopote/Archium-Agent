@@ -35,7 +35,7 @@ from archium.domain.slide_recovery import (
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.infrastructure.slide_recovery.region_overlay_renderer import render_region_overlay
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.studio.slide_canvas_enhanced import parse_canvas_editor_event
 
 
@@ -200,10 +200,10 @@ def render_slide_recovery_region_editor(
                 service = SlideRecoveryRegionEditService(session)
                 updated = service.apply_region_edits(run.id, regions)
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
             return None
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
             return None
 
         _save_draft_regions(run.id, extract_regions(updated))
@@ -249,7 +249,7 @@ def _render_interactive_region_canvas(
         st.caption(canvas_editor_unavailable_reason() or str(exc))
         return False
     except Exception as exc:
-        st.caption(f"交互画布不可用：{format_user_error(exc)}")
+        st.caption(f"交互画布不可用：{report_user_error(exc)}")
         return False
 
     event_kind, element_id, x_percent, y_percent, width_percent, height_percent, _preserve = (
@@ -329,7 +329,7 @@ def _render_static_region_overlay(
             use_container_width=True,
         )
     except Exception as exc:
-        st.warning(f"区域叠加预览失败：{format_user_error(exc)}")
+        st.warning(f"区域叠加预览失败：{report_user_error(exc)}")
         st.image(str(source_path), caption="源页面", use_container_width=True)
 
 
@@ -397,9 +397,9 @@ def _render_merge_split_controls(
             st.session_state[merge_key] = []
             st.rerun()
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
     if split_clicked:
         try:
@@ -414,9 +414,9 @@ def _render_merge_split_controls(
             st.session_state[merge_key] = []
             st.rerun()
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
 
 def _render_region_form(

@@ -13,7 +13,7 @@ from archium.domain.visual.enums import LayoutContentType
 from archium.domain.visual.layout_evidence_item import EvidenceItemRole, LayoutEvidenceItem
 from archium.domain.visual.render_scene import TextNode
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.label_map import entity_label, field_label
 from archium.ui.layout_family_ui import format_layout_family_label, layout_family_implemented
 from archium.ui.studio.canvas_command_bridge import set_studio_selection
@@ -103,7 +103,7 @@ def _run_lock(
         st.success("已锁定元素。" if locked else "已解锁元素。")
         st.rerun()
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _run_reorder(
@@ -130,7 +130,7 @@ def _run_reorder(
         st.success(f"已{labels.get(direction, '调整')}图层。")
         st.rerun()
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _run_visibility(
@@ -152,7 +152,7 @@ def _run_visibility(
         st.success("已显示元素。" if visible else "已隐藏元素。")
         st.rerun()
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _run_align(
@@ -176,7 +176,7 @@ def _run_align(
         st.success("已更新对齐。")
         st.rerun()
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def render_slide_properties(
@@ -294,7 +294,7 @@ def render_slide_properties(
                         st.success("已插入分析区。")
                         st.rerun()
                     except Exception as exc:
-                        st.error(format_user_error(exc))
+                        st.error(report_user_error(exc))
 
         _render_element_properties(
             slide_snapshot=slide_snapshot,
@@ -330,7 +330,12 @@ def render_slide_properties(
             project_id=project_id,
         )
     except Exception:
-        pass
+        from archium.logging import get_logger
+
+        get_logger(__name__, operation="studio_properties").debug(
+            "evidence binding panel unavailable",
+            exc_info=True,
+        )
 
 
 def _render_vision_illustration_panel(
@@ -537,7 +542,7 @@ def _render_vision_illustration_panel(
                 st.warning("底图 QA：" + "；".join(warnings))
             st.rerun()
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
     last = st.session_state.get(f"studio_vision_last_{slide.id}")
     if isinstance(last, dict) and last.get("asset_id"):
@@ -657,7 +662,7 @@ def _render_evidence_items_panel(
             st.success(note)
             st.rerun()
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
 
 def _render_element_properties(
@@ -817,7 +822,7 @@ def _render_element_properties(
                 st.success("已更新元素文字。")
                 st.rerun()
             except Exception as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
         if st.button(
             "应用颜色 / 字号",
             use_container_width=True,
@@ -835,7 +840,7 @@ def _render_element_properties(
                 st.success("已更新文字样式。")
                 st.rerun()
             except Exception as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
 
         with st.expander("混排样式（同框粗细/颜色）", expanded=False):
             existing_runs = []
@@ -939,7 +944,7 @@ def _render_element_properties(
                     st.success("已保存混排样式。")
                     st.rerun()
                 except Exception as exc:
-                    st.error(format_user_error(exc))
+                    st.error(report_user_error(exc))
     elif element.content_type in {LayoutContentType.IMAGE, LayoutContentType.DRAWING}:
         if element.content_ref:
             st.write(f"当前素材：`{element.content_ref}`")
@@ -981,7 +986,7 @@ def _render_element_properties(
                         st.success("已更新元素素材。")
                         st.rerun()
                     except Exception as exc:
-                        st.error(format_user_error(exc))
+                        st.error(report_user_error(exc))
             else:
                 st.caption("项目暂无可用素材，请先在资料阶段上传。")
         elif element.content_type == LayoutContentType.DRAWING:
@@ -1006,7 +1011,7 @@ def _render_element_properties(
                     st.success("已应用底部渐隐。")
                     st.rerun()
                 except Exception as exc:
-                    st.error(format_user_error(exc))
+                    st.error(report_user_error(exc))
             if st.button(
                 "应用剪影分析框",
                 use_container_width=True,
@@ -1026,7 +1031,7 @@ def _render_element_properties(
                     st.success("已应用剪影分析框。")
                     st.rerun()
                 except Exception as exc:
-                    st.error(format_user_error(exc))
+                    st.error(report_user_error(exc))
     elif element.content_ref:
         st.write(f"素材引用：`{element.content_ref}`")
         if element.fit_mode is not None:
@@ -1067,7 +1072,7 @@ def _render_element_properties(
                     st.success("已更新色块颜色。")
                     st.rerun()
                 except Exception as exc:
-                    st.error(format_user_error(exc))
+                    st.error(report_user_error(exc))
             with st.expander("线性渐变填充（两色）", expanded=False):
                 existing = shape_node.fill
                 stop0 = existing.stops[0].color if existing and existing.stops else fill_default
@@ -1119,7 +1124,7 @@ def _render_element_properties(
                         st.success("已应用渐变填充。")
                         st.rerun()
                     except Exception as exc:
-                        st.error(format_user_error(exc))
+                        st.error(report_user_error(exc))
 
     if not element_locked:
         multi_ids = [
@@ -1242,7 +1247,7 @@ def _render_element_properties(
                     st.success("已组合元素。")
                     st.rerun()
                 except Exception as exc:
-                    st.error(format_user_error(exc))
+                    st.error(report_user_error(exc))
             if len(multi_ids) == 2 and st.button(
                 "连接",
                 use_container_width=True,
@@ -1268,7 +1273,7 @@ def _render_element_properties(
                     st.success("已创建连接线。")
                     st.rerun()
                 except Exception as exc:
-                    st.error(format_user_error(exc))
+                    st.error(report_user_error(exc))
 
         if element.content_type == LayoutContentType.GROUP and st.button(
             "取消组合",
@@ -1288,7 +1293,7 @@ def _render_element_properties(
                 st.success("已取消组合。")
                 st.rerun()
             except Exception as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
 
         if element.content_type == LayoutContentType.FREEFORM:
             st.caption(
@@ -1365,7 +1370,7 @@ def _render_element_properties(
                 st.success("已复制元素。")
                 st.rerun()
             except Exception as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
 
         if st.button(
             "删除此元素",
@@ -1387,7 +1392,7 @@ def _render_element_properties(
                 st.success("已删除元素。")
                 st.rerun()
             except Exception as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
 
         if st.button(
             "锁定此元素",

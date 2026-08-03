@@ -24,7 +24,7 @@ from archium.ui.background_workflow_runner import (
 from archium.ui.chunk_panel import render_chunk_panel
 from archium.ui.components import render_file_downloads
 from archium.ui.cultural_narrative_panel import render_cultural_narrative_panel
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.fact_ledger_panel import render_fact_ledger_panel
 from archium.ui.knowledge_panel import render_knowledge_panel
 from archium.ui.label_map import (
@@ -291,7 +291,12 @@ def _consume_upload_feedback(project_id: UUID, *, key_prefix: str) -> None:
                 pending = ledger.pending_count
                 conflicts = ledger.conflict_count
             except Exception:
-                pass
+                from archium.logging import get_logger
+
+                get_logger(__name__, operation="workspace_nba").debug(
+                    "fact ledger unavailable for next-best-action",
+                    exc_info=True,
+                )
             target = resolve_next_best_action_target(
                 action,
                 pending_fact_count=pending,
@@ -817,9 +822,9 @@ def _render_pptx_export_section(project_id: UUID) -> None:
                 _store_pptx_export_result(export_result)
                 st.success("PPTX 已导出（视觉版式）。")
             except WorkflowError as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
             except Exception as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
         else:
             st.session_state[prompt_key] = True
             st.rerun()
@@ -868,9 +873,9 @@ def _render_pptx_export_section(project_id: UUID) -> None:
                     success_message="视觉编排完成。",
                 )
             except WorkflowError as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
             except Exception as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
 
         if col_legacy.button(
             "直接用旧版模板导出",
@@ -891,9 +896,9 @@ def _render_pptx_export_section(project_id: UUID) -> None:
                 st.success("PPTX 已导出（旧版模板）。")
                 st.rerun()
             except WorkflowError as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
             except Exception as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
     elif has_visual_layout:
         st.caption("当前汇报已具备视觉版式，点击上方按钮将按 RenderScene 导出。")
 

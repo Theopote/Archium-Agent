@@ -17,7 +17,7 @@ from archium.domain.enums import ArchitecturalWorkspaceMode
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.project_knowledge_profile import (
     load_project_knowledge_display,
@@ -81,7 +81,7 @@ def render_workspace_mode_chrome(project_id: UUID, *, key_prefix: str = "ws_mode
         st.caption(str(exc))
         return
     except Exception as exc:
-        st.caption(format_user_error(exc))
+        st.caption(report_user_error(exc))
         return
 
     go_label = entry.label if entry is not None else _primary_label(profile.primary_page_key)

@@ -9,7 +9,7 @@ import streamlit as st
 from archium.domain.page_pipeline_status import PagePipelineStatus
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.layout_family_ui import format_layout_family_label
 from archium.ui.page_status_board_panel import (
     load_page_status_board,
@@ -46,9 +46,9 @@ def _move_slide(context: StudioPresentationContext, from_index: int, to_index: i
         st.success(f"已将 P{from_index + 1} 移动到 P{to_index + 1}。")
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _status_by_slide(context: StudioPresentationContext) -> dict[str, PagePipelineStatus]:
@@ -119,9 +119,9 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
                 st.success(f"已新增 P{new_slide.order + 1}。")
                 st.rerun()
             except WorkflowError as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
             except Exception as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
     with manage_cols[1]:
         current = slides[selected_index]
         if st.button(
@@ -137,9 +137,9 @@ def render_slide_navigator(*, context: StudioPresentationContext) -> int:
                 st.success("已删除当前页。")
                 st.rerun()
             except WorkflowError as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
             except Exception as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
 
     with st.expander("排序", expanded=False):
         reorder_cols = st.columns([1, 1, 2])

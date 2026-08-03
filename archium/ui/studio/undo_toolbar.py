@@ -8,7 +8,7 @@ import streamlit as st
 
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.studio.undo_stack import content_redo_depth, visual_redo_depth
 from archium.ui.studio_service import (
     count_content_undo_steps,
@@ -79,9 +79,9 @@ def _run_visual_undo(*, slide_id: UUID) -> None:
         st.success(_visual_history_message(result, fallback="已撤销一步视觉修改。"))
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _run_visual_redo(*, slide_id: UUID) -> None:
@@ -91,9 +91,9 @@ def _run_visual_redo(*, slide_id: UUID) -> None:
         st.success(_visual_history_message(result, fallback="已重做一步视觉修改。"))
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _visual_history_message(result: object, *, fallback: str) -> str:
@@ -115,9 +115,9 @@ def _run_content_undo(*, slide_id: UUID) -> None:
         st.success("已撤销一步内容修改。")
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _run_content_redo(*, slide_id: UUID) -> None:
@@ -127,6 +127,6 @@ def _run_content_redo(*, slide_id: UUID) -> None:
         st.success("已重做一步内容修改。")
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))

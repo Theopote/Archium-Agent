@@ -18,7 +18,7 @@ from archium.domain.visual.proposal_status import ProposalStatus
 from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.studio_service import (
     accept_theme_proposal,
     create_theme_proposal,
@@ -170,9 +170,9 @@ def render_deck_theme_panel(
             st.success("风格提案已生成，请审阅样本 QA 后再接受。")
             st.rerun()
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
     stored_proposal: ThemeChangeProposal | None = (
         _get_stored_theme_proposal(presentation_id) or active
@@ -272,9 +272,9 @@ def render_deck_theme_panel(
             st.success("全稿风格已应用，各页已写入 Revision。")
             st.rerun()
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
     if a2.button(
         "拒绝",
@@ -288,6 +288,6 @@ def render_deck_theme_panel(
             st.info("已拒绝风格提案，正式 DesignSystem 未改动。")
             st.rerun()
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))

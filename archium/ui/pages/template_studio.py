@@ -17,7 +17,7 @@ from archium.domain.visual.architectural_template import (
 )
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 
 
 def _selected_template_id() -> UUID | None:
@@ -50,10 +50,10 @@ def _render_upload_panel() -> None:
                     name=name.strip() or Path(uploaded.name).stem,
                 )
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
             return
         except Exception as exc:  # noqa: BLE001
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
             return
         st.session_state.template_studio_selected_id = str(result.template.id)
         st.success(
@@ -263,7 +263,7 @@ def _render_layout_editor(template_id: UUID) -> None:
                     layout_id,
                 )
             except WorkflowError as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
                 return
         st.image(str(preview.preview_path), use_container_width=True)
         st.success(f"已生成测试填充预览：`{preview.preview_path.name}`")
@@ -275,7 +275,7 @@ def _render_layout_editor(template_id: UUID) -> None:
                 try:
                     published = TemplateStudioService(session).publish(template_id)
                 except WorkflowError as exc:
-                    st.error(format_user_error(exc))
+                    st.error(report_user_error(exc))
                     return
             st.success(f"已发布：{published.name}（v{published.version}）")
             st.rerun()

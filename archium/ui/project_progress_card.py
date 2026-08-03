@@ -476,7 +476,12 @@ def load_cockpit_task_summary(snapshot: ProjectProgressSnapshot) -> CockpitTaskS
                     }:
                         other_attention += 1
         except Exception:
-            pass
+            from archium.logging import get_logger
+
+            get_logger(__name__).debug(
+                'page status board unavailable for progress card',
+                exc_info=True,
+            )
 
     lines: list[str] = []
     if snapshot.outline_changes_pending:

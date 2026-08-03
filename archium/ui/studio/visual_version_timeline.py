@@ -14,7 +14,7 @@ from archium.config.settings import Settings, get_settings
 from archium.domain.scene_revision_summary import SceneRevisionSummary
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.visual_service import SlideVisualSnapshot
 
 
@@ -188,7 +188,7 @@ def _render_compare_view(
             if right_path is not None and right_path.is_file():
                 st.image(str(right_path), use_container_width=True)
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _restore_scene_revision(*, slide_id: UUID, revision_id: UUID) -> None:
@@ -211,6 +211,6 @@ def _restore_scene_revision(*, slide_id: UUID, revision_id: UUID) -> None:
         )
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))

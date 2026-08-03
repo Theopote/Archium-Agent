@@ -19,7 +19,7 @@ from archium.domain.visual.slide_capacity_budget import (
 )
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.studio_service import (
     analyze_slide_content_adaptation,
     apply_slide_content_adaptation,
@@ -173,7 +173,7 @@ def _load_capacity(slide_id: UUID) -> SlideCapacityBudget | None:
         with get_session() as session:
             return estimate_slide_capacity(session, slide_id)
     except WorkflowError as exc:
-        st.caption(format_user_error(exc))
+        st.caption(report_user_error(exc))
         return None
     except Exception:
         return None
@@ -220,9 +220,9 @@ def _propose_split(*, slide_id: UUID) -> None:
         st.success("拆页提案已生成，请确认 Before/After 后再执行。")
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _accept_split(proposal: SlideSplitProposal) -> None:
@@ -235,9 +235,9 @@ def _accept_split(proposal: SlideSplitProposal) -> None:
         st.success(getattr(result, "message", None) or "拆页已完成。")
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _load_suggestions(slide_snapshot: SlideVisualSnapshot) -> list[ContentAdaptationSuggestion]:
@@ -249,7 +249,7 @@ def _load_suggestions(slide_snapshot: SlideVisualSnapshot) -> list[ContentAdapta
                 layout_report=slide_snapshot.validation,
             )
     except WorkflowError as exc:
-        st.caption(format_user_error(exc))
+        st.caption(report_user_error(exc))
         return []
 
 
@@ -261,9 +261,9 @@ def _run_adaptation(*, slide_id: UUID, action: str) -> None:
         st.success(message)
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _run_restore(*, slide_id: UUID) -> None:
@@ -273,6 +273,6 @@ def _run_restore(*, slide_id: UUID) -> None:
         st.success("已撤销一步内容修改。")
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))

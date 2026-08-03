@@ -7,7 +7,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.ui.app_navigation import get_app_page
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 
 RESUME_EXPORT_BUTTON_LABEL = "从审核门继续导出"
 RESUME_EXPORT_HELP = (
@@ -41,4 +41,4 @@ def render_resume_failure(
         if project_id is not None:
             st.caption(f"项目：`{project_id}`")
         return
-    st.error(format_user_error(exc))
+    st.error(report_user_error(exc))

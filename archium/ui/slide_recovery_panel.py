@@ -16,7 +16,7 @@ from archium.domain.slide_recovery import PAGE_KIND_LABELS_ZH, HybridRenderScene
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.delivery.export_policy_panel import EXPORT_POLICY_PRESETS
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.slide_recovery_region_panel import render_slide_recovery_region_editor
 
 
@@ -280,10 +280,10 @@ def _run_export(
                 policy_preset=policy_preset,
             )
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return
 
     if export_result.pptx_export_skipped:
@@ -324,10 +324,10 @@ def _run_import(
                 presentation_id=presentation_id,
             )
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return
 
     st.success(
@@ -355,10 +355,10 @@ def _run_save_template(
                 source_preview_path=delivery.resolve_source_preview_path(result),
             )
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return
 
     st.success(

@@ -10,7 +10,7 @@ from archium.application.slide_diff import change_source_label
 from archium.domain.revision import EntityRevision
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.studio_service import (
     list_slide_content_revisions,
     list_slide_visual_revisions,
@@ -82,9 +82,9 @@ def _restore_visual(*, slide_id: UUID, revision_id: UUID) -> None:
         st.success("已恢复到所选视觉版本。")
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _restore_content(*, slide_id: UUID, revision_id: UUID) -> None:
@@ -94,6 +94,6 @@ def _restore_content(*, slide_id: UUID, revision_id: UUID) -> None:
         st.success("已恢复到所选内容版本。")
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))

@@ -516,7 +516,12 @@ def render_design_context_strip(project_id: UUID) -> None:
                     label="前往建议页面 →",
                 )
     except Exception:
-        pass
+        from archium.logging import get_logger
+
+        get_logger(__name__).debug(
+            'design context strip page link unavailable',
+            exc_info=True,
+        )
     try:
         from archium.application.design_revise_persistence import (
             load_pending_design_revise,
@@ -623,7 +628,12 @@ def render_stage_header(stage_id: str) -> None:
                 current_page_key=stage_id,
             )
         except Exception:
-            pass
+            from archium.logging import get_logger
+
+            get_logger(__name__).debug(
+                'orchestration status chrome unavailable',
+                exc_info=True,
+            )
     else:
         render_page_header(stage.title, caption)
     render_stage_access_advisory(stage_id, snapshot)

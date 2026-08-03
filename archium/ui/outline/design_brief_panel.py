@@ -32,7 +32,7 @@ from archium.domain.slide_intent import SlideIntent
 from archium.domain.visual.visual_grammar import PageArchetype
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 
 _PRIMARY_VISUAL_OPTIONS = [
     ("drawing", "建筑图纸"),
@@ -76,7 +76,7 @@ def render_design_brief_panel(
                 st.success("已生成全部页面设计摘要。")
                 st.rerun()
             except WorkflowError as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
         return
 
     briefs = index_design_briefs(outline.page_design_briefs)
@@ -90,7 +90,7 @@ def render_design_brief_panel(
                     SlideDesignBriefService(session).regenerate_page(outline.id, page_order)
                 st.rerun()
             except WorkflowError as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
         return
 
     status_label = BRIEF_STATUS_LABELS_ZH.get(brief.status, brief.status.value)
@@ -126,7 +126,7 @@ def render_design_brief_panel(
                 st.success(f"第 {page_order + 1} 页设计摘要已批准。")
                 st.rerun()
             except WorkflowError as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
         if st.button(
             "重生成摘要",
             key=f"brief_regen_{page_order}",
@@ -137,7 +137,7 @@ def render_design_brief_panel(
                     SlideDesignBriefService(session).regenerate_page(outline.id, page_order)
                 st.rerun()
             except WorkflowError as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
         if st.button("批量批准", key="brief_approve_all", width="stretch"):
             try:
                 with get_session() as session:
@@ -148,14 +148,14 @@ def render_design_brief_panel(
                 st.success("全部页面设计摘要已批准。")
                 st.rerun()
             except WorkflowError as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
         if st.button("重新生成全部", key="brief_regen_all", width="stretch"):
             try:
                 with get_session() as session:
                     SlideDesignBriefService(session).generate_all(outline.id)
                 st.rerun()
             except WorkflowError as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
 
     if ready:
         st.success("全部页面设计摘要已批准，可进入正式批量生成。")
@@ -272,6 +272,6 @@ def _render_brief_editor(outline_id: UUID, brief: SlideDesignBrief) -> SlideDesi
                 st.warning("已批准页面被修改，状态变为「待重新确认」。")
             st.rerun()
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
     return brief

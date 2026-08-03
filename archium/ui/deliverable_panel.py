@@ -12,7 +12,7 @@ from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.availability_labels import format_availability_suffix
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.planning_service import set_deliverable_selected
 
 
@@ -102,6 +102,6 @@ def _toggle(plan_id: UUID, deliverable_id: str, selected: bool) -> None:
             set_deliverable_selected(session, plan_id, deliverable_id, selected)
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))

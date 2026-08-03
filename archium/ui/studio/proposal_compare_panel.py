@@ -22,7 +22,7 @@ from archium.domain.visual.scene_change_proposal import (
 )
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.visual_service import SlideVisualSnapshot
 
 
@@ -341,6 +341,6 @@ def _accept_proposal(
         st.success(f"提案已接受（{status_label}），Scene Revision 已保存。")
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))

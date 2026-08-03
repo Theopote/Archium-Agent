@@ -55,7 +55,7 @@ from archium.ui.background_workflow_runner import (
     submit_resume_workflow,
     warn_background_workflows_required,
 )
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.label_map import (
     entity_label,
     regenerate_failure_label,
@@ -1050,7 +1050,7 @@ def _render_slide_evidence_items_section(
                     st.success(f"第 {slide.order + 1} 页语义证据已保存。")
                     st.rerun()
                 except Exception as exc:
-                    st.error(format_user_error(exc))
+                    st.error(report_user_error(exc))
 
 
 def _render_review_issues_panel(
@@ -1290,9 +1290,9 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
             st.info("已在后台继续运行工作流，请查看进度。")
             render_workflow_progress_panel(project_id, job_id=job.job_id)
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
 def _narrative_arc_update_from_form(
     *,

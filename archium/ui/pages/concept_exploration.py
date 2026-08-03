@@ -14,7 +14,7 @@ from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 from archium.ui.components.chrome import render_page_header
 from archium.ui.components.concept_direction_compare import render_concept_direction_compare
-from archium.ui.error_handlers import format_user_error, report_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.planning_service import (
     commit_exploration_to_mission,
@@ -64,7 +64,7 @@ def render() -> None:
         except WorkflowError as exc:
             st.error(str(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
     def _reject_revise(direction_id: UUID) -> None:
         try:
@@ -84,7 +84,7 @@ def render() -> None:
         except WorkflowError as exc:
             st.error(str(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
     with get_session() as session:
         projects = list_projects(session)
@@ -339,7 +339,7 @@ def _render_artifact_rail(exploration: ExplorationSession, *, settings) -> list:
         except WorkflowError as exc:
             st.error(str(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
     return list(directions)
 
 

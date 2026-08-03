@@ -10,7 +10,7 @@ from archium.config.settings import Settings
 from archium.domain.visual.edit_intent import INTENT_USER_LABELS, VisualEditIntent
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.studio.proposal_compare_panel import (
     get_stored_proposal,
     render_proposal_compare_panel,
@@ -201,9 +201,9 @@ def _run_scoped_proposal(
         st.success("修改提案已生成，请在下方对比后接受或拒绝。")
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _render_legacy_panel(*, slide_id: UUID) -> None:
@@ -245,9 +245,9 @@ def _render_legacy_panel(*, slide_id: UUID) -> None:
             st.success("已撤销一步视觉修改。")
             st.rerun()
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
 
 def _run_edit(*, slide_id: UUID, text: str) -> None:
@@ -260,6 +260,6 @@ def _run_edit(*, slide_id: UUID, text: str) -> None:
         st.success("已直接应用视觉修改。")
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))

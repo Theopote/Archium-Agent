@@ -23,7 +23,7 @@ GENERIC_USER_ERROR = "操作失败，请稍后重试。若问题持续，请联�
 
 
 def format_user_error(exc: BaseException) -> str:
-    """Return a user-facing message for common Archium failures."""
+    """Return a user-facing message for known Archium failures (no logging)."""
     if isinstance(exc, ConfigurationError):
         return "配置错误，请联系管理员检查系统设置。"
     if isinstance(exc, DocumentParseError):
@@ -51,8 +51,16 @@ def format_user_error(exc: BaseException) -> str:
 
 
 def report_user_error(exc: BaseException) -> str:
-    """Log unexpected failures and return a safe message for Streamlit."""
+    """Map failures for Streamlit; log unknowns so they are never silent.
+
+    Use this in ``except Exception`` / catch-all UI handlers.
+    """
     if isinstance(exc, ArchiumError):
         return format_user_error(exc)
     logger.exception("Unexpected UI error")
     return GENERIC_USER_ERROR
+
+
+def surface_ui_error(exc: BaseException) -> str:
+    """Preferred UI catch-all alias for ``report_user_error``."""
+    return report_user_error(exc)

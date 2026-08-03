@@ -28,7 +28,7 @@ from archium.ui.background_workflow_runner import (
     load_visual_result,
     load_workflow_result,
 )
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.label_map import brief_storyline_pair
 
 WorkflowScope = str  # "presentation" | "planning" | "visual" | "slide_recovery"
@@ -164,7 +164,7 @@ def _apply_job_completion(
         try:
             result = _load_result_for_scope(scope, job.workflow_run_id)
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
             set_active_job_id(project_id, None, scope, presentation_id=presentation_id)
             return
 
@@ -358,7 +358,7 @@ def _poll_once(
                 if on_complete is not None:
                     on_complete(result)
             except WorkflowError as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
             if run.status == WorkflowStatus.AWAITING_REVIEW:
                 st.warning(awaiting_review_message or _default_awaiting_message(scope))
             elif run.status == WorkflowStatus.COMPLETED:

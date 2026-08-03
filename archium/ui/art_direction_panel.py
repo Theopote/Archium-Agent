@@ -16,7 +16,7 @@ from archium.domain.visual.style import (
 )
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.visual_service import (
     approve_art_direction,
     continue_visual_after_art_direction_approval,
@@ -219,9 +219,9 @@ def render_art_direction_panel(
                 st.success("视觉方向已保存。")
             st.rerun()
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
     with st.expander("根据反馈重新生成", expanded=False):
         feedback = st.text_area(
@@ -250,4 +250,4 @@ def render_art_direction_panel(
                     st.success("视觉方向已重新生成，请再次审核。")
                     st.rerun()
                 except Exception as exc:
-                    st.error(format_user_error(exc))
+                    st.error(report_user_error(exc))

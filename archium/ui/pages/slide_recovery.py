@@ -24,7 +24,7 @@ from archium.ui.background_workflow_runner import (
     submit_slide_recovery_job,
     warn_background_workflows_required,
 )
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.slide_recovery_panel import render_slide_recovery_result_panel
 from archium.ui.workflow_progress_panel import (
@@ -260,6 +260,6 @@ def render() -> None:
                 settings=settings,
             )
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))

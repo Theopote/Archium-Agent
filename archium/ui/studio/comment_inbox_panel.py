@@ -9,7 +9,7 @@ import streamlit as st
 from archium.domain.visual.element_comment import ElementComment, ElementCommentStatus
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.visual_service import SlideVisualSnapshot
 
 _STATUS_LABELS = {
@@ -41,7 +41,7 @@ def render_comment_inbox(
             counts = service.inbox_counts(presentation_id)
             comments = service.list_for_presentation(presentation_id)
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return
 
     cols = st.columns(6)
@@ -227,9 +227,9 @@ def _rebind(comment_id: UUID) -> None:
         st.success("已重新绑定到当前 Scene。")
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _resolve(comment_id: UUID) -> None:
@@ -243,6 +243,6 @@ def _resolve(comment_id: UUID) -> None:
         st.success("评论已标记为已解决。")
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))

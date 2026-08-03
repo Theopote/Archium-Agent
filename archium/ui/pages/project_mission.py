@@ -21,7 +21,7 @@ from archium.ui.background_workflow_runner import (
 )
 from archium.ui.clarification_panel import render_clarification_panel, render_known_unknown_panel
 from archium.ui.deliverable_panel import render_deliverable_panel
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.label_map import (
     brief_storyline_pair,
     entity_label,
@@ -565,9 +565,9 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
                             else:
                                 st.success(f"已生成{kind_label}。" + " ".join(paths))
                         except WorkflowError as exc:
-                            st.error(format_user_error(exc))
+                            st.error(report_user_error(exc))
                         except Exception as exc:
-                            st.error(format_user_error(exc))
+                            st.error(report_user_error(exc))
                 cached = st.session_state.get(cache_key)
                 if cached is not None:
                     with st.expander(f"预览：{label}", expanded=False):
@@ -620,10 +620,10 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
             )
         request = bridge.request
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return
 
     st.markdown("**将进入现有汇报主链的 PresentationRequest 预览**")
@@ -643,10 +643,10 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
             request = bridge.request
             st.success("已按当前方向与视觉简报刷新汇报请求草稿。")
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
             return
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
             return
 
     st.write(f"- 标题：{request.title}")

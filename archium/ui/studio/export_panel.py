@@ -25,7 +25,7 @@ from archium.ui.background_workflow_runner import (
     submit_visual_job,
     warn_background_workflows_required,
 )
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.label_map import LAYOUT_GENERATION_ACTION
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.studio.slide_actions import run_studio_replan, show_studio_validation_feedback
@@ -371,9 +371,9 @@ def _export_pptx(
         else:
             st.warning("导出完成，但未返回文件路径。")
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _append_delivery_record(
@@ -488,9 +488,9 @@ def _export_pdf(
         for warning in pdf_export_result.warnings:
             st.caption(warning)
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
 
 
 def _render_quick_export_popover(

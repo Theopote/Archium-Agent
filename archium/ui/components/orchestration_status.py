@@ -17,7 +17,7 @@ from archium.domain.orchestration import (
 )
 from archium.domain.workflow import WorkflowRun
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
 
 _AWAITING = frozenset(
@@ -149,7 +149,12 @@ def render_orchestration_status(
                 title="相关任务进度",
             )
         except Exception:
-            pass
+            from archium.logging import get_logger
+
+            get_logger(__name__).debug(
+                'orchestration human-gate panel unavailable',
+                exc_info=True,
+            )
         caption = human_gate_caption(parse_human_gate(run.state))
         if caption:
             st.caption(caption)
@@ -209,7 +214,12 @@ def _render_compact_gate(
                     label=f"前往：{gate.label or page_key}",
                 )
             except Exception:
-                pass
+                from archium.logging import get_logger
+
+                get_logger(__name__).debug(
+                    'human-gate page link unavailable',
+                    exc_info=True,
+                )
 
     if stage_status in _AWAITING:
         _render_advance_replan_buttons(run, key_prefix=key_prefix, settings=settings)
@@ -249,7 +259,7 @@ def _render_advance_replan_buttons(
                     st.switch_page(get_app_page(result.page_key))
                 st.rerun()
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
     if cols[1].button(
         "按上下文重规划",
         key=f"{key_prefix}_replan_{run.id}",
@@ -268,4 +278,4 @@ def _render_advance_replan_buttons(
                     st.session_state["orchestration_replan"] = result.replan_decision
                 st.rerun()
         except Exception as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))

@@ -9,7 +9,7 @@ import streamlit as st
 from archium.domain.visual.layout import LayoutPlan
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.label_map import entity_label
 from archium.ui.layout_family_ui import (
     format_layout_family_label,
@@ -104,7 +104,7 @@ def render_layout_candidates_panel(*, slide_snapshot: SlideVisualSnapshot | None
             st.success("已切换版式。")
             st.rerun()
         except (WorkflowError, ValueError) as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
     unimplemented = len(candidates) - len(selectable)
     if unimplemented:
@@ -154,9 +154,9 @@ def _render_template_match_controls(slide_snapshot: SlideVisualSnapshot) -> None
             st.success("已按模板生成候选版式并选中推荐方案。")
             st.rerun()
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
         except Exception as exc:  # noqa: BLE001
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
 
 
 def _candidate_label(plan: LayoutPlan, *, current_id: UUID | None) -> str:

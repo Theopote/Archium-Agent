@@ -10,7 +10,7 @@ from archium.config.settings import Settings
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.pages.workspace import PROJECT_TYPE_LABELS
 from archium.ui.studio_service import (
@@ -50,9 +50,9 @@ def render_studio_onboarding() -> None:
                 st.success(f"已创建项目：{project.name}")
                 st.rerun()
             except WorkflowError as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
             except Exception as exc:
-                st.error(format_user_error(exc))
+                st.error(report_user_error(exc))
 
 
 def render_studio_import_panel(*, project_id: UUID, expanded: bool = False) -> None:
@@ -111,10 +111,10 @@ def _run_import(project_id: UUID, uploads: list, *, settings: Settings) -> None:
                     )
                 )
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
         return
 
     for result in results:

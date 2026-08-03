@@ -172,5 +172,10 @@ def store_pending_revise_from_selection(selection: object) -> bool:
         with get_session() as session:
             persist_pending_design_revise(session, project_id, payload)
     except Exception:
-        pass
+        from archium.logging import get_logger
+
+        get_logger(__name__).debug(
+            'persist pending design revise failed',
+            exc_info=True,
+        )
     return True

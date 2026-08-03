@@ -10,7 +10,7 @@ from archium.application.visual.scene_repair_service import summarize_deferred_r
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.studio.proposal_compare_panel import get_stored_proposal, store_proposal
 from archium.ui.studio_service import create_slide_overflow_repair_proposal
 from archium.ui.visual_service import SlideVisualSnapshot
@@ -75,6 +75,6 @@ def _create_overflow_proposal(slide_id: UUID, node_ids: list[str]) -> None:
         st.success("溢出修复提案已生成，请到 **AI** Tab 查看对比并确认。")
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))

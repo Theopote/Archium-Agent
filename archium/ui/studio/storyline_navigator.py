@@ -125,7 +125,12 @@ def render_storyline_navigator(
             icon=":material/account_tree:",
         )
     except Exception:
-        pass
+        from archium.logging import get_logger
+
+        get_logger(__name__).debug(
+            'storyline page link unavailable',
+            exc_info=True,
+        )
 
     mode = st.radio(
         "导航",

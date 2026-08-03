@@ -10,7 +10,7 @@ from archium.domain.enums import EffortLevel, Priority
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.planning_service import set_workstream_selected
 
 PRIORITY_LABELS = {
@@ -94,6 +94,6 @@ def _toggle(workstream_id: UUID, selected: bool) -> None:
             set_workstream_selected(session, workstream_id, selected)
         st.rerun()
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     except Exception as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))

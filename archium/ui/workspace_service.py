@@ -421,7 +421,12 @@ def reassess_knowledge_after_upload(
         pending = ledger.pending_count
         conflicts = ledger.conflict_count
     except Exception:
-        pass
+        from archium.logging import get_logger
+
+        get_logger(__name__).debug(
+            'fact ledger unavailable for workspace actions',
+            exc_info=True,
+        )
     for item in actions[:3]:
         if item.action.value == "upload_materials":
             continue

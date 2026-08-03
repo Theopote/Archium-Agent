@@ -19,7 +19,7 @@ from archium.domain.page_pipeline_status import (
 )
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
-from archium.ui.error_handlers import format_user_error
+from archium.ui.error_handlers import report_user_error
 from archium.ui.label_map import entity_label
 
 _SEVERITY_META: dict[str, dict[str, str]] = {
@@ -276,7 +276,7 @@ def _handle_action(
                 )
             st.success("已重新匹配该页素材。可在素材看板确认。")
         except WorkflowError as exc:
-            st.error(format_user_error(exc))
+            st.error(report_user_error(exc))
         st.rerun()
         return
 
@@ -295,7 +295,7 @@ def _handle_action(
         elif action == PageStatusAction.UNSKIP:
             st.success("已取消跳过。")
     except WorkflowError as exc:
-        st.error(format_user_error(exc))
+        st.error(report_user_error(exc))
     st.rerun()
 
 
