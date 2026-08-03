@@ -388,10 +388,8 @@ def _append_delivery_record(
     import logging
     from datetime import UTC, datetime
 
-    from archium.application.delivery_record_service import (
-        DeliveryRecordResult,
-        DeliveryRecordService,
-    )
+    from archium.application.api.session import api_from_session
+    from archium.application.delivery_record_service import DeliveryRecordResult
 
     logger = logging.getLogger(__name__)
     result = DeliveryRecordResult(file_exported=True, record_persisted=False)
@@ -403,7 +401,7 @@ def _append_delivery_record(
             )
 
             revision_id = latest_presentation_revision_id(session, presentation_id)
-            record = DeliveryRecordService(session).record_export(
+            record = api_from_session(session).delivery.record_export(
                 project_id=project_id,
                 presentation_id=presentation_id,
                 format=fmt,

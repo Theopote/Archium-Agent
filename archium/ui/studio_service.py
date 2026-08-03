@@ -1231,7 +1231,6 @@ def undo_slide_visual_edit(
 
 
 def redo_slide_visual_edit(session: Session, slide_id: UUID) -> object:
-    from archium.application.revision_service import RevisionService
     from archium.application.visual.scene_history_service import SCENE_STATE_SNAPSHOT_KIND
     from archium.application.visual.scene_undo_service import SceneUndoService
     from archium.ui.studio.canvas_command_bridge import bump_canvas_generation
@@ -1241,12 +1240,12 @@ def redo_slide_visual_edit(session: Session, slide_id: UUID) -> object:
     if revision_id is None:
         raise WorkflowError("没有可重做的视觉修改。")
 
-    slide = api_from_session(session).slides.get(slide_id)
+    api = api_from_session(session)
+    slide = api.slides.get(slide_id)
     if slide is None:
         raise WorkflowError("页面不存在。")
 
-    revisions = RevisionService(session)
-    revision = revisions.get_revision(revision_id)
+    revision = api.revisions.get(revision_id)
     if revision is not None and revision.snapshot.get("kind") == SCENE_STATE_SNAPSHOT_KIND:
         result = SceneUndoService(
             session,

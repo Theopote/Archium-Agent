@@ -107,10 +107,10 @@ def render_job_progress_strip(
 ) -> None:
     """Unified WorkflowRun + ArtifactJob + BackgroundJob progress."""
     try:
-        from archium.application.job_progress_service import JobProgressService
+        from archium.application.api.session import api_from_session
 
         with get_session() as session:
-            jobs = JobProgressService(session).list_for_project(
+            jobs = api_from_session(session).jobs.list_for_project(
                 project_id, limit=limit, active_only=active_only
             )
     except Exception:

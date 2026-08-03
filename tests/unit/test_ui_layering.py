@@ -56,3 +56,24 @@ def test_ui_does_not_import_repositories() -> None:
                 f"{path.relative_to(package_root)}:{line_no}: {match.group(0).strip()}"
             )
     assert hits == [], "ui must not import repositories:\n" + "\n".join(hits)
+
+
+def test_ui_pages_prefer_application_api_for_delivery_and_jobs() -> None:
+    """APP-029: pages should not construct Delivery/Job progress services directly."""
+    banned = re.compile(
+        r"^\s*(?:from|import)\s+archium\.application\."
+        r"(?:delivery_record_service|job_progress_service)\b"
+    )
+    root = Path(__file__).resolve().parents[2] / "archium" / "ui" / "pages"
+    package_root = root.parent.parent.parent
+    hits: list[str] = []
+    for path in root.rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        for match in banned.finditer(text):
+            line_no = text.count("\n", 0, match.start()) + 1
+            hits.append(
+                f"{path.relative_to(package_root)}:{line_no}: {match.group(0).strip()}"
+            )
+    assert hits == [], "ui pages must use Application API for delivery/jobs:\n" + "\n".join(
+        hits
+    )

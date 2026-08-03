@@ -185,12 +185,12 @@ def _render_recent_versions(snapshot: ProjectProgressSnapshot) -> None:
 
     export_records: list[DeliveryRecord | dict[str, object]] = []
     try:
-        from archium.application.delivery_record_service import DeliveryRecordService
+        from archium.application.api.session import api_from_session
 
         with get_session() as session:
             export_records = [
                 record
-                for record in DeliveryRecordService(session).list_for_project(
+                for record in api_from_session(session).delivery.list_for_project(
                     snapshot.project_id, limit=4
                 )
             ]

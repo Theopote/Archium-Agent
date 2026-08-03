@@ -245,13 +245,13 @@ def _render_delivery_records(presentation_id: UUID) -> None:
     st.markdown("#### 版本记录")
     import logging
 
-    from archium.application.delivery_record_service import DeliveryRecordService
+    from archium.application.api.session import api_from_session
 
     logger = logging.getLogger(__name__)
     records_load_failed = False
     try:
         with get_session() as session:
-            records = DeliveryRecordService(session).list_for_presentation(
+            records = api_from_session(session).delivery.list_for_presentation(
                 presentation_id, limit=12
             )
     except Exception:

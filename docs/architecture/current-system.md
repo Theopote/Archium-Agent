@@ -137,11 +137,13 @@ Studio 的编辑闭环不是直接覆写导出文件：
 
 - Streamlit 通过 `api_from_session(session)` 调用；**不**在 `ui/`（含 pages 与面板）直连 Repository
 - Studio / Visual / Planning 门面的高频读路径走 `SlidesApi` / `VisualApi` / `MissionApi` / `PlanningApi`（`load_presentation_visual`、`resolve_run` 等）
+- 交付与后台任务：pages / 导出面板走 `DeliveryApi` / `JobsApi` / `RevisionsApi`（不直接 new `DeliveryRecordService` / `JobProgressService`）
 - `ProjectApi` 写路径只 `flush`，由调用方 `get_session()` 提交（APP-003）
 - 长任务一律 `JobsApi.create`（支持 `idempotency_key`）；可 `get_progress` / `list_active` / `cancel`
 - 结果幂等：同 project + idempotency_key 返回同一 job；刷新后按 job_id / project 恢复
 - 事务仍遵守 APP-003：调用方 `get_session()`，UI 不 `commit`
 - 本波不引入 FastAPI HTTP；未来 HTTP 只做薄适配
+- Application 内部服务仍可直连 Repository（正常分层）；API 是对外稳定边界
 
 ### Domain 对象准入
 

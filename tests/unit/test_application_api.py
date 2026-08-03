@@ -241,6 +241,12 @@ def test_project_api_create_with_type_does_not_extra_commit(
     assert commits == [1]
 
 
+def test_delivery_api_list_empty(db_session: Session) -> None:
+    project = ProjectRepository(db_session).create(Project(name="Delivery API", description=""))
+    api = api_from_session(db_session)
+    assert api.delivery.list_for_project(project.id) == []
+
+
 def test_planning_api_resolve_run_and_session(db_session: Session) -> None:
     from archium.domain.enums import WorkflowStatus
     from archium.domain.planning_session import PlanningSession

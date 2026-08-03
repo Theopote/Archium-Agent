@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -19,6 +20,45 @@ class DeliveryApi:
 
     def list_for_project(self, project_id: UUID, *, limit: int = 20) -> list[DeliveryRecord]:
         return self._records.list_for_project(project_id, limit=limit)
+
+    def list_for_presentation(
+        self,
+        presentation_id: UUID,
+        *,
+        limit: int = 12,
+    ) -> list[DeliveryRecord]:
+        return self._records.list_for_presentation(presentation_id, limit=limit)
+
+    def record_export(
+        self,
+        *,
+        project_id: UUID,
+        presentation_id: UUID,
+        format: str,
+        file_uri: str,
+        qa_status: str = "unknown",
+        revision_id: UUID | None = None,
+        round_trip_report: dict[str, Any] | None = None,
+        derived_from_artifact_ids: list[UUID] | None = None,
+        generator_version: str = "archium-unknown",
+        font_manifest_hash: str | None = None,
+        theme_version: str | None = None,
+        export_policy: str | None = None,
+    ) -> DeliveryRecord:
+        return self._records.record_export(
+            project_id=project_id,
+            presentation_id=presentation_id,
+            format=format,
+            file_uri=file_uri,
+            qa_status=qa_status,
+            revision_id=revision_id,
+            round_trip_report=round_trip_report,
+            derived_from_artifact_ids=derived_from_artifact_ids,
+            generator_version=generator_version,
+            font_manifest_hash=font_manifest_hash,
+            theme_version=theme_version,
+            export_policy=export_policy,
+        )
 
     def enqueue_formal_export(
         self,
