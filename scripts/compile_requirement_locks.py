@@ -11,14 +11,20 @@ Outputs:
 Regenerate after changing ``[project]`` / ``[project.optional-dependencies]``::
 
     python scripts/compile_requirement_locks.py
+
+Verify committed locks match pyproject (CI / pre-push)::
+
+    python scripts/compile_requirement_locks.py --check
 """
 
 from __future__ import annotations
 
 import argparse
+import filecmp
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[1]
@@ -52,10 +58,15 @@ def _run_uv(args: list[str]) -> None:
     subprocess.run(cmd, check=True, cwd=_ROOT)
 
 
-def compile_locks(*, python_versions: tuple[str, ...]) -> None:
-    _REQ_DIR.mkdir(parents=True, exist_ok=True)
+def compile_locks(
+    *,
+    python_versions: tuple[str, ...],
+    output_dir: Path,
+) -> list[Path]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    written: list[Path] = []
 
-    base_out = _REQ_DIR / "base.lock"
+    base_out = output_dir / "base.lock"
     _run_uv(
         [
             "pip",
@@ -67,10 +78,11 @@ def compile_locks(*, python_versions: tuple[str, ...]) -> None:
             str(base_out),
         ]
     )
+    written.append(base_out)
 
     for version in python_versions:
         tag = version.replace(".", "")
-        out = _REQ_DIR / f"full-py{tag}.lock"
+        out = output_dir / f"full-py{tag}.lock"
         _run_uv(
             [
                 "pip",
@@ -84,6 +96,37 @@ def compile_locks(*, python_versions: tuple[str, ...]) -> None:
                 str(out),
             ]
         )
+        written.append(out)
+    return written
+
+
+def check_locks(*, python_versions: tuple[str, ...]) -> int:
+    """Recompile into a temp dir and fail if committed locks differ."""
+    expected = ["base.lock", *[f"full-py{v.replace('.', '')}.lock" for v in python_versions]]
+    missing = [name for name in expected if not (_REQ_DIR / name).is_file()]
+    if missing:
+        print("Missing lock files:", ", ".join(missing), file=sys.stderr)
+        return 1
+
+    with tempfile.TemporaryDirectory(prefix="archium-locks-") as tmp:
+        tmp_dir = Path(tmp)
+        compile_locks(python_versions=python_versions, output_dir=tmp_dir)
+        drift: list[str] = []
+        for name in expected:
+            committed = _REQ_DIR / name
+            fresh = tmp_dir / name
+            if not filecmp.cmp(committed, fresh, shallow=False):
+                drift.append(name)
+        if drift:
+            print(
+                "Requirement lock drift detected (pyproject.toml vs requirements/):\n  "
+                + "\n  ".join(drift)
+                + "\nRegenerate with: python scripts/compile_requirement_locks.py",
+                file=sys.stderr,
+            )
+            return 1
+    print("Requirement locks are in sync with pyproject.toml")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -95,9 +138,16 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="CPython version for full locks (repeatable). Default: 3.11 and 3.12.",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Fail if committed locks are out of sync with pyproject.toml.",
+    )
     args = parser.parse_args(argv)
     versions = tuple(args.python_versions or ("3.11", "3.12"))
-    compile_locks(python_versions=versions)
+    if args.check:
+        return check_locks(python_versions=versions)
+    compile_locks(python_versions=versions, output_dir=_REQ_DIR)
     print(f"Wrote locks under {_REQ_DIR.relative_to(_ROOT)}")
     return 0
 

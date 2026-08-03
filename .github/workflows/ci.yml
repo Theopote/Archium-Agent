@@ -16,12 +16,34 @@ env:
 
 jobs:
   # ---------------------------------------------------------------------------
+  # lock-sync — pyproject ranges must match committed requirements/*.lock
+  # ---------------------------------------------------------------------------
+  lock-sync:
+    name: requirement lock sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        run: pip install uv
+      - name: Check Python requirement locks
+        run: python scripts/compile_requirement_locks.py --check
+      - name: Check pptxgen package-lock present
+        run: test -f archium/infrastructure/renderers/pptxgen/package-lock.json
+      - name: Check canvas editor package-lock present
+        run: test -f archium/ui/components/canvas_editor/frontend/package-lock.json
+
+  # ---------------------------------------------------------------------------
   # compatibility — both supported CPythons; cheap static + unit + thin integration
   # ---------------------------------------------------------------------------
   compatibility:
     name: compatibility (${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    needs: [lock-sync]
 
     strategy:
       fail-fast: false

@@ -113,6 +113,33 @@ Studio 的编辑闭环不是直接覆写导出文件：
 | Agents/Prompts | `archium/agents/`、`archium/prompts/` | 结构化生成与提示词；不是全部业务逻辑所在层 |
 | 配置 | `archium/config/` | **仅** Settings / registry；不打开 DB、不解析 keyring、不 import application/infrastructure |
 
+### 分层自动守卫（CI）
+
+下列规则由 `tests/unit/test_*_layering.py` 静态扫描强制执行，禁止仅靠文档自律：
+
+| 规则 | 守卫 |
+|------|------|
+| Domain 不依赖 Application / Infrastructure / UI / Workflow / Agents | `test_domain_layering` |
+| Domain 不 import sqlalchemy / streamlit / chromadb / openai / langgraph | `test_domain_layering` |
+| Application 不依赖 UI；不直接 import ORM models | `test_application_layering` |
+| Infrastructure 不依赖 Application / UI | `test_infrastructure_layering` |
+| Workflow 不依赖 UI | `test_workflow_layering` |
+| UI 不直接 import ORM models | `test_ui_layering` |
+
+### Domain 对象准入
+
+新增 Domain entity / aggregate **仅当同时满足**：
+
+1. 有稳定 identity（或明确为不可变 Value Object）；
+2. 有独立生命周期或版本追踪需求；
+3. 有可陈述的不变量；
+4. 会被 **≥2** 个用例 / 角色引用；
+5. 不是现有对象的临时视图或单次 DTO；
+6. 不能用 TypedDict / dataclass DTO / Workflow state / Read Model 表达得更清楚；
+7. 需要持久化，或跨进程/跨会话复用。
+
+不满足时优先：Application DTO、Value Object、派生 Read Model、Workflow state。禁止为「看起来专业」而增殖只用一次的 Schema。
+
 ## 视觉与编辑现状
 
 - 固定画布先计算 `SlideCapacityBudget`。状态为 `fits`、`tight`、`overloaded`、`impossible`；超载后禁止继续缩小字体，改走内容适配或拆页。`CAPACITY.*` 警告会写入工作流 warnings；`CAPACITY.IMPOSSIBLE` 会硬阻断 layout candidates。

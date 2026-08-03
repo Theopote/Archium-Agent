@@ -146,3 +146,11 @@ class RateLimitError(ArchiumError):
         super().__init__(message)
         self.retry_after = retry_after
         self.limit_type = limit_type
+
+
+# Audit / product aliases — prefer these names at call sites when clearer.
+UserInputError = ValidationError
+LLMExecutionError = LLMProviderError
+WorkflowStateError = WorkflowError
+ArtifactValidationError = ValidationError
+ExternalToolUnavailableError = ExternalServiceError

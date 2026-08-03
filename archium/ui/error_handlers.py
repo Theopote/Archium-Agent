@@ -5,8 +5,12 @@ from __future__ import annotations
 from archium.exceptions import (
     ArchiumError,
     ConfigurationError,
+    DocumentParseError,
+    ExternalServiceError,
+    LLMProviderError,
     PresentationNotFoundError,
     ProjectNotFoundError,
+    RenderingError,
     SlideRevisionNotFoundError,
     ValidationError,
     WorkflowError,
@@ -22,6 +26,15 @@ def format_user_error(exc: BaseException) -> str:
     """Return a user-facing message for common Archium failures."""
     if isinstance(exc, ConfigurationError):
         return "配置错误，请联系管理员检查系统设置。"
+    if isinstance(exc, DocumentParseError):
+        return f"文档解析失败：{exc}"
+    if isinstance(exc, LLMProviderError):
+        return "模型调用失败，请检查网络或 API 配置后重试。"
+    if isinstance(exc, RenderingError):
+        return f"渲染失败：{exc}"
+    if isinstance(exc, ExternalServiceError):
+        service = f"（{exc.service_name}）" if exc.service_name else ""
+        return f"外部工具不可用{service}：{exc}"
     if isinstance(exc, WorkflowError):
         return str(exc)
     if isinstance(exc, ProjectNotFoundError):

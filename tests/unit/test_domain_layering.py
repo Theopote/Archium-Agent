@@ -9,7 +9,7 @@ _FORBIDDEN_ARCHIUM = re.compile(
     r"^\s*(?:from|import)\s+archium\.(?:application|infrastructure|ui|workflow|agents)\b"
 )
 _FORBIDDEN_LIBS = re.compile(
-    r"^\s*(?:from|import)\s+(?:sqlalchemy|streamlit|chromadb)\b"
+    r"^\s*(?:from|import)\s+(?:sqlalchemy|streamlit|chromadb|openai|langgraph)\b"
 )
 
 
