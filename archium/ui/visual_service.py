@@ -35,7 +35,7 @@ from archium.domain.visual.preferences import VisualPreferences
 from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent
-from archium.application.unit_of_work import UnitOfWork
+from archium.application.unit_of_work import api_bound
 from archium.exceptions import WorkflowError
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.llm.factory import create_llm_provider
@@ -97,7 +97,7 @@ def run_visual_workflow(
     from archium.application.slide_design_brief_service import design_briefs_ready
     from archium.exceptions import WorkflowError
 
-    api = UnitOfWork.bind(session).api
+    api = api_bound(session)
     presentation = api.slides.get_presentation(presentation_id)
     if presentation is not None and presentation.current_outline_id is not None:
         outline = api.slides.get_outline(presentation.current_outline_id)
@@ -178,7 +178,7 @@ def export_presentation_pptx_from_layout_plans(
     chart_export_mode: ChartExportMode | None = None,
 ) -> RenderResult:
     """Export formal editable PPTX from RenderScenes (DOM-003 authority)."""
-    return UnitOfWork.bind(session).api.render.export_editable_pptx_result(
+    return api_bound(session).render.export_editable_pptx_result(
         presentation_id,
         chart_export_mode=chart_export_mode,
         allow_legacy_spec_fallback=False,
@@ -213,7 +213,7 @@ def get_presentation_visual_snapshot(
     deck_qa_report: dict | None = None,
     preview_paths: list[str] | None = None,
 ) -> PresentationVisualSnapshot:
-    loaded = UnitOfWork.bind(session).api.visual.load_presentation_visual(presentation_id)
+    loaded = api_bound(session).visual.load_presentation_visual(presentation_id)
     design_system = loaded.design_system
     art_direction = loaded.art_direction
 
@@ -298,7 +298,7 @@ def select_layout_candidate(
     from archium.application.visual.visual_history_service import VisualHistoryService
     from archium.domain.enums import RevisionSource
 
-    api = UnitOfWork.bind(session).api
+    api = api_bound(session)
     visual = api.visual
     slides = api.slides
     slide = slides.get(slide_id)
@@ -363,7 +363,7 @@ def apply_template_to_slide(
         candidate_count=candidate_count,
         select_best=True,
     )
-    api = UnitOfWork.bind(session).api
+    api = api_bound(session)
     slide = api.slides.get(slide_id)
     if slide is None:
         raise WorkflowError(f"页面不存在：{slide_id}")
@@ -410,7 +410,7 @@ def replan_slide(
 ) -> SlideVisualSnapshot:
     """Re-plan a single slide; optional preset tweaks VisualIntent before planning."""
     resolved = _resolve_runtime_settings(settings)
-    api = UnitOfWork.bind(session).api
+    api = api_bound(session)
     visual = api.visual
     slides = api.slides
 

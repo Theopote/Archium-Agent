@@ -1,4 +1,4 @@
-"""API session context — holds SQLAlchemy Session; caller owns commit (APP-003)."""
+"""API context — Application resource facades bound to one UnitOfWork."""
 
 from __future__ import annotations
 
@@ -7,6 +7,8 @@ from functools import cached_property
 from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session
+
+from archium.application.unit_of_work import UnitOfWork
 
 if TYPE_CHECKING:
     from archium.application.api.context import ContextApi
@@ -26,14 +28,35 @@ if TYPE_CHECKING:
 
 @dataclass
 class ApiContext:
-    """Bundle of resource APIs for one unit-of-work session.
+    """Bundle of resource APIs for one Unit of Work.
 
-    Prefer constructing via :func:`archium.application.unit_of_work.unit_of_work`
-    or :func:`archium.application.unit_of_work.application_api` so UI does not
-    handle Session lifecycle. ``session`` remains for services/tests.
+    Construct via ``application_api()``, ``UnitOfWork.bind(session).api``, or
+    ``api_from_session(session)``. Product code should use resource properties
+    (``project``, ``jobs``, …); ``session`` is an escape hatch for legacy
+    services that still require SQLAlchemy Session.
     """
 
-    session: Session
+    _uow: UnitOfWork
+
+    @classmethod
+    def from_uow(cls, uow: UnitOfWork) -> ApiContext:
+        return cls(_uow=uow)
+
+    @classmethod
+    def from_session(cls, session: Session) -> ApiContext:
+        return UnitOfWork.bind(session).api
+
+    @property
+    def uow(self) -> UnitOfWork:
+        return self._uow
+
+    @property
+    def session(self) -> Session:
+        """Escape hatch — prefer resource APIs; do not commit (APP-003)."""
+        return self._uow.session
+
+    def flush(self) -> None:
+        self._uow.flush()
 
     @cached_property
     def jobs(self) -> JobsApi:
@@ -115,12 +138,5 @@ class ApiContext:
 
 
 def api_from_session(session: Session) -> ApiContext:
-    """Compatibility: build API on an existing Session.
-
-    Prefer :func:`archium.application.unit_of_work.application_api` or
-    :class:`~archium.application.unit_of_work.Application` in new UI code.
-    Equivalent to ``UnitOfWork.bind(session).api``.
-    """
-    from archium.application.unit_of_work import UnitOfWork
-
+    """Compatibility alias for ``UnitOfWork.bind(session).api``."""
     return UnitOfWork.bind(session).api

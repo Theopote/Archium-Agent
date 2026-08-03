@@ -13,7 +13,7 @@ from archium.application.asset_vision_rag_service import (
     AssetVisionBackfillResult,
     AssetVisionBackfillService,
 )
-from archium.application.unit_of_work import UnitOfWork
+from archium.application.unit_of_work import api_bound
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.chunk_service import ChunkService
 from archium.application.ingestion_service import ImportItemResult
@@ -119,7 +119,7 @@ def resolve_generation_form_defaults(session: Session, project_id: UUID) -> Gene
     )
     project = None
     try:
-        project = UnitOfWork.bind(session).api.project.get(project_id)
+        project = api_bound(session).project.get(project_id)
     except ProjectNotFoundError:
         return base
 
@@ -156,7 +156,7 @@ def resolve_generation_form_defaults(session: Session, project_id: UUID) -> Gene
     deck_rows = list_project_presentations(session, project_id)
     if deck_rows:
         deck = max(deck_rows, key=lambda item: item.updated_at)
-        briefs = UnitOfWork.bind(session).api.slides.list_briefs(deck.id)
+        briefs = api_bound(session).slides.list_briefs(deck.id)
         if briefs:
             brief = briefs[-1]
             if (brief.title or "").strip():
@@ -235,7 +235,7 @@ def create_project(
     origin_mode: ProjectOriginMode = ProjectOriginMode.EXISTING_PROJECT,
     actor_id: str | None = None,
 ) -> Project:
-    return UnitOfWork.bind(session).api.project.create(
+    return api_bound(session).project.create(
         name.strip(),
         description.strip() or None,
         origin_mode=origin_mode,
@@ -245,7 +245,7 @@ def create_project(
 
 
 def get_project_overview(session: Session, project_id: UUID) -> ProjectOverview | None:
-    api = UnitOfWork.bind(session).api
+    api = api_bound(session)
     try:
         project = api.project.get(project_id)
     except ProjectNotFoundError:
@@ -273,7 +273,7 @@ def _parse_required_sections(required_sections_text: str) -> list[str]:
 
 
 def list_project_documents(session: Session, project_id: UUID) -> list[SourceDocument]:
-    return UnitOfWork.bind(session).api.documents.list(project_id)
+    return api_bound(session).documents.list(project_id)
 
 
 def list_document_chunks(session: Session, document_id: UUID) -> list[DocumentChunk]:
@@ -295,7 +295,7 @@ def update_document_chunk(
 
 
 def list_project_presentations(session: Session, project_id: UUID) -> list[Presentation]:
-    return UnitOfWork.bind(session).api.project.list_presentations(project_id)
+    return api_bound(session).project.list_presentations(project_id)
 
 
 @dataclass(frozen=True)
@@ -652,7 +652,7 @@ def export_presentation_pptx_legacy(
 ) -> RenderResult:
     """Export editable PPTX via DeliveryApi (Scene preferred; Spec fallback)."""
     resolved_settings = _resolve_runtime_settings(settings)
-    return UnitOfWork.bind(session).api.delivery.reexport(
+    return api_bound(session).delivery.reexport(
         presentation_id,
         export_json=False,
         export_marp=False,

@@ -72,7 +72,7 @@ class UnitOfWork:
     def api(self) -> ApiContext:
         from archium.application.api.session import ApiContext
 
-        return ApiContext(session=self._session)
+        return ApiContext.from_uow(self)
 
     @property
     def session(self) -> Session:
@@ -146,3 +146,14 @@ class Application:
 def get_application(uow_factory: UnitOfWorkFactory | None = None) -> Application:
     """Construct an Application gateway (tests may inject a fake factory)."""
     return Application(uow_factory=uow_factory)
+
+
+def api_bound(session_or_uow: Session | UnitOfWork) -> ApiContext:
+    """Resolve Application API from a Session or an existing UnitOfWork.
+
+    UI facades that still accept ``Session`` should call this once per
+    function instead of repeating ``UnitOfWork.bind(session).api``.
+    """
+    if isinstance(session_or_uow, UnitOfWork):
+        return session_or_uow.api
+    return UnitOfWork.bind(session_or_uow).api

@@ -9,15 +9,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from archium.application.api.session import api_from_session
+from archium.application.api.session import ApiContext, api_from_session
 from archium.application.unit_of_work import (
     Application,
     UnitOfWork,
+    api_bound,
     application_api,
     get_application,
     unit_of_work,
 )
-from archium.domain.project import Project
 from archium.infrastructure.database.base import Base
 from archium.infrastructure.database.repositories import ProjectRepository
 
@@ -65,6 +65,26 @@ def test_unit_of_work_bind_shares_api_cache(db_session: Session) -> None:
     assert api_from_session(db_session) is not uow.api  # new bind → new ApiContext
 
 
+def test_api_context_holds_unit_of_work(db_session: Session) -> None:
+    uow = UnitOfWork.bind(db_session)
+    api = uow.api
+    assert isinstance(api, ApiContext)
+    assert api.uow is uow
+    assert api.session is db_session
+    api.project.create("持有UoW", "")
+    api.flush()
+    listed = {p.name for p in api.project.list()}
+    assert "持有UoW" in listed
+
+
+def test_api_bound_accepts_session_or_uow(db_session: Session) -> None:
+    uow = UnitOfWork.bind(db_session)
+    assert api_bound(uow) is uow.api
+    from_session = api_bound(db_session)
+    assert from_session.session is db_session
+    assert from_session.uow.session is db_session
+
+
 def test_api_from_session_delegates_to_uow(db_session: Session) -> None:
     api = api_from_session(db_session)
     project = api.project.create("UoW项目", "d")
@@ -75,6 +95,7 @@ def test_application_api_hides_session(db_session: Session) -> None:
     with application_api() as api:
         created = api.project.create("网关项目", "")
         assert created.name == "网关项目"
+        assert isinstance(api.uow, UnitOfWork)
 
 
 def test_application_gateway_injectable_factory(db_session: Session) -> None:
@@ -95,8 +116,6 @@ def test_unit_of_work_context_commits_via_get_session(db_session: Session) -> No
     with unit_of_work() as uow:
         project = uow.api.project.create("事务项目", "")
         project_id = project.id
-    # New session via repository on fixture session may not see committed data
-    # if fixture session is separate — re-open via Application.
     app = Application()
     with app.api() as api:
         names = [item.name for item in api.project.list()]

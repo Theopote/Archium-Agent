@@ -49,7 +49,7 @@ from archium.domain.workflow import WorkflowRun
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
 from archium.application.api.mission import MissionApi
-from archium.application.unit_of_work import UnitOfWork
+from archium.application.unit_of_work import api_bound
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
 from archium.ui.workspace_service import _resolve_runtime_settings
@@ -331,7 +331,7 @@ def _build_mission_planning_snapshot(
         clarifying_questions=clarifying_questions,
         workstreams=workstreams,
         deliverable_plan=plan,
-        project_facts=UnitOfWork.bind(session).api.context.list_facts(mission.project_id),
+        project_facts=api_bound(session).context.list_facts(mission.project_id),
         presentation_request=run_state.presentation_request,
         artifact_execution_plans=artifact_execution_plans,
         readiness=MissionClarificationService.build_readiness(
@@ -354,7 +354,7 @@ def get_planning_snapshot(
     settings: Settings | None = None,
 ) -> PlanningSnapshot:
     """Load the best available planning snapshot for the UI."""
-    api = UnitOfWork.bind(session).api
+    api = api_bound(session)
 
     planning_session = _resolve_planning_session(
         api,
@@ -733,7 +733,7 @@ def preview_presentation_request_from_mission(session: Session, mission_id: UUID
     )
     from archium.application.mission_to_presentation_request import build_presentation_request
 
-    mission = UnitOfWork.bind(session).api.mission.get(mission_id)
+    mission = api_bound(session).mission.get(mission_id)
     if mission is None:
         raise WorkflowError(f"Mission {mission_id} not found")
     return build_presentation_request(
@@ -1065,7 +1065,7 @@ def start_presentation_from_planning(
     if run is None:
         raise WorkflowError(f"Workflow run {workflow_run_id} not found")
 
-    missions = UnitOfWork.bind(session).api.mission
+    missions = api_bound(session).mission
     mission_id = None
     raw = run.state.get("mission_id")
     if raw:
@@ -1124,7 +1124,7 @@ def start_presentation_from_planning(
 
         run.status = WorkflowStatus.COMPLETED
         run.touch()
-        UnitOfWork.bind(session).api.planning.update_run(run)
+        api_bound(session).planning.update_run(run)
     bridge = planning.get_presentation_bridge(workflow_run_id)
     presentation_service = _create_presentation_service(session, runtime)
     result = presentation_service.run(
