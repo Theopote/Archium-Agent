@@ -34,6 +34,9 @@ class SlidesApi:
     def list_briefs(self, presentation_id: UUID) -> list[PresentationBrief]:
         return self._presentations.list_briefs(presentation_id)
 
+    def get_brief(self, brief_id: UUID) -> PresentationBrief | None:
+        return self._presentations.get_brief(brief_id)
+
     def list_outlines(self, presentation_id: UUID) -> list[OutlinePlan]:
         return self._presentations.list_outlines(presentation_id)
 

@@ -130,20 +130,20 @@ def render_presentation_critique_card(
 
 
 def _compute_presentation_critique(presentation_id: UUID) -> dict[str, Any] | None:
+    from archium.application.api.session import api_from_session
     from archium.application.presentation_critic import critique_presentation
-    from archium.infrastructure.database.repositories import PresentationRepository
 
     with get_session() as session:
-        repo = PresentationRepository(session)
-        presentation = repo.get_presentation(presentation_id)
+        api = api_from_session(session)
+        presentation = api.slides.get_presentation(presentation_id)
         if presentation is None:
             return None
         brief = None
         if presentation.current_brief_id:
-            brief = repo.get_brief(presentation.current_brief_id)
+            brief = api.slides.get_brief(presentation.current_brief_id)
         storyline = None
         if presentation.current_storyline_id:
-            storyline = repo.get_storyline(presentation.current_storyline_id)
-        slides = repo.list_slides(presentation_id)
+            storyline = api.storyline.get(presentation.current_storyline_id)
+        slides = api.slides.list_for_presentation(presentation_id)
         report = critique_presentation(brief=brief, storyline=storyline, slides=slides)
         return report.as_dict()

@@ -184,9 +184,9 @@ def _row_key(row: AssetBoardRow) -> str:
 
 def _load_slide(slide_id: UUID) -> SlideSpec:
     with get_session() as session:
-        from archium.infrastructure.database.repositories import PresentationRepository
+        from archium.application.api.session import api_from_session
 
-        slide = PresentationRepository(session).get_slide(slide_id)
+        slide = api_from_session(session).slides.get(slide_id)
         if slide is None:
             raise WorkflowError(f"Slide {slide_id} not found")
         return slide

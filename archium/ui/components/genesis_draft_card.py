@@ -8,17 +8,16 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.api.session import api_from_session
 from archium.application.genesis_starter_service import GenesisStarterResult
-from archium.infrastructure.database.repositories import PresentationRepository
 from archium.infrastructure.database.session import get_session
-from archium.infrastructure.database.visual_repositories import LayoutPlanRepository
 from archium.ui.app_navigation import get_app_page
 from archium.ui.label_map import slide_role_label
 
 
 def _load_cover_preview(presentation_id: UUID) -> tuple[str, str] | None:
     with get_session() as session:
-        slides = PresentationRepository(session).list_slides(presentation_id)
+        slides = api_from_session(session).slides.list_for_presentation(presentation_id)
     if not slides:
         return None
     slide = sorted(slides, key=lambda item: item.order)[0]
@@ -27,8 +26,7 @@ def _load_cover_preview(presentation_id: UUID) -> tuple[str, str] | None:
 
 def _load_outline_sections(presentation_id: UUID) -> list[tuple[str, str]]:
     with get_session() as session:
-        repo = PresentationRepository(session)
-        outlines = repo.list_outlines(presentation_id)
+        outlines = api_from_session(session).slides.list_outlines(presentation_id)
         if not outlines:
             return []
         outline = outlines[0]
@@ -57,16 +55,16 @@ def _load_slide_wireframe_rows(
     preview_service = SlidePreviewService(get_settings())
     rows: list[tuple[int, str, str, str | None]] = []
     with get_session() as session:
+        api = api_from_session(session)
         slides = sorted(
-            PresentationRepository(session).list_slides(presentation_id),
+            api.slides.list_for_presentation(presentation_id),
             key=lambda item: item.order,
         )
-        plans = LayoutPlanRepository(session)
         for slide in slides:
             role = slide_role_label(getattr(slide, "slide_role", None))
             path: str | None = None
             if slide.layout_plan_id is not None:
-                plan = plans.get(slide.layout_plan_id)
+                plan = api.visual.get_layout_plan(slide.layout_plan_id)
                 if plan is not None:
                     wireframe = preview_service._ensure_wireframe_preview(
                         presentation_id, plan

@@ -53,7 +53,7 @@ class ProjectApi:
             from archium.infrastructure.database.repositories import ProjectRepository
 
             project = ProjectRepository(self._session).update(project)
-            self._session.commit()
+            self._session.flush()
         return project
 
     def update(
@@ -81,6 +81,11 @@ class ProjectApi:
         from archium.infrastructure.database.repositories import AssetRepository
 
         return AssetRepository(self._session).get_by_id(asset_id)
+
+    def list_assets(self, project_id: UUID):
+        from archium.infrastructure.database.repositories import AssetRepository
+
+        return AssetRepository(self._session).list_by_project(project_id)
 
     def list_cultural_narratives(self, project_id: UUID):
         from archium.infrastructure.database.repositories import ProjectRepository

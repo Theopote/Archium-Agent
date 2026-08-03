@@ -9,7 +9,8 @@ _ORM_IMPORT = re.compile(
     r"^\s*(?:from|import)\s+archium\.infrastructure\.database\.models\b"
 )
 _REPO_IMPORT = re.compile(
-    r"^\s*(?:from|import)\s+archium\.infrastructure\.database\.repositories\b"
+    r"^\s*(?:from|import)\s+archium\.infrastructure\.database\."
+    r"(?:repositories|mission_repositories|visual_repositories)\b"
 )
 
 
@@ -40,3 +41,18 @@ def test_ui_pages_do_not_import_repositories() -> None:
                 f"{path.relative_to(package_root)}:{line_no}: {match.group(0).strip()}"
             )
     assert hits == [], "ui pages must not import repositories:\n" + "\n".join(hits)
+
+
+def test_ui_does_not_import_repositories() -> None:
+    """APP-029: entire UI package goes through Application API facades."""
+    root = Path(__file__).resolve().parents[2] / "archium" / "ui"
+    package_root = root.parent.parent
+    hits: list[str] = []
+    for path in root.rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        for match in _REPO_IMPORT.finditer(text):
+            line_no = text.count("\n", 0, match.start()) + 1
+            hits.append(
+                f"{path.relative_to(package_root)}:{line_no}: {match.group(0).strip()}"
+            )
+    assert hits == [], "ui must not import repositories:\n" + "\n".join(hits)

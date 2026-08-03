@@ -197,9 +197,9 @@ def _render_delivery_actions(
     )
 
     with get_session() as session:
-        from archium.infrastructure.database.repositories import PresentationRepository
+        from archium.application.api.session import api_from_session
 
-        deck_options = PresentationRepository(session).list_by_project(project_id)
+        deck_options = api_from_session(session).project.list_presentations(project_id)
 
     deck_labels = {str(item.id): item.title for item in deck_options}
     deck_ids = list(deck_labels.keys())

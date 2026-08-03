@@ -30,6 +30,9 @@ class PlanningApi:
     def list_planning_runs(self, project_id: UUID) -> list[WorkflowRun]:
         return self._runs.list_planning_by_project(project_id)
 
+    def list_runs(self, project_id: UUID) -> list[WorkflowRun]:
+        return self._runs.list_by_project(project_id)
+
     def get_session(self, planning_session_id: UUID) -> PlanningSession | None:
         return self._sessions.get_by_id(planning_session_id)
 

@@ -220,6 +220,27 @@ def test_mission_api_get(db_session: Session) -> None:
     assert api.context.list_facts(project.id) == []
 
 
+def test_project_api_create_with_type_does_not_extra_commit(
+    db_session: Session, monkeypatch
+) -> None:
+    """Type patch must flush only; create_project's allowlisted commit is unchanged."""
+    from archium.domain.enums import ProjectType
+
+    commits: list[int] = []
+    original_commit = db_session.commit
+
+    def _track_commit() -> None:
+        commits.append(1)
+        original_commit()
+
+    monkeypatch.setattr(db_session, "commit", _track_commit)
+    api = api_from_session(db_session)
+    created = api.project.create("类型项目", "d", project_type=ProjectType.CULTURE)
+    assert created.project_type == ProjectType.CULTURE
+    # ProjectManagementService.create_project (allowlisted) commits once; API must not add another.
+    assert commits == [1]
+
+
 def test_planning_api_resolve_run_and_session(db_session: Session) -> None:
     from archium.domain.enums import WorkflowStatus
     from archium.domain.planning_session import PlanningSession

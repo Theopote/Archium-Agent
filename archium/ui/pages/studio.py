@@ -71,8 +71,8 @@ def _render_art_direction_gate_if_paused() -> None:
 
 def _render_studio_art_direction(*, project_id: UUID, presentation_id: UUID) -> None:
     """Editable 汇报气质 on the Style tab (not only when the gate pauses)."""
+    from archium.application.api.session import api_from_session
     from archium.infrastructure.database.session import get_session
-    from archium.infrastructure.database.visual_repositories import ArtDirectionRepository
     from archium.ui.art_direction_panel import render_art_direction_panel
 
     result = st.session_state.get("last_visual_workflow_result")
@@ -87,13 +87,10 @@ def _render_studio_art_direction(*, project_id: UUID, presentation_id: UUID) -> 
 
     if art is None:
         with get_session() as session:
-            for candidate in ArtDirectionRepository(session).list_by_project(project_id):
-                if candidate.presentation_id == presentation_id:
-                    art = candidate
-                    break
-            if art is None:
-                arts = ArtDirectionRepository(session).list_by_project(project_id)
-                art = arts[0] if arts else None
+            art = api_from_session(session).visual.resolve_art_direction_for_presentation(
+                project_id=project_id,
+                presentation_id=presentation_id,
+            )
 
     if art is None:
         st.caption("尚无汇报气质。生成页时完成视觉编排后会出现在这里。")

@@ -16,7 +16,7 @@ from archium.application.workflow_progress import (
 )
 from archium.domain.enums import WorkflowStatus
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.repositories import WorkflowRunRepository
+from archium.application.api.session import api_from_session
 from archium.infrastructure.database.session import get_session
 from archium.ui.background_workflow_runner import (
     BackgroundJobStatus,
@@ -195,7 +195,7 @@ def _apply_job_completion(
 
 def _render_progress_body(workflow_run_id: UUID) -> None:
     with get_session() as session:
-        run = WorkflowRunRepository(session).get_by_id(workflow_run_id)
+        run = api_from_session(session).planning.get_run(workflow_run_id)
     if run is None:
         st.info("正在启动任务…")
         return
@@ -345,7 +345,7 @@ def _poll_once(
 
     if job is None and run_id is not None:
         with get_session() as session:
-            run = WorkflowRunRepository(session).get_by_id(run_id)
+            run = api_from_session(session).planning.get_run(run_id)
         if run is not None and run.status in {
             WorkflowStatus.COMPLETED,
             WorkflowStatus.FAILED,
@@ -428,7 +428,7 @@ def render_workflow_progress_panel(
             return job.status not in _terminal_statuses()
         if resolved_run_id is not None:
             with get_session() as session:
-                run = WorkflowRunRepository(session).get_by_id(resolved_run_id)
+                run = api_from_session(session).planning.get_run(resolved_run_id)
             return run is not None and run.status == WorkflowStatus.RUNNING
         return False
 

@@ -192,13 +192,12 @@ def _render_compare_view(
 
 
 def _restore_scene_revision(*, slide_id: UUID, revision_id: UUID) -> None:
-    from archium.infrastructure.database.repositories import PresentationRepository
+    from archium.application.api.session import api_from_session
 
     try:
         settings = get_settings()
         with st.spinner("正在恢复 Scene 版本…"), get_session() as session:
-            presentations = PresentationRepository(session)
-            slide = presentations.get_slide(slide_id)
+            slide = api_from_session(session).slides.get(slide_id)
             if slide is None:
                 raise WorkflowError("页面不存在。")
             result = SceneRevisionTimelineService(session, settings=settings).restore_revision(
