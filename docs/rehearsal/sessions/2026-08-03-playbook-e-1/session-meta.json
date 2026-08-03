@@ -1,0 +1,72 @@
+{
+  "session_id": "2026-08-03-playbook-e-1",
+  "date": "2026-08-03",
+  "playbook": "E",
+  "status": "ready_for_operator",
+  "facilitator": "",
+  "operator": "",
+  "operator_is_non_developer": true,
+  "llm_configured": null,
+  "pptx_export_ready": true,
+  "project_id": "7ad9c03b-bf46-43ff-a30b-7917099f8434",
+  "project_name": "Playbook E · Architectural Benchmark",
+  "deck_page_count": 20,
+  "worst_slide_id": "",
+  "worst_slide_reason": "",
+  "total_session_seconds": null,
+  "automated_gate": {
+    "command": "python scripts/run_playbook_e_gate.py -q",
+    "passed": true,
+    "run_date": "2026-08-03",
+    "commit": "d4b65c68",
+    "result": "31 passed"
+  },
+  "engineer_dry_run": {
+    "passed": true,
+    "script": "evidence/run_e_dry_run.py",
+    "checks": {
+      "set_text": true,
+      "scene_contains_marker": true,
+      "pptx_contains_marker": true,
+      "undo_steps_before": 1,
+      "restored_original_text": true
+    },
+    "note": "Service-layer only; does not close UI-006. Seed now writes baseline SceneRevision so first edit is undoable."
+  },
+  "steps": {
+    "E0": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    },
+    "E1": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    },
+    "E2": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    },
+    "E3": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    },
+    "E4": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    },
+    "E5": {
+      "pass": null,
+      "waived": false,
+      "waive_reason": ""
+    }
+  },
+  "overall_pass": false,
+  "blockers": [],
+  "presentation_id": "fd7cde92-3f53-4902-a001-06c67f61a8c2",
+  "notes": "Seeded from architectural_slides case_001–case_020 with baseline SceneRevision. Prep: FontSize snap; nav 资料→大纲→生成→工作室→交付; engineer dry-run set_text→PPTX→undo passed."
+}

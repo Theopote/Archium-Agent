@@ -101,8 +101,9 @@ def _plan_from_scene(scene, *, slide_id: UUID, design_system_id: UUID) -> object
 def seed_deck(*, count: int, project_name: str) -> dict[str, object]:
     import archium.infrastructure.database.models  # noqa: F401
     from archium.application.artifact_policy_service import save_render_scene
+    from archium.application.visual.scene_history_service import SceneHistoryService
     from archium.config.settings import get_settings
-    from archium.domain.enums import ApprovalStatus, SlideType
+    from archium.domain.enums import ApprovalStatus, RevisionSource, SlideType
     from archium.domain.presentation import Presentation, PresentationBrief, Storyline
     from archium.domain.project import Project
     from archium.domain.slide import SlideSpec
@@ -243,7 +244,18 @@ def seed_deck(*, count: int, project_name: str) -> dict[str, object]:
                     "id": uuid4(),
                 }
             )
-            save_render_scene(RenderSceneRepository(session), scene)
+            saved_scene = save_render_scene(RenderSceneRepository(session), scene)
+            # Baseline revision so the first Studio edit has a parent and Undo works.
+            SceneHistoryService(session).record_scene(
+                slide=slide,
+                scene=saved_scene,
+                change_source=RevisionSource.IMPORT,
+                scene_revision_source="import_recovery",
+                parent_revision_id=None,
+                note="playbook-e benchmark seed baseline",
+                summary="benchmark import baseline",
+                qa_status="imported",
+            )
             imported.append(
                 {
                     "case_id": case_id,

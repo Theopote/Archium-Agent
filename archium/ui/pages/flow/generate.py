@@ -1,4 +1,4 @@
-"""Product-flow stage: 汇报 — page queue + recovery CTAs."""
+"""Product-flow stage: 生成 — page queue + recovery CTAs."""
 
 from __future__ import annotations
 

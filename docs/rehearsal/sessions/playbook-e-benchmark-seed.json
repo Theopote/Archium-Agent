@@ -1,126 +1,126 @@
 {
-  "project_id": "28a03e0d-37b1-4ab0-844d-aea7cc63c315",
+  "project_id": "7ad9c03b-bf46-43ff-a30b-7917099f8434",
   "project_name": "Playbook E · Architectural Benchmark",
-  "presentation_id": "9e84eb16-98c1-4d76-9e15-2f79bb58141c",
+  "presentation_id": "fd7cde92-3f53-4902-a001-06c67f61a8c2",
   "deck_page_count": 20,
   "slides": [
     {
       "case_id": "case_001_site_plan",
-      "slide_id": "399ffebc-3649-4538-8e85-4e27f12e17d4",
+      "slide_id": "8564465a-74c9-44de-95c7-a9b6afc6cec9",
       "title": "院区总平面与改造范围",
       "order": "0"
     },
     {
       "case_id": "case_002_site_photos",
-      "slide_id": "1a6f3ae6-277c-48ce-b82e-23dc39f511ff",
-      "title": "老院区交通与环境问题",
+      "slide_id": "4e3a6dd6-2ef2-423e-b7a4-5520eb254f2f",
+      "title": "交通与环境问题",
       "order": "1"
     },
     {
       "case_id": "case_003_case_comparison",
-      "slide_id": "58bbcfef-662d-4677-8fdd-b3458b5e749a",
+      "slide_id": "2781f3cf-8269-4a07-b345-85372d80ae09",
       "title": "三座医疗更新案例横向比较",
       "order": "2"
     },
     {
       "case_id": "case_004_economic_metrics",
-      "slide_id": "dde3c874-10b1-4bb6-a592-30019d7baf20",
+      "slide_id": "c0b4c5bc-0697-4013-a3cf-495bac8a1db2",
       "title": "经济技术指标",
       "order": "3"
     },
     {
       "case_id": "case_005_design_concept",
-      "slide_id": "fe98f792-1b80-471e-9066-b72a1f222223",
+      "slide_id": "a3bfad8c-8478-44ce-9db3-28187e8a1c06",
       "title": "设计理念：以患者路径组织空间",
       "order": "4"
     },
     {
       "case_id": "case_006_project_hero",
-      "slide_id": "155cfe2a-e9ce-449e-a3db-e19980e23725",
+      "slide_id": "2ee749d4-2f90-49e3-bb2b-593d1c9341d1",
       "title": "城市更新医疗综合体方案",
       "order": "5"
     },
     {
       "case_id": "case_007_aerial_hero",
-      "slide_id": "ece08c85-00b7-4886-b215-f89bc9becf02",
+      "slide_id": "54485253-4091-4592-acb1-d8a8d7a18212",
       "title": "院区与周边城市关系",
       "order": "6"
     },
     {
       "case_id": "case_008_overlay_hero",
-      "slide_id": "d2d81153-76f1-4666-aa25-96af2f7ca64b",
+      "slide_id": "e774eaea-59e2-47ce-af9e-99b40dd75d89",
       "title": "以路径组织空间",
       "order": "7"
     },
     {
       "case_id": "case_009_patient_journey",
-      "slide_id": "3933af8d-2a11-480b-8986-fdbe62b4cc57",
+      "slide_id": "53ceed19-a0bb-4cd3-96d5-c27fe479c606",
       "title": "患者旅程：到达至离院",
       "order": "8"
     },
     {
       "case_id": "case_010_construction_phases",
-      "slide_id": "e5dd11df-c798-492e-afbf-b3c886546cb5",
+      "slide_id": "5cbc93f1-71ab-49a2-a2c1-ec4d230015a7",
       "title": "分期实施与运维过渡",
       "order": "9"
     },
     {
       "case_id": "case_011_design_process",
-      "slide_id": "5b8cfa0f-076c-4738-8ed1-2b7a9afa9396",
+      "slide_id": "2a179705-aba3-4e57-8164-0699c35a8066",
       "title": "从诊断到方案的设计推演",
       "order": "10"
     },
     {
       "case_id": "case_012_circulation_diagram",
-      "slide_id": "2efa17a0-dc6a-47a7-8b20-ad7e1a996d27",
+      "slide_id": "029b5858-ad97-4b6d-909a-9513bbfe9829",
       "title": "院区主要流线分析",
       "order": "11"
     },
     {
       "case_id": "case_013_zoning_callouts",
-      "slide_id": "71fa0d6f-7201-4d79-adbe-034edc51cbcd",
+      "slide_id": "f7eeb9da-736e-46cc-b03f-5c8ddef28a5c",
       "title": "功能分区与公共界面",
       "order": "12"
     },
     {
       "case_id": "case_014_structure_concept",
-      "slide_id": "c38db639-bb2c-42ef-ad31-fa1a2a127017",
+      "slide_id": "a2784e45-7384-4149-8fd9-cf08936813e2",
       "title": "门诊区结构概念",
       "order": "13"
     },
     {
       "case_id": "case_015_design_principles",
-      "slide_id": "10fb4484-fd65-4556-8cd5-dcd5fc4a8445",
+      "slide_id": "ac48a029-4b3d-4b8e-958b-d4de9a409889",
       "title": "设计原则",
       "order": "14"
     },
     {
       "case_id": "case_016_sustainability_cards",
-      "slide_id": "fc6ee1ba-3887-476e-aba2-4c2b9aed02a2",
+      "slide_id": "5779ff7d-0096-4661-9dce-69e408b32555",
       "title": "可持续设计策略",
       "order": "15"
     },
     {
       "case_id": "case_017_spatial_strategy_lead",
-      "slide_id": "68051502-73fa-4264-9ab4-aa95523f0399",
+      "slide_id": "57ed0b67-6906-451d-b8f5-8cf2d15b4339",
       "title": "空间策略：由内院组织体量",
       "order": "16"
     },
     {
       "case_id": "case_018_drawing_metrics_hybrid",
-      "slide_id": "cd1d4b16-5141-4c67-a71a-9a9ca5ddb4b7",
+      "slide_id": "ffa1b82e-457d-4b47-a511-5efde940d970",
       "title": "总平面与核心指标",
       "order": "17"
     },
     {
       "case_id": "case_019_photo_text_hybrid",
-      "slide_id": "e50db2b6-7a55-4412-89a6-5f6bf5663d6b",
+      "slide_id": "caf5fd83-0736-4bb0-84e8-8566e894e2db",
       "title": "现场问题与设计回应",
       "order": "18"
     },
     {
       "case_id": "case_020_synthesis_canvas",
-      "slide_id": "423ed3fc-f3df-473f-a7a1-b70666b71daf",
+      "slide_id": "c6b32581-2465-4b17-9c26-b4692faf8aad",
       "title": "方案综合解读",
       "order": "19"
     }

@@ -1,4 +1,4 @@
-"""Product-flow stage: 汇报 (page key ``edit``).
+"""Product-flow stage: 工作室 (page key ``edit``).
 
 This is the formal five-stage entry. It embeds ``pages.studio`` as the
 workbench shell; do not navigate users to the legacy ``studio`` page key.
