@@ -74,12 +74,12 @@ from archium.ui.workflow_resume_ux import (
     render_resume_failure,
 )
 from archium.ui.workspace_service import (
-from archium.application.unit_of_work import UnitOfWork
     regenerate_brief,
     regenerate_outline_plan,
     regenerate_slide_plan,
     regenerate_storyline,
 )
+from archium.application.unit_of_work import application_api
 
 FOCUS_SLIDE_SESSION_KEY = "review_focus_slide_id"
 
@@ -956,9 +956,8 @@ def _render_slide_evidence_items_section(
     st.markdown("**语义证据（EvidenceItem）**")
     st.caption("为证据板页面编辑 claim / role / 素材绑定；保存后同步 key_points 与视觉需求。")
 
-    
-    with get_session() as session:
-        assets = UnitOfWork.bind(session).api.project.list_assets(project_id)
+    with application_api() as api:
+        assets = api.project.list_assets(project_id)
     asset_options = {str(asset.id): asset.filename for asset in assets}
 
     for slide in editable:
@@ -1430,13 +1429,13 @@ def _slide_asset_binding_updates_from_outline(outline: object) -> list[SlideAsse
 
 
 def _render_page_asset_binding_editor(*, outline: OutlinePlan, project_id: UUID) -> None:
-        from archium.application.asset_provenance import format_asset_option_label
+    from archium.application.asset_provenance import format_asset_option_label
 
     st.markdown("**页面素材绑定（page_materials）**")
     st.caption("把项目素材显式绑到某一页；生成与匹配时优先尊重这些绑定，而不是让 AI 猜测。")
 
-    with get_session() as session:
-        assets = UnitOfWork.bind(session).api.project.list_assets(project_id)
+    with application_api() as api:
+        assets = api.project.list_assets(project_id)
     assets_by_id = {asset.id: asset for asset in assets}
 
     bindings = list(getattr(outline, "page_asset_bindings", []) or [])

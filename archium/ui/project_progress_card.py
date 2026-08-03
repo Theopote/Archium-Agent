@@ -11,9 +11,8 @@ from sqlalchemy.orm import Session
 
 from archium.domain.enums import EvidenceAvailability, ProjectOriginMode
 from archium.domain.project import Project
-from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
-from archium.application.unit_of_work import UnitOfWork
+from archium.application.unit_of_work import api_bound, application_api
 
 _PRESENTATION_TYPE_LABELS = {
     "concept": "概念汇报",
@@ -266,7 +265,7 @@ def _snapshot_for_project(
         resolve_project_evidence,
     )
     from archium.application.project_context_routing import skips_default_clarification
-        from archium.domain.enums import ApprovalStatus
+    from archium.domain.enums import ApprovalStatus
     from archium.ui.visual_service import presentation_has_visual_layout
 
     try:
@@ -279,7 +278,7 @@ def _snapshot_for_project(
             document_count=0,
         )
 
-    api = UnitOfWork.bind(session).api
+    api = api_bound(session)
     presentations = api.project.list_presentations(project.id)
 
     from archium.application.presentation_selection import select_presentation
@@ -399,8 +398,7 @@ def load_project_progress_snapshot() -> ProjectProgressSnapshot | None:
     raw_project = st.session_state.get("selected_project_id")
     raw_presentation = st.session_state.get("selected_presentation_id")
 
-    with get_session() as session:
-        api = UnitOfWork.bind(session).api
+    with application_api() as api:
         projects = api.project.list()
         if not projects:
             return None
@@ -422,7 +420,7 @@ def load_project_progress_snapshot() -> ProjectProgressSnapshot | None:
                 preferred = None
 
         snapshot = _snapshot_for_project(
-            session,
+            api.session,
             project,
             preferred_presentation_id=preferred,
         )
@@ -437,11 +435,11 @@ def load_project_progress_snapshot() -> ProjectProgressSnapshot | None:
 def list_recent_project_snapshots(*, limit: int = 6) -> list[ProjectProgressSnapshot]:
     """Recent projects for the home cockpit, newest activity first."""
     
-    with get_session() as session:
-        projects = UnitOfWork.bind(session).api.project.list()
+    with application_api() as api:
+        projects = api.project.list()
         if not projects:
             return []
-        snapshots = [_snapshot_for_project(session, project) for project in projects]
+        snapshots = [_snapshot_for_project(api.session, project) for project in projects]
     snapshots.sort(key=lambda item: item.updated_at, reverse=True)
     return snapshots[:limit]
 
@@ -459,8 +457,8 @@ def load_cockpit_task_summary(snapshot: ProjectProgressSnapshot) -> CockpitTaskS
 
     if snapshot.presentation_id is not None:
         try:
-            with get_session() as session:
-                board = PageStatusBoardService(session).build_board(snapshot.presentation_id)
+            with application_api() as api:
+                board = PageStatusBoardService(api.session).build_board(snapshot.presentation_id)
                 for row in board.rows:
                     if row.phase == PagePipelinePhase.ASSET_MISSING:
                         missing_assets += 1
@@ -527,12 +525,11 @@ def continue_work_page_key(snapshot: ProjectProgressSnapshot) -> str:
         from archium.application.product_continue_work import (
             resolve_continue_work_page_key,
         )
-        from archium.infrastructure.database.session import get_session
         from archium.ui.session_actor import get_current_actor_id
 
-        with get_session() as session:
+        with application_api() as api:
             return resolve_continue_work_page_key(
-                session,
+                api.session,
                 snapshot.project_id,
                 presentation_stage_id=snapshot.current_stage_id,
                 slide_count=snapshot.slide_count,

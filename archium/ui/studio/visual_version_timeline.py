@@ -16,7 +16,7 @@ from archium.exceptions import WorkflowError
 from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import report_user_error
 from archium.ui.visual_service import SlideVisualSnapshot
-from archium.application.unit_of_work import UnitOfWork
+from archium.application.unit_of_work import unit_of_work
 
 
 def _compare_session_key(slide_id: UUID) -> str:
@@ -196,11 +196,11 @@ def _restore_scene_revision(*, slide_id: UUID, revision_id: UUID) -> None:
     
     try:
         settings = get_settings()
-        with st.spinner("正在恢复 Scene 版本…"), get_session() as session:
-            slide = UnitOfWork.bind(session).api.slides.get(slide_id)
+        with st.spinner("正在恢复 Scene 版本…"), unit_of_work() as uow:
+            slide = uow.api.slides.get(slide_id)
             if slide is None:
                 raise WorkflowError("页面不存在。")
-            result = SceneRevisionTimelineService(session, settings=settings).restore_revision(
+            result = SceneRevisionTimelineService(uow.session, settings=settings).restore_revision(
                 slide=slide,
                 source_revision_id=revision_id,
             )

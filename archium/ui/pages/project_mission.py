@@ -48,7 +48,7 @@ from archium.ui.workflow_progress_panel import (
 )
 from archium.ui.workspace_service import list_projects
 from archium.ui.workstream_panel import render_workstream_panel
-from archium.application.unit_of_work import UnitOfWork
+from archium.application.unit_of_work import unit_of_work
 
 STEP_LABELS = [
     "1. 描述任务",
@@ -281,16 +281,15 @@ def _render_describe(project_id: UUID) -> None:
     if genesis_task and not st.session_state.mission_task_draft:
         st.session_state.mission_task_draft = genesis_task
     example_pool = TASK_EXAMPLE_PROMPTS
-    with get_session() as session:
-        
+    with unit_of_work() as uow:
         try:
-            project_for_examples = UnitOfWork.bind(session).api.project.get(project_id)
+            project_for_examples = uow.api.project.get(project_id)
         except Exception:
             project_for_examples = None
         if project_for_examples is not None:
             from archium.application.project_context_routing import is_research_programming
 
-            if is_research_programming(session, project_for_examples):
+            if is_research_programming(uow.session, project_for_examples):
                 example_pool = PROGRAMMING_TASK_EXAMPLE_PROMPTS
     example = st.selectbox(
         "示例（可选，不会限制你的描述）",

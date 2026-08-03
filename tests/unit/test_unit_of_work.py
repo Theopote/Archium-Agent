@@ -85,6 +85,16 @@ def test_api_bound_accepts_session_or_uow(db_session: Session) -> None:
     assert from_session.uow.session is db_session
 
 
+def test_session_of_and_session_like(db_session: Session) -> None:
+    from archium.application.unit_of_work import SessionLike, session_of
+
+    uow = UnitOfWork.bind(db_session)
+    assert session_of(db_session) is db_session
+    assert session_of(uow) is db_session
+    bound: SessionLike = uow
+    assert api_bound(bound) is uow.api
+
+
 def test_api_from_session_delegates_to_uow(db_session: Session) -> None:
     api = api_from_session(db_session)
     project = api.project.create("UoW项目", "d")

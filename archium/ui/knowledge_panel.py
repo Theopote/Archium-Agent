@@ -6,7 +6,7 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.application.unit_of_work import UnitOfWork
+from archium.application.unit_of_work import unit_of_work
 from archium.application.project_knowledge_service import ProjectKnowledgeService
 from archium.domain.enums import DocumentPurpose, InformationOrigin, InformationReliability
 from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
@@ -41,19 +41,19 @@ def render_knowledge_panel(project_id: UUID) -> None:
     st.markdown("#### 资料与事实")
     st.caption("区分项目事实、公开资料、参考案例与系统推测；确认后才优先进入正式汇报生成。")
 
-    with get_session() as session:
-        service = ProjectKnowledgeService(session)
+    with unit_of_work() as uow:
+        service = ProjectKnowledgeService(uow.session)
         view = service.get_view(project_id)
-        documents = UnitOfWork.bind(session).api.documents.list(project_id)
+        documents = uow.api.documents.list(project_id)
         from archium.application.mission_context_bridge import resolve_project_mission
         from archium.application.mission_research_enrichment_service import (
             MissionResearchEnrichmentService,
         )
 
-        mission = resolve_project_mission(session, project_id)
+        mission = resolve_project_mission(uow.session, project_id)
         enriched_item_ids: set[str] = set()
         if mission is not None:
-            enriched_item_ids = MissionResearchEnrichmentService(session).get_enriched_item_ids(
+            enriched_item_ids = MissionResearchEnrichmentService(uow.session).get_enriched_item_ids(
                 mission.id
             )
 

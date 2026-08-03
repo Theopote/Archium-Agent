@@ -7,8 +7,6 @@ from dataclasses import dataclass, field
 from typing import Literal
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-
 from archium.application.visual.art_direction_service import ArtDirectionService
 from archium.application.visual.layout_planning_service import LayoutPlanningService
 from archium.application.visual.layout_validation_service import LayoutValidationService
@@ -35,7 +33,7 @@ from archium.domain.visual.preferences import VisualPreferences
 from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent
-from archium.application.unit_of_work import api_bound
+from archium.application.unit_of_work import SessionLike, api_bound, session_of
 from archium.exceptions import WorkflowError
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.llm.factory import create_llm_provider
@@ -68,11 +66,12 @@ class PresentationVisualSnapshot:
 
 
 def _create_visual_workflow_service(
-    session: Session,
+    session: SessionLike,
     *,
     settings: Settings,
     use_llm: bool,
 ) -> VisualWorkflowService:
+    session = session_of(session)
     llm = create_llm_provider(settings) if use_llm and settings.llm_configured else None
     return VisualWorkflowService(
         session,
@@ -83,7 +82,7 @@ def _create_visual_workflow_service(
 
 
 def run_visual_workflow(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     presentation_id: UUID,
     *,
@@ -94,6 +93,7 @@ def run_visual_workflow(
     candidate_count: int = 3,
     settings: Settings | None = None,
 ) -> VisualWorkflowResult:
+    session = session_of(session)
     from archium.application.slide_design_brief_service import design_briefs_ready
     from archium.exceptions import WorkflowError
 
@@ -129,12 +129,13 @@ def run_visual_workflow(
 
 
 def continue_visual_after_art_direction_approval(
-    session: Session,
+    session: SessionLike,
     workflow_run_id: UUID,
     *,
     approve: bool = True,
     settings: Settings | None = None,
 ) -> VisualWorkflowResult:
+    session = session_of(session)
     resolved = _resolve_runtime_settings(settings)
     service = _create_visual_workflow_service(session, settings=resolved, use_llm=False)
     return service.continue_after_art_direction_approval(
@@ -144,12 +145,13 @@ def continue_visual_after_art_direction_approval(
 
 
 def continue_visual_after_layout_review(
-    session: Session,
+    session: SessionLike,
     workflow_run_id: UUID,
     *,
     allow_invalid_layout_export: bool = False,
     settings: Settings | None = None,
 ) -> VisualWorkflowResult:
+    session = session_of(session)
     resolved = _resolve_runtime_settings(settings)
     service = _create_visual_workflow_service(session, settings=resolved, use_llm=False)
     return service.continue_after_layout_review(
@@ -158,11 +160,12 @@ def continue_visual_after_layout_review(
     )
 
 
-def presentation_has_visual_layout(session: Session, presentation_id: UUID) -> bool:
+def presentation_has_visual_layout(session: SessionLike, presentation_id: UUID) -> bool:
     """Return True when every slide has a persisted LayoutPlan.
 
     Implementation lives in application; this UI re-export keeps existing callers stable.
     """
+    session = session_of(session)
     from archium.application.visual.layout_readiness import (
         presentation_has_visual_layout as _impl,
     )
@@ -171,13 +174,14 @@ def presentation_has_visual_layout(session: Session, presentation_id: UUID) -> b
 
 
 def export_presentation_pptx_from_layout_plans(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
     *,
     settings: Settings | None = None,
     chart_export_mode: ChartExportMode | None = None,
 ) -> RenderResult:
     """Export formal editable PPTX from RenderScenes (DOM-003 authority)."""
+    session = session_of(session)
     return api_bound(session).render.export_editable_pptx_result(
         presentation_id,
         chart_export_mode=chart_export_mode,
@@ -187,13 +191,14 @@ def export_presentation_pptx_from_layout_plans(
 
 
 def generate_visual_and_export_pptx(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     presentation_id: UUID,
     *,
     settings: Settings | None = None,
 ) -> VisualWorkflowResult:
     """Run visual composition with PPTX export enabled (streamlined export path)."""
+    session = session_of(session)
     return run_visual_workflow(
         session,
         project_id,
@@ -206,13 +211,14 @@ def generate_visual_and_export_pptx(
 
 
 def get_presentation_visual_snapshot(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
     *,
     visual_critic_reports: list[dict] | None = None,
     deck_qa_report: dict | None = None,
     preview_paths: list[str] | None = None,
 ) -> PresentationVisualSnapshot:
+    session = session_of(session)
     loaded = api_bound(session).visual.load_presentation_visual(presentation_id)
     design_system = loaded.design_system
     art_direction = loaded.art_direction
@@ -264,36 +270,40 @@ def get_presentation_visual_snapshot(
 
 
 def update_art_direction(
-    session: Session,
+    session: SessionLike,
     art_direction_id: UUID,
     updates: dict[str, object],
 ) -> ArtDirection:
+    session = session_of(session)
     return ArtDirectionService(session).update(art_direction_id, updates)
 
 
-def approve_art_direction(session: Session, art_direction_id: UUID) -> ArtDirection:
+def approve_art_direction(session: SessionLike, art_direction_id: UUID) -> ArtDirection:
+    session = session_of(session)
     return ArtDirectionService(session).approve(art_direction_id)
 
 
 def regenerate_art_direction(
-    session: Session,
+    session: SessionLike,
     art_direction_id: UUID,
     feedback: str,
     *,
     use_llm: bool = False,
     settings: Settings | None = None,
 ) -> ArtDirection:
+    session = session_of(session)
     resolved = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved) if use_llm and resolved.llm_configured else None
     return ArtDirectionService(session, llm=llm).regenerate(art_direction_id, feedback)
 
 
 def select_layout_candidate(
-    session: Session,
+    session: SessionLike,
     *,
     slide_id: UUID,
     layout_plan_id: UUID,
 ) -> LayoutPlan:
+    session = session_of(session)
     from archium.application.visual.layout_locked import preserve_locked_elements
     from archium.application.visual.visual_history_service import VisualHistoryService
     from archium.domain.enums import RevisionSource
@@ -343,7 +353,7 @@ def select_layout_candidate(
 
 
 def apply_template_to_slide(
-    session: Session,
+    session: SessionLike,
     *,
     slide_id: UUID,
     template_id: UUID,
@@ -351,6 +361,7 @@ def apply_template_to_slide(
     settings: Settings | None = None,
 ) -> SlideVisualSnapshot:
     """Match a published template to the slide, fill content, and select the best plan."""
+    session = session_of(session)
     from archium.application.visual.template_composition_service import TemplateCompositionService
     from archium.application.visual.visual_history_service import VisualHistoryService
     from archium.domain.enums import RevisionSource
@@ -400,7 +411,7 @@ def apply_template_to_slide(
 
 
 def replan_slide(
-    session: Session,
+    session: SessionLike,
     *,
     slide_id: UUID,
     preset: str | None = None,
@@ -409,6 +420,7 @@ def replan_slide(
     settings: Settings | None = None,
 ) -> SlideVisualSnapshot:
     """Re-plan a single slide; optional preset tweaks VisualIntent before planning."""
+    session = session_of(session)
     resolved = _resolve_runtime_settings(settings)
     api = api_bound(session)
     visual = api.visual
@@ -491,7 +503,7 @@ def replan_slide(
 
 
 def optimize_slide_layout_with_intelligent_algorithm(
-    session: Session,
+    session: SessionLike,
     slide: SlideSpec,
     design_system_integration: DesignSystemIntegrationService,
     constraints: dict[str, any] | None = None,
@@ -510,6 +522,7 @@ def optimize_slide_layout_with_intelligent_algorithm(
     Returns:
         Layout optimization result with recommended layout and positions
     """
+    session = session_of(session)
     # Convert slide data to format expected by intelligent layout optimizer
     slide_data = {
         "id": str(slide.id),
@@ -542,7 +555,7 @@ def optimize_slide_layout_with_intelligent_algorithm(
 
 
 def apply_intelligent_layout_to_visual_workflow(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
     slides: list[SlideSpec],
     design_system_integration: DesignSystemIntegrationService,
@@ -561,6 +574,7 @@ def apply_intelligent_layout_to_visual_workflow(
     Returns:
         List of layout optimization results for each slide
     """
+    session = session_of(session)
     consistency_checker = LayoutConsistencyChecker()
     
     optimization_results = []

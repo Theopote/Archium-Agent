@@ -7,6 +7,7 @@ Preferred UI / future HTTP entry:
 
     with unit_of_work() as uow:
         uow.api.jobs.create(...)
+        LegacyService(uow.session).run(...)
 
     app = Application()
     with app.api() as api:
@@ -14,8 +15,7 @@ Preferred UI / future HTTP entry:
 
 Nested / tests that already hold a Session:
 
-    api = UnitOfWork.bind(session).api
-    # or api_from_session(session) — thin alias
+    api = api_bound(session)  # or UnitOfWork.bind(session).api
 
 Transaction ownership still follows APP-003: the outer ``get_session()``
 (used inside :func:`unit_of_work`) commits on success / rolls back on error.
@@ -84,6 +84,9 @@ class UnitOfWork:
         self._session.flush()
 
 
+SessionLike = Session | UnitOfWork
+
+
 @contextmanager
 def unit_of_work(
     engine: Engine | None = None,
@@ -148,7 +151,7 @@ def get_application(uow_factory: UnitOfWorkFactory | None = None) -> Application
     return Application(uow_factory=uow_factory)
 
 
-def api_bound(session_or_uow: Session | UnitOfWork) -> ApiContext:
+def api_bound(session_or_uow: SessionLike) -> ApiContext:
     """Resolve Application API from a Session or an existing UnitOfWork.
 
     UI facades that still accept ``Session`` should call this once per
@@ -157,3 +160,10 @@ def api_bound(session_or_uow: Session | UnitOfWork) -> ApiContext:
     if isinstance(session_or_uow, UnitOfWork):
         return session_or_uow.api
     return UnitOfWork.bind(session_or_uow).api
+
+
+def session_of(session_or_uow: SessionLike) -> Session:
+    """Normalize Session | UnitOfWork to a SQLAlchemy Session (escape hatch)."""
+    if isinstance(session_or_uow, UnitOfWork):
+        return session_or_uow.session
+    return session_or_uow

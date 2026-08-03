@@ -7,9 +7,6 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.infrastructure.database.session import get_session
-from archium.application.unit_of_work import UnitOfWork
-
 
 def render_visual_critic_findings(critic: dict[str, Any] | None) -> None:
     """Show Visual Critic findings grouped into product QA buckets."""
@@ -43,13 +40,13 @@ def render_design_critique_card(
         data = raw if isinstance(raw, dict) else None
     if (not isinstance(data, dict) or not data) and project_id is not None:
         try:
+            from archium.application.api import application_api
             from archium.application.design_revise_persistence import (
-                design_critique_resume_page,
                 load_latest_design_critique_report,
             )
 
-            with get_session() as session:
-                data = load_latest_design_critique_report(session, project_id)
+            with application_api() as api:
+                data = load_latest_design_critique_report(api.session, project_id)
             if isinstance(data, dict) and data:
                 st.session_state["last_design_critique_report"] = data
         except Exception:
@@ -131,10 +128,10 @@ def render_presentation_critique_card(
 
 
 def _compute_presentation_critique(presentation_id: UUID) -> dict[str, Any] | None:
-        from archium.application.presentation_critic import critique_presentation
+    from archium.application.api import application_api
+    from archium.application.presentation_critic import critique_presentation
 
-    with get_session() as session:
-        api = UnitOfWork.bind(session).api
+    with application_api() as api:
         presentation = api.slides.get_presentation(presentation_id)
         if presentation is None:
             return None

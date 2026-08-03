@@ -36,7 +36,7 @@ from archium.ui.studio_service import (
 )
 from archium.ui.visual_service import SlideVisualSnapshot
 from archium.ui.workflow_progress_panel import render_workflow_progress_panel, set_active_job_id
-from archium.application.unit_of_work import UnitOfWork
+from archium.application.unit_of_work import unit_of_work
 
 
 def _apply_visual_result(result: object) -> None:
@@ -389,19 +389,19 @@ def _append_delivery_record(
     import logging
     from datetime import UTC, datetime
 
-        from archium.application.delivery_record_service import DeliveryRecordResult
+    from archium.application.delivery_record_service import DeliveryRecordResult
 
     logger = logging.getLogger(__name__)
     result = DeliveryRecordResult(file_exported=True, record_persisted=False)
     revision_id = None
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
             from archium.application.evidence_readiness_service import (
                 latest_presentation_revision_id,
             )
 
-            revision_id = latest_presentation_revision_id(session, presentation_id)
-            record = UnitOfWork.bind(session).api.delivery.record_export(
+            revision_id = latest_presentation_revision_id(uow.session, presentation_id)
+            record = uow.api.delivery.record_export(
                 project_id=project_id,
                 presentation_id=presentation_id,
                 format=fmt,

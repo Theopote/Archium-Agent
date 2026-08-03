@@ -7,12 +7,11 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.api import application_api
 from archium.application.project_deletion_service import ProjectDeletionService
-from archium.application.unit_of_work import UnitOfWork
 from archium.application.workspace_mode_service import WorkspaceModeService
 from archium.domain.project import Project
 from archium.exceptions import ProjectNotFoundError, ValidationError
-from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 from archium.ui.error_handlers import report_user_error
 
@@ -50,8 +49,8 @@ def _render_project_card(project: Project, index: int) -> None:
 
             if st.button("📂 打开", key=f"open_{project.id}", use_container_width=True, type="primary"):
                 st.session_state.selected_project_id = str(project.id)
-                with get_session() as session:
-                    page_key = WorkspaceModeService(session).resolve_primary_page_key(
+                with application_api() as api:
+                    page_key = WorkspaceModeService(api.session).resolve_primary_page_key(
                         project.id
                     )
                 st.switch_page(get_app_page(page_key))
@@ -61,8 +60,8 @@ def _render_project_card(project: Project, index: int) -> None:
 
 def _render_edit_dialog(project_id: UUID, expected_updated_at: datetime | None) -> None:
     try:
-        with get_session() as session:
-            project = UnitOfWork.bind(session).api.project.get(project_id)
+        with application_api() as api:
+            project = api.project.get(project_id)
     except ProjectNotFoundError:
         st.warning("项目不存在或已被删除。")
         st.session_state.editing_project_id = None
@@ -83,8 +82,8 @@ def _render_edit_dialog(project_id: UUID, expected_updated_at: datetime | None) 
 
         if submit:
             try:
-                with get_session() as session:
-                    UnitOfWork.bind(session).api.project.update(
+                with application_api() as api:
+                    api.project.update(
                         project_id,
                         name=new_name,
                         description=new_description,
@@ -107,8 +106,8 @@ def _render_edit_dialog(project_id: UUID, expected_updated_at: datetime | None) 
 
 def _render_delete_confirmation(project_id: UUID) -> None:
     try:
-        with get_session() as session:
-            project = UnitOfWork.bind(session).api.project.get(project_id)
+        with application_api() as api:
+            project = api.project.get(project_id)
     except ProjectNotFoundError:
         st.warning("项目不存在或已被删除。")
         st.session_state.deleting_project_id = None
@@ -130,8 +129,8 @@ def _render_delete_confirmation(project_id: UUID) -> None:
     with col1:
         if st.button("🗑️ 确认删除", use_container_width=True, type="primary"):
             try:
-                with get_session() as session:
-                    result = ProjectDeletionService(session).delete_project(project_id)
+                with application_api() as api:
+                    result = ProjectDeletionService(api.session).delete_project(project_id)
                 st.success("✅ 项目已删除")
                 if result.warnings:
                     for _warning in result.warnings:
@@ -164,8 +163,8 @@ def _render_create_project_form() -> None:
             try:
                 from archium.ui.session_actor import get_current_actor_id
 
-                with get_session() as session:
-                    created_project = UnitOfWork.bind(session).api.project.create(
+                with application_api() as api:
+                    created_project = api.project.create(
                         project_name,
                         project_description,
                         actor_id=get_current_actor_id(),
@@ -194,12 +193,10 @@ def render() -> None:
     if "show_create_form" not in st.session_state:
         st.session_state.show_create_form = False
 
-    with get_session() as session:
+    with application_api() as api:
         from archium.ui.session_actor import get_current_actor_id
 
-        projects = UnitOfWork.bind(session).api.project.list(
-            actor_id=get_current_actor_id()
-        )
+        projects = api.project.list(actor_id=get_current_actor_id())
 
     col1, col2 = st.columns([3, 1])
     with col2:

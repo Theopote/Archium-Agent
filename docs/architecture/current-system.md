@@ -144,8 +144,8 @@ Studio 的编辑闭环不是直接覆写导出文件：
    - **编排 run**：策划 / 视觉 / 生成等 LangGraph 路径可先落 `WorkflowRun` + `BackgroundWorkflowRunner`；与 `BackgroundJob` 双轨并存，逐步收敛，**不得假装已全部 job 化**
 3. **幂等范围** — 同 `project_id` + `idempotency_key` → **同一 BackgroundJob**；不承诺业务产物（文件、版式候选等）永不重复生成。
 4. **刷新恢复范围** — 活跃 Job 可按 `job_id` / project 拉回；用户侧列表优先 `JobsApi.list_operations`（`OperationView`，可合并 WorkflowRun）；**不**覆盖仅存于 Streamlit `session_state`、未落库的临时 UI 草稿。
-5. **事务 / UoW** — 遵守 APP-003。**首选** `with application_api() as api:` 或 `Application().api()`（Session 不进入 UI）；嵌套/测试可用 `UnitOfWork.bind(session).api` / `api_from_session(session)` / `api_bound(session|uow)`。`ApiContext` **只持有** `UnitOfWork`（`api.uow`）；`api.session` 为 escape hatch。`get_session()` 仍负责 commit/rollback；API 只 flush（`api.flush()` / `UnitOfWork.flush`）。
-6. **ApiContext** — 资源属性有明确返回类型，并按实例 `cached_property` 缓存（同一 context 内共享同一 facade）。UI facade（studio/visual/workspace/planning）经 `api_bound` 取 API，避免重复 `UnitOfWork.bind`。
+5. **事务 / UoW** — 遵守 APP-003。**首选** `with application_api() as api:`（纯 API）或 `with unit_of_work() as uow:`（API + 仍需 Session 的应用服务）。嵌套/测试可用 `api_bound(session|uow)` / `api_from_session`。`ApiContext` **只持有** `UnitOfWork`（`api.uow`）；`api.session` / `session_of` 为 escape hatch。UI facade 签名为 `SessionLike`（`Session | UnitOfWork`）。`get_session()` 仍负责 commit/rollback；API 只 flush（`api.flush()` / `UnitOfWork.flush`）。
+6. **ApiContext** — 资源属性有明确返回类型，并按实例 `cached_property` 缓存（同一 context 内共享同一 facade）。
 
 **UI 侧已落实的偏好路径：** Studio/Visual/Planning 读路径走对应 API；交付记录与任务进度走 `DeliveryApi` / `JobsApi`；同步导出不直连 `FormalPptxExportService` / `PresentationExportService`。
 

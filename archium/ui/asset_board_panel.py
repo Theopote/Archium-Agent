@@ -19,7 +19,7 @@ from archium.infrastructure.database.session import get_session
 from archium.ui.asset_metadata_panel import render_plan_overlay_editor_for_asset
 from archium.ui.label_map import entity_label
 from archium.ui.web_image_preview_panel import render_web_image_preview_panel
-from archium.application.unit_of_work import UnitOfWork
+from archium.application.unit_of_work import application_api
 
 
 def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None:
@@ -184,9 +184,8 @@ def _row_key(row: AssetBoardRow) -> str:
 
 
 def _load_slide(slide_id: UUID) -> SlideSpec:
-    with get_session() as session:
-        
-        slide = UnitOfWork.bind(session).api.slides.get(slide_id)
+    with application_api() as api:
+        slide = api.slides.get(slide_id)
         if slide is None:
             raise WorkflowError(f"Slide {slide_id} not found")
         return slide

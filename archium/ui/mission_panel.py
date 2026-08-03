@@ -28,7 +28,7 @@ from archium.ui.components.design_rationale_details import render_design_rationa
 from archium.ui.components.spatial_design_details import render_spatial_design_layer
 from archium.ui.error_handlers import report_user_error
 from archium.ui.planning_service import update_mission_fields
-from archium.application.unit_of_work import UnitOfWork
+from archium.application.unit_of_work import application_api
 
 TASK_NATURE_LABELS = {
     TaskNature.NEW_BUILD: "新建",
@@ -505,16 +505,16 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
         project_id=mission.project_id,
     )
 
-    with get_session() as session:
+    with application_api() as api:
         try:
-            project = UnitOfWork.bind(session).api.project.get(mission.project_id)
+            project = api.project.get(mission.project_id)
         except ProjectNotFoundError:
             project = None
         from archium.application.project_context_routing import is_concept_leaning
 
-        concept_origin = project is not None and is_concept_leaning(session, project)
-        directions = list_concept_directions(session, mission.id)
-        progress = get_design_iteration_progress(session, mission.id)
+        concept_origin = project is not None and is_concept_leaning(api.session, project)
+        directions = list_concept_directions(api.session, mission.id)
+        progress = get_design_iteration_progress(api.session, mission.id)
 
     if concept_origin:
         st.markdown("**已提交概念方向**")

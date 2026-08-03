@@ -6,18 +6,16 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.application.unit_of_work import UnitOfWork
+from archium.application.api import application_api
 from archium.application.renovation_issue_service import is_renovation_scenario, validate_issue_map
 from archium.exceptions import ProjectNotFoundError
-from archium.infrastructure.database.session import get_session
 
 
 def render_renovation_issue_panel(project_id: UUID) -> None:
     st.markdown("#### 改造问题图")
     st.caption("老旧建筑改造类项目的证据 → 问题 → 策略闭环，供 Storyline 与 Outline 引用。")
 
-    with get_session() as session:
-        api = UnitOfWork.bind(session).api
+    with application_api() as api:
         try:
             project = api.project.get(project_id)
         except ProjectNotFoundError:

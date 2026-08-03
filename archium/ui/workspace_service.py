@@ -7,13 +7,11 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-
 from archium.application.asset_vision_rag_service import (
     AssetVisionBackfillResult,
     AssetVisionBackfillService,
 )
-from archium.application.unit_of_work import api_bound
+from archium.application.unit_of_work import SessionLike, api_bound, session_of
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.chunk_service import ChunkService
 from archium.application.ingestion_service import ImportItemResult
@@ -52,10 +50,11 @@ def _resolve_runtime_settings(settings: Settings | None) -> Settings:
 
 
 def _create_workflow_service(
-    session: Session,
+    session: SessionLike,
     llm: object,
     settings: Settings,
 ) -> PresentationWorkflowService:
+    session = session_of(session)
     return PresentationWorkflowService(
         session,
         llm,  # type: ignore[arg-type]
@@ -105,8 +104,9 @@ def _looks_like_placeholder_audience(text: str) -> bool:
     return cleaned in {"", "汇报对象", "汇报对象待确认"}
 
 
-def resolve_generation_form_defaults(session: Session, project_id: UUID) -> GenerationFormDefaults:
+def resolve_generation_form_defaults(session: SessionLike, project_id: UUID) -> GenerationFormDefaults:
     """Project / Brief / Outline / Genesis-aware defaults for the generate form."""
+    session = session_of(session)
     from archium.domain.intent.intent_evolution import IntentEvolutionKind
 
     base = GenerationFormDefaults(
@@ -210,8 +210,9 @@ def resolve_generation_form_defaults(session: Session, project_id: UUID) -> Gene
     )
 
 
-def list_projects(session: Session, actor_id: str | None = None) -> list[Project]:
+def list_projects(session: SessionLike, actor_id: str | None = None) -> list[Project]:
     """List projects visible to ``actor_id`` (default: session / local-user)."""
+    session = session_of(session)
     from archium.application.project_access_service import ProjectAccessService
     from archium.domain.access import LOCAL_ACTOR_ID
 
@@ -227,7 +228,7 @@ def list_projects(session: Session, actor_id: str | None = None) -> list[Project
 
 
 def create_project(
-    session: Session,
+    session: SessionLike,
     *,
     name: str,
     project_type: ProjectType,
@@ -235,6 +236,7 @@ def create_project(
     origin_mode: ProjectOriginMode = ProjectOriginMode.EXISTING_PROJECT,
     actor_id: str | None = None,
 ) -> Project:
+    session = session_of(session)
     return api_bound(session).project.create(
         name.strip(),
         description.strip() or None,
@@ -244,7 +246,8 @@ def create_project(
     )
 
 
-def get_project_overview(session: Session, project_id: UUID) -> ProjectOverview | None:
+def get_project_overview(session: SessionLike, project_id: UUID) -> ProjectOverview | None:
+    session = session_of(session)
     api = api_bound(session)
     try:
         project = api.project.get(project_id)
@@ -272,21 +275,24 @@ def _parse_required_sections(required_sections_text: str) -> list[str]:
     return [single]
 
 
-def list_project_documents(session: Session, project_id: UUID) -> list[SourceDocument]:
+def list_project_documents(session: SessionLike, project_id: UUID) -> list[SourceDocument]:
+    session = session_of(session)
     return api_bound(session).documents.list(project_id)
 
 
-def list_document_chunks(session: Session, document_id: UUID) -> list[DocumentChunk]:
+def list_document_chunks(session: SessionLike, document_id: UUID) -> list[DocumentChunk]:
+    session = session_of(session)
     return ChunkService(session).list_document_chunks(document_id)
 
 
 def update_document_chunk(
-    session: Session,
+    session: SessionLike,
     chunk_id: UUID,
     *,
     content: str,
     section_title: str | None = None,
 ) -> DocumentChunk:
+    session = session_of(session)
     return ChunkService(session).update_chunk(
         chunk_id,
         content=content,
@@ -294,7 +300,8 @@ def update_document_chunk(
     )
 
 
-def list_project_presentations(session: Session, project_id: UUID) -> list[Presentation]:
+def list_project_presentations(session: SessionLike, project_id: UUID) -> list[Presentation]:
+    session = session_of(session)
     return api_bound(session).project.list_presentations(project_id)
 
 
@@ -311,7 +318,7 @@ class UploadKnowledgeTip:
 
 
 def import_uploaded_file(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     filename: str,
@@ -320,6 +327,7 @@ def import_uploaded_file(
     reassess: bool = True,
     attach_visual_idea_seed: bool = True,
 ) -> ImportItemResult:
+    session = session_of(session)
     suffix = Path(filename).suffix
     with NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
         temp_file.write(data)
@@ -386,12 +394,13 @@ def import_uploaded_file(
 
 
 def reassess_knowledge_after_upload(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     settings: Settings | None = None,
 ) -> UploadKnowledgeTip | None:
     """Refresh KnowledgeState after new evidence; never fail the import path."""
+    session = session_of(session)
     from archium.application.context import best_effort_reassess_knowledge
 
     resolved = _resolve_runtime_settings(settings)
@@ -453,23 +462,25 @@ def reassess_knowledge_after_upload(
     )
 
 def backfill_project_asset_vision(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     settings: Settings | None = None,
 ) -> AssetVisionBackfillResult:
+    session = session_of(session)
     resolved = _resolve_runtime_settings(settings)
     return AssetVisionBackfillService(session, settings=resolved).backfill_project(project_id)
 
 
 def preview_project_retrieval(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     query: str,
     *,
     settings: Settings | None = None,
     max_chunks: int = 12,
 ) -> ProjectContextBundle:
+    session = session_of(session)
     from archium.application._helpers import build_project_context_bundle
 
     resolved = _resolve_runtime_settings(settings)
@@ -506,7 +517,7 @@ def build_presentation_request(
 
 
 def run_presentation_workflow(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     request: PresentationRequest,
     *,
@@ -523,6 +534,7 @@ def run_presentation_workflow(
     require_slides_review: bool = False,
     settings: Settings | None = None,
 ) -> WorkflowRunResult:
+    session = session_of(session)
     resolved_settings = _resolve_runtime_settings(settings)
     llm = create_llm_provider(resolved_settings)
     service = _create_workflow_service(session, llm, resolved_settings)
@@ -645,12 +657,13 @@ def regenerate_slide_plan(
 
 
 def export_presentation_pptx_legacy(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
     *,
     settings: Settings | None = None,
 ) -> RenderResult:
     """Export editable PPTX via DeliveryApi (Scene preferred; Spec fallback)."""
+    session = session_of(session)
     resolved_settings = _resolve_runtime_settings(settings)
     return api_bound(session).delivery.reexport(
         presentation_id,

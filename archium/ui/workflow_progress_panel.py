@@ -16,7 +16,7 @@ from archium.application.workflow_progress import (
 )
 from archium.domain.enums import WorkflowStatus
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import application_api
 from archium.ui.background_workflow_runner import (
     BackgroundJobStatus,
     BackgroundWorkflowJob,
@@ -29,7 +29,6 @@ from archium.ui.background_workflow_runner import (
 )
 from archium.ui.error_handlers import report_user_error
 from archium.ui.label_map import brief_storyline_pair
-from archium.application.unit_of_work import UnitOfWork
 
 WorkflowScope = str  # "presentation" | "planning" | "visual" | "slide_recovery"
 
@@ -194,8 +193,8 @@ def _apply_job_completion(
 
 
 def _render_progress_body(workflow_run_id: UUID) -> None:
-    with get_session() as session:
-        run = UnitOfWork.bind(session).api.planning.get_run(workflow_run_id)
+    with application_api() as api:
+        run = api.planning.get_run(workflow_run_id)
     if run is None:
         st.info("正在启动任务…")
         return
@@ -222,8 +221,8 @@ def _render_progress_body(workflow_run_id: UUID) -> None:
         from archium.ui.page_status_board_panel import render_page_status_board
 
         project_id = _project_id_from_run(run)
-        with get_session() as session:
-            board = PageStatusBoardService(session).build_board(
+        with application_api() as api:
+            board = PageStatusBoardService(api.session).build_board(
                 presentation_id,
                 workflow_step=snapshot.current_step,
             )
@@ -344,8 +343,8 @@ def _poll_once(
         return True
 
     if job is None and run_id is not None:
-        with get_session() as session:
-            run = UnitOfWork.bind(session).api.planning.get_run(run_id)
+        with application_api() as api:
+            run = api.planning.get_run(run_id)
         if run is not None and run.status in {
             WorkflowStatus.COMPLETED,
             WorkflowStatus.FAILED,
@@ -427,8 +426,8 @@ def render_workflow_progress_panel(
         if job is not None:
             return job.status not in _terminal_statuses()
         if resolved_run_id is not None:
-            with get_session() as session:
-                run = UnitOfWork.bind(session).api.planning.get_run(resolved_run_id)
+            with application_api() as api:
+                run = api.planning.get_run(resolved_run_id)
             return run is not None and run.status == WorkflowStatus.RUNNING
         return False
 

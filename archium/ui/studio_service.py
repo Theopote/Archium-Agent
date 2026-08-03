@@ -7,8 +7,6 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-
 from archium.application.content_adaptation_service import ContentAdaptationService
 from archium.application.ingestion_service import ImportItemResult
 from archium.application.slide_evidence_edit_service import SlideEvidenceEditResult
@@ -32,7 +30,7 @@ from archium.domain.visual.slide_capacity_budget import SlideCapacityBudget
 from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
 from archium.domain.visual.vision_generation import VisionGenerationResult
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import api_bound
+from archium.application.unit_of_work import SessionLike, api_bound, session_of
 from archium.ui.visual_service import (
     PresentationVisualSnapshot,
     SlideVisualSnapshot,
@@ -66,21 +64,24 @@ class StudioPresentationContext:
     warnings: tuple[str, ...] = ()
 
 
-def list_studio_projects(session: Session) -> list[Project]:
+def list_studio_projects(session: SessionLike) -> list[Project]:
+    session = session_of(session)
     return list_projects(session)
 
 
-def list_studio_presentations(session: Session, project_id: UUID) -> list[Presentation]:
+def list_studio_presentations(session: SessionLike, project_id: UUID) -> list[Presentation]:
+    session = session_of(session)
     return list_project_presentations(session, project_id)
 
 
 def create_studio_project(
-    session: Session,
+    session: SessionLike,
     *,
     name: str,
     project_type: ProjectType,
     description: str = "",
 ) -> Project:
+    session = session_of(session)
     from archium.ui.session_actor import get_current_actor_id
 
     return create_project(
@@ -92,18 +93,20 @@ def create_studio_project(
     )
 
 
-def get_studio_project_overview(session: Session, project_id: UUID) -> ProjectOverview | None:
+def get_studio_project_overview(session: SessionLike, project_id: UUID) -> ProjectOverview | None:
+    session = session_of(session)
     return get_project_overview(session, project_id)
 
 
 def import_studio_file(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     filename: str,
     data: bytes,
     settings: Settings | None = None,
 ) -> ImportItemResult:
+    session = session_of(session)
     return import_uploaded_file(
         session,
         project_id,
@@ -114,7 +117,7 @@ def import_studio_file(
 
 
 def load_studio_context(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     presentation_id: UUID,
     *,
@@ -123,6 +126,7 @@ def load_studio_context(
     preview_paths: list[str] | None = None,
     workflow_output_dir: str | Path | None = None,
 ) -> StudioPresentationContext | None:
+    session = session_of(session)
     overview = get_project_overview(session, project_id)
     if overview is None:
         return None
@@ -234,12 +238,13 @@ def get_selected_slide_snapshot(
 
 
 def export_presentation_from_studio(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
     *,
     settings: object | None = None,
     chart_export_mode: object | None = None,
 ) -> RenderResult:
+    session = session_of(session)
     return api_bound(session).delivery.export_formal_pptx_result(
         presentation_id,
         chart_export_mode=chart_export_mode,  # type: ignore[arg-type]
@@ -249,12 +254,13 @@ def export_presentation_from_studio(
 
 
 def export_presentation_pdf_from_studio(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
     *,
     settings: object | None = None,
 ) -> RenderResult:
     """Export PDF by rendering Scene PPTX then converting with LibreOffice."""
+    session = session_of(session)
     return api_bound(session).delivery.export_pdf(
         presentation_id,
         settings=_resolve_runtime_settings(settings),  # type: ignore[arg-type]
@@ -262,12 +268,13 @@ def export_presentation_pdf_from_studio(
 
 
 def add_studio_slide(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
     *,
     after_index: int | None = None,
 ) -> SlideSpec:
     """Insert a blank slide after ``after_index`` (or append when None)."""
+    session = session_of(session)
     slides_api = api_bound(session).slides
     slides = slides_api.list_for_presentation(presentation_id)
     if not slides:
@@ -308,8 +315,9 @@ def add_studio_slide(
     return slides_api.save(new_slide)
 
 
-def delete_studio_slide(session: Session, slide_id: UUID) -> None:
+def delete_studio_slide(session: SessionLike, slide_id: UUID) -> None:
     """Delete one slide; raises when it is the last page in the deck."""
+    session = session_of(session)
     slides_api = api_bound(session).slides
     slide = slides_api.get(slide_id)
     if slide is None:
@@ -321,13 +329,14 @@ def delete_studio_slide(session: Session, slide_id: UUID) -> None:
 
 
 def reorder_studio_slide(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
     *,
     from_index: int,
     to_index: int,
 ) -> None:
     """Move one slide from ``from_index`` to ``to_index`` (0-based list positions)."""
+    session = session_of(session)
     slides_api = api_bound(session).slides
     slides = slides_api.list_for_presentation(presentation_id)
     if not slides:
@@ -353,8 +362,9 @@ def reorder_studio_slide(
         )
 
 
-def apply_slide_edit_command(session: Session, command: object) -> object:
+def apply_slide_edit_command(session: SessionLike, command: object) -> object:
     """Execute one unified SlideEditCommand."""
+    session = session_of(session)
     from archium.application.visual.slide_edit_execution_service import SlideEditExecutionService
     from archium.domain.visual.slide_edit_command import SlideEditCommand, SlideEditScope
     from archium.ui.studio.undo_stack import clear_content_redo_stack, clear_visual_redo_stack
@@ -369,11 +379,12 @@ def apply_slide_edit_command(session: Session, command: object) -> object:
 
 
 def analyze_slide_content_adaptation(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     layout_report: object | None = None,
 ) -> list[ContentAdaptationSuggestion]:
+    session = session_of(session)
     return ContentAdaptationService(session).analyze(
         slide_id,
         layout_report=layout_report,  # type: ignore[arg-type]
@@ -381,19 +392,21 @@ def analyze_slide_content_adaptation(
 
 
 def estimate_slide_capacity(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
 ) -> SlideCapacityBudget | None:
     """Return ``SlideCapacityBudget`` for the Studio capacity gauge, or None."""
+    session = session_of(session)
     return ContentAdaptationService(session).estimate_capacity(slide_id)
 
 
 def create_slide_scene_proposal_from_text(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     text: str,
 ) -> SceneChangeProposal:
     """Parse NL text into Studio commands and return a SceneChangeProposal."""
+    session = session_of(session)
     from archium.application.visual.studio_nl_proposal_service import StudioNLProposalService
 
     settings = _resolve_runtime_settings(None)
@@ -405,10 +418,11 @@ def create_slide_scene_proposal_from_text(
 
 
 def load_presentation_design_system(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
 ) -> DesignSystem | None:
     """Return the DesignSystem bound to this presentation's ArtDirection, if any."""
+    session = session_of(session)
     api = api_bound(session)
     presentation = api.slides.get_presentation(presentation_id)
     if presentation is None:
@@ -423,13 +437,14 @@ def load_presentation_design_system(
 
 
 def create_theme_proposal(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
     tokens: object,
     *,
     preferred_slide_id: UUID | None = None,
 ) -> ThemeChangeProposal:
     """Create a deck-wide ThemeChangeProposal from Studio token controls."""
+    session = session_of(session)
     from archium.application.visual.theme_proposal_service import ThemeProposalService
     from archium.domain.visual.deck_theme_tokens import DeckThemeTokens
 
@@ -444,9 +459,10 @@ def create_theme_proposal(
 
 
 def get_active_theme_proposal(
-    session: Session,
+    session: SessionLike,
     presentation_id: UUID,
 ) -> ThemeChangeProposal | None:
+    session = session_of(session)
     from archium.application.visual.theme_proposal_service import ThemeProposalService
 
     settings = _resolve_runtime_settings(None)
@@ -454,12 +470,13 @@ def get_active_theme_proposal(
 
 
 def accept_theme_proposal(
-    session: Session,
+    session: SessionLike,
     proposal: object,
     *,
     notes: str = "",
     allow_blockers: bool = False,
 ) -> ThemeChangeProposal:
+    session = session_of(session)
     from archium.application.visual.theme_proposal_service import ThemeProposalService
     from archium.ui.studio.undo_stack import clear_all_visual_redo_stacks
 
@@ -476,11 +493,12 @@ def accept_theme_proposal(
 
 
 def reject_theme_proposal(
-    session: Session,
+    session: SessionLike,
     proposal: object,
     *,
     notes: str = "",
 ) -> ThemeChangeProposal:
+    session = session_of(session)
     from archium.application.visual.theme_proposal_service import ThemeProposalService
 
     if not isinstance(proposal, ThemeChangeProposal):
@@ -493,7 +511,7 @@ def reject_theme_proposal(
 
 
 def create_slide_scene_proposal_from_element_comment(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     node_id: str,
@@ -504,6 +522,7 @@ def create_slide_scene_proposal_from_element_comment(
     region_bbox: dict[str, float] | None = None,
 ) -> SceneChangeProposal:
     """Bind an NL note to a RenderScene node and create a SceneChangeProposal."""
+    session = session_of(session)
     from archium.application.visual.element_comment_service import ElementCommentService
 
     settings = _resolve_runtime_settings(None)
@@ -546,13 +565,14 @@ def resolve_selected_render_node_id(
 
 
 def create_slide_scene_proposal_from_intent(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     intent: object,
     *,
     params: dict[str, object] | None = None,
 ) -> SceneChangeProposal:
     """Map a preset visual intent to Studio commands and return a SceneChangeProposal."""
+    session = session_of(session)
     from archium.application.visual.studio_nl_proposal_service import StudioNLProposalService
     from archium.domain.visual.edit_intent import VisualEditIntent
 
@@ -567,12 +587,13 @@ def create_slide_scene_proposal_from_intent(
 
 
 def create_slide_overflow_repair_proposal(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     node_ids: list[str] | None = None,
 ) -> SceneChangeProposal:
     """Create a SceneChangeProposal for deferred semantic overflow repair."""
+    session = session_of(session)
     from archium.application.visual.studio_nl_proposal_service import StudioNLProposalService
 
     settings = _resolve_runtime_settings(None)
@@ -584,7 +605,7 @@ def create_slide_overflow_repair_proposal(
 
 
 def apply_slide_visual_edit(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     text: str | None = None,
@@ -592,6 +613,7 @@ def apply_slide_visual_edit(
     params: dict[str, object] | None = None,
 ) -> object:
     """Apply NL or preset visual edit intent for the current slide."""
+    session = session_of(session)
     from archium.application.visual.visual_edit_service import VisualEditService
     from archium.domain.visual.edit_intent import intent_from_preset
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
@@ -607,7 +629,7 @@ def apply_slide_visual_edit(
 
 
 def apply_slide_element_move(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     element_id: str,
@@ -615,6 +637,7 @@ def apply_slide_element_move(
     y: float,
 ) -> object:
     """Move a layout element via canvas drag or property panel."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -628,12 +651,13 @@ def apply_slide_element_move(
 
 
 def apply_slide_element_moves(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     moves: list[tuple[str, float, float]],
 ) -> object:
     """Batch-move layout elements (one Scene revision)."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -644,13 +668,14 @@ def apply_slide_element_moves(
 
 
 def apply_slide_element_text(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     element_id: str,
     text: str,
 ) -> object:
     """Rewrite element text via Studio command chain (canvas / properties)."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -661,13 +686,14 @@ def apply_slide_element_text(
 
 
 def apply_slide_element_asset(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     element_id: str,
     asset_id: UUID,
 ) -> object:
     """Replace image asset via Studio ReplaceAssetCommand."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -678,12 +704,13 @@ def apply_slide_element_asset(
 
 
 def apply_slide_evidence_items(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     items: list[LayoutEvidenceItem],
 ) -> SlideEvidenceEditResult:
     """Save semantic evidence items and patch annotation/photo nodes."""
+    session = session_of(session)
     from archium.application.slide_evidence_edit_service import SlideEvidenceEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -694,7 +721,7 @@ def apply_slide_evidence_items(
 
 
 def generate_slide_vision_illustration(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     project_id: UUID,
@@ -714,6 +741,7 @@ def generate_slide_vision_illustration(
     diagram type, Vision v0.2 composes strategy overlays on that base (still illustrative).
     ``generation_mode=edit_from_photo`` runs v0.3 conditioned edit (still illustrative).
     """
+    session = session_of(session)
     from pathlib import Path
 
     from archium.application.visual.vision import VisionImageGenerationService
@@ -817,7 +845,7 @@ def generate_slide_vision_illustration(
 
 
 def apply_slide_element_style(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     element_id: str,
@@ -826,6 +854,7 @@ def apply_slide_element_style(
     fill_color: str | None = None,
 ) -> object:
     """Update text/shape style via UpdateNodeStyleCommand."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -842,13 +871,14 @@ def apply_slide_element_style(
 
 
 def apply_slide_element_text_runs(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     element_id: str,
     runs: list[dict[str, object]],
 ) -> object:
     """Replace TextNode runs via SetTextRunsCommand."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -863,7 +893,7 @@ def apply_slide_element_text_runs(
 
 
 def apply_slide_element_gradient_fill(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     element_id: str,
@@ -871,6 +901,7 @@ def apply_slide_element_gradient_fill(
     bottom_fade: bool = False,
 ) -> object:
     """Set GradientFill on a shape/image via SetGradientFillCommand."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -886,7 +917,7 @@ def apply_slide_element_gradient_fill(
 
 
 def apply_slide_element_resize(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     element_id: str,
@@ -897,6 +928,7 @@ def apply_slide_element_resize(
     preserve_aspect_ratio: bool = False,
 ) -> object:
     """Resize a layout element via canvas handles."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -915,7 +947,7 @@ def apply_slide_element_resize(
 
 
 def apply_slide_element_align(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     element_ids: list[str],
@@ -923,6 +955,7 @@ def apply_slide_element_align(
     reference_element_id: str | None = None,
 ) -> object:
     """Align selected layout elements through the Studio command chain."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -938,12 +971,13 @@ def apply_slide_element_align(
 
 
 def apply_slide_element_delete(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     element_id: str,
 ) -> object:
     """Delete (hide) a layout element through the Studio command chain."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -954,12 +988,13 @@ def apply_slide_element_delete(
 
 
 def apply_slide_element_duplicate(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     element_ids: list[str],
 ) -> object:
     """Duplicate layout element(s) through the Studio command chain."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -970,12 +1005,13 @@ def apply_slide_element_duplicate(
 
 
 def apply_slide_element_group(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     element_ids: list[str],
 ) -> object:
     """Group layout element(s) through the Studio command chain."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -986,7 +1022,7 @@ def apply_slide_element_group(
 
 
 def apply_slide_element_connect(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     start_element_id: str,
@@ -994,6 +1030,7 @@ def apply_slide_element_connect(
     routing: str = "straight",
 ) -> object:
     """Connect two layout elements with a ConnectorNode."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -1009,7 +1046,7 @@ def apply_slide_element_connect(
 
 
 def apply_slide_create_freeform(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     preset: str = "triangle",
@@ -1019,6 +1056,7 @@ def apply_slide_create_freeform(
     height: float = 2.5,
 ) -> object:
     """Create a FreeformNode analysis zone on the slide."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -1036,13 +1074,14 @@ def apply_slide_create_freeform(
 
 
 def apply_slide_element_silhouette(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     element_id: str,
     preset: str = "diamond",
 ) -> object:
     """Apply silhouette mask + Freeform overlay on an image element."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -1057,12 +1096,13 @@ def apply_slide_element_silhouette(
 
 
 def apply_slide_element_ungroup(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     element_id: str,
 ) -> object:
     """Ungroup a GroupNode through the Studio command chain."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -1073,13 +1113,14 @@ def apply_slide_element_ungroup(
 
 
 def apply_slide_element_visibility(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     element_id: str,
     visible: bool,
 ) -> object:
     """Show or hide a layout element through the Studio command chain."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -1094,13 +1135,14 @@ def apply_slide_element_visibility(
 
 
 def apply_slide_element_reorder(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     element_id: str,
     direction: str,
 ) -> object:
     """Change element stacking order through the Studio command chain."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -1115,7 +1157,7 @@ def apply_slide_element_reorder(
 
 
 def apply_slide_element_lock(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     element_id: str,
@@ -1123,6 +1165,7 @@ def apply_slide_element_lock(
     lock_scopes: list[str] | None = None,
 ) -> object:
     """Lock or unlock a layout element through the Studio command chain."""
+    session = session_of(session)
     from archium.application.visual.studio_scene_edit_service import StudioSceneEditService
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
@@ -1137,11 +1180,13 @@ def apply_slide_element_lock(
     )
 
 
-def restore_slide_content_adaptation(session: Session, slide_id: UUID) -> object:
+def restore_slide_content_adaptation(session: SessionLike, slide_id: UUID) -> object:
+    session = session_of(session)
     return undo_slide_content_adaptation(session, slide_id)
 
 
-def undo_slide_content_adaptation(session: Session, slide_id: UUID) -> object:
+def undo_slide_content_adaptation(session: SessionLike, slide_id: UUID) -> object:
+    session = session_of(session)
     from archium.application.content_adaptation_service import ContentAdaptationService
     from archium.application.slide_history_service import SlideHistoryService
     from archium.ui.studio.undo_stack import push_content_redo_revision
@@ -1156,7 +1201,8 @@ def undo_slide_content_adaptation(session: Session, slide_id: UUID) -> object:
     return result
 
 
-def redo_slide_content_adaptation(session: Session, slide_id: UUID) -> object:
+def redo_slide_content_adaptation(session: SessionLike, slide_id: UUID) -> object:
+    session = session_of(session)
     from archium.ui.studio.undo_stack import pop_content_redo_revision
 
     revision_id = pop_content_redo_revision(slide_id)
@@ -1165,14 +1211,16 @@ def redo_slide_content_adaptation(session: Session, slide_id: UUID) -> object:
     return restore_slide_content_at_revision(session, slide_id, revision_id)
 
 
-def restore_slide_visual_edit(session: Session, slide_id: UUID) -> object:
+def restore_slide_visual_edit(session: SessionLike, slide_id: UUID) -> object:
+    session = session_of(session)
     return undo_slide_visual_edit(session, slide_id)
 
 
 def undo_slide_visual_edit(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
 ) -> SceneRevisionRestoreResult | VisualEditResult:
+    session = session_of(session)
     from archium.application.visual.scene_undo_service import SceneUndoService
     from archium.application.visual.visual_edit_service import VisualEditService
     from archium.application.visual.visual_history_service import VisualHistoryService
@@ -1213,7 +1261,8 @@ def undo_slide_visual_edit(
     return restore_result
 
 
-def redo_slide_visual_edit(session: Session, slide_id: UUID) -> object:
+def redo_slide_visual_edit(session: SessionLike, slide_id: UUID) -> object:
+    session = session_of(session)
     from archium.application.visual.scene_history_service import SCENE_STATE_SNAPSHOT_KIND
     from archium.application.visual.scene_undo_service import SceneUndoService
     from archium.ui.studio.canvas_command_bridge import bump_canvas_generation
@@ -1240,12 +1289,13 @@ def redo_slide_visual_edit(session: Session, slide_id: UUID) -> object:
 
 
 def apply_slide_content_adaptation(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     *,
     text: str | None = None,
     action: str | None = None,
 ) -> object:
+    session = session_of(session)
     from archium.application.content_adaptation_heuristics import parse_content_adaptation_text
     from archium.application.content_adaptation_service import ContentAdaptationService
     from archium.domain.content_adaptation import action_from_value
@@ -1264,8 +1314,9 @@ def apply_slide_content_adaptation(
     return service.apply(slide_id, resolved)
 
 
-def apply_deck_repair_suggestion(session: Session, suggestion: DeckRepairSuggestion) -> object:
+def apply_deck_repair_suggestion(session: SessionLike, suggestion: DeckRepairSuggestion) -> object:
     """Apply one deck-level repair suggestion via existing visual edit service."""
+    session = session_of(session)
     return apply_slide_visual_edit(
         session,
         suggestion.slide_id,
@@ -1275,10 +1326,11 @@ def apply_deck_repair_suggestion(session: Session, suggestion: DeckRepairSuggest
 
 
 def restore_slide_visual_at_revision(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     revision_id: UUID,
 ) -> object:
+    session = session_of(session)
     from archium.application.visual.visual_edit_service import VisualEditService
 
     service = VisualEditService(session, settings=_resolve_runtime_settings(None))
@@ -1286,16 +1338,18 @@ def restore_slide_visual_at_revision(
 
 
 def restore_slide_content_at_revision(
-    session: Session,
+    session: SessionLike,
     slide_id: UUID,
     revision_id: UUID,
 ) -> object:
+    session = session_of(session)
     from archium.application.content_adaptation_service import ContentAdaptationService
 
     return ContentAdaptationService(session).restore_at_revision(slide_id, revision_id)
 
 
-def list_slide_visual_revisions(session: Session, slide_id: UUID) -> list[EntityRevision]:
+def list_slide_visual_revisions(session: SessionLike, slide_id: UUID) -> list[EntityRevision]:
+    session = session_of(session)
     from archium.application.visual.visual_history_service import VisualHistoryService
 
     slide = api_bound(session).slides.get(slide_id)
@@ -1304,13 +1358,15 @@ def list_slide_visual_revisions(session: Session, slide_id: UUID) -> list[Entity
     return VisualHistoryService(session).list_slide_visual_revisions(slide)
 
 
-def list_slide_content_revisions(session: Session, slide_id: UUID) -> list[EntityRevision]:
+def list_slide_content_revisions(session: SessionLike, slide_id: UUID) -> list[EntityRevision]:
+    session = session_of(session)
     from archium.application.content_adaptation_service import ContentAdaptationService
 
     return ContentAdaptationService(session).list_content_revisions(slide_id)
 
 
-def count_visual_revisions(session: Session, slide_id: UUID) -> int:
+def count_visual_revisions(session: SessionLike, slide_id: UUID) -> int:
+    session = session_of(session)
     from archium.application.visual.visual_history_service import VisualHistoryService
 
     slide = api_bound(session).slides.get(slide_id)
@@ -1319,7 +1375,8 @@ def count_visual_revisions(session: Session, slide_id: UUID) -> int:
     return VisualHistoryService(session).count_slide_visual_revisions(slide)
 
 
-def count_scene_revisions(session: Session, slide_id: UUID) -> int:
+def count_scene_revisions(session: SessionLike, slide_id: UUID) -> int:
+    session = session_of(session)
     from archium.application.scene_revision_timeline_service import SceneRevisionTimelineService
 
     slide = api_bound(session).slides.get(slide_id)
@@ -1331,7 +1388,8 @@ def count_scene_revisions(session: Session, slide_id: UUID) -> int:
     )
 
 
-def count_visual_undo_steps(session: Session, slide_id: UUID) -> int:
+def count_visual_undo_steps(session: SessionLike, slide_id: UUID) -> int:
+    session = session_of(session)
     from archium.application.visual.scene_undo_service import SceneUndoService
     from archium.application.visual.visual_edit_service import VisualEditService
 
@@ -1344,7 +1402,8 @@ def count_visual_undo_steps(session: Session, slide_id: UUID) -> int:
     return scene_steps + visual_steps
 
 
-def count_content_undo_steps(session: Session, slide_id: UUID) -> int:
+def count_content_undo_steps(session: SessionLike, slide_id: UUID) -> int:
+    session = session_of(session)
     from archium.application.slide_history_service import SlideHistoryService
 
     slide = api_bound(session).slides.get(slide_id)

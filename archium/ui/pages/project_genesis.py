@@ -16,7 +16,7 @@ from archium.ui.app_navigation import get_app_page
 from archium.ui.components.chrome import render_page_header
 from archium.ui.error_handlers import report_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
-from archium.application.unit_of_work import UnitOfWork
+from archium.application.unit_of_work import application_api, unit_of_work
 
 _ASSESSMENT_KEY = "genesis_context_assessment"
 _PROJECT_KEY = "genesis_assessed_project_id"
@@ -237,8 +237,7 @@ def _render_intent_evidence_summary(project_id: str) -> None:
         return
 
     evidence_rows = []
-    with get_session() as session:
-        api = UnitOfWork.bind(session).api
+    with application_api() as api:
         missions = api.mission.list_for_project(project_uuid)
         if missions and missions[0].design_intent is not None:
             evidence_rows = list(missions[0].design_intent.evidence[-6:])
@@ -297,15 +296,14 @@ def _starter_from_payload(payload: dict, project_id: str) -> GenesisStarterResul
         )
     prompt = st.session_state.get("genesis_task_description") or ""
     understanding = str(payload.get("understanding_summary") or "")
-    with get_session() as session:
-        
+    with unit_of_work() as uow:
         try:
-            project = UnitOfWork.bind(session).api.project.get(UUID(project_id))
+            project = uow.api.project.get(UUID(project_id))
         except Exception:
             project = None
         name = project.name if project is not None else "新汇报"
         return ensure_genesis_starter_draft(
-            session,
+            uow.session,
             UUID(project_id),
             prompt=prompt,
             project_name=name,
@@ -411,9 +409,9 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
 
         with st.spinner("正在重新评估知识状态…"):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
                     assessment = reassess_project_context(
-                        session,
+                        uow.session,
                         UUID(project_id),
                         user_text=st.session_state.get("genesis_task_description"),
                         settings=settings,
@@ -421,13 +419,13 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
                     from archium.application.genesis_starter_service import (
                         ensure_genesis_starter_draft,
                     )
-                    
+
                     try:
-                        project = UnitOfWork.bind(session).api.project.get(UUID(project_id))
+                        project = uow.api.project.get(UUID(project_id))
                     except Exception:
                         project = None
                     starter = ensure_genesis_starter_draft(
-                        session,
+                        uow.session,
                         UUID(project_id),
                         prompt=st.session_state.get("genesis_task_description") or "",
                         project_name=project.name if project is not None else "新汇报",

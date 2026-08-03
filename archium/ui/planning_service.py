@@ -7,8 +7,6 @@ from dataclasses import dataclass, field
 from typing import cast
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-
 from archium.application.artifact_executors import ArtifactOutput
 from archium.application.deliverable_planning_service import (
     DeliverablePlanningService,
@@ -49,7 +47,7 @@ from archium.domain.workflow import WorkflowRun
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
 from archium.application.api.mission import MissionApi
-from archium.application.unit_of_work import api_bound
+from archium.application.unit_of_work import SessionLike, api_bound, session_of
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
 from archium.ui.workspace_service import _resolve_runtime_settings
@@ -97,9 +95,10 @@ class PlanningSnapshot:
 
 
 def _create_planning_service(
-    session: Session,
+    session: SessionLike,
     settings: Settings,
 ) -> PlanningWorkflowService:
+    session = session_of(session)
     llm = create_llm_provider(settings)
     return PlanningWorkflowService(
         session,
@@ -110,9 +109,10 @@ def _create_planning_service(
 
 
 def _create_presentation_service(
-    session: Session,
+    session: SessionLike,
     settings: Settings,
 ) -> PresentationWorkflowService:
+    session = session_of(session)
     llm = create_llm_provider(settings)
     return PresentationWorkflowService(
         session,
@@ -123,42 +123,45 @@ def _create_presentation_service(
 
 
 def start_planning(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     task_description: str,
     *,
     settings: Settings | None = None,
     origin_mode: ProjectOriginMode | None = None,
 ) -> PlanningWorkflowResult:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     service = _create_planning_service(session, runtime)
     return service.run(project_id, task_description, origin_mode=origin_mode)
 
 
 def continue_after_clarification(
-    session: Session,
+    session: SessionLike,
     workflow_run_id: UUID,
     *,
     settings: Settings | None = None,
 ) -> PlanningWorkflowResult:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     service = _create_planning_service(session, runtime)
     return service.continue_after_clarification(workflow_run_id)
 
 
 def continue_after_mission_correction(
-    session: Session,
+    session: SessionLike,
     workflow_run_id: UUID,
     *,
     settings: Settings | None = None,
 ) -> PlanningWorkflowResult:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     service = _create_planning_service(session, runtime)
     return service.continue_after_mission_correction(workflow_run_id)
 
 
 def approve_mission_and_continue(
-    session: Session,
+    session: SessionLike,
     workflow_run_id: UUID,
     *,
     user_id: str | None = None,
@@ -166,6 +169,7 @@ def approve_mission_and_continue(
     note: str | None = None,
     settings: Settings | None = None,
 ) -> PlanningWorkflowResult:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     service = _create_planning_service(session, runtime)
     return service.approve_mission_and_continue(
@@ -174,7 +178,7 @@ def approve_mission_and_continue(
 
 
 def approve_and_continue(
-    session: Session,
+    session: SessionLike,
     workflow_run_id: UUID,
     *,
     user_id: str | None = None,
@@ -182,29 +186,32 @@ def approve_and_continue(
     settings: Settings | None = None,
 ) -> PlanningWorkflowResult:
     """UI facade: approve deliverable plan then resume the planning workflow."""
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     service = _create_planning_service(session, runtime)
     return service.approve_and_continue(workflow_run_id, user_id=user_id, note=note)
 
 
 def resume_after_plan_approval(
-    session: Session,
+    session: SessionLike,
     workflow_run_id: UUID,
     *,
     settings: Settings | None = None,
 ) -> PlanningWorkflowResult:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     service = _create_planning_service(session, runtime)
     return service.resume_after_plan_approval(workflow_run_id)
 
 
 def continue_after_plan_approval(
-    session: Session,
+    session: SessionLike,
     workflow_run_id: UUID,
     *,
     settings: Settings | None = None,
 ) -> PlanningWorkflowResult:
     """Deprecated alias for :func:`approve_and_continue`."""
+    session = session_of(session)
     return approve_and_continue(session, workflow_run_id, settings=settings)
 
 
@@ -286,7 +293,7 @@ def _extract_planning_run_state(run: WorkflowRun | None) -> _PlanningRunState:
 
 
 def _build_mission_planning_snapshot(
-    session: Session,
+    session: SessionLike,
     missions: MissionApi,
     *,
     mission: ProjectMission,
@@ -294,6 +301,7 @@ def _build_mission_planning_snapshot(
     run: WorkflowRun | None,
     run_state: _PlanningRunState,
 ) -> PlanningSnapshot:
+    session = session_of(session)
     mission_id = mission.id
     plans = missions.list_deliverable_plans(mission_id)
     plan = plans[0] if plans else None
@@ -345,7 +353,7 @@ def _build_mission_planning_snapshot(
 
 
 def get_planning_snapshot(
-    session: Session,
+    session: SessionLike,
     *,
     planning_session_id: UUID | None = None,
     workflow_run_id: UUID | None = None,
@@ -354,6 +362,7 @@ def get_planning_snapshot(
     settings: Settings | None = None,
 ) -> PlanningSnapshot:
     """Load the best available planning snapshot for the UI."""
+    session = session_of(session)
     api = api_bound(session)
 
     planning_session = _resolve_planning_session(
@@ -412,24 +421,26 @@ def get_planning_snapshot(
 
 
 def update_mission_fields(
-    session: Session,
+    session: SessionLike,
     mission_id: UUID,
     patch: MissionPatch,
     *,
     settings: Settings | None = None,
 ) -> ProjectMission:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     return ProjectMissionService(session, llm, settings=runtime).update_mission(mission_id, patch)
 
 
 def generate_concept_directions(
-    session: Session,
+    session: SessionLike,
     mission_id: UUID,
     *,
     count: int = 3,
     settings: Settings | None = None,
 ):
+    session = session_of(session)
     from archium.application.concept_direction_service import ConceptDirectionService
 
     runtime = _resolve_runtime_settings(settings)
@@ -440,7 +451,8 @@ def generate_concept_directions(
     )
 
 
-def list_concept_directions(session: Session, mission_id: UUID):
+def list_concept_directions(session: SessionLike, mission_id: UUID):
+    session = session_of(session)
     from archium.application.concept_direction_service import ConceptDirectionService
     from archium.infrastructure.llm.mock import MockLLMProvider
 
@@ -448,12 +460,13 @@ def list_concept_directions(session: Session, mission_id: UUID):
 
 
 def select_concept_direction(
-    session: Session,
+    session: SessionLike,
     direction_id: UUID,
     *,
     settings: Settings | None = None,
     revise_action: str | None = None,
 ):
+    session = session_of(session)
     from archium.application.concept_direction_service import ConceptDirectionService
     from archium.ui.session_actor import get_current_actor_id
 
@@ -467,11 +480,12 @@ def select_concept_direction(
 
 
 def archive_concept_direction(
-    session: Session,
+    session: SessionLike,
     direction_id: UUID,
     *,
     settings: Settings | None = None,
 ):
+    session = session_of(session)
     from archium.application.concept_direction_service import ConceptDirectionService
 
     runtime = _resolve_runtime_settings(settings)
@@ -482,12 +496,13 @@ def archive_concept_direction(
 
 
 def assess_project_context(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     user_text: str,
     *,
     settings: Settings | None = None,
 ):
+    session = session_of(session)
     from archium.application.context import ContextAnalyzer
 
     runtime = _resolve_runtime_settings(settings)
@@ -498,12 +513,13 @@ def assess_project_context(
 
 
 def reassess_project_context(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     user_text: str | None = None,
     settings: Settings | None = None,
 ):
+    session = session_of(session)
     from archium.application.context import ContextAnalyzer
 
     runtime = _resolve_runtime_settings(settings)
@@ -529,11 +545,12 @@ def resolve_next_best_action_target(
 
 
 def try_execute_research_for_project(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     *,
     settings: Settings | None = None,
 ) -> tuple[bool, str]:
+    session = session_of(session)
     from archium.application.context import ContextAnalyzer
 
     runtime = _resolve_runtime_settings(settings)
@@ -560,13 +577,14 @@ def assess_entry_context(
 
 
 def start_exploration_session(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     idea_text: str,
     *,
     settings: Settings | None = None,
     enrich: bool = True,
 ):
+    session = session_of(session)
     from archium.application.exploration_service import ExplorationService
 
     runtime = _resolve_runtime_settings(settings)
@@ -577,11 +595,12 @@ def start_exploration_session(
 
 
 def enrich_exploration_idea_seed(
-    session: Session,
+    session: SessionLike,
     exploration_id: UUID,
     *,
     settings: Settings | None = None,
 ):
+    session = session_of(session)
     from archium.application.exploration_service import ExplorationService
 
     runtime = _resolve_runtime_settings(settings)
@@ -591,14 +610,16 @@ def enrich_exploration_idea_seed(
     )
 
 
-def get_latest_exploration_for_project(session: Session, project_id: UUID):
+def get_latest_exploration_for_project(session: SessionLike, project_id: UUID):
+    session = session_of(session)
     from archium.application.exploration_service import ExplorationService
     from archium.infrastructure.llm.mock import MockLLMProvider
 
     return ExplorationService(session, MockLLMProvider()).get_latest_for_project(project_id)
 
 
-def list_exploration_directions(session: Session, exploration_id: UUID):
+def list_exploration_directions(session: SessionLike, exploration_id: UUID):
+    session = session_of(session)
     from archium.application.exploration_service import ExplorationService
     from archium.infrastructure.llm.mock import MockLLMProvider
 
@@ -606,12 +627,13 @@ def list_exploration_directions(session: Session, exploration_id: UUID):
 
 
 def generate_exploration_directions(
-    session: Session,
+    session: SessionLike,
     exploration_id: UUID,
     *,
     count: int = 3,
     settings: Settings | None = None,
 ):
+    session = session_of(session)
     from archium.application.exploration_service import ExplorationService
 
     runtime = _resolve_runtime_settings(settings)
@@ -623,12 +645,13 @@ def generate_exploration_directions(
 
 
 def select_exploration_direction(
-    session: Session,
+    session: SessionLike,
     direction_id: UUID,
     *,
     settings: Settings | None = None,
     revise_action: str | None = None,
 ):
+    session = session_of(session)
     from archium.application.exploration_service import ExplorationService
     from archium.ui.session_actor import get_current_actor_id
 
@@ -642,11 +665,12 @@ def select_exploration_direction(
 
 
 def commit_exploration_to_mission(
-    session: Session,
+    session: SessionLike,
     exploration_id: UUID,
     *,
     settings: Settings | None = None,
 ):
+    session = session_of(session)
     from archium.application.exploration_service import ExplorationService
 
     runtime = _resolve_runtime_settings(settings)
@@ -657,7 +681,7 @@ def commit_exploration_to_mission(
 
 
 def synthesize_visual_concept_brief(
-    session: Session,
+    session: SessionLike,
     direction_id: UUID,
     *,
     generate_image: bool = False,
@@ -667,6 +691,7 @@ def synthesize_visual_concept_brief(
     focus_hint: str | None = None,
     style_preset=None,
 ):
+    session = session_of(session)
     from archium.application.visual.vision import VisualConceptBriefService
 
     runtime = _resolve_runtime_settings(settings)
@@ -681,7 +706,8 @@ def synthesize_visual_concept_brief(
     )
 
 
-def get_visual_concept_brief_for_slot(session: Session, direction_id: UUID, slot_key: str):
+def get_visual_concept_brief_for_slot(session: SessionLike, direction_id: UUID, slot_key: str):
+    session = session_of(session)
     from archium.application.visual.vision import VisualConceptBriefService
     from archium.infrastructure.llm.mock import MockLLMProvider
 
@@ -691,13 +717,14 @@ def get_visual_concept_brief_for_slot(session: Session, direction_id: UUID, slot
 
 
 def refine_visual_concept_brief(
-    session: Session,
+    session: SessionLike,
     direction_id: UUID,
     feedback: str,
     *,
     generate_image: bool = False,
     settings: Settings | None = None,
 ):
+    session = session_of(session)
     from archium.application.visual.vision import VisualConceptBriefService
 
     runtime = _resolve_runtime_settings(settings)
@@ -709,7 +736,8 @@ def refine_visual_concept_brief(
     )
 
 
-def get_latest_visual_concept_brief(session: Session, direction_id: UUID):
+def get_latest_visual_concept_brief(session: SessionLike, direction_id: UUID):
+    session = session_of(session)
     from archium.application.visual.vision import VisualConceptBriefService
     from archium.infrastructure.llm.mock import MockLLMProvider
 
@@ -718,14 +746,16 @@ def get_latest_visual_concept_brief(session: Session, direction_id: UUID):
     )
 
 
-def get_design_iteration_progress(session: Session, mission_id: UUID):
+def get_design_iteration_progress(session: SessionLike, mission_id: UUID):
+    session = session_of(session)
     from archium.application.design_iteration_status import summarize_design_iteration
 
     return summarize_design_iteration(session, mission_id)
 
 
-def preview_presentation_request_from_mission(session: Session, mission_id: UUID):
+def preview_presentation_request_from_mission(session: SessionLike, mission_id: UUID):
     """Build a PresentationRequest preview from mission + selected direction/visual brief."""
+    session = session_of(session)
     from archium.application.context.mission_cognition import load_project_knowledge_state
     from archium.application.mission_context_bridge import (
         resolve_selected_concept_direction,
@@ -745,23 +775,25 @@ def preview_presentation_request_from_mission(session: Session, mission_id: UUID
 
 
 def refresh_presentation_request_draft(
-    session: Session,
+    session: SessionLike,
     workflow_run_id: UUID,
     *,
     settings: Settings | None = None,
 ) -> MissionPresentationBridge:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     service = _create_planning_service(session, runtime)
     return service.refresh_presentation_request_draft(workflow_run_id)
 
 
 def answer_clarifying_question(
-    session: Session,
+    session: SessionLike,
     question_id: UUID,
     answer: str,
     *,
     settings: Settings | None = None,
 ) -> ClarificationActionResult:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     return MissionClarificationService(session, llm, settings=runtime).answer_question(
@@ -770,12 +802,13 @@ def answer_clarifying_question(
 
 
 def assume_clarifying_question(
-    session: Session,
+    session: SessionLike,
     question_id: UUID,
     *,
     assumption_text: str | None = None,
     settings: Settings | None = None,
 ) -> ClarificationActionResult:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     return MissionClarificationService(session, llm, settings=runtime).assume_question(
@@ -784,22 +817,24 @@ def assume_clarifying_question(
 
 
 def defer_clarifying_question(
-    session: Session,
+    session: SessionLike,
     question_id: UUID,
     *,
     settings: Settings | None = None,
 ) -> ClarificationActionResult:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     return MissionClarificationService(session, llm, settings=runtime).defer_question(question_id)
 
 
 def mark_question_not_applicable(
-    session: Session,
+    session: SessionLike,
     question_id: UUID,
     *,
     settings: Settings | None = None,
 ) -> ClarificationActionResult:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     return MissionClarificationService(session, llm, settings=runtime).mark_question_not_applicable(
@@ -808,24 +843,26 @@ def mark_question_not_applicable(
 
 
 def answer_knowledge_gap(
-    session: Session,
+    session: SessionLike,
     gap_id: UUID,
     answer: str,
     *,
     settings: Settings | None = None,
 ) -> ClarificationActionResult:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     return MissionClarificationService(session, llm, settings=runtime).answer_gap(gap_id, answer)
 
 
 def assume_knowledge_gap(
-    session: Session,
+    session: SessionLike,
     gap_id: UUID,
     assumption_text: str,
     *,
     settings: Settings | None = None,
 ) -> ClarificationActionResult:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     return MissionClarificationService(session, llm, settings=runtime).assume_gap(
@@ -834,31 +871,35 @@ def assume_knowledge_gap(
 
 
 def defer_knowledge_gap(
-    session: Session,
+    session: SessionLike,
     gap_id: UUID,
     *,
     settings: Settings | None = None,
 ) -> ClarificationActionResult:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     return MissionClarificationService(session, llm, settings=runtime).defer_gap(gap_id)
 
 
-def confirm_project_fact(session: Session, fact_id: UUID):
+def confirm_project_fact(session: SessionLike, fact_id: UUID):
+    session = session_of(session)
     return FactLedgerService(session).confirm_fact(fact_id)
 
 
-def reject_project_fact(session: Session, fact_id: UUID) -> ProjectFact:
+def reject_project_fact(session: SessionLike, fact_id: UUID) -> ProjectFact:
+    session = session_of(session)
     return FactLedgerService(session).reject_fact(fact_id)
 
 
 def set_workstream_selected(
-    session: Session,
+    session: SessionLike,
     workstream_id: UUID,
     selected: bool,
     *,
     settings: Settings | None = None,
 ) -> Workstream:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     service = WorkstreamPlanningService(session, llm, settings=runtime)
@@ -868,13 +909,14 @@ def set_workstream_selected(
 
 
 def set_deliverable_selected(
-    session: Session,
+    session: SessionLike,
     plan_id: UUID,
     deliverable_id: str,
     selected: bool,
     *,
     settings: Settings | None = None,
 ) -> DeliverablePlan:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     llm = create_llm_provider(runtime)
     service = DeliverablePlanningService(session, llm, settings=runtime)
@@ -884,13 +926,14 @@ def set_deliverable_selected(
 
 
 def get_presentation_bridge(
-    session: Session,
+    session: SessionLike,
     workflow_run_id: UUID,
     *,
     user_overrides: PresentationOverrides | None = None,
     force_refresh: bool = False,
     settings: Settings | None = None,
 ) -> MissionPresentationBridge:
+    session = session_of(session)
     runtime = _resolve_runtime_settings(settings)
     service = _create_planning_service(session, runtime)
     return service.get_presentation_bridge(
@@ -901,13 +944,14 @@ def get_presentation_bridge(
 
 
 def run_artifact_job(
-    session: Session,
+    session: SessionLike,
     mission_id: UUID,
     deliverable_id: str,
     *,
     settings: Settings | None = None,
 ):
     """Create, run, and persist an ArtifactJob for a planned non-presentation deliverable."""
+    session = session_of(session)
     from archium.application.artifact_job_service import ArtifactJobService
 
     runtime = _resolve_runtime_settings(settings)
@@ -918,24 +962,26 @@ def run_artifact_job(
 
 
 def list_artifact_jobs(
-    session: Session,
+    session: SessionLike,
     mission_id: UUID,
     *,
     limit: int = 20,
 ) -> list:
+    session = session_of(session)
     from archium.application.artifact_job_service import ArtifactJobService
 
     return ArtifactJobService(session).list_jobs_for_mission(mission_id, limit=limit)
 
 
 def generate_question_list_artifact(
-    session: Session,
+    session: SessionLike,
     mission_id: UUID,
     *,
     deliverable_id: str | None = None,
     settings: Settings | None = None,
 ) -> ArtifactOutput:
     """Execute QuestionListExecutor and persist an ArtifactJob when deliverable_id is set."""
+    session = session_of(session)
     return _generate_via_artifact_job(
         session,
         mission_id,
@@ -946,12 +992,13 @@ def generate_question_list_artifact(
 
 
 def generate_work_plan_artifact(
-    session: Session,
+    session: SessionLike,
     mission_id: UUID,
     *,
     deliverable_id: str | None = None,
     settings: Settings | None = None,
 ) -> ArtifactOutput:
+    session = session_of(session)
     return _generate_via_artifact_job(
         session,
         mission_id,
@@ -962,12 +1009,13 @@ def generate_work_plan_artifact(
 
 
 def generate_report_artifact(
-    session: Session,
+    session: SessionLike,
     mission_id: UUID,
     *,
     deliverable_id: str | None = None,
     settings: Settings | None = None,
 ) -> ArtifactOutput:
+    session = session_of(session)
     return _generate_via_artifact_job(
         session,
         mission_id,
@@ -978,12 +1026,13 @@ def generate_report_artifact(
 
 
 def generate_memo_artifact(
-    session: Session,
+    session: SessionLike,
     mission_id: UUID,
     *,
     deliverable_id: str | None = None,
     settings: Settings | None = None,
 ) -> ArtifactOutput:
+    session = session_of(session)
     return _generate_via_artifact_job(
         session,
         mission_id,
@@ -994,12 +1043,13 @@ def generate_memo_artifact(
 
 
 def generate_checklist_artifact(
-    session: Session,
+    session: SessionLike,
     mission_id: UUID,
     *,
     deliverable_id: str | None = None,
     settings: Settings | None = None,
 ) -> ArtifactOutput:
+    session = session_of(session)
     return _generate_via_artifact_job(
         session,
         mission_id,
@@ -1010,12 +1060,13 @@ def generate_checklist_artifact(
 
 
 def generate_case_study_artifact(
-    session: Session,
+    session: SessionLike,
     mission_id: UUID,
     *,
     deliverable_id: str | None = None,
     settings: Settings | None = None,
 ) -> ArtifactOutput:
+    session = session_of(session)
     return _generate_via_artifact_job(
         session,
         mission_id,
@@ -1026,13 +1077,14 @@ def generate_case_study_artifact(
 
 
 def _generate_via_artifact_job(
-    session: Session,
+    session: SessionLike,
     mission_id: UUID,
     *,
     deliverable_id: str | None,
     settings: Settings | None,
     kind_label: str,
 ) -> ArtifactOutput:
+    session = session_of(session)
     if not deliverable_id:
         raise WorkflowError(f"生成{kind_label}需要 deliverable_id，以便写入 ArtifactJob")
     result = run_artifact_job(
@@ -1047,7 +1099,7 @@ def _generate_via_artifact_job(
 
 
 def start_presentation_from_planning(
-    session: Session,
+    session: SessionLike,
     project_id: UUID,
     workflow_run_id: UUID,
     *,
@@ -1058,6 +1110,7 @@ def start_presentation_from_planning(
     settings: Settings | None = None,
 ) -> WorkflowRunResult:
     """Approve plan gate if needed, then launch the existing presentation pipeline."""
+    session = session_of(session)
 
     runtime = _resolve_runtime_settings(settings)
     planning = _create_planning_service(session, runtime)

@@ -36,10 +36,12 @@ from archium.application.api.storyline import StorylineApi
 from archium.application.api.visual import VisualApi
 from archium.application.unit_of_work import (
     Application,
+    SessionLike,
     UnitOfWork,
     api_bound,
     application_api,
     get_application,
+    session_of,
     unit_of_work,
 )
 
@@ -56,6 +58,7 @@ __all__ = [
     "RenderApi",
     "RevisionsApi",
     "ScenesApi",
+    "SessionLike",
     "SlidesApi",
     "StorylineApi",
     "UnitOfWork",
@@ -64,5 +67,6 @@ __all__ = [
     "api_from_session",
     "application_api",
     "get_application",
+    "session_of",
     "unit_of_work",
 ]

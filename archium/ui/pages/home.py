@@ -8,6 +8,7 @@ from pathlib import Path
 import streamlit as st
 
 from archium.domain.delivery_record import DeliveryRecord
+from archium.application.unit_of_work import application_api
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 from archium.ui.project_progress_card import (
@@ -185,7 +186,7 @@ def _render_recent_versions(snapshot: ProjectProgressSnapshot) -> None:
 
     export_records: list[DeliveryRecord | dict[str, object]] = []
     try:
-        from archium.application.unit_of_work import UnitOfWork, application_api
+        from archium.application.unit_of_work import application_api
 
         with application_api() as api:
             export_records = [
@@ -258,9 +259,9 @@ def _render_recent_design_changes(snapshot: ProjectProgressSnapshot) -> None:
             intent_evolution_kind_label,
         )
 
-        with get_session() as session:
+        with application_api() as api:
             try:
-                project = UnitOfWork.bind(session).api.project.get(snapshot.project_id)
+                project = api.project.get(snapshot.project_id)
             except Exception:
                 project = None
         evolution = project.intent_evolution if project is not None else None

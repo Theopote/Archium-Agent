@@ -53,7 +53,6 @@ from archium.ui.workflow_resume_ux import (
     render_resume_failure,
 )
 from archium.ui.workspace_service import (
-from archium.application.unit_of_work import UnitOfWork
     UploadKnowledgeTip,
     backfill_project_asset_vision,
     build_presentation_request,
@@ -66,6 +65,7 @@ from archium.application.unit_of_work import UnitOfWork
     list_projects,
     reassess_knowledge_after_upload,
 )
+from archium.application.unit_of_work import unit_of_work
 
 _UPLOAD_FEEDBACK_KEY = "materials_upload_feedback"
 
@@ -204,21 +204,21 @@ def _render_documents(project_id: UUID, *, show_uploader: bool = True) -> None:
         ]
         st.dataframe(rows, use_container_width=True, hide_index=True)
     else:
-        with get_session() as session:
+        with unit_of_work() as uow:
             from archium.application.project_context_routing import (
                 is_concept_leaning,
                 is_research_programming,
             )
-            
+
             try:
-                project = UnitOfWork.bind(session).api.project.get(project_id)
+                project = uow.api.project.get(project_id)
             except Exception:
                 project = None
-            if project is not None and is_concept_leaning(session, project) and not is_research_programming(
-                session, project
+            if project is not None and is_concept_leaning(uow.session, project) and not is_research_programming(
+                uow.session, project
             ):
                 st.caption("概念探索中 — 资料可后续补充 enrich 任务理解。")
-            elif project is not None and is_research_programming(session, project):
+            elif project is not None and is_research_programming(uow.session, project):
                 st.caption("策划与可研中 — 资料可后续补充 enrich 任务理解。")
             else:
                 st.caption("尚未导入资料。上传任务书、图纸说明或调研文档后再生成汇报。")
@@ -429,15 +429,15 @@ def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
 
 def _load_generation_contract(project_id: UUID):
     """Load the selected persisted plan; generation must not re-plan it."""
-        from archium.application.review_service import PresentationReviewService
+    from archium.application.review_service import PresentationReviewService
 
     preferred = st.session_state.get("selected_presentation_id")
-    with get_session() as session:
-        presentations = UnitOfWork.bind(session).api.project.list_presentations(project_id)
+    with unit_of_work() as uow:
+        presentations = uow.api.project.list_presentations(project_id)
         if preferred:
             presentations.sort(key=lambda item: str(item.id) != str(preferred))
         for presentation in presentations:
-            context = PresentationReviewService(session).get_review_context(presentation.id)
+            context = PresentationReviewService(uow.session).get_review_context(presentation.id)
             if context is not None and context.outline is not None:
                 return context
     return None
