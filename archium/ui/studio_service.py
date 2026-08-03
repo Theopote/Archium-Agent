@@ -741,13 +741,10 @@ def generate_slide_vision_illustration(
         VisionGenerationMode,
         VisionStylePreset,
     )
-    from archium.infrastructure.database.repositories import (
-        AssetRepository,
-    )
-    from archium.infrastructure.database.visual_repositories import RenderSceneRepository
     from archium.ui.studio.undo_stack import clear_visual_redo_stack
 
-    slide = api_from_session(session).slides.get(slide_id)
+    api = api_from_session(session)
+    slide = api.slides.get(slide_id)
     if slide is None:
         raise WorkflowError("页面不存在。")
 
@@ -770,8 +767,7 @@ def generate_slide_vision_illustration(
 
     base_image_path: str | None = None
     if base_element_id:
-        scenes = RenderSceneRepository(session).list_by_slide(slide_id)
-        scene = scenes[0] if scenes else None
+        scene = api.scenes.get_latest_for_slide(slide_id)
         if scene is not None:
             node = scene.node_by_layout_element_id(base_element_id) or scene.node_by_id(
                 base_element_id
@@ -783,7 +779,7 @@ def generate_slide_vision_illustration(
                 if node.storage_uri:
                     candidates.append(node.storage_uri)
                 if node.asset_id is not None:
-                    asset = AssetRepository(session).get_by_id(node.asset_id)
+                    asset = api.project.get_asset(node.asset_id)
                     if asset is not None and asset.path:
                         candidates.append(asset.path)
                 for candidate in candidates:

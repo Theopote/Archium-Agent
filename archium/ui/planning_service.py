@@ -48,12 +48,8 @@ from archium.domain.project_mission import ProjectMission
 from archium.domain.workflow import WorkflowRun
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.mission_repositories import MissionRepository
-from archium.infrastructure.database.repositories import (
-    FactRepository,
-    PlanningSessionRepository,
-    WorkflowRunRepository,
-)
+from archium.application.api.mission import MissionApi
+from archium.application.api.session import api_from_session
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
 from archium.ui.workspace_service import _resolve_runtime_settings
@@ -223,41 +219,31 @@ class _PlanningRunState:
 
 
 def _resolve_planning_session(
-    sessions: PlanningSessionRepository,
+    api,
     *,
     planning_session_id: UUID | None,
     workflow_run_id: UUID | None,
     project_id: UUID | None,
 ) -> PlanningSession | None:
-    if planning_session_id is not None:
-        return sessions.get_by_id(planning_session_id)
-    if workflow_run_id is not None:
-        return sessions.get_by_workflow_run_id(workflow_run_id)
-    if project_id is not None:
-        project_sessions = sessions.list_by_project(project_id)
-        return project_sessions[0] if project_sessions else None
-    return None
+    return api.planning.resolve_session(
+        planning_session_id=planning_session_id,
+        workflow_run_id=workflow_run_id,
+        project_id=project_id,
+    )
 
 
 def _resolve_planning_run(
-    runs: WorkflowRunRepository,
-    sessions: PlanningSessionRepository,
+    api,
     *,
     workflow_run_id: UUID | None,
     planning_session: PlanningSession | None,
     project_id: UUID | None,
 ) -> tuple[WorkflowRun | None, PlanningSession | None]:
-    run: WorkflowRun | None = None
-    if workflow_run_id is not None:
-        run = runs.get_by_id(workflow_run_id)
-    elif planning_session is not None and planning_session.workflow_run_id is not None:
-        run = runs.get_by_id(planning_session.workflow_run_id)
-    elif project_id is not None:
-        planning_runs = runs.list_planning_by_project(project_id)
-        run = planning_runs[0] if planning_runs else None
-        if planning_session is None and run is not None:
-            planning_session = sessions.get_by_workflow_run_id(run.id)
-    return run, planning_session
+    return api.planning.resolve_run(
+        workflow_run_id=workflow_run_id,
+        planning_session=planning_session,
+        project_id=project_id,
+    )
 
 
 def _extract_planning_run_state(run: WorkflowRun | None) -> _PlanningRunState:
@@ -301,7 +287,7 @@ def _extract_planning_run_state(run: WorkflowRun | None) -> _PlanningRunState:
 
 def _build_mission_planning_snapshot(
     session: Session,
-    missions: MissionRepository,
+    missions: MissionApi,
     *,
     mission: ProjectMission,
     planning_session: PlanningSession | None,
@@ -345,7 +331,7 @@ def _build_mission_planning_snapshot(
         clarifying_questions=clarifying_questions,
         workstreams=workstreams,
         deliverable_plan=plan,
-        project_facts=FactRepository(session).list_by_project(mission.project_id),
+        project_facts=api_from_session(session).context.list_facts(mission.project_id),
         presentation_request=run_state.presentation_request,
         artifact_execution_plans=artifact_execution_plans,
         readiness=MissionClarificationService.build_readiness(
@@ -368,19 +354,16 @@ def get_planning_snapshot(
     settings: Settings | None = None,
 ) -> PlanningSnapshot:
     """Load the best available planning snapshot for the UI."""
-    runs = WorkflowRunRepository(session)
-    sessions = PlanningSessionRepository(session)
-    missions = MissionRepository(session)
+    api = api_from_session(session)
 
     planning_session = _resolve_planning_session(
-        sessions,
+        api,
         planning_session_id=planning_session_id,
         workflow_run_id=workflow_run_id,
         project_id=project_id,
     )
     run, planning_session = _resolve_planning_run(
-        runs,
-        sessions,
+        api,
         workflow_run_id=workflow_run_id,
         planning_session=planning_session,
         project_id=project_id,
@@ -393,7 +376,7 @@ def get_planning_snapshot(
     if resolved_mission_id is None:
         resolved_mission_id = run_state.mission_id
     if resolved_mission_id is None and project_id is not None:
-        project_missions = missions.list_missions_by_project(project_id)
+        project_missions = api.mission.list_for_project(project_id)
         if project_missions:
             resolved_mission_id = project_missions[0].id
 
@@ -407,7 +390,7 @@ def get_planning_snapshot(
             warnings=list(run_state.warnings),
         )
 
-    mission = missions.get_mission(resolved_mission_id)
+    mission = api.mission.get(resolved_mission_id)
     if mission is None:
         return PlanningSnapshot(
             planning_session=planning_session,
@@ -420,7 +403,7 @@ def get_planning_snapshot(
 
     return _build_mission_planning_snapshot(
         session,
-        missions,
+        api.mission,
         mission=mission,
         planning_session=planning_session,
         run=run,
@@ -1083,7 +1066,7 @@ def start_presentation_from_planning(
     if run is None:
         raise WorkflowError(f"Workflow run {workflow_run_id} not found")
 
-    missions = MissionRepository(session)
+    missions = api_from_session(session).mission
     mission_id = None
     raw = run.state.get("mission_id")
     if raw:
@@ -1142,9 +1125,7 @@ def start_presentation_from_planning(
 
         run.status = WorkflowStatus.COMPLETED
         run.touch()
-        from archium.infrastructure.database.repositories import WorkflowRunRepository
-
-        WorkflowRunRepository(session).update(run)
+        api_from_session(session).planning.update_run(run)
     bridge = planning.get_presentation_bridge(workflow_run_id)
     presentation_service = _create_presentation_service(session, runtime)
     result = presentation_service.run(

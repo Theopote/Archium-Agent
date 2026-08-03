@@ -77,6 +77,11 @@ class ProjectApi:
     def count_presentations(self, project_id: UUID) -> int:
         return self._presentations.count_by_project(project_id)
 
+    def get_asset(self, asset_id: UUID):
+        from archium.infrastructure.database.repositories import AssetRepository
+
+        return AssetRepository(self._session).get_by_id(asset_id)
+
     def list_cultural_narratives(self, project_id: UUID):
         from archium.infrastructure.database.repositories import ProjectRepository
 

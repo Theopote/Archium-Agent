@@ -153,13 +153,12 @@ def resolve_generation_form_defaults(session: Session, project_id: UUID) -> Gene
                     purpose = "形成前期策划与概念设计汇报，明确重建定位与决策路径"
             break
 
-    from archium.infrastructure.database.repositories import PresentationRepository
+    from archium.application.api.session import api_from_session
 
-    presentations = PresentationRepository(session)
     deck_rows = list_project_presentations(session, project_id)
     if deck_rows:
         deck = max(deck_rows, key=lambda item: item.updated_at)
-        briefs = presentations.list_briefs(deck.id)
+        briefs = api_from_session(session).slides.list_briefs(deck.id)
         if briefs:
             brief = briefs[-1]
             if (brief.title or "").strip():

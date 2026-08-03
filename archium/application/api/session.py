@@ -85,6 +85,12 @@ class ApiContext:
 
         return VisualApi(self.session)
 
+    @property
+    def planning(self):
+        from archium.application.api.planning import PlanningApi
+
+        return PlanningApi(self.session)
+
 
 def api_from_session(session: Session) -> ApiContext:
     return ApiContext(session=session)

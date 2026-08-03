@@ -215,3 +215,42 @@ def test_mission_api_get(db_session: Session) -> None:
     assert got is not None
     assert got.id == mission.id
     assert got.title == "任务"
+    assert api.mission.list_deliverable_plans(mission.id) == []
+    assert api.mission.list_workstreams(mission.id) == []
+    assert api.context.list_facts(project.id) == []
+
+
+def test_planning_api_resolve_run_and_session(db_session: Session) -> None:
+    from archium.domain.enums import WorkflowStatus
+    from archium.domain.planning_session import PlanningSession
+    from archium.domain.workflow import WorkflowRun
+    from archium.infrastructure.database.repositories import (
+        PlanningSessionRepository,
+        WorkflowRunRepository,
+    )
+
+    project = ProjectRepository(db_session).create(Project(name="Planning API", description=""))
+    run = WorkflowRunRepository(db_session).create(
+        WorkflowRun(
+            project_id=project.id,
+            status=WorkflowStatus.RUNNING,
+            state={"workflow_kind": "planning"},
+        )
+    )
+    session_row = PlanningSessionRepository(db_session).create(
+        PlanningSession(
+            project_id=project.id,
+            workflow_run_id=run.id,
+            user_task_description="策划会话",
+        )
+    )
+    api = api_from_session(db_session)
+    assert api.planning.get_run(run.id) is not None
+    resolved_session = api.planning.resolve_session(project_id=project.id)
+    assert resolved_session is not None
+    assert resolved_session.id == session_row.id
+    resolved_run, linked = api.planning.resolve_run(project_id=project.id)
+    assert resolved_run is not None
+    assert resolved_run.id == run.id
+    assert linked is not None
+    assert linked.id == session_row.id

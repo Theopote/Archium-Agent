@@ -11,6 +11,7 @@ from archium.application.api.delivery import DeliveryApi
 from archium.application.api.documents import DocumentsApi
 from archium.application.api.jobs import JobsApi
 from archium.application.api.mission import MissionApi
+from archium.application.api.planning import PlanningApi
 from archium.application.api.project import ProjectApi
 from archium.application.api.render import RenderApi
 from archium.application.api.revisions import RevisionsApi
@@ -27,6 +28,7 @@ __all__ = [
     "DocumentsApi",
     "JobsApi",
     "MissionApi",
+    "PlanningApi",
     "ProjectApi",
     "RenderApi",
     "RevisionsApi",
