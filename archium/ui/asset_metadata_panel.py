@@ -8,7 +8,7 @@ import streamlit as st
 
 from archium.application.asset_metadata_service import AssetMetadataService
 from archium.domain.plan_overlay import PlanLegendItem, PlanOverlayMetadata, plan_overlay_from_asset
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 
 _PLAN_VISUAL_TYPES = {"site_plan", "map", "floor_plan"}
 
@@ -59,7 +59,8 @@ def render_asset_metadata_panel(project_id: UUID) -> None:
         "未标注时导出 PPTX 不会自动添加这些元素，避免错误信息。"
     )
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         assets = AssetMetadataService(session).list_project_assets(project_id)
 
     if not assets:
@@ -78,7 +79,8 @@ def render_asset_metadata_panel(project_id: UUID) -> None:
     )
     asset = next(item for item in assets if str(item.id) == selected_id)
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         overlay = AssetMetadataService(session).get_plan_overlay(asset.id)
 
     show_north = st.checkbox(
@@ -118,13 +120,15 @@ def render_asset_metadata_panel(project_id: UUID) -> None:
             scale_pending=scale_pending and not scale_label.strip(),
             legend_items=_parse_legend_lines(legend_text),
         )
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             AssetMetadataService(session).save_plan_overlay(asset.id, draft)
         st.success("图纸标注已保存。导出 PPTX 时将按核实内容渲染。")
         st.rerun()
 
     if clear_col.button("清除标注", key=f"clear_plan_overlay_{asset.id}", use_container_width=True):
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             AssetMetadataService(session).clear_plan_overlay(asset.id)
         st.warning("已清除该素材的图纸标注。")
         st.rerun()
@@ -140,7 +144,8 @@ def render_plan_overlay_editor_for_asset(
     if visual_type not in _PLAN_VISUAL_TYPES:
         return
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         service = AssetMetadataService(session)
         overlay = service.get_plan_overlay(asset_id)
 
@@ -175,7 +180,8 @@ def render_plan_overlay_editor_for_asset(
             scale_pending=scale_pending and not scale_label.strip(),
             legend_items=_parse_legend_lines(legend_text),
         )
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             AssetMetadataService(session).save_plan_overlay(asset_id, draft)
         st.success("图纸标注已保存。")
         st.rerun()

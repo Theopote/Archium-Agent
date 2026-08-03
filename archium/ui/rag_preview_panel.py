@@ -9,7 +9,7 @@ import streamlit as st
 from archium.application.fact_retrieval import match_fact_keys_from_query
 from archium.application.knowledge_fusion import KnowledgeFusionService
 from archium.domain.knowledge_reference import KnowledgeSourceKind
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.workspace_service import preview_project_retrieval
 
@@ -45,7 +45,8 @@ def render_rag_preview_panel(project_id: UUID) -> None:
         return
 
     settings = get_ui_effective_settings()
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         bundle = preview_project_retrieval(
             session,
             project_id,

@@ -43,7 +43,6 @@ from archium.domain.review import ReviewIssue
 from archium.domain.review_rules import repair_strategy_for_rule
 from archium.domain.slide import SlideSpec
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
 from archium.ui.artifact_history_panel import (
     render_brief_history_panel,
     render_storyline_history_panel,
@@ -79,7 +78,7 @@ from archium.ui.workspace_service import (
     regenerate_slide_plan,
     regenerate_storyline,
 )
-from archium.application.unit_of_work import application_api
+from archium.application.unit_of_work import application_api, unit_of_work
 
 FOCUS_SLIDE_SESSION_KEY = "review_focus_slide_id"
 
@@ -361,7 +360,8 @@ def _render_regenerate_actions(
 
 
 def _render_brief_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         review_service = PresentationReviewService(session)
         context = review_service.get_review_context(
             context_presentation_id,
@@ -425,7 +425,8 @@ def _render_brief_editor(context_presentation_id: UUID, workflow_run_id: UUID | 
     )
 
     if save_clicked or approve_clicked or reject_clicked:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             review_service = PresentationReviewService(session)
             review_service.update_brief(brief.id, update)
             if approve_clicked:
@@ -447,7 +448,8 @@ def _manuscript_status_badge(status: ManuscriptStatus) -> str:
 
 
 def _render_manuscript_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         review_service = PresentationReviewService(session)
         context = review_service.get_review_context(
             context_presentation_id,
@@ -490,14 +492,16 @@ def _render_manuscript_editor(context_presentation_id: UUID, workflow_run_id: UU
         use_container_width=True,
     )
     if approve_clicked:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             PresentationReviewService(session).approve_manuscript(manuscript.id)
         st.success(f"{_MANUSCRIPT_LABEL} 已批准。")
         st.rerun()
 
 
 def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         review_service = PresentationReviewService(session)
         context = review_service.get_review_context(
             context_presentation_id,
@@ -608,7 +612,8 @@ def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUI
                 final_decision=final_decision,
             ),
         )
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             review_service = PresentationReviewService(session)
             review_service.update_storyline(storyline.id, update)
             if approve_clicked:
@@ -622,7 +627,8 @@ def _render_storyline_editor(context_presentation_id: UUID, workflow_run_id: UUI
 
 
 def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         review_service = PresentationReviewService(session)
         context = review_service.get_review_context(
             context_presentation_id,
@@ -743,7 +749,8 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
             page_asset_bindings=page_asset_bindings,
             expected_version=outline.version,
         )
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             review_service = PresentationReviewService(session)
             saved = review_service.update_outline(outline.id, update)
             if reorder_clicked:
@@ -811,7 +818,8 @@ def _render_outline_editor(context_presentation_id: UUID, workflow_run_id: UUID 
 
 
 def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID | None) -> None:
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         review_service = PresentationReviewService(session)
         context = review_service.get_review_context(
             context_presentation_id,
@@ -875,7 +883,8 @@ def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID |
     )
 
     if save_clicked:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             review_service = PresentationReviewService(session)
             for row in edited.to_dict(orient="records"):
                 slide_id = row.get("id")
@@ -896,7 +905,8 @@ def _render_slides_editor(context_presentation_id: UUID, workflow_run_id: UUID |
         st.rerun()
 
     if approve_all_clicked:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             review_service = PresentationReviewService(session)
             review_service.approve_all_slides(context_presentation_id)
         st.success("全部页面已批准。")
@@ -1041,7 +1051,8 @@ def _render_slide_evidence_items_section(
                 use_container_width=True,
             ):
                 try:
-                    with get_session() as session:
+                    with unit_of_work() as uow:
+                        session = uow.session
                         PresentationReviewService(session).update_slide_evidence_items(
                             slide.id,
                             edited,
@@ -1061,7 +1072,8 @@ def _render_review_issues_panel(
 ) -> None:
     settings = get_settings()
     slides_by_id = _slide_lookup(slides)
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         review_service = PresentationReviewService(session)
         all_issues = review_service.list_review_issues(presentation_id)
 
@@ -1181,11 +1193,13 @@ def _render_review_issues_panel(
             st.toast(f"已定位到 {_issue_slide_label(issue, slides_by_id)}，请切换到 {_SLIDE_LABEL} 标签页。")
             st.rerun()
         if cols[2].button("标记已解决", key=f"resolve_issue_{issue.id}"):
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 PresentationReviewService(session).resolve_review_issue(issue.id)
             st.rerun()
         if cols[3].button("忽略", key=f"dismiss_issue_{issue.id}"):
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 PresentationReviewService(session).dismiss_review_issue(issue.id)
             st.rerun()
 
@@ -1194,7 +1208,8 @@ def render_review_panel(*, presentation_id: UUID | None, workflow_run_id: UUID |
     if presentation_id is None:
         return
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         review_service = PresentationReviewService(session)
         context = review_service.get_review_context(
             presentation_id,
@@ -1480,7 +1495,8 @@ def _render_page_asset_binding_editor(*, outline: OutlinePlan, project_id: UUID)
                 )
                 if str(index) != remove_key
             ]
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 PresentationReviewService(session).update_page_asset_bindings(
                     outline.id,
                     [
@@ -1548,7 +1564,8 @@ def _render_page_asset_binding_editor(*, outline: OutlinePlan, project_id: UUID)
                 required=bool(required),
             )
         )
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             PresentationReviewService(session).update_page_asset_bindings(
                 outline.id,
                 updates,

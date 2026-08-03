@@ -27,7 +27,6 @@ from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Storyline
 from archium.domain.slide_intent import SlideIntent, slide_intents_from_page_instructions
 from archium.domain.visual.visual_grammar import PageArchetype
-from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 from archium.ui.pages import project_mission
 from archium.ui.pages.flow import (
@@ -37,7 +36,7 @@ from archium.ui.pages.flow import (
 )
 from archium.ui.planning_service import TASK_EXAMPLE_PROMPTS, PlanningSnapshot
 from archium.ui.workspace_service import list_project_presentations
-from archium.application.unit_of_work import application_api
+from archium.application.unit_of_work import application_api, unit_of_work
 
 _PAGE_TYPE_LABELS = {
     "general": "通用内容",
@@ -85,7 +84,8 @@ def _render_task_composer(project_id: UUID) -> None:
 def _load_outline_storyline(
     project_id: UUID,
 ) -> tuple[OutlinePlan | None, Storyline | None, list]:
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         presentations = list_project_presentations(session, project_id)
         if not presentations:
             return None, None, []
@@ -179,7 +179,8 @@ def _outline_update_from(
 
 
 def _save_outline(outline_id: UUID, update: OutlineUpdate) -> OutlinePlan:
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         saved = PresentationReviewService(session).update_outline(outline_id, update)
         return saved
 
@@ -820,7 +821,8 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
                     from archium.ui.error_handlers import report_user_error
 
                     try:
-                        with get_session() as session:
+                        with unit_of_work() as uow:
+                            session = uow.session
                             SlideDesignBriefService(session).generate_all(outline.id)
                         st.rerun()
                     except WorkflowError as exc:
@@ -881,7 +883,8 @@ def _confirm_outline(project_id: UUID, *, outline: OutlinePlan | None) -> None:
     from archium.ui.error_handlers import format_user_error
 
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             result = OutlineApprovalService(session).approve_for_project(
                 project_id,
                 approved_by="user",

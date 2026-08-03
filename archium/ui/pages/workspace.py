@@ -11,7 +11,6 @@ from archium.application.workflow_models import WorkflowRunResult
 from archium.domain.enums import ProjectType
 from archium.domain.render import RenderResult
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
 from archium.ui.asset_metadata_panel import render_asset_metadata_panel
 from archium.ui.background_workflow_runner import (
     VisualJobAction,
@@ -96,7 +95,8 @@ def _resolve_active_presentation_id(project_id: UUID) -> UUID | None:
         if result is not None and result.presentation is not None
         else st.session_state.get("selected_presentation_id")
     )
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         from archium.application.presentation_selection import select_presentation
 
         presentations = list_project_presentations(session, project_id)
@@ -118,7 +118,8 @@ def _store_pptx_export_result(result: RenderResult) -> None:
 
 
 def _render_project_selector() -> UUID | None:
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         projects = list_projects(session)
 
     if not projects:
@@ -158,7 +159,8 @@ def _render_create_project() -> None:
             if not name.strip():
                 st.error("请填写项目名称")
                 return
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 from archium.ui.session_actor import get_current_actor_id
 
                 project = create_project(
@@ -174,7 +176,8 @@ def _render_create_project() -> None:
 
 
 def _render_overview(project_id: UUID) -> None:
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         overview = get_project_overview(session, project_id)
     if overview is None:
         st.warning("项目不存在或已被删除。")
@@ -189,7 +192,8 @@ def _render_overview(project_id: UUID) -> None:
 
 def _render_documents(project_id: UUID, *, show_uploader: bool = True) -> None:
     st.markdown("#### 项目资料")
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         documents = list_project_documents(session, project_id)
 
     if documents:
@@ -289,7 +293,8 @@ def _consume_upload_feedback(project_id: UUID, *, key_prefix: str) -> None:
             try:
                 from archium.application.fact_ledger_service import FactLedgerService
 
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     ledger = FactLedgerService(session).get_ledger(project_id)
                 pending = ledger.pending_count
                 conflicts = ledger.conflict_count
@@ -348,7 +353,8 @@ def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
         results = []
         knowledge_tip: UploadKnowledgeTip | None = None
         settings = get_ui_effective_settings()
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             for upload in uploads:
                 results.append(
                     import_uploaded_file(
@@ -411,7 +417,8 @@ def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
         )
         if st.button("补建图档语义索引", key=f"backfill_vision_{project_id}"):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     backfill_result = backfill_project_asset_vision(
                         session, project_id, settings=settings
                     )
@@ -568,7 +575,8 @@ def _render_generation_form(project_id: UUID) -> None:
         resolve_generation_form_defaults as _resolve_form_defaults,
     )
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         defaults = _resolve_form_defaults(session, project_id)
 
     with st.form("presentation_form"):
@@ -688,7 +696,8 @@ def _render_review_section(project_id: UUID) -> None:
     workflow_run_id = result.workflow_run.id if result is not None else None
 
     if presentation_id is None:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             presentations = list_project_presentations(session, project_id)
         if not presentations:
             st.caption(
@@ -720,7 +729,8 @@ def _render_last_result() -> None:
         st.caption(f"{entity_label('Storyline')} 论点：{result.storyline.thesis}")
 
     if result.presentation is not None:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             from archium.application.review_service import PresentationReviewService
             from archium.domain.enums import ReviewSeverity, ReviewStatus
 
@@ -798,7 +808,8 @@ def _render_pptx_export_section(project_id: UUID) -> None:
         "也可跳过视觉编排，直接使用旧版 PresentationSpec 模板。"
     )
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         has_visual_layout = presentation_has_visual_layout(session, presentation_id)
 
     prompt_key = _pptx_export_prompt_key(presentation_id)
@@ -813,10 +824,8 @@ def _render_pptx_export_section(project_id: UUID) -> None:
         if has_visual_layout:
             st.session_state.pop(prompt_key, None)
             try:
-                with (
-                    st.spinner("正在按 RenderScene 导出 PPTX…"),
-                    get_session() as session,
-                ):
+                with st.spinner("正在按 RenderScene 导出 PPTX…"), unit_of_work() as uow:
+                    session = uow.session
                     export_result = export_presentation_pptx_from_layout_plans(
                         session,
                         presentation_id,
@@ -886,10 +895,8 @@ def _render_pptx_export_section(project_id: UUID) -> None:
         ):
             st.session_state.pop(prompt_key, None)
             try:
-                with (
-                    st.spinner("正在使用旧版模板导出 PPTX…"),
-                    get_session() as session,
-                ):
+                with st.spinner("正在使用旧版模板导出 PPTX…"), unit_of_work() as uow:
+                    session = uow.session
                     export_result = export_presentation_pptx_legacy(
                         session,
                         presentation_id,
@@ -917,7 +924,8 @@ def _render_pptx_export_section(project_id: UUID) -> None:
 
 def _render_history(project_id: UUID) -> None:
     st.markdown("#### 历史汇报")
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         presentations = list_project_presentations(session, project_id)
 
     if not presentations:
@@ -991,7 +999,8 @@ def render_materials_stage(project_id: UUID) -> None:
     """资料阶段：摘要指标 + 上传主操作 + 文件/事实/素材/缺口；高级工具收折。"""
     from archium.ui.materials_summary import load_materials_summary
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         summary = load_materials_summary(session, project_id)
 
     st.markdown(

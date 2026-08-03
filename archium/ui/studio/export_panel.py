@@ -17,7 +17,6 @@ from archium.domain.visual.scene_presets import (
     scene_preset_preferences,
 )
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 from archium.ui.background_workflow_runner import (
     VisualJobAction,
@@ -266,7 +265,8 @@ def _export_pptx(
                 presentation_id=presentation_id,
                 export_format="PPTX",
             )
-        with st.spinner("正在评估导出忠实度…"), get_session() as session:
+        with st.spinner("正在评估导出忠实度…"), unit_of_work() as uow:
+            session = uow.session
             from archium.application.evidence_readiness_service import (
                 latest_presentation_revision_id,
             )
@@ -286,7 +286,8 @@ def _export_pptx(
                 strict_closure=require_formal_gate,
             )
 
-        with st.spinner("正在导出 PPTX…"), get_session() as session:
+        with st.spinner("正在导出 PPTX…"), unit_of_work() as uow:
+            session = uow.session
             pptx_export_result: RenderResult = export_presentation_from_studio(
                 session,
                 presentation_id,
@@ -305,7 +306,8 @@ def _export_pptx(
 
             round_trip_report = None
             qa_status = qa_status
-            with st.spinner("正在执行 Round-trip QA…"), get_session() as session:
+            with st.spinner("正在执行 Round-trip QA…"), unit_of_work() as uow:
+                session = uow.session
                 from archium.application.evidence_readiness_service import (
                     latest_presentation_revision_id,
                 )
@@ -452,7 +454,8 @@ def _export_pdf(
             presentation_id=presentation_id,
             export_format="PDF",
         )
-        with st.spinner("正在导出 PDF…"), get_session() as session:
+        with st.spinner("正在导出 PDF…"), unit_of_work() as uow:
+            session = uow.session
             pdf_export_result: RenderResult = export_presentation_pdf_from_studio(
                 session,
                 presentation_id,

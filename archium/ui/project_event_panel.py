@@ -5,8 +5,8 @@ from __future__ import annotations
 from uuid import UUID
 
 import streamlit as st
+from archium.application.unit_of_work import unit_of_work
 
-from archium.infrastructure.database.session import get_session
 
 _EVENT_LABELS = {
     "project_created": "创建项目",
@@ -37,7 +37,8 @@ def render_project_event_log(
     try:
         from archium.application.project_event_service import ProjectEventService
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             events = ProjectEventService(session).list_for_project(
                 project_id, limit=limit
             )
@@ -67,7 +68,8 @@ def render_project_usage_strip(
     try:
         from archium.application.usage_rollup_service import UsageRollupService
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             rollup = UsageRollupService(session).rollup_for_project(project_id)
     except Exception:
         return
@@ -107,7 +109,7 @@ def render_job_progress_strip(
 ) -> None:
     """Unified WorkflowRun + ArtifactJob + BackgroundJob progress."""
     try:
-        from archium.application.unit_of_work import application_api
+        from archium.application.unit_of_work import application_api, unit_of_work
 
         with application_api() as api:
             jobs = api.jobs.list_operations(
@@ -138,9 +140,9 @@ def render_job_progress_strip(
         ):
             try:
                 from archium.application.background_job_worker import BackgroundJobWorker
-                from archium.infrastructure.database.session import get_session
 
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     done = BackgroundJobWorker(session).process_once()
                 if done is None:
                     st.info("队列为空。")

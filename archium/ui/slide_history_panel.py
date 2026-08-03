@@ -11,7 +11,7 @@ from archium.application.slide_history_service import SlideHistoryService
 from archium.domain.revision import SlideLineageOption
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_history import SlideFieldChange, SlideRevision
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.label_map import entity_label
 
 
@@ -53,7 +53,8 @@ def _render_diff_result(
 
 def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]) -> None:
     """Render revision timeline and diff tools for SlideSpec."""
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         history = SlideHistoryService(session)
         revisions = history.list_presentation_revisions(presentation_id)
         lineage_options = history.list_lineage_options(presentation_id, slides)
@@ -92,7 +93,8 @@ def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]
     selected_option: SlideLineageOption = option_map[selected_lineage_id]
     lineage_id = UUID(selected_lineage_id)
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         history = SlideHistoryService(session)
         slide_revisions = history.list_revisions_by_lineage(lineage_id)
         current_slide = next(
@@ -126,7 +128,8 @@ def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]
             key=f"history_restore_btn_{presentation_id}",
             use_container_width=True,
         ):
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 SlideHistoryService(session).restore_at_revision(UUID(restore_id))
             st.success("页面内容已恢复到所选版本。")
             st.rerun()
@@ -138,7 +141,8 @@ def render_slide_history_panel(*, presentation_id: UUID, slides: list[SlideSpec]
         key=f"history_mode_{presentation_id}",
     )
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         history = SlideHistoryService(session)
         if compare_mode == "与上一版对比":
             if len(slide_revisions) < 2:

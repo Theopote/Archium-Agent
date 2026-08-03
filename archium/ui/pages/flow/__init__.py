@@ -28,6 +28,7 @@ from archium.ui.project_progress_card import (
     load_project_progress_snapshot,
 )
 from archium.ui.session_context import select_project_context
+from archium.application.unit_of_work import unit_of_work
 
 _NEXT_ACTION_LABELS = {
     "materials": "确认资料并进入大纲 →",
@@ -58,12 +59,13 @@ def _append_cognition_gate_warnings(project_id: UUID, warnings: list[str]) -> No
             PresentationGateVerdict,
         )
         from archium.config.settings import get_settings
-        from archium.infrastructure.database.session import get_session
+        from archium.application.unit_of_work import unit_of_work
 
         mode = (get_settings().presentation_cognition_gate or "warn").strip().lower()
         if mode == "off":
             return
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             readiness = evaluate_presentation_cognition(session, project_id)
         if readiness.verdict == PresentationGateVerdict.PROCEED:
             return
@@ -86,9 +88,9 @@ def _append_unresolved_design_warning(project_id: UUID, warnings: list[str]) -> 
     try:
         from archium.application.process.design_process_pointer import build_design_pointer
         from archium.application.product_continue_work import design_loop_open
-        from archium.infrastructure.database.session import get_session
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             pointer = build_design_pointer(session, project_id)
             if not design_loop_open(pointer):
                 return
@@ -104,10 +106,10 @@ def _append_role_edit_warning(project_id: UUID, warnings: list[str]) -> None:
     """Soft-guide Client/Reviewer away from edit-heavy stages (COLLAB-005)."""
     try:
         from archium.application.role_navigation import resolve_role_navigation
-        from archium.infrastructure.database.session import get_session
         from archium.ui.session_actor import get_current_actor_id
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             hint = resolve_role_navigation(
                 session,
                 project_id,
@@ -497,10 +499,10 @@ def render_design_context_strip(project_id: UUID) -> None:
             resolve_role_navigation,
             role_label,
         )
-        from archium.infrastructure.database.session import get_session
         from archium.ui.session_actor import get_current_actor_id
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             hint = resolve_role_navigation(
                 session,
                 project_id,
@@ -531,9 +533,9 @@ def render_design_context_strip(project_id: UUID) -> None:
             design_loop_open,
             page_for_unresolved_design,
         )
-        from archium.infrastructure.database.session import get_session
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             pending = load_pending_design_revise(session, project_id)
             pointer = build_design_pointer(session, project_id)
             open_loop = design_loop_open(pointer)
@@ -654,12 +656,12 @@ def render_flow_project_context(
     """
     from uuid import UUID
 
-    from archium.infrastructure.database.session import get_session
     from archium.ui.pages.workspace import ensure_workspace_session
     from archium.ui.workspace_service import list_projects
 
     ensure_workspace_session()
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         projects = list_projects(session)
     if not projects:
         if allow_create:

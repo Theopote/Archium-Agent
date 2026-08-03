@@ -15,7 +15,7 @@ from archium.domain.visual.style import (
     resolve_style_preset_id,
 )
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.visual_service import (
     approve_art_direction,
@@ -200,7 +200,8 @@ def render_art_direction_panel(
             "style_preset_id": style_preset_id,
         }
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 update_art_direction(session, art_direction.id, updates)
                 if approve_clicked or approve_continue:
                     approve_art_direction(session, art_direction.id)
@@ -240,7 +241,8 @@ def render_art_direction_panel(
                 st.warning("请填写反馈后再重新生成。")
             else:
                 try:
-                    with get_session() as session:
+                    with unit_of_work() as uow:
+                        session = uow.session
                         regenerate_art_direction(
                             session,
                             art_direction.id,

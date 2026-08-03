@@ -11,7 +11,7 @@ from archium.application.visual.element_geometry import (
     layout_coords_from_percent,
 )
 from archium.domain.visual.layout import LayoutPlan
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 
 
@@ -60,7 +60,8 @@ def apply_canvas_move_event(
     try:
         from archium.ui.studio_service import apply_slide_element_move
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             apply_slide_element_move(
                 session,
                 slide_id,
@@ -103,7 +104,8 @@ def apply_canvas_move_many_event(
     try:
         from archium.ui.studio_service import apply_slide_element_moves
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             apply_slide_element_moves(session, slide_id, moves=resolved)
     except Exception as exc:
         st.error(report_user_error(exc))
@@ -149,7 +151,8 @@ def apply_canvas_resize_event(
     try:
         from archium.ui.studio_service import apply_slide_element_resize
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             apply_slide_element_resize(
                 session,
                 slide_id,
@@ -184,7 +187,8 @@ def apply_canvas_commit_text_event(
     try:
         from archium.ui.studio_service import apply_slide_element_text
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             apply_slide_element_text(
                 session,
                 slide_id,
@@ -217,7 +221,8 @@ def apply_canvas_commit_replace_asset_event(
 
         from archium.ui.studio_service import apply_slide_element_asset
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             apply_slide_element_asset(
                 session,
                 slide_id,
@@ -247,7 +252,8 @@ def apply_canvas_delete_event(
     try:
         from archium.ui.studio_service import apply_slide_element_delete
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             apply_slide_element_delete(session, slide_id, element_id=element_id)
     except Exception as exc:
         st.error(report_user_error(exc))
@@ -275,7 +281,8 @@ def apply_canvas_duplicate_event(
     try:
         from archium.ui.studio_service import apply_slide_element_duplicate
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             result = apply_slide_element_duplicate(session, slide_id, element_ids=ids)
     except Exception as exc:
         st.error(report_user_error(exc))

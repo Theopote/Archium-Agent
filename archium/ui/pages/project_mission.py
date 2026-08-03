@@ -11,7 +11,6 @@ import streamlit as st
 from archium.config.settings import Settings
 from archium.domain.enums import DeliverableType
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 from archium.ui.background_workflow_runner import (
     PlanningJobAction,
@@ -149,7 +148,8 @@ def _init_state() -> None:
 
 
 def _project_selector(*, key: str = "mission_project_selector") -> UUID | None:
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         projects = list_projects(session)
     if not projects:
         st.info("还没有项目。")
@@ -189,7 +189,8 @@ def _load_snapshot(project_id: UUID) -> PlanningSnapshot:
         if st.session_state.planning_mission_id
         else None
     )
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         snapshot = get_planning_snapshot(
             session,
             planning_session_id=session_id,
@@ -551,7 +552,8 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
                 ):
                     with st.spinner(spinner_text):
                         try:
-                            with get_session() as session:
+                            with unit_of_work() as uow:
+                                session = uow.session
                                 output = generator(
                                     session,
                                     mission_id,
@@ -581,7 +583,8 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
                         if getattr(cached, "docx_path", None):
                             st.caption(f"DOCX：{cached.docx_path}")
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             recent_jobs = list_artifact_jobs(session, mission_id, limit=8)
         if recent_jobs:
             st.markdown("**最近成果作业**")
@@ -615,7 +618,8 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
         return
 
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             bridge = get_presentation_bridge(
                 session,
                 UUID(st.session_state.planning_workflow_run_id),
@@ -637,7 +641,8 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
         try:
             from archium.ui.planning_service import refresh_presentation_request_draft
 
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 bridge = refresh_presentation_request_draft(
                     session,
                     UUID(st.session_state.planning_workflow_run_id),
@@ -741,7 +746,8 @@ def render(*, embedded: bool = False) -> None:
         return
 
     project_id = selected_project_id
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         from archium.application.context.workflow_navigation import (
             as_session_state,
             sync_mission_step_from_context,

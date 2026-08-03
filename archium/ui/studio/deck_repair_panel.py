@@ -7,7 +7,7 @@ import streamlit as st
 from archium.application.visual.deck_repair_service import DeckRepairService
 from archium.domain.visual.deck_repair import DeckRepairSuggestion
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio_service import StudioPresentationContext, apply_deck_repair_suggestion
 
@@ -50,7 +50,8 @@ def _apply_suggestion(
     slide_index: int | None,
 ) -> None:
     try:
-        with st.spinner("正在应用整套修复建议…"), get_session() as session:
+        with st.spinner("正在应用整套修复建议…"), unit_of_work() as uow:
+            session = uow.session
             apply_deck_repair_suggestion(session, suggestion)
         if slide_index is not None:
             st.session_state.studio_selected_slide_index = slide_index

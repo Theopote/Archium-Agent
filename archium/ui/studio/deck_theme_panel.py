@@ -17,7 +17,6 @@ from archium.domain.visual.page_quality import IssueSeverity
 from archium.domain.visual.proposal_status import ProposalStatus
 from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
 from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio_service import (
@@ -161,7 +160,8 @@ def render_deck_theme_panel(
             icon_style=icon_style,
         )
         try:
-            with st.spinner("正在应用 Token、编译样本页并跑 QA…"), get_session() as session:
+            with st.spinner("正在应用 Token、编译样本页并跑 QA…"), unit_of_work() as uow:
+                session = uow.session
                 proposal = create_theme_proposal(
                     session,
                     presentation_id,
@@ -264,7 +264,8 @@ def render_deck_theme_panel(
         disabled=has_blocker and not allow_blockers,
     ):
         try:
-            with st.spinner("正在切换 DesignSystem 并重编译全稿…"), get_session() as session:
+            with st.spinner("正在切换 DesignSystem 并重编译全稿…"), unit_of_work() as uow:
+                session = uow.session
                 accepted = accept_theme_proposal(
                     session,
                     proposal,

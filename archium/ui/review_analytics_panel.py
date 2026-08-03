@@ -11,7 +11,7 @@ from archium.application.review_analytics import summarize_rule_codes
 from archium.application.review_service import PresentationReviewService
 from archium.domain.enums import ReviewStatus
 from archium.domain.review import ReviewIssue
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.workspace_service import list_project_presentations
 
 REPAIR_STRATEGY_LABELS = {
@@ -55,7 +55,8 @@ def render_rule_code_stats(issues: list[ReviewIssue]) -> None:
 
 def render_project_review_quality_dashboard(project_id: UUID) -> None:
     """Aggregate review issues across all presentations in a project."""
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         presentations = list_project_presentations(session, project_id)
         review_service = PresentationReviewService(session)
         all_issues = review_service.list_review_issues_by_project(project_id)

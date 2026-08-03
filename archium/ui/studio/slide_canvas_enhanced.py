@@ -12,6 +12,7 @@ from archium.ui.label_map import entity_label, field_label
 from archium.ui.layout_family_ui import format_layout_family_label
 from archium.ui.studio.element_labels import format_element_label
 from archium.ui.visual_service import SlideVisualSnapshot
+from archium.application.unit_of_work import unit_of_work
 
 
 def parse_canvas_editor_event(value: object) -> tuple[str, str | None, float | None, float | None, float | None, float | None, bool]:
@@ -325,7 +326,7 @@ def _load_comment_anchors(
     """Active ElementComment overlays for the interactive canvas."""
     from uuid import UUID
 
-    from archium.infrastructure.database.session import get_session
+    from archium.application.unit_of_work import unit_of_work
     from archium.ui.studio.comment_canvas_anchors import build_comment_canvas_anchors
 
     focused_id = st.session_state.get("studio_focused_comment_id")
@@ -340,7 +341,8 @@ def _load_comment_anchors(
         focused_region = None
 
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             from archium.application.visual.element_comment_service import (
                 ElementCommentService,
             )
@@ -397,9 +399,9 @@ def _render_interactive_canvas(
             from uuid import UUID
 
             from archium.application.asset_board_service import AssetBoardService
-            from archium.infrastructure.database.session import get_session
 
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 for asset in AssetBoardService(session).list_project_assets(UUID(str(project_id))):
                     assets.append(
                         {

@@ -19,7 +19,7 @@ from archium.domain.visual.benchmark import (
     HumanVisualReview,
     HumanVisualReviewSource,
 )
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.visual_service import SlideVisualSnapshot
 
@@ -53,7 +53,8 @@ def get_stored_human_review(
             except ValidationError:
                 # Invalid cached review data, ignore and load from DB
                 pass
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         return load_slide_review(
             session,
             presentation_id,
@@ -64,7 +65,8 @@ def get_stored_human_review(
 
 def store_human_review(review: HumanVisualReview, *, presentation_id: UUID, slide_id: UUID) -> Path:
     settings = get_ui_effective_settings()
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         path = save_slide_review(
             session,
             presentation_id,

@@ -21,7 +21,6 @@ from archium.domain.visual.scene_change_proposal import (
     SceneChangeProposal,
 )
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
 from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.visual_service import SlideVisualSnapshot
@@ -306,7 +305,8 @@ def _accept_proposal(
 
         slide = slide_snapshot.slide
         current_scene = slide_snapshot.render_scene
-        with st.spinner("正在接受提案并创建 Scene Revision…"), get_session() as session:
+        with st.spinner("正在接受提案并创建 Scene Revision…"), unit_of_work() as uow:
+            session = uow.session
             service = SceneProposalService(session, settings=settings)
             if current_scene is not None and service.is_stale(proposal, current_scene):
                 service.mark_proposal_superseded(proposal)

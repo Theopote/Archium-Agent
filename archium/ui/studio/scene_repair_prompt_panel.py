@@ -9,7 +9,7 @@ import streamlit as st
 from archium.application.visual.scene_repair_service import summarize_deferred_repair
 from archium.domain.visual.scene_qa import SceneSemanticCheckCode
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio.proposal_compare_panel import get_stored_proposal, store_proposal
 from archium.ui.studio_service import create_slide_overflow_repair_proposal
@@ -65,7 +65,8 @@ def render_deferred_scene_repair_panel(
 def _create_overflow_proposal(slide_id: UUID, node_ids: list[str]) -> None:
     unique_nodes = list(dict.fromkeys(node_ids))
     try:
-        with st.spinner("正在生成溢出修复提案…"), get_session() as session:
+        with st.spinner("正在生成溢出修复提案…"), unit_of_work() as uow:
+            session = uow.session
             proposal = create_slide_overflow_repair_proposal(
                 session,
                 slide_id,

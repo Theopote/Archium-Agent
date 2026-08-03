@@ -7,7 +7,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.domain.access import LOCAL_ACTOR_ID, ProjectRole
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 
 _ROLE_LABELS = {
     ProjectRole.OWNER: "负责人",
@@ -30,7 +30,8 @@ def render_project_members_panel(
     from archium.application.project_invite_service import ProjectInviteService
     from archium.exceptions import AccessDeniedError, ValidationError
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         access = ProjectAccessService(session)
         access.ensure_default_owner(project_id)
         members = access.list_members(project_id)
@@ -69,7 +70,8 @@ def render_project_members_panel(
                 st.warning("请填写成员 ID。")
             else:
                 try:
-                    with get_session() as session:
+                    with unit_of_work() as uow:
+                        session = uow.session
                         assert role is not None
                         ProjectAccessService(session).add_member(
                             project_id,
@@ -113,7 +115,8 @@ def render_project_members_panel(
             create_invite = st.form_submit_button("生成邀请码", use_container_width=True)
         if create_invite:
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     invite = ProjectInviteService(session).create_invite(
                         project_id,
                         invite_role,
@@ -145,7 +148,8 @@ def render_project_members_panel(
                 from archium.ui.session_actor import set_current_actor_id
 
                 joined_actor = (redeem_actor or "").strip() or "guest-user"
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     invite, member = ProjectInviteService(session).redeem(
                         redeem_code,
                         actor_id=joined_actor,

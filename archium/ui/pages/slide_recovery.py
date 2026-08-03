@@ -17,7 +17,7 @@ from archium.config.settings import Settings
 from archium.domain.enums import WorkflowStatus
 from archium.domain.slide_recovery import PAGE_KIND_LABELS_ZH, SlideRecoveryPageKind
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.background_workflow_runner import (
     SlideRecoveryJobAction,
     background_workflows_enabled,
@@ -46,7 +46,8 @@ def _init_session_state() -> None:
 
 
 def _render_project_selector() -> UUID | None:
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         projects = list_projects(session)
     if not projects:
         st.info("请先创建项目，以便记录页面复活工作流。")

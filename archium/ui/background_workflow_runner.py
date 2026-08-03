@@ -30,11 +30,10 @@ from archium.application.workflow_models import WorkflowRunResult
 from archium.config.settings import Settings
 from archium.domain.enums import WorkflowStatus
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
 from archium.infrastructure.llm.base import LLMProvider
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
-from archium.application.unit_of_work import application_api
+from archium.application.unit_of_work import application_api, unit_of_work
 
 
 class BackgroundJobStatus(StrEnum):
@@ -208,7 +207,8 @@ def _run_presentation_job(
 ) -> None:
     _set_job_status(job, BackgroundJobStatus.RUNNING)
     try:
-        with get_session(scoped=False) as session:
+        with unit_of_work(scoped=False) as uow:
+            session = uow.session
             llm = create_llm_provider(settings)
             service = _create_presentation_service(session, llm, settings)
             try:
@@ -233,7 +233,8 @@ def _run_continue_job(job: BackgroundWorkflowJob, *, settings: Settings) -> None
         return
     _set_job_status(job, BackgroundJobStatus.RUNNING)
     try:
-        with get_session(scoped=False) as session:
+        with unit_of_work(scoped=False) as uow:
+            session = uow.session
             llm = create_llm_provider(settings)
             service = _create_presentation_service(session, llm, settings)
             try:
@@ -337,7 +338,8 @@ def _run_resume_job(job: BackgroundWorkflowJob, *, settings: Settings) -> None:
         return
     _set_job_status(job, BackgroundJobStatus.RUNNING)
     try:
-        with get_session(scoped=False) as session:
+        with unit_of_work(scoped=False) as uow:
+            session = uow.session
             llm = create_llm_provider(settings)
             service = _create_presentation_service(session, llm, settings)
             try:
@@ -389,7 +391,8 @@ def _run_planning_job(
     if workflow_run_id is not None:
         job.workflow_run_id = workflow_run_id
     try:
-        with get_session(scoped=False) as session:
+        with unit_of_work(scoped=False) as uow:
+            session = uow.session
             service = _create_planning_service(session, settings)
             try:
                 if action == PlanningJobAction.START:
@@ -486,7 +489,8 @@ def _run_visual_job(
         job.workflow_run_id = workflow_run_id
     use_llm = bool(run_kwargs.get("use_llm", False))
     try:
-        with get_session(scoped=False) as session:
+        with unit_of_work(scoped=False) as uow:
+            session = uow.session
             service = _create_visual_service(session, settings, use_llm=use_llm)
             try:
                 if action == VisualJobAction.RUN:
@@ -561,7 +565,8 @@ def _run_slide_recovery_job(
     if workflow_run_id is not None:
         job.workflow_run_id = workflow_run_id
     try:
-        with get_session(scoped=False) as session:
+        with unit_of_work(scoped=False) as uow:
+            session = uow.session
             service = _create_slide_recovery_service(session, settings)
             if action == SlideRecoveryJobAction.RUN:
                 result = service.run(job.project_id, request)
@@ -657,7 +662,8 @@ def load_workflow_result(
 ) -> WorkflowRunResult:
     """Load a presentation WorkflowRunResult from persisted DB state."""
     resolved = _resolve_settings(settings)
-    with get_session(scoped=False) as session:
+    with unit_of_work(scoped=False) as uow:
+        session = uow.session
         llm = create_llm_provider(resolved)
         service = _create_presentation_service(session, llm, resolved)
         try:
@@ -671,7 +677,8 @@ def load_planning_result(
 ) -> PlanningWorkflowResult:
     """Load a planning workflow result from persisted DB state."""
     resolved = _resolve_settings(settings)
-    with get_session(scoped=False) as session:
+    with unit_of_work(scoped=False) as uow:
+        session = uow.session
         service = _create_planning_service(session, resolved)
         try:
             return cast(PlanningWorkflowResult, service.result_from_run(workflow_run_id))
@@ -684,7 +691,8 @@ def load_slide_recovery_result(
 ) -> SlideRecoveryWorkflowResult:
     """Load a slide recovery workflow result from persisted DB state."""
     resolved = _resolve_settings(settings)
-    with get_session(scoped=False) as session:
+    with unit_of_work(scoped=False) as uow:
+        session = uow.session
         service = _create_slide_recovery_service(session, resolved)
         return service.result_from_run(workflow_run_id)
 
@@ -694,7 +702,8 @@ def load_visual_result(
 ) -> VisualWorkflowResult:
     """Load a visual workflow result from persisted DB state."""
     resolved = _resolve_settings(settings)
-    with get_session(scoped=False) as session:
+    with unit_of_work(scoped=False) as uow:
+        session = uow.session
         service = _create_visual_service(session, resolved, use_llm=False)
         try:
             return cast(VisualWorkflowResult, service.result_from_run(workflow_run_id))

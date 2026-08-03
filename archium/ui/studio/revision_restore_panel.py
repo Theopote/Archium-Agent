@@ -9,7 +9,6 @@ import streamlit as st
 from archium.application.slide_diff import change_source_label
 from archium.domain.revision import EntityRevision
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
 from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio_service import (
@@ -80,7 +79,8 @@ def render_content_revision_panel(*, slide_snapshot: SlideVisualSnapshot | None)
 
 def _restore_visual(*, slide_id: UUID, revision_id: UUID) -> None:
     try:
-        with st.spinner("正在恢复视觉版本…"), get_session() as session:
+        with st.spinner("正在恢复视觉版本…"), unit_of_work() as uow:
+            session = uow.session
             restore_slide_visual_at_revision(session, slide_id, revision_id)
         st.success("已恢复到所选视觉版本。")
         st.rerun()
@@ -92,7 +92,8 @@ def _restore_visual(*, slide_id: UUID, revision_id: UUID) -> None:
 
 def _restore_content(*, slide_id: UUID, revision_id: UUID) -> None:
     try:
-        with st.spinner("正在恢复内容版本…"), get_session() as session:
+        with st.spinner("正在恢复内容版本…"), unit_of_work() as uow:
+            session = uow.session
             restore_slide_content_at_revision(session, slide_id, revision_id)
         st.success("已恢复到所选内容版本。")
         st.rerun()

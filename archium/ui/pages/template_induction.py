@@ -20,14 +20,16 @@ from archium.domain.visual.template_induction import (
 from archium.exceptions import WorkflowError
 from archium.ui.error_handlers import report_user_error
 from archium.ui.pipeline_role_ui import role_button_label, role_caption
+from archium.application.unit_of_work import unit_of_work
 
 
 def _render_presentation_binding_selector(*, key_prefix: str = "induction") -> UUID | None:
     """Optional project/presentation binding for Phase 6 SlideGenerationContext."""
-    from archium.infrastructure.database.session import get_session
+    from archium.application.unit_of_work import unit_of_work
     from archium.ui.workspace_service import list_project_presentations, list_projects
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         projects = list_projects(session)
     if not projects:
         st.caption("未找到项目，Phase 6 将仅使用 outline 内容填充。")
@@ -43,7 +45,8 @@ def _render_presentation_binding_selector(*, key_prefix: str = "induction") -> U
     )
     project_id = UUID(selected_project)
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         presentations = list_project_presentations(session, project_id)
     if not presentations:
         st.caption("该项目尚无汇报，无法启用页面级上下文。")
@@ -64,14 +67,14 @@ def _render_presentation_binding_selector(*, key_prefix: str = "induction") -> U
 
 def _describe_template_editing_context(workspace: Path) -> str:
     from archium.application.visual.template_induction_service import TemplateInductionService
-    from archium.infrastructure.database.session import get_session
 
     service = TemplateInductionService()
     outline = service.load_outline_plan(workspace)
     if outline is None:
         return "页面上下文：缺少 outline_plan.json"
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         bundle = service.resolve_template_editing_context(session, outline)
     if bundle is None:
         return (
@@ -827,9 +830,9 @@ def _render_template_editing_panel(workspace: Path, co_plan: OutlineTemplateCoPl
                 return
             if bound_presentation_id is not None:
                 outline = service.bind_outline_to_presentation(workspace, bound_presentation_id)
-            from archium.infrastructure.database.session import get_session
 
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 batch, updated = service.execute_co_plan_template_editing(
                     induction,
                     outline,

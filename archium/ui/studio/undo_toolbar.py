@@ -7,7 +7,6 @@ from uuid import UUID
 import streamlit as st
 
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
 from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio.undo_stack import content_redo_depth, visual_redo_depth
@@ -76,7 +75,8 @@ def render_undo_toolbar(*, slide_snapshot: SlideVisualSnapshot | None) -> None:
 
 def _run_visual_undo(*, slide_id: UUID) -> None:
     try:
-        with st.spinner("正在撤销视觉修改…"), get_session() as session:
+        with st.spinner("正在撤销视觉修改…"), unit_of_work() as uow:
+            session = uow.session
             result = undo_slide_visual_edit(session, slide_id)
         st.success(_visual_history_message(result, fallback="已撤销一步视觉修改。"))
         st.rerun()
@@ -88,7 +88,8 @@ def _run_visual_undo(*, slide_id: UUID) -> None:
 
 def _run_visual_redo(*, slide_id: UUID) -> None:
     try:
-        with st.spinner("正在重做视觉修改…"), get_session() as session:
+        with st.spinner("正在重做视觉修改…"), unit_of_work() as uow:
+            session = uow.session
             result = redo_slide_visual_edit(session, slide_id)
         st.success(_visual_history_message(result, fallback="已重做一步视觉修改。"))
         st.rerun()
@@ -112,7 +113,8 @@ def _visual_history_message(result: object, *, fallback: str) -> str:
 
 def _run_content_undo(*, slide_id: UUID) -> None:
     try:
-        with st.spinner("正在撤销内容修改…"), get_session() as session:
+        with st.spinner("正在撤销内容修改…"), unit_of_work() as uow:
+            session = uow.session
             undo_slide_content_adaptation(session, slide_id)
         st.success("已撤销一步内容修改。")
         st.rerun()
@@ -124,7 +126,8 @@ def _run_content_undo(*, slide_id: UUID) -> None:
 
 def _run_content_redo(*, slide_id: UUID) -> None:
     try:
-        with st.spinner("正在重做内容修改…"), get_session() as session:
+        with st.spinner("正在重做内容修改…"), unit_of_work() as uow:
+            session = uow.session
             redo_slide_content_adaptation(session, slide_id)
         st.success("已重做一步内容修改。")
         st.rerun()

@@ -18,7 +18,7 @@ from archium.domain.fact import ProjectFact
 from archium.domain.knowledge_gap import Assumption, ClarifyingQuestion, KnowledgeGap
 from archium.domain.project_mission import MissionConstraint
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.planning_service import (
     answer_clarifying_question,
@@ -420,7 +420,8 @@ def _fact_value(fact: ProjectFact) -> str:
 
 def _run(action: Callable) -> None:
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             action(session)
         st.rerun()
     except WorkflowError as exc:

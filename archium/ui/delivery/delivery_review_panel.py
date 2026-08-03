@@ -12,6 +12,7 @@ from archium.application.visual.visual_workflow_service import VisualWorkflowRes
 from archium.domain.export_verdict import ExportVerdict, ExportVerdictStatus
 from archium.ui.delivery.fidelity_report_panel import get_stored_manifest
 from archium.ui.studio_service import StudioPresentationContext
+from archium.application.unit_of_work import unit_of_work
 
 
 @dataclass(frozen=True)
@@ -265,9 +266,10 @@ def _open_review_issue_payloads(presentation_id) -> list[dict]:
     try:
         from archium.application.review_service import PresentationReviewService
         from archium.domain.enums import ReviewStatus
-        from archium.infrastructure.database.session import get_session
+        from archium.application.unit_of_work import unit_of_work
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             issues = PresentationReviewService(session).list_review_issues(presentation_id)
         open_like = {ReviewStatus.OPEN, ReviewStatus.ACKNOWLEDGED}
         payloads: list[dict] = []

@@ -6,7 +6,7 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.label_map import STATUS_LABELS, entity_label
 from archium.ui.session_context import (
     select_presentation_context,
@@ -65,7 +65,8 @@ def render_studio_selection(
         st.session_state.studio_advanced_mode = advanced
     advanced = bool(st.session_state.studio_advanced_mode)
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         projects = list_studio_projects(session)
     if not projects:
         render_studio_onboarding()
@@ -98,7 +99,8 @@ def render_studio_selection(
 
     project_id = UUID(selected_project)
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         presentations = list_studio_presentations(session, project_id)
     if not presentations:
         if compact:
@@ -119,7 +121,8 @@ def render_studio_selection(
             st.session_state.selected_presentation_id
         )
     else:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             from archium.application.presentation_selection import select_presentation
 
             picked = select_presentation(session, presentations)
@@ -172,7 +175,8 @@ def render_studio_selection(
 
     presentation_id = UUID(selected_presentation)
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         context = load_studio_context(
             session,
             project_id,

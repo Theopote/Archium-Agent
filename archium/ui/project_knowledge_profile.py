@@ -11,13 +11,15 @@ from archium.application.project_knowledge_display import (
     build_project_knowledge_display,
 )
 from archium.domain.intent.knowledge_state import KnowledgeState
+from archium.application.unit_of_work import unit_of_work
 
 
 def load_project_knowledge_display(project_id: UUID) -> ProjectKnowledgeDisplay | None:
     from archium.application.project_context_builder import build_project_context
-    from archium.infrastructure.database.session import get_session
+    from archium.application.unit_of_work import unit_of_work
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         context = build_project_context(session, project_id)
         if context is None:
             return None
@@ -75,9 +77,9 @@ def render_ai_understanding_panel(
 ) -> ProjectKnowledgeDisplay | None:
     """Architect-facing understanding panel — known / missing / next, not % dashboards."""
     from archium.application.project_context_builder import build_project_context
-    from archium.infrastructure.database.session import get_session
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         context = build_project_context(session, project_id)
         if context is None:
             return None
@@ -137,13 +139,14 @@ def render_project_knowledge_strip(
     keeps it off by default.
     """
     from archium.application.project_context_builder import build_project_context
-    from archium.infrastructure.database.session import get_session
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         context = build_project_context(session, project_id)
     if context is None:
         return None
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         display = build_project_knowledge_display(context)
         display = _apply_fresh_gap_report(session, project_id, display)
 
@@ -233,9 +236,9 @@ def _render_process_board(project_id: UUID) -> None:
     try:
         from archium.application.process import build_project_process_board
         from archium.domain.process import design_focus_label
-        from archium.infrastructure.database.session import get_session
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             board = build_project_process_board(session, project_id)
         st.caption(f"过程板：{board.summary_line()}")
         details = []
@@ -271,7 +274,6 @@ def render_project_knowledge_action_buttons(
     from archium.application.context.next_action_selector import resolve_action_target
     from archium.application.context.workflow_navigation import as_session_state
     from archium.application.project_context_builder import build_project_context
-    from archium.infrastructure.database.session import get_session
     from archium.ui.components.nba_explainable_card import render_explainable_nba_actions
     from archium.ui.context_navigation import (
         dispatch_next_best_action,
@@ -279,7 +281,8 @@ def render_project_knowledge_action_buttons(
     )
     from archium.ui.llm_settings import get_ui_effective_settings
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         context = build_project_context(session, project_id)
         if context is None or not context.next_actions:
             display = load_project_knowledge_display(project_id)
@@ -314,7 +317,8 @@ def render_project_knowledge_action_buttons(
         titles.append(label)
 
     def _on_action(action_type) -> None:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             result = dispatch_next_best_action(
                 session,
                 as_session_state(st.session_state),

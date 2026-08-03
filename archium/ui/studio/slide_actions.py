@@ -6,7 +6,7 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.visual_service import SlideVisualSnapshot, replan_slide
 
@@ -26,7 +26,8 @@ def describe_slide_validation(slide_snapshot: SlideVisualSnapshot | None) -> tup
 
 def run_studio_replan(slide_id: UUID) -> None:
     try:
-        with st.spinner("正在重新生成候选版式…"), get_session() as session:
+        with st.spinner("正在重新生成候选版式…"), unit_of_work() as uow:
+            session = uow.session
             replan_slide(session, slide_id=slide_id, preset=None, candidate_count=3)
         st.success("已重新生成候选版式。")
         st.rerun()

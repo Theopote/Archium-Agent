@@ -9,7 +9,7 @@ import streamlit as st
 from archium.application.llm_profile_service import CredentialStatus, LLMProfileService
 from archium.config import get_settings
 from archium.domain.llm_profile import LLMProfile
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.infrastructure.llm.connection_test import verify_llm_connection
 from archium.infrastructure.llm.factory import reset_llm_provider_cache
 from archium.infrastructure.llm.provider_presets import (
@@ -82,7 +82,8 @@ def _resolve_model_choice(
 
 def _load_profile_and_status() -> tuple[LLMProfile, CredentialStatus]:
     base_settings = get_settings()
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         service = LLMProfileService(session)
         profile = service.get_or_create_default_profile()
         status = service.credential_status(
@@ -102,7 +103,8 @@ def _resolve_api_key_for_action(
 
     if typed_key.strip():
         return normalize_api_key(typed_key)
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         service = LLMProfileService(session)
         session_key = st.session_state.get("llm_session_api_key")
         api_key, _ = service.resolve_api_key(
@@ -220,7 +222,8 @@ def render() -> None:
         elif not api_key_input.strip() and not credential_status.configured:
             st.error("首次保存需要输入 API Key。")
         else:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 save_service = LLMProfileService(session)
                 save_service.save_default_profile(draft_profile)
                 if api_key_input.strip():
@@ -237,7 +240,8 @@ def render() -> None:
             st.rerun()
 
     if delete_clicked:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             delete_service = LLMProfileService(session)
             delete_service.delete_api_key(
                 draft_profile, session_store=cast(dict[str, object], st.session_state)
@@ -279,7 +283,8 @@ def _render_model_role_mapping(draft_profile: LLMProfile) -> None:
         "可选角色（OCR、图像生成等）未配置时不影响普通生成流程。"
     )
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         registry = ModelRoleRegistryService(session)
         profiles = registry.list_profiles()
         assignments = registry.list_role_assignments()
@@ -317,7 +322,8 @@ def _render_model_role_mapping(draft_profile: LLMProfile) -> None:
                 new_assignments.append(ModelRoleAssignment(role=role, profile_id=picked))
 
         if st.button("保存角色映射", key="save_model_role_mapping"):
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 save_registry = ModelRoleRegistryService(session)
                 save_registry.save_profiles(profiles)
                 save_registry.save_role_assignments(new_assignments)
@@ -353,7 +359,6 @@ def _render_about() -> None:
 def _render_web_research_settings() -> None:
     from archium.application.web_research_settings_service import WebResearchSettingsService
     from archium.config.settings import get_settings
-    from archium.infrastructure.database.session import get_session
     from archium.ui.web_research_settings import (
         delete_tavily_api_key,
         save_tavily_api_key,
@@ -368,7 +373,8 @@ def _render_web_research_settings() -> None:
     )
 
     base_settings = get_settings()
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         prefs = WebResearchSettingsService(session).get_preferences(base_settings=base_settings)
 
     enabled = st.toggle("启用联网研究", value=prefs.enabled)
@@ -419,7 +425,8 @@ def _render_web_research_settings() -> None:
     delete_clicked = delete_col.button("删除 Tavily 密钥", use_container_width=True)
 
     if save_clicked:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             WebResearchSettingsService(session).save_preferences(
                 enabled=enabled,
                 provider=provider,
@@ -451,7 +458,6 @@ def _render_web_research_settings() -> None:
 def _render_image_search_settings() -> None:
     from archium.application.image_search_settings_service import ImageSearchSettingsService
     from archium.config.settings import get_settings
-    from archium.infrastructure.database.session import get_session
     from archium.ui.image_search_settings import (
         delete_pexels_api_key,
         delete_unsplash_api_key,
@@ -468,7 +474,8 @@ def _render_image_search_settings() -> None:
     )
 
     base_settings = get_settings()
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         prefs_service = ImageSearchSettingsService(session)
         prefs = prefs_service.get_preferences(base_settings=base_settings)
 
@@ -528,7 +535,8 @@ def _render_image_search_settings() -> None:
         if not pexels_configured and not unsplash_configured and not pexels_key_input.strip() and not unsplash_key_input.strip():
             st.error("请至少配置 Pexels 或 Unsplash 其中一个 API Key。")
         else:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 ImageSearchSettingsService(session).save_preferences(
                     enabled=enabled,
                     persist_to_library=persist_to_library,

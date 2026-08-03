@@ -9,7 +9,7 @@ import streamlit as st
 from archium.config.settings import Settings
 from archium.domain.visual.edit_intent import INTENT_USER_LABELS, VisualEditIntent
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio.proposal_compare_panel import (
     get_stored_proposal,
@@ -153,7 +153,8 @@ def _run_scoped_proposal(
         st.error("请先描述想做的修改。")
         return
     try:
-        with st.spinner("正在生成修改提案…"), get_session() as session:
+        with st.spinner("正在生成修改提案…"), unit_of_work() as uow:
+            session = uow.session
             if scope_label == "当前页面" or not bound_nodes:
                 proposal = create_slide_scene_proposal_from_text(session, slide_id, text)
             elif scope_label == "选区(包围盒)" and len(bound_nodes) >= 1:
@@ -240,7 +241,8 @@ def _render_legacy_panel(*, slide_id: UUID) -> None:
 
     if st.button("撤销上一步", use_container_width=True, key=f"studio_undo_edit_{slide_id}"):
         try:
-            with st.spinner("正在撤销…"), get_session() as session:
+            with st.spinner("正在撤销…"), unit_of_work() as uow:
+                session = uow.session
                 restore_slide_visual_edit(session, slide_id)
             st.success("已撤销一步视觉修改。")
             st.rerun()
@@ -255,7 +257,8 @@ def _run_edit(*, slide_id: UUID, text: str) -> None:
         st.error("请先描述想做的修改。")
         return
     try:
-        with st.spinner("正在应用…"), get_session() as session:
+        with st.spinner("正在应用…"), unit_of_work() as uow:
+            session = uow.session
             apply_slide_visual_edit(session, slide_id, text=text)
         st.success("已直接应用视觉修改。")
         st.rerun()

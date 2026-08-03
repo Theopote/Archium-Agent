@@ -9,7 +9,7 @@ import streamlit as st
 
 from archium.application.design_system_integration import DesignSystemIntegrationService
 from archium.domain.presentation_templates import PresentationType, get_template, list_templates
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 
 
 def render_template_selection_panel(
@@ -32,7 +32,8 @@ def render_template_selection_panel(
     st.caption("选择适合您演示场景的专业模板，确保输出质量与风格统一")
     
     # Initialize design system integration
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         design_system_service = DesignSystemIntegrationService(session)
     
     # Get available templates
@@ -234,7 +235,8 @@ def render_design_quality_panel(
     st.caption("基于专业标准评估演示文稿的设计质量")
     
     # Initialize design system integration
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         design_system_service = DesignSystemIntegrationService(session)
     
     # Assess quality
@@ -328,7 +330,8 @@ def render_visual_elements_panel(
     st.caption("专业的建筑图标、图表和视觉元素")
     
     # Initialize visual elements library
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         design_system_service = DesignSystemIntegrationService(session)
     
     # Search interface

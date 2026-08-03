@@ -13,7 +13,6 @@ from archium.application.scene_revision_timeline_service import (
 from archium.config.settings import Settings, get_settings
 from archium.domain.scene_revision_summary import SceneRevisionSummary
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
 from archium.ui.error_handlers import report_user_error
 from archium.ui.visual_service import SlideVisualSnapshot
 from archium.application.unit_of_work import unit_of_work
@@ -65,7 +64,8 @@ def render_scene_version_timeline_panel(
 
     slide = slide_snapshot.slide
     settings = get_settings()
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         service = SceneRevisionTimelineService(session, settings=settings)
         summaries = service.list_summaries(slide)
 
@@ -108,7 +108,8 @@ def _render_timeline_row(
 ) -> None:
     thumb_col, meta_col, action_col = st.columns([1.2, 3, 1.3])
     with thumb_col:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             service = SceneRevisionTimelineService(session, settings=settings)
             preview_path = service.preview_cache_path(presentation_id, item.revision_id)
         if preview_path is not None and preview_path.is_file():
@@ -120,7 +121,8 @@ def _render_timeline_row(
                 key=f"studio_scene_thumb_{slide_id}_{item.revision_id}",
                 use_container_width=True,
             ):
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     service = SceneRevisionTimelineService(session, settings=settings)
                     service.render_preview(presentation_id, item.revision_id)
                 st.rerun()
@@ -171,7 +173,8 @@ def _render_compare_view(
 ) -> None:
     st.markdown("**版本对比**")
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             service = service_cls(session, settings=settings)
             left_scene, right_scene = service.compare_revisions(
                 left_revision_id,

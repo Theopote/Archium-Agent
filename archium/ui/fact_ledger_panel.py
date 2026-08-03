@@ -8,7 +8,7 @@ import streamlit as st
 
 from archium.application.fact_ledger_service import FactLedgerService
 from archium.domain.enums import VerificationStatus
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.label_map import content_pipeline_chain
 from archium.ui.llm_settings import get_ui_effective_settings
@@ -56,7 +56,8 @@ def render_fact_ledger_panel(
     )
 
     settings = get_ui_effective_settings()
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         service = FactLedgerService(
             session,
             llm=create_llm_provider(settings) if settings.llm_configured else None,
@@ -176,7 +177,8 @@ def render_fact_ledger_panel(
 
     btn1, btn2, btn3 = st.columns(3)
     if btn1.button("保存修正", key=f"save_fact_{selected.id}", use_container_width=True):
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             FactLedgerService(session).update_fact(
                 selected.id,
                 value=new_value.strip(),
@@ -186,7 +188,8 @@ def render_fact_ledger_panel(
         st.rerun()
 
     if btn2.button("确认事实", key=f"confirm_fact_{selected.id}", use_container_width=True):
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             result = FactLedgerService(
                 session,
                 llm=create_llm_provider(settings) if settings.llm_configured else None,
@@ -202,7 +205,8 @@ def render_fact_ledger_panel(
         st.rerun()
 
     if btn3.button("驳回事实", key=f"reject_fact_{selected.id}", use_container_width=True):
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             FactLedgerService(session).reject_fact(selected.id)
         st.warning("事实已驳回，后续生成将不再引用。")
         st.rerun()

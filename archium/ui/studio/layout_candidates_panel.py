@@ -8,7 +8,6 @@ import streamlit as st
 
 from archium.domain.visual.layout import LayoutPlan
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
 from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.label_map import entity_label
@@ -147,7 +146,8 @@ def _render_template_match_controls(slide_snapshot: SlideVisualSnapshot) -> None
         key=f"studio_apply_template_{slide_id}",
     ):
         try:
-            with st.spinner("正在匹配模板并填充内容…"), get_session() as session:
+            with st.spinner("正在匹配模板并填充内容…"), unit_of_work() as uow:
+                session = uow.session
                 apply_template_to_slide(
                     session,
                     slide_id=slide_id,

@@ -10,7 +10,7 @@ from archium.domain.enums import ConceptDirectionStatus, ExplorationSessionStatu
 from archium.domain.exploration_session import ExplorationSession
 from archium.domain.intent.idea_seed import IdeaSeed
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.app_navigation import get_app_page
 from archium.ui.components.chrome import render_page_header
 from archium.ui.components.concept_direction_compare import render_concept_direction_compare
@@ -45,7 +45,8 @@ def render() -> None:
 
     def _apply_revise(direction_id: UUID) -> None:
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 selection = select_exploration_direction(
                     session, direction_id, revise_action="apply"
                 )
@@ -68,7 +69,8 @@ def render() -> None:
 
     def _reject_revise(direction_id: UUID) -> None:
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 selection = select_exploration_direction(
                     session, direction_id, revise_action="reject"
                 )
@@ -86,7 +88,8 @@ def render() -> None:
         except Exception as exc:
             st.error(report_user_error(exc))
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         projects = list_projects(session)
     if not projects:
         st.info("请先在「开始项目」创建概念探索项目。")
@@ -114,7 +117,8 @@ def render() -> None:
         project_id=project_id,
     )
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         exploration = get_latest_exploration_for_project(session, project_id)
 
     if exploration is None:
@@ -177,7 +181,8 @@ def render() -> None:
             return
         with st.spinner("正在合成设计使命并生成 Mission…"):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     result = commit_exploration_to_mission(
                         session,
                         exploration.id,
@@ -217,7 +222,8 @@ def _render_thinking_rail(exploration: ExplorationSession, project_id: UUID, *, 
 
             with st.spinner("正在重新评估知识状态…"):
                 try:
-                    with get_session() as session:
+                    with unit_of_work() as uow:
+                        session = uow.session
                         result = reassess_project_context(
                             session,
                             project_id,
@@ -246,7 +252,8 @@ def _render_thinking_rail(exploration: ExplorationSession, project_id: UUID, *, 
                 return
             with st.spinner("正在解读想法…"):
                 try:
-                    with get_session() as session:
+                    with unit_of_work() as uow:
+                        session = uow.session
                         result = enrich_exploration_idea_seed(
                             session, exploration.id, settings=settings
                         )
@@ -271,7 +278,8 @@ def _render_thinking_rail(exploration: ExplorationSession, project_id: UUID, *, 
                 return
             with st.spinner("正在推演概念方向…"):
                 try:
-                    with get_session() as session:
+                    with unit_of_work() as uow:
+                        session = uow.session
                         result = generate_exploration_directions(
                             session,
                             exploration.id,
@@ -302,7 +310,8 @@ def _render_thinking_rail(exploration: ExplorationSession, project_id: UUID, *, 
 def _render_artifact_rail(exploration: ExplorationSession, *, settings) -> list:
     """Artifact side — comparable concept direction cards."""
     st.markdown("### 设计成果")
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         directions = list_exploration_directions(session, exploration.id)
 
     if not directions:
@@ -318,7 +327,8 @@ def _render_artifact_rail(exploration: ExplorationSession, *, settings) -> list:
     )
     if clicked and clicked[0] == "select":
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 selection = select_exploration_direction(session, clicked[1])
             from archium.ui.components.design_revise_ask_panel import (
                 store_pending_revise_from_selection,

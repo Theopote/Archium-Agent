@@ -6,7 +6,7 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 
 
 def render_design_artifact_timeline(
@@ -19,7 +19,8 @@ def render_design_artifact_timeline(
     try:
         from archium.application.design_artifact_catalog import list_design_artifacts
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             rows = list_design_artifacts(session, project_id, limit=limit)
     except Exception:
         return

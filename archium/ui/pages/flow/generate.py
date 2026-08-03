@@ -6,7 +6,7 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.app_navigation import get_app_page
 from archium.ui.generate_queue import GenerateQueueMetrics, metrics_from_board, queue_row_status
 from archium.ui.label_map import CONTENT_PIPELINE_ACTION
@@ -27,7 +27,8 @@ from archium.ui.workspace_service import list_project_presentations
 
 def _selected_presentation_id(project_id: UUID) -> UUID | None:
     selected = st.session_state.get("selected_presentation_id")
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         from archium.application.presentation_selection import select_presentation
 
         presentations = list_project_presentations(session, project_id)
@@ -66,7 +67,8 @@ def _render_project_context_readiness(project_id: UUID) -> None:
     from archium.ui.context_navigation import dispatch_next_best_action
 
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             context = build_project_context(session, project_id)
         readiness = presentation_readiness_from_context(context)
     except Exception:
@@ -102,7 +104,8 @@ def _render_project_context_readiness(project_id: UUID) -> None:
         }.get(readiness.suggested_action.value, readiness.suggested_action.value)
         if st.button(f"建议：{label}", key=f"generate_gate_{readiness.suggested_action.value}"):
             settings = get_settings()
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 dispatch_next_best_action(
                     session,
                     as_session_state(st.session_state),
@@ -183,7 +186,8 @@ def _render_bottom_actions(*, has_attention: bool, ready_for_export: bool) -> No
 def _render_starter_content_banner(project_id: UUID) -> None:
     from archium.application.genesis_starter_service import get_genesis_starter_state
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         starter = get_genesis_starter_state(session, project_id)
     if starter is None:
         return

@@ -8,6 +8,7 @@ import streamlit as st
 
 from archium.application.llm_settings_resolver import get_effective_settings
 from archium.config.settings import Settings
+from archium.application.unit_of_work import unit_of_work
 
 
 def session_api_key() -> str | None:
@@ -44,9 +45,10 @@ def render_project_llm_tier_selector(
         tier_label,
     )
     from archium.domain.project_llm_tier import ProjectLLMTier
-    from archium.infrastructure.database.session import get_session
+    from archium.application.unit_of_work import unit_of_work
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         service = ProjectLLMTierService(session)
         current = service.get_tier(project_id)
     options = [ProjectLLMTier.FAST, ProjectLLMTier.QUALITY]
@@ -60,7 +62,8 @@ def render_project_llm_tier_selector(
         help="快速概念用轻量模型；竞赛 / 正式汇报可用高质量模型。",
     )
     if choice != current:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             ProjectLLMTierService(session).set_tier(project_id, choice)
         st.caption(f"已切换为「{tier_label(choice)}」。")
         st.rerun()

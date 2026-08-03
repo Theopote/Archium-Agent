@@ -10,7 +10,6 @@ from archium.application.unit_of_work import unit_of_work
 from archium.application.project_knowledge_service import ProjectKnowledgeService
 from archium.domain.enums import DocumentPurpose, InformationOrigin, InformationReliability
 from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
-from archium.infrastructure.database.session import get_session
 
 ORIGIN_LABELS = {
     InformationOrigin.USER_UPLOAD: "用户上传",
@@ -102,7 +101,8 @@ def render_knowledge_panel(project_id: UUID) -> None:
             key="knowledge_doc_purpose",
         )
         if st.button("保存资料角色", key="save_doc_purpose"):
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 ProjectKnowledgeService(session).set_document_purpose(selected_id, purpose)
             st.success("资料角色已更新")
             st.rerun()
@@ -131,7 +131,8 @@ def render_knowledge_panel(project_id: UUID) -> None:
                         source_title=url.strip(),
                     )
                 )
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 ProjectKnowledgeService(session).create_item(
                     project_id,
                     statement=statement,
@@ -165,7 +166,8 @@ def _render_item_row(
     if item.linked_fact_id and service_available:
         cols = st.columns(2)
         if cols[0].button("确认", key=f"confirm_ki_{item.id}"):
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 from archium.application.fact_ledger_service import FactLedgerService
                 from archium.infrastructure.llm.factory import create_llm_provider
                 from archium.ui.llm_settings import get_ui_effective_settings
@@ -184,7 +186,8 @@ def _render_item_row(
                     }
             st.rerun()
         if cols[1].button("驳回", key=f"reject_ki_{item.id}"):
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 from archium.application.fact_ledger_service import FactLedgerService
 
                 FactLedgerService(session).reject_fact(item.linked_fact_id)
@@ -192,10 +195,12 @@ def _render_item_row(
     elif not item.linked_fact_id and not item.is_rejected and service_available:
         cols = st.columns(2)
         if cols[0].button("确认", key=f"confirm_ki_{item.id}"):
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 ProjectKnowledgeService(session).confirm_item(item.id)
             st.rerun()
         if cols[1].button("驳回", key=f"reject_ki_{item.id}"):
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 ProjectKnowledgeService(session).reject_item(item.id)
             st.rerun()

@@ -33,7 +33,7 @@ from archium.domain.slide_recovery import (
     RecoveredPageRegion,
 )
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.infrastructure.slide_recovery.region_overlay_renderer import render_region_overlay
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio.slide_canvas_enhanced import parse_canvas_editor_event
@@ -99,7 +99,8 @@ def render_slide_recovery_region_editor(
     if not regions:
         return None
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         delivery = SlideRecoveryDeliveryService(session, settings=settings)
         source_path = delivery.resolve_source_preview_path(result)
 
@@ -196,7 +197,8 @@ def render_slide_recovery_region_editor(
 
     if apply_clicked:
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 service = SlideRecoveryRegionEditService(session)
                 updated = service.apply_region_edits(run.id, regions)
         except WorkflowError as exc:

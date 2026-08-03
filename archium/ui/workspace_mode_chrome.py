@@ -15,7 +15,7 @@ from archium.application.workspace_mode_service import (
 )
 from archium.domain.enums import ArchitecturalWorkspaceMode
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.app_navigation import get_app_page
 from archium.ui.error_handlers import report_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
@@ -44,7 +44,8 @@ def resolve_ui_workspace_mode(project_id: UUID) -> ArchitecturalWorkspaceMode:
             override = ArchitecturalWorkspaceMode(str(raw))
         except ValueError:
             override = None
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         return WorkspaceModeService(session).resolve_mode(project_id, override=override)
 
 
@@ -72,7 +73,8 @@ def render_workspace_mode_chrome(project_id: UUID, *, key_prefix: str = "ws_mode
         st.caption("尚未评估知识状态。请从「开始项目」描述项目情况。")
 
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             service = WorkspaceModeService(session)
             profile = service.resolve_profile(project_id, override=override)
             available = service.available_modes(project_id)

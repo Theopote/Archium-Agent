@@ -8,6 +8,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.ui.components.design_reflection_details import render_design_reflection
+from archium.application.unit_of_work import unit_of_work
 
 
 def hydrate_pending_revise_from_db(project_id: UUID | None) -> None:
@@ -21,9 +22,10 @@ def hydrate_pending_revise_from_db(project_id: UUID | None) -> None:
         from archium.application.design_revise_persistence import (
             load_pending_design_revise,
         )
-        from archium.infrastructure.database.session import get_session
+        from archium.application.unit_of_work import unit_of_work
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             pending = load_pending_design_revise(session, project_id)
         if pending:
             st.session_state["pending_design_revise"] = pending
@@ -49,9 +51,9 @@ def clear_pending_revise_state(project_id: UUID | None = None) -> None:
         from archium.application.design_revise_persistence import (
             clear_pending_design_revise,
         )
-        from archium.infrastructure.database.session import get_session
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             clear_pending_design_revise(session, project_id)
     except Exception:
         return
@@ -167,9 +169,9 @@ def store_pending_revise_from_selection(selection: object) -> bool:
         from archium.application.design_revise_persistence import (
             persist_pending_design_revise,
         )
-        from archium.infrastructure.database.session import get_session
 
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             persist_pending_design_revise(session, project_id, payload)
     except Exception:
         from archium.logging import get_logger

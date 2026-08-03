@@ -16,7 +16,7 @@ from archium.domain.orchestration import (
     list_process_timeline,
 )
 from archium.domain.workflow import WorkflowRun
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
 
@@ -97,7 +97,8 @@ def render_orchestration_status(
     from archium.infrastructure.llm.factory import create_llm_provider
 
     settings = get_ui_effective_settings()
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         llm = create_llm_provider(settings)
         service = WorkflowOrchestrationService(session, llm, settings=settings)
         run = service.get_active_run(project_id)
@@ -241,7 +242,8 @@ def _render_advance_replan_buttons(
         use_container_width=True,
     ):
         try:
-            with get_session() as advance_session:
+            with unit_of_work() as uow:
+                advance_session = uow.session
                 advance_llm = create_llm_provider(settings)
                 advance_service = WorkflowOrchestrationService(
                     advance_session, advance_llm, settings=settings
@@ -267,7 +269,8 @@ def _render_advance_replan_buttons(
         help="根据当前知识状态改写尚未执行的阶段，不打断当前待确认步骤",
     ):
         try:
-            with get_session() as replan_session:
+            with unit_of_work() as uow:
+                replan_session = uow.session
                 replan_llm = create_llm_provider(settings)
                 replan_service = WorkflowOrchestrationService(
                     replan_session, replan_llm, settings=settings

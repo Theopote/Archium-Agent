@@ -31,7 +31,7 @@ from archium.domain.slide_design_brief import (
 from archium.domain.slide_intent import SlideIntent
 from archium.domain.visual.visual_grammar import PageArchetype
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 
 _PRIMARY_VISUAL_OPTIONS = [
@@ -71,7 +71,8 @@ def render_design_brief_panel(
         st.caption("尚未生成设计摘要。可从页面意图自动生成。")
         if st.button("生成全部设计摘要", type="primary", key="brief_generate_all"):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     SlideDesignBriefService(session).generate_all(outline.id)
                 st.success("已生成全部页面设计摘要。")
                 st.rerun()
@@ -86,7 +87,8 @@ def render_design_brief_panel(
         st.warning(f"第 {selected_page + 1} 页尚无设计摘要。")
         if st.button("生成本页设计摘要", key=f"brief_regen_{page_order}"):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     SlideDesignBriefService(session).regenerate_page(outline.id, page_order)
                 st.rerun()
             except WorkflowError as exc:
@@ -117,7 +119,8 @@ def render_design_brief_panel(
             width="stretch",
         ):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     SlideDesignBriefService(session).approve_page(
                         outline.id,
                         page_order,
@@ -133,14 +136,16 @@ def render_design_brief_panel(
             width="stretch",
         ):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     SlideDesignBriefService(session).regenerate_page(outline.id, page_order)
                 st.rerun()
             except WorkflowError as exc:
                 st.error(report_user_error(exc))
         if st.button("批量批准", key="brief_approve_all", width="stretch"):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     SlideDesignBriefService(session).approve_all(
                         outline.id,
                         expected_version=outline.version,
@@ -151,7 +156,8 @@ def render_design_brief_panel(
                 st.error(report_user_error(exc))
         if st.button("重新生成全部", key="brief_regen_all", width="stretch"):
             try:
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     SlideDesignBriefService(session).generate_all(outline.id)
                 st.rerun()
             except WorkflowError as exc:
@@ -265,7 +271,8 @@ def _render_brief_editor(outline_id: UUID, brief: SlideDesignBrief) -> SlideDesi
             status=brief.status.value,
         )
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 saved = SlideDesignBriefService(session).update_brief(outline_id, update)
             st.success("设计摘要已保存。")
             if saved.status == ApprovalStatus.CHANGES_PENDING:

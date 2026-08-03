@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.label_map import STATUS_LABELS, entity_label
 from archium.ui.slide_history_panel import render_slide_history_panel
 from archium.ui.studio.deck_repair_panel import render_deck_repair_panel
@@ -58,7 +58,8 @@ def render_history_panel(
         )
 
     if slide_snapshot is not None:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             scene_revision_count = count_scene_revisions(session, slide_snapshot.slide.id)
             layout_revision_count = count_visual_revisions(session, slide_snapshot.slide.id)
         st.caption(

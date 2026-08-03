@@ -16,7 +16,7 @@ from archium.domain.visual.architectural_template import (
     TemplateStatus,
 )
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 
 
@@ -44,7 +44,8 @@ def _render_upload_panel() -> None:
         staged = staging / uploaded.name
         staged.write_bytes(uploaded.getvalue())
         try:
-            with st.spinner("正在导入、截图并提取结构…"), get_session() as session:
+            with st.spinner("正在导入、截图并提取结构…"), unit_of_work() as uow:
+                session = uow.session
                 result = TemplateStudioService(session).import_pptx(
                     staged,
                     name=name.strip() or Path(uploaded.name).stem,
@@ -67,7 +68,8 @@ def _render_upload_panel() -> None:
 
 def _render_template_list() -> None:
     st.markdown("#### 已保存模板")
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         templates = TemplateStudioService(session).list_templates()
     if not templates:
         st.info("尚无模板。请先上传 PPTX。")
@@ -119,7 +121,8 @@ def _render_slot_overlay(layout: ArchitecturalTemplateLayout) -> None:
 
 
 def _render_layout_editor(template_id: UUID) -> None:
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         template = TemplateStudioService(session).get_template(template_id)
     if template is None:
         st.warning("模板不存在。")
@@ -159,7 +162,8 @@ def _render_layout_editor(template_id: UUID) -> None:
             index=[item.value for item in TemplatePageType].index(layout.page_type.value),
         )
         if st.button("保存页面分类", use_container_width=True):
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 TemplateStudioService(session).update_page_type(
                     template_id,
                     layout_id,
@@ -211,7 +215,8 @@ def _render_layout_editor(template_id: UUID) -> None:
                             "auto_detected": False,
                         }
                     )
-                    with get_session() as session:
+                    with unit_of_work() as uow:
+                        session = uow.session
                         TemplateStudioService(session).upsert_slot(
                             template_id,
                             layout_id,
@@ -220,7 +225,8 @@ def _render_layout_editor(template_id: UUID) -> None:
                     st.success("槽位已保存。")
                     st.rerun()
                 if st.button("删除槽位", key=f"del_slot_{layout_id}_{slot.id}"):
-                    with get_session() as session:
+                    with unit_of_work() as uow:
+                        session = uow.session
                         TemplateStudioService(session).delete_slot(
                             template_id,
                             layout_id,
@@ -250,13 +256,15 @@ def _render_layout_editor(template_id: UUID) -> None:
                     auto_detected=False,
                     label=new_role,
                 )
-                with get_session() as session:
+                with unit_of_work() as uow:
+                    session = uow.session
                     TemplateStudioService(session).upsert_slot(template_id, layout_id, new_slot)
                 st.rerun()
 
     st.markdown("#### 5. 测试内容填充")
     if st.button("用测试内容填充并预览本页", type="primary"):
-        with st.spinner("正在填充并渲染预览…"), get_session() as session:
+        with st.spinner("正在填充并渲染预览…"), unit_of_work() as uow:
+            session = uow.session
             try:
                 preview = TemplateStudioService(session).fill_test_content_preview(
                     template_id,
@@ -271,7 +279,8 @@ def _render_layout_editor(template_id: UUID) -> None:
     st.markdown("#### 6. 发布")
     if template.status != TemplateStatus.PUBLISHED:
         if st.button("发布 ArchitecturalTemplate", type="secondary"):
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 try:
                     published = TemplateStudioService(session).publish(template_id)
                 except WorkflowError as exc:

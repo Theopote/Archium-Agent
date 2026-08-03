@@ -13,7 +13,7 @@ from archium.application.visual.vision.visual_thinking_slots import (
 )
 from archium.domain.concept_direction import ConceptDirection
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 
 
@@ -49,7 +49,8 @@ def render_visual_thinking_panel(
             else:
                 st.caption(f"对应意图字段：{slot.intent_field}（尚空，将用方向标题）")
 
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 brief = get_visual_concept_brief_for_slot(session, direction.id, slot.key)
             if brief is not None:
                 st.caption(
@@ -137,7 +138,8 @@ def _run_slot_synthesize(direction, *, slot_key: str, generate_image: bool, sett
     hint = focus_hint_for_slot(direction, slot)
     with st.spinner(f"正在探索「{slot.label}」…"):
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 result = synthesize_visual_concept_brief(
                     session,
                     direction.id,
@@ -172,7 +174,8 @@ def _run_refine(direction, feedback: str, *, generate_image: bool, settings) -> 
         return
     with st.spinner("正在根据反馈修订方向…"):
         try:
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 loop = refine_visual_concept_brief(
                     session,
                     direction.id,

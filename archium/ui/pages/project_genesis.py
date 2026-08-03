@@ -11,7 +11,6 @@ from archium.domain.context.recommended_workflow import RecommendedWorkflow
 from archium.domain.enums import ProjectOriginMode
 from archium.domain.intent.next_best_action import NextBestActionType
 from archium.exceptions import ValidationError, WorkflowError
-from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 from archium.ui.components.chrome import render_page_header
 from archium.ui.error_handlers import report_user_error
@@ -100,7 +99,8 @@ def _render_entry_form() -> None:
             )
 
             project_name = name.strip() or _default_name_from_prompt(prompt.strip())
-            with get_session() as session:
+            with unit_of_work() as uow:
+                session = uow.session
                 from archium.ui.session_actor import get_current_actor_id
 
                 project = ProjectManagementService(session).create_project(
@@ -516,7 +516,8 @@ def _pending_fact_counts() -> tuple[int, int]:
     if not project_raw:
         return 0, 0
     try:
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             ledger = FactLedgerService(session).get_ledger(UUID(str(project_raw)))
         return ledger.pending_count, ledger.conflict_count
     except Exception:
@@ -586,7 +587,8 @@ def _dispatch_action(action: NextBestActionType) -> None:
         return
     settings = get_ui_effective_settings()
     project_id = UUID(str(project_raw))
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         result = dispatch_next_best_action(
             session,
             as_session_state(st.session_state),

@@ -11,7 +11,7 @@ from archium.application.web_image_preview_service import WebImagePreviewService
 from archium.config.settings import get_settings
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.exceptions import WorkflowError
-from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import unit_of_work
 from archium.ui.image_search_settings import session_pexels_api_key, session_unsplash_api_key
 
 
@@ -33,7 +33,8 @@ def render_web_image_preview_panel(
     preview_key = f"web_preview_{presentation_id}_{slide.id}_{requirement_index}"
     cache_key = f"{preview_key}_result"
 
-    with get_session() as session:
+    with unit_of_work() as uow:
+        session = uow.session
         preferences = ImageSearchSettingsService(session).get_preferences(
             base_settings=get_settings(),
         )
@@ -50,7 +51,8 @@ def render_web_image_preview_panel(
         return
 
     if st.button("检索预览", key=f"{preview_key}_search", use_container_width=True):
-        with get_session() as session:
+        with unit_of_work() as uow:
+            session = uow.session
             service = WebImagePreviewService(
                 session,
                 pexels_session_api_key=session_pexels_api_key(),
@@ -87,7 +89,8 @@ def render_web_image_preview_panel(
                 use_container_width=True,
             ):
                 try:
-                    with get_session() as session:
+                    with unit_of_work() as uow:
+                        session = uow.session
                         service = WebImagePreviewService(
                             session,
                             pexels_session_api_key=session_pexels_api_key(),
