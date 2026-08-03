@@ -168,3 +168,65 @@ class JobProgressService:
             reverse=True,
         )
         return rows[:limit]
+
+    def get(self, job_id: UUID) -> JobProgressView | None:
+        """Resolve a single job across workflow / artifact / background stores."""
+        run = self._workflows.get_by_id(job_id)
+        if run is not None:
+            state = dict(run.state or {})
+            message = ""
+            errors = list(run.errors or [])
+            if errors:
+                message = str(errors[-1])[:200]
+            elif state.get("awaiting_review"):
+                message = "等待人工确认"
+            return JobProgressView(
+                job_id=run.id,
+                project_id=run.project_id,
+                kind=JobKind.WORKFLOW,
+                label=_workflow_label(state, run.status),
+                status=run.status.value,
+                progress_pct=_workflow_progress_pct(run.status, state),
+                message=message,
+                updated_at=run.updated_at,
+                detail={
+                    "presentation_id": (
+                        str(run.presentation_id) if run.presentation_id else ""
+                    )
+                },
+            )
+        try:
+            artifact = self._artifacts.get(job_id)
+        except Exception:
+            artifact = None
+        if artifact is not None:
+            title = (artifact.deliverable_title or artifact.title or artifact.deliverable_id).strip()
+            return JobProgressView(
+                job_id=artifact.id,
+                project_id=artifact.project_id,
+                kind=JobKind.ARTIFACT,
+                label=f"成果 · {title}" if title else "成果任务",
+                status=artifact.status.value,
+                progress_pct=_artifact_progress_pct(artifact.status),
+                message=(artifact.message or artifact.error_message or "")[:200],
+                updated_at=artifact.updated_at,
+                detail={"deliverable_id": artifact.deliverable_id},
+            )
+        bg_job = self._background.get_by_id(job_id)
+        if bg_job is None:
+            return None
+        return JobProgressView(
+            job_id=bg_job.id,
+            project_id=bg_job.project_id,
+            kind=JobKind.BACKGROUND,
+            label=bg_job.label or f"后台 · {bg_job.kind.value}",
+            status=bg_job.status.value,
+            progress_pct=bg_job.progress_pct,
+            message=(bg_job.message or bg_job.error_message or "")[:200],
+            updated_at=bg_job.updated_at,
+            detail={
+                "kind": bg_job.kind.value,
+                "idempotency_key": bg_job.idempotency_key or "",
+                "cancel_requested": bg_job.cancel_requested,
+            },
+        )

@@ -1896,6 +1896,8 @@ def background_job_to_domain(orm: BackgroundJobORM) -> BackgroundJob:
         started_at=orm.started_at,
         completed_at=orm.completed_at,
         attempts=int(orm.attempts or 0),
+        idempotency_key=getattr(orm, "idempotency_key", None),
+        cancel_requested=bool(getattr(orm, "cancel_requested", False)),
         created_at=orm.created_at,
         updated_at=orm.updated_at,
     )
@@ -1920,6 +1922,10 @@ def background_job_to_orm(
     target.started_at = domain.started_at
     target.completed_at = domain.completed_at
     target.attempts = int(domain.attempts or 0)
+    target.idempotency_key = (domain.idempotency_key or None)
+    if target.idempotency_key is not None:
+        target.idempotency_key = target.idempotency_key[:200]
+    target.cancel_requested = bool(domain.cancel_requested)
     if domain.created_at is not None:
         target.created_at = domain.created_at
     if domain.updated_at is not None:

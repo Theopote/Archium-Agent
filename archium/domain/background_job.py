@@ -42,6 +42,8 @@ class BackgroundJob(IdentifiedModel, TimestampedModel):
     started_at: datetime | None = None
     completed_at: datetime | None = None
     attempts: int = Field(default=0, ge=0)
+    idempotency_key: str | None = Field(default=None, max_length=200)
+    cancel_requested: bool = False
 
     def mark_running(self, *, message: str = "") -> None:
         self.status = BackgroundJobStatus.RUNNING
@@ -55,6 +57,19 @@ class BackgroundJob(IdentifiedModel, TimestampedModel):
         self.progress_pct = max(0, min(100, int(pct)))
         if message:
             self.message = message
+        self.touch()
+
+    def request_cancel(self, *, message: str = "cancel requested") -> None:
+        self.cancel_requested = True
+        if message:
+            self.message = message[:500]
+        self.touch()
+
+    def mark_cancelled(self, *, message: str = "cancelled") -> None:
+        self.status = BackgroundJobStatus.CANCELLED
+        self.cancel_requested = True
+        self.message = (message or "cancelled")[:500]
+        self.completed_at = utc_now()
         self.touch()
 
     def mark_completed(self, *, result: dict[str, Any] | None = None, message: str = "") -> None:

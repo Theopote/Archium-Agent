@@ -125,6 +125,21 @@ Studio 的编辑闭环不是直接覆写导出文件：
 | Infrastructure 不依赖 Application / UI | `test_infrastructure_layering` |
 | Workflow 不依赖 UI | `test_workflow_layering` |
 | UI 不直接 import ORM models | `test_ui_layering` |
+| UI `pages/` 不 import `database.repositories`（走 Application API） | `test_ui_layering` |
+
+### Application API 边界（APP-029）
+
+进程内稳定业务边界在 `archium/application/api/`，资源名对应产品路径（非 HTTP）：
+
+`/project` `/documents` `/context` `/mission` `/storyline` `/slides` `/scenes` `/revisions` `/render` `/delivery` 以及 `/jobs`。
+
+约定：
+
+- Streamlit 通过 `api_from_session(session)` 调用；**不**在 `ui/pages` 直连 Repository
+- 长任务一律 `JobsApi.create`（支持 `idempotency_key`）；可 `get_progress` / `list_active` / `cancel`
+- 结果幂等：同 project + idempotency_key 返回同一 job；刷新后按 job_id / project 恢复
+- 事务仍遵守 APP-003：调用方 `get_session()`，UI 不 `commit`
+- 本波不引入 FastAPI HTTP；未来 HTTP 只做薄适配
 
 ### Domain 对象准入
 

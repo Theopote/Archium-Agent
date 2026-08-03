@@ -253,14 +253,17 @@ def _render_recent_design_changes(snapshot: ProjectProgressSnapshot) -> None:
     """Partner-facing design timeline snippet for Project Home."""
     st.markdown("**最近设计变化**")
     try:
-        from archium.infrastructure.database.repositories import ProjectRepository
+        from archium.application.api.session import api_from_session
         from archium.ui.intent_evolution_panel import (
             format_intent_event_time,
             intent_evolution_kind_label,
         )
 
         with get_session() as session:
-            project = ProjectRepository(session).get_by_id(snapshot.project_id)
+            try:
+                project = api_from_session(session).project.get(snapshot.project_id)
+            except Exception:
+                project = None
         evolution = project.intent_evolution if project is not None else None
         events = list(evolution.events) if evolution is not None else []
         if not events:

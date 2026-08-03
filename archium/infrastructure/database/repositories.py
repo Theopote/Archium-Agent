@@ -1988,12 +1988,30 @@ class BackgroundJobRepository:
         orm = self._session.get(BackgroundJobORM, job_id)
         return mappers.background_job_to_domain(orm) if orm else None
 
+    def get_by_idempotency_key(
+        self,
+        project_id: UUID,
+        idempotency_key: str,
+    ) -> BackgroundJob | None:
+        key = idempotency_key.strip()
+        if not key:
+            return None
+        stmt = (
+            select(BackgroundJobORM)
+            .where(BackgroundJobORM.project_id == project_id)
+            .where(BackgroundJobORM.idempotency_key == key)
+            .limit(1)
+        )
+        orm = self._session.scalars(stmt).first()
+        return mappers.background_job_to_domain(orm) if orm else None
+
     def claim_next(self) -> BackgroundJob | None:
-        """Atomically claim the oldest queued job."""
+        """Atomically claim the oldest queued job that is not cancel-requested."""
         try:
             stmt = (
                 select(BackgroundJobORM)
                 .where(BackgroundJobORM.status == BackgroundJobStatus.QUEUED.value)
+                .where(BackgroundJobORM.cancel_requested.is_(False))
                 .order_by(BackgroundJobORM.created_at.asc())
                 .limit(1)
             )
@@ -2001,6 +2019,9 @@ class BackgroundJobRepository:
             if orm is None:
                 return None
             job = mappers.background_job_to_domain(orm)
+            if job.cancel_requested:
+                job.mark_cancelled(message=job.message or "cancelled before claim")
+                return self.update(job)
             job.mark_running(message=job.message or "running")
             return self.update(job)
         except SQLAlchemyError as exc:

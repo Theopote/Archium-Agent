@@ -13,7 +13,7 @@ from archium.application.cad_spatial_fact_materializer import (
     materialize_cad_spatial_facts,
     merge_cad_analysis_into_document,
 )
-from archium.domain.background_job import BackgroundJob, BackgroundJobKind
+from archium.domain.background_job import BackgroundJob, BackgroundJobKind, BackgroundJobStatus
 from archium.infrastructure.database.repositories import DocumentRepository
 
 
@@ -28,9 +28,19 @@ class BackgroundJobWorker:
         job = self._jobs.claim_next()
         if job is None:
             return None
+        if job.status == BackgroundJobStatus.CANCELLED or job.cancel_requested:
+            if job.status != BackgroundJobStatus.CANCELLED:
+                return self._jobs.cancel(job.id, message="cancelled before run")
+            return job
         try:
+            if self._jobs.is_cancel_requested(job.id):
+                return self._jobs.cancel(job.id, message="cancelled")
             self._jobs.set_progress(job.id, 20, message="dispatching")
+            if self._jobs.is_cancel_requested(job.id):
+                return self._jobs.cancel(job.id, message="cancelled")
             result = self._dispatch(job)
+            if self._jobs.is_cancel_requested(job.id):
+                return self._jobs.cancel(job.id, message="cancelled")
             return self._jobs.complete(job.id, result=result, message="completed")
         except Exception as exc:
             return self._jobs.fail(job.id, str(exc))

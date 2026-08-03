@@ -281,9 +281,12 @@ def _render_describe(project_id: UUID) -> None:
         st.session_state.mission_task_draft = genesis_task
     example_pool = TASK_EXAMPLE_PROMPTS
     with get_session() as session:
-        from archium.infrastructure.database.repositories import ProjectRepository
+        from archium.application.api.session import api_from_session
 
-        project_for_examples = ProjectRepository(session).get_by_id(project_id)
+        try:
+            project_for_examples = api_from_session(session).project.get(project_id)
+        except Exception:
+            project_for_examples = None
         if project_for_examples is not None:
             from archium.application.project_context_routing import is_research_programming
 

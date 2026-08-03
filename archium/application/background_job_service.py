@@ -1,4 +1,4 @@
-"""Durable background job enqueue / claim / complete."""
+"""Durable background job enqueue / claim / complete / cancel."""
 
 from __future__ import annotations
 
@@ -29,7 +29,13 @@ class BackgroundJobService:
         label: str = "",
         payload: dict[str, Any] | None = None,
         message: str = "queued",
+        idempotency_key: str | None = None,
     ) -> BackgroundJob:
+        key = (idempotency_key or "").strip() or None
+        if key is not None:
+            existing = self._repo.get_by_idempotency_key(project_id, key)
+            if existing is not None:
+                return existing
         job = BackgroundJob(
             project_id=project_id,
             kind=kind,
@@ -37,6 +43,7 @@ class BackgroundJobService:
             label=(label or kind.value)[:300],
             message=message[:500],
             payload=dict(payload or {}),
+            idempotency_key=key,
         )
         return self._repo.create(job)
 
@@ -47,6 +54,8 @@ class BackgroundJobService:
         job = self._repo.get_by_id(job_id)
         if job is None:
             return None
+        if job.cancel_requested or job.status == BackgroundJobStatus.CANCELLED:
+            return job
         job.set_progress(pct, message=message)
         return self._repo.update(job)
 
@@ -60,6 +69,11 @@ class BackgroundJobService:
         job = self._repo.get_by_id(job_id)
         if job is None:
             return None
+        if job.cancel_requested or job.status == BackgroundJobStatus.CANCELLED:
+            if job.status != BackgroundJobStatus.CANCELLED:
+                job.mark_cancelled(message=job.message or "cancelled")
+                return self._repo.update(job)
+            return job
         job.mark_completed(result=result, message=message)
         return self._repo.update(job)
 
@@ -67,8 +81,34 @@ class BackgroundJobService:
         job = self._repo.get_by_id(job_id)
         if job is None:
             return None
+        if job.status == BackgroundJobStatus.CANCELLED:
+            return job
         job.mark_failed(error_message[:800])
         return self._repo.update(job)
+
+    def cancel(self, job_id: UUID, *, message: str = "cancelled") -> BackgroundJob | None:
+        """Cancel a job. Queued jobs finish immediately; running jobs cooperate."""
+        job = self._repo.get_by_id(job_id)
+        if job is None:
+            return None
+        if job.status in {
+            BackgroundJobStatus.COMPLETED,
+            BackgroundJobStatus.FAILED,
+            BackgroundJobStatus.CANCELLED,
+        }:
+            return job
+        # Queued, or worker acknowledging a prior cancel request → terminal CANCELLED.
+        if job.status == BackgroundJobStatus.QUEUED or job.cancel_requested:
+            job.mark_cancelled(message=message)
+            return self._repo.update(job)
+        job.request_cancel(message=message or "cancel requested")
+        return self._repo.update(job)
+
+    def is_cancel_requested(self, job_id: UUID) -> bool:
+        job = self._repo.get_by_id(job_id)
+        if job is None:
+            return False
+        return bool(job.cancel_requested or job.status == BackgroundJobStatus.CANCELLED)
 
     def list_for_project(
         self,

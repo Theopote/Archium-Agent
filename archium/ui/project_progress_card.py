@@ -398,21 +398,22 @@ def _snapshot_for_project(
 
 def load_project_progress_snapshot() -> ProjectProgressSnapshot | None:
     """Load a lightweight progress snapshot for the sidebar."""
-    from archium.infrastructure.database.repositories import ProjectRepository
+    from archium.application.api.session import api_from_session
 
     raw_project = st.session_state.get("selected_project_id")
     raw_presentation = st.session_state.get("selected_presentation_id")
 
     with get_session() as session:
-        projects = ProjectRepository(session).list_all()
+        api = api_from_session(session)
+        projects = api.project.list()
         if not projects:
             return None
 
         project = None
         if raw_project is not None:
             try:
-                project = ProjectRepository(session).get_by_id(UUID(str(raw_project)))
-            except ValueError:
+                project = api.project.get(UUID(str(raw_project)))
+            except Exception:
                 project = None
         if project is None:
             project = max(projects, key=lambda item: item.updated_at)
@@ -439,10 +440,10 @@ def load_project_progress_snapshot() -> ProjectProgressSnapshot | None:
 
 def list_recent_project_snapshots(*, limit: int = 6) -> list[ProjectProgressSnapshot]:
     """Recent projects for the home cockpit, newest activity first."""
-    from archium.infrastructure.database.repositories import ProjectRepository
+    from archium.application.api.session import api_from_session
 
     with get_session() as session:
-        projects = ProjectRepository(session).list_all()
+        projects = api_from_session(session).project.list()
         if not projects:
             return []
         snapshots = [_snapshot_for_project(session, project) for project in projects]

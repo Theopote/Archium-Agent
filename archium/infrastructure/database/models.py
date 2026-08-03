@@ -1488,6 +1488,12 @@ class BackgroundJobORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Index("ix_background_jobs_status_created", "status", "created_at"),
         Index("ix_background_jobs_project_id_created", "project_id", "created_at"),
         Index("ix_background_jobs_kind", "kind"),
+        Index(
+            "uq_background_jobs_project_idempotency",
+            "project_id",
+            "idempotency_key",
+            unique=True,
+        ),
     )
 
     project_id: Mapped[uuid.UUID] = mapped_column(
@@ -1504,6 +1510,8 @@ class BackgroundJobORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     started_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    idempotency_key: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    cancel_requested: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class ProjectMemberORM(UUIDPrimaryKeyMixin, TimestampMixin, Base):

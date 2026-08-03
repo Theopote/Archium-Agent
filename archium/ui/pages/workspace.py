@@ -208,9 +208,12 @@ def _render_documents(project_id: UUID, *, show_uploader: bool = True) -> None:
                 is_concept_leaning,
                 is_research_programming,
             )
-            from archium.infrastructure.database.repositories import ProjectRepository
+            from archium.application.api.session import api_from_session
 
-            project = ProjectRepository(session).get_by_id(project_id)
+            try:
+                project = api_from_session(session).project.get(project_id)
+            except Exception:
+                project = None
             if project is not None and is_concept_leaning(session, project) and not is_research_programming(
                 session, project
             ):
@@ -426,12 +429,12 @@ def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
 
 def _load_generation_contract(project_id: UUID):
     """Load the selected persisted plan; generation must not re-plan it."""
+    from archium.application.api.session import api_from_session
     from archium.application.review_service import PresentationReviewService
-    from archium.infrastructure.database.repositories import PresentationRepository
 
     preferred = st.session_state.get("selected_presentation_id")
     with get_session() as session:
-        presentations = PresentationRepository(session).list_by_project(project_id)
+        presentations = api_from_session(session).project.list_presentations(project_id)
         if preferred:
             presentations.sort(key=lambda item: str(item.id) != str(preferred))
         for presentation in presentations:

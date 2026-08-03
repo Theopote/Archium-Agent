@@ -764,10 +764,9 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
                 with get_session() as session:
                     from uuid import UUID as _UUID
 
-                    from archium.infrastructure.database.repositories import (
-                        PresentationRepository,
-                    )
+                    from archium.application.api.session import api_from_session
 
+                    api = api_from_session(session)
                     presentation_id: _UUID | None = None
                     selected_presentation = st.session_state.get("selected_presentation_id")
                     if selected_presentation:
@@ -775,13 +774,13 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
                             presentation_id = _UUID(str(selected_presentation))
                         except (TypeError, ValueError):
                             presentation_id = None
-                    presentations = PresentationRepository(session).list_by_project(project_id)
+                    presentations = api.project.list_presentations(project_id)
                     if presentation_id is not None:
                         presentations = [
                             item for item in presentations if item.id == presentation_id
                         ] or presentations
                     if presentations:
-                        slides = PresentationRepository(session).list_slides(presentations[0].id)
+                        slides = api.slides.list_for_presentation(presentations[0].id)
                         slides_generated = bool(slides) and all(
                             slide.layout_plan_id is not None for slide in slides
                         )

@@ -229,8 +229,8 @@ def _default_name_from_prompt(prompt: str) -> str:
 def _render_intent_evidence_summary(project_id: str) -> None:
     from uuid import UUID
 
+    from archium.application.api.session import api_from_session
     from archium.infrastructure.database.mission_repositories import MissionRepository
-    from archium.infrastructure.database.repositories import ProjectRepository
 
     try:
         project_uuid = UUID(project_id)
@@ -243,7 +243,10 @@ def _render_intent_evidence_summary(project_id: str) -> None:
         if missions and missions[0].design_intent is not None:
             evidence_rows = list(missions[0].design_intent.evidence[-6:])
         if not evidence_rows:
-            project = ProjectRepository(session).get_by_id(project_uuid)
+            try:
+                project = api_from_session(session).project.get(project_uuid)
+            except Exception:
+                project = None
             if project and project.intent_evolution:
                 for event in reversed(project.intent_evolution.events):
                     snapshot = event.design_intent_snapshot or {}
@@ -295,9 +298,12 @@ def _starter_from_payload(payload: dict, project_id: str) -> GenesisStarterResul
     prompt = st.session_state.get("genesis_task_description") or ""
     understanding = str(payload.get("understanding_summary") or "")
     with get_session() as session:
-        from archium.infrastructure.database.repositories import ProjectRepository
+        from archium.application.api.session import api_from_session
 
-        project = ProjectRepository(session).get_by_id(UUID(project_id))
+        try:
+            project = api_from_session(session).project.get(UUID(project_id))
+        except Exception:
+            project = None
         name = project.name if project is not None else "新汇报"
         return ensure_genesis_starter_draft(
             session,
@@ -416,9 +422,12 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
                     from archium.application.genesis_starter_service import (
                         ensure_genesis_starter_draft,
                     )
-                    from archium.infrastructure.database.repositories import ProjectRepository
+                    from archium.application.api.session import api_from_session
 
-                    project = ProjectRepository(session).get_by_id(UUID(project_id))
+                    try:
+                        project = api_from_session(session).project.get(UUID(project_id))
+                    except Exception:
+                        project = None
                     starter = ensure_genesis_starter_draft(
                         session,
                         UUID(project_id),

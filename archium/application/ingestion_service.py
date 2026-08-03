@@ -66,6 +66,12 @@ class IngestionService:
         self._parsers = parsers if parsers is not None else default_parsers()
         self._retrieval = retrieval
 
+    def list_documents(self, project_id: UUID) -> list[SourceDocument]:
+        return self._documents.list_by_project(project_id)
+
+    def get_document(self, document_id: UUID) -> SourceDocument | None:
+        return self._documents.get_document(document_id)
+
     def import_file(
         self,
         project_id: UUID,

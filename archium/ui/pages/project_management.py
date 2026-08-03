@@ -8,7 +8,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.project_deletion_service import ProjectDeletionService
-from archium.application.project_management_service import ProjectManagementService
+from archium.application.api.session import api_from_session
 from archium.application.workspace_mode_service import WorkspaceModeService
 from archium.domain.project import Project
 from archium.exceptions import ProjectNotFoundError, ValidationError
@@ -62,7 +62,7 @@ def _render_project_card(project: Project, index: int) -> None:
 def _render_edit_dialog(project_id: UUID, expected_updated_at: datetime | None) -> None:
     try:
         with get_session() as session:
-            project = ProjectManagementService(session).get_project(project_id)
+            project = api_from_session(session).project.get(project_id)
     except ProjectNotFoundError:
         st.warning("项目不存在或已被删除。")
         st.session_state.editing_project_id = None
@@ -84,7 +84,7 @@ def _render_edit_dialog(project_id: UUID, expected_updated_at: datetime | None) 
         if submit:
             try:
                 with get_session() as session:
-                    ProjectManagementService(session).update_project(
+                    api_from_session(session).project.update(
                         project_id,
                         name=new_name,
                         description=new_description,
@@ -108,7 +108,7 @@ def _render_edit_dialog(project_id: UUID, expected_updated_at: datetime | None) 
 def _render_delete_confirmation(project_id: UUID) -> None:
     try:
         with get_session() as session:
-            project = ProjectManagementService(session).get_project(project_id)
+            project = api_from_session(session).project.get(project_id)
     except ProjectNotFoundError:
         st.warning("项目不存在或已被删除。")
         st.session_state.deleting_project_id = None
@@ -165,7 +165,7 @@ def _render_create_project_form() -> None:
                 from archium.ui.session_actor import get_current_actor_id
 
                 with get_session() as session:
-                    created_project = ProjectManagementService(session).create_project(
+                    created_project = api_from_session(session).project.create(
                         project_name,
                         project_description,
                         actor_id=get_current_actor_id(),
@@ -197,7 +197,7 @@ def render() -> None:
     with get_session() as session:
         from archium.ui.session_actor import get_current_actor_id
 
-        projects = ProjectManagementService(session).list_projects(
+        projects = api_from_session(session).project.list(
             actor_id=get_current_actor_id()
         )
 
