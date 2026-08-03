@@ -1,7 +1,7 @@
 step_id,step_name,project_id,slide_id,pass,step_seconds,blocker_tag,pptx_edit_verified,notes,evidence_path,blocker_level
-E0,浏览20页并选最差页,,,,,,,,
-E1,选中单个元素,,,,,,,,
-E2,移动或缩放,,,,,,,,
-E3,换图或改文字,,,,,,,,
-E4,Undo,,,,,,,,
-E5,导出PPTX并在PowerPoint继续编辑,,,,,,,,
+E0,浏览20页并选最差页,7ad9c03b-bf46-43ff-a30b-7917099f8434,2ee749d4-2f90-49e3-bb2b-593d1c9341d1,Partial,180,post_e_improvement,,工程预演：工作室已打开且可见 P1–P20；选定 P6 hero 为改稿页。侧栏页列表点击常被遮挡。,evidence/E0-studio-loaded.png,post_e_improvement
+E1,选中单个元素,7ad9c03b-bf46-43ff-a30b-7917099f8434,2ee749d4-2f90-49e3-bb2b-593d1c9341d1,N,120,e_blocker,,浏览器自动化无法可靠点选故事线页按钮（Click intercepted）；Canvas 自定义组件亦难经 a11y 树点选。真人场次须验证。,,e_blocker
+E2,移动或缩放,7ad9c03b-bf46-43ff-a30b-7917099f8434,2ee749d4-2f90-49e3-bb2b-593d1c9341d1,Y,2,,,"服务层 move_layout_element 通过（title 0.7,0.45→1.1,0.65）。非浏览器拖拽。",evidence/rehearsal-e2-e5-result.json,
+E3,换图或改文字,7ad9c03b-bf46-43ff-a30b-7917099f8434,2ee749d4-2f90-49e3-bb2b-593d1c9341d1,Partial,2,,,"服务层 set_text_runs 通过；未覆盖浏览器双击改字 / AI 提案接受。",evidence/rehearsal-e2-e5-result.json,post_e_improvement
+E4,Undo,7ad9c03b-bf46-43ff-a30b-7917099f8434,2ee749d4-2f90-49e3-bb2b-593d1c9341d1,Y,1,,,服务层 SceneUndo 通过（undo_steps_before=2）。UI「撤销视觉」按钮未点。,evidence/rehearsal-e2-e5-result.json,
+E5,导出PPTX并在PowerPoint继续编辑,7ad9c03b-bf46-43ff-a30b-7917099f8434,2ee749d4-2f90-49e3-bb2b-593d1c9341d1,Partial,3,,N,导出 PPTX 含改题标记；未在 PowerPoint/WPS 内再编辑（需真人）。,evidence/E5-rehearsal-export.pptx,post_e_improvement

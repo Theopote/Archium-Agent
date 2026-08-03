@@ -1,0 +1,39 @@
+{
+  "presentation_id": "fd7cde92-3f53-4902-a001-06c67f61a8c2",
+  "steps": {
+    "E2_move": {
+      "ok": true,
+      "node_id": "title",
+      "before": [
+        0.7,
+        0.45
+      ],
+      "after": [
+        1.1,
+        0.75
+      ],
+      "actions": [
+        "move_node"
+      ]
+    },
+    "E3_set_text": {
+      "ok": true,
+      "node_id": "title"
+    },
+    "E4_undo": {
+      "undo_steps_after_two_edits": 2,
+      "text_restored_after_first_undo": true,
+      "final_text_clean": true,
+      "final_geometry_near_original": true
+    },
+    "E5_export": {
+      "ok": true,
+      "path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\data\\outputs\\presentations\\fd7cde92-3f53-4902-a001-06c67f61a8c2\\v1\\presentation.pptx",
+      "warnings": []
+    }
+  },
+  "pptx_evidence": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\docs\\rehearsal\\sessions\\2026-08-03-playbook-e-1\\evidence\\browser-rehearsal-export.pptx",
+  "ok": true,
+  "slide_id": "8564465a-74c9-44de-95c7-a9b6afc6cec9",
+  "deck_page_count": 20
+}

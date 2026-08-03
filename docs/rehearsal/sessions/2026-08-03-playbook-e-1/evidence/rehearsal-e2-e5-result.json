@@ -1,0 +1,45 @@
+{
+  "mode": "engineering_browser_assisted_rehearsal",
+  "closes_ui_006": false,
+  "presentation_id": "fd7cde92-3f53-4902-a001-06c67f61a8c2",
+  "steps": {
+    "E2_move": {
+      "pass": true,
+      "node_id": "title",
+      "before": {
+        "x": 0.7,
+        "y": 0.45
+      },
+      "after": {
+        "x": 1.1,
+        "y": 0.65
+      },
+      "message": "move element"
+    },
+    "E3_set_text": {
+      "pass": true,
+      "message": "set text runs",
+      "text": "预演改题-PlaybookE-20260803"
+    },
+    "E5_export": {
+      "pass": true,
+      "path": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\data\\outputs\\presentations\\fd7cde92-3f53-4902-a001-06c67f61a8c2\\v1\\presentation.pptx",
+      "evidence": "C:\\Users\\navib\\Desktop\\development\\Archium-Agent\\docs\\rehearsal\\sessions\\2026-08-03-playbook-e-1\\evidence\\E5-rehearsal-export.pptx",
+      "warnings": []
+    },
+    "E4_undo": {
+      "undo_steps_before": 2,
+      "pass": true,
+      "after_text": "城市更新医疗综合体方案",
+      "note": "Undid after export so E5 evidence retains marker."
+    }
+  },
+  "e0_worst_slide": {
+    "slide_id": "2ee749d4-2f90-49e3-bb2b-593d1c9341d1",
+    "order": 5,
+    "title": "城市更新医疗综合体方案",
+    "reason": "工程预演选定 P6 hero 页作为改稿对象（封面类占位图常见问题）。"
+  },
+  "elapsed_seconds": 2.1,
+  "overall_service_pass": true
+}
