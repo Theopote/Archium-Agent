@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from enum import StrEnum
 
+from pydantic import Field
+
 from archium.domain._base import DomainModel
 
 
@@ -21,3 +23,8 @@ class NextBestAction(DomainModel):
     reason: str = ""
     question: str | None = None
     priority: int = 0
+    # Explainable NBA card fields (optional; UI fills defaults when empty).
+    why_now: str = ""
+    affects: list[str] = Field(default_factory=list)
+    expected_outcome: str = ""
+    reversible: bool | None = None

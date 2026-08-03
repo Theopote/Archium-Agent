@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from archium.application.context.nba_explainability import enrich_next_best_actions
 from archium.application.context.types import ActionDispatch, WorkflowEntryDispatch
 from archium.domain.context.project_context import ProjectContext
 from archium.domain.context.recommended_workflow import RecommendedWorkflow
@@ -106,23 +107,29 @@ def default_actions_for_stage(
     blocking_gaps: bool = False,
 ) -> list[NextBestAction]:
     if blocking_gaps:
-        return [
-            NextBestAction(
-                action=NextBestActionType.ASK,
-                reason="存在待确认或冲突的关键事实，先澄清再推进",
-                priority=0,
-            ),
-            NextBestAction(
-                action=NextBestActionType.UPLOAD_MATERIALS,
-                reason="补充可核验资料以消解缺口",
-                priority=1,
-            ),
-            NextBestAction(
-                action=NextBestActionType.EXPLORE_DIRECTIONS,
-                reason="在约束内仍可并行推演概念方向",
-                priority=2,
-            ),
-        ]
+        return enrich_next_best_actions(
+            [
+                NextBestAction(
+                    action=NextBestActionType.ASK,
+                    reason="存在待确认或冲突的关键事实，先澄清再推进",
+                    why_now="存在待确认或冲突的关键事实；未确认前不宜继续生成相关页面。",
+                    affects=["事实台账", "项目概况页", "经济技术指标相关页"],
+                    expected_outcome="确认后将按统一口径更新事实，并可重新生成受影响页面。",
+                    reversible=True,
+                    priority=0,
+                ),
+                NextBestAction(
+                    action=NextBestActionType.UPLOAD_MATERIALS,
+                    reason="补充可核验资料以消解缺口",
+                    priority=1,
+                ),
+                NextBestAction(
+                    action=NextBestActionType.EXPLORE_DIRECTIONS,
+                    reason="在约束内仍可并行推演概念方向",
+                    priority=2,
+                ),
+            ]
+        )
     if stage == KnowledgeMaturityStage.TECHNICAL_PRESENTATION.value:
         return [
             NextBestAction(

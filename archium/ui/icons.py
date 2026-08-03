@@ -24,6 +24,7 @@ TEMPLATE_STUDIO = ":material/view_quilt:"
 TEMPLATE_INDUCTION = ":material/science:"
 WORKSPACE = ":material/work:"
 SLIDE_RECOVERY = ":material/photo_album:"
+TOOL_HUB = ":material/handyman:"
 
 # —— Common actions ——
 CHECK = ":material/check_circle:"

@@ -23,14 +23,22 @@ _PROJECT_KEY = "genesis_assessed_project_id"
 
 def render() -> None:
     """Describe the project; Archium assesses knowledge and suggests next steps."""
-    render_page_header(
-        "开始项目",
-        "告诉我你的想法或项目情况——不必先选「有资料还是没资料」。",
-    )
-    st.caption(
-        "建筑设计是知识完整度的连续谱：多数项目介于纯想法与完备资料之间。"
-        "系统会判断已知/未知，并建议下一步。"
-    )
+    fast = st.session_state.get("genesis_intent") == "fast_deck"
+    if fast:
+        render_page_header(
+            "快速生成汇报",
+            "描述项目后尽快出稿；完成后可直接进入工作室预览封面。",
+        )
+        st.caption("此路径少打断、少追问。需要深入理解任务时，请改用「开始项目」。")
+    else:
+        render_page_header(
+            "开始项目",
+            "告诉我你的想法或项目情况——不必先选「有资料还是没资料」。",
+        )
+        st.caption(
+            "建筑设计是知识完整度的连续谱：多数项目介于纯想法与完备资料之间。"
+            "系统会判断已知/未知，并建议下一步。"
+        )
 
     assessed_id = st.session_state.get(_PROJECT_KEY)
     assessment_payload = st.session_state.get(_ASSESSMENT_KEY)
@@ -47,6 +55,7 @@ def render() -> None:
 
 def _render_entry_form() -> None:
     settings = get_ui_effective_settings()
+    fast = st.session_state.get("genesis_intent") == "fast_deck"
     with st.form("genesis_context_form"):
         name = st.text_input(
             "项目名称（可选）",
@@ -62,11 +71,11 @@ def _render_entry_form() -> None:
         )
         go_studio_after = st.checkbox(
             "完成后直接进入工作室预览封面",
-            value=False,
+            value=bool(fast or st.session_state.get("genesis_go_studio_after")),
             key="genesis_go_studio_after",
         )
         submit = st.form_submit_button(
-            "开始理解项目",
+            "开始出稿" if fast else "开始理解项目",
             type="primary",
             use_container_width=True,
         )
@@ -368,19 +377,21 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
     st.divider()
     if not actions:
         st.caption("暂无行动，可继续描述项目或补充资料。")
-    for index, action in enumerate(actions):
-        label = _action_label(action.action, reason=action.reason)
-        help_text = action.reason
-        if action.question:
-            help_text = f"{help_text}（问：{action.question}）" if help_text else action.question
-        if st.button(
-            label,
-            key=f"nba_{index}_{action.action.value}",
-            use_container_width=True,
-            type="primary" if index == 0 else "secondary",
-            help=help_text or None,
-        ):
-            _dispatch_action(action.action)
+    else:
+        from archium.application.context.nba_action_executor import nba_execute_label
+        from archium.ui.components.nba_explainable_card import render_explainable_nba_actions
+
+        titles = [
+            nba_execute_label(action.action, reason=action.reason) or action.action.value
+            for action in actions
+        ]
+        clicked = render_explainable_nba_actions(
+            actions,
+            key_prefix="genesis",
+            titles=titles,
+        )
+        if clicked is not None:
+            _dispatch_action(clicked)
             return
 
     settings = get_ui_effective_settings()

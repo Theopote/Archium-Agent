@@ -10,7 +10,6 @@ import streamlit as st
 from archium.domain.delivery_record import DeliveryRecord
 from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
-from archium.ui.product_flow import primary_stages, product_flow_chain, product_flow_home_steps
 from archium.ui.project_progress_card import (
     ProjectProgressSnapshot,
     _format_relative_time,
@@ -70,38 +69,60 @@ def _resolve_primary(snapshots: list[ProjectProgressSnapshot]) -> ProjectProgres
     return snapshots[0]
 
 
-def _render_empty_state() -> None:
-    from archium.ui.components.chrome import render_empty_state
+def _go_new_project() -> None:
+    st.session_state.pop("genesis_intent", None)
+    st.session_state.show_create_form = True
+    st.switch_page(get_app_page("project-genesis"))
 
-    def _go_create() -> None:
-        st.session_state.show_create_form = True
-        st.switch_page(get_app_page("project-genesis"))
 
-    render_empty_state(
-        f"{greeting_for_now()}，开始第一个项目",
-        "直接描述你的建筑想法或项目情况。"
-        "不必先准备齐资料，也不必选择「有资料 / 没资料」。",
-        primary_label="描述你的项目",
-        primary_key="home_new_project_empty",
-        on_primary=_go_create,
-    )
-    from archium.ui.components.first_run_guide import render_first_run_steps
+def _go_fast_deck() -> None:
+    """少追问、尽快出稿：进入 Genesis 快速线。"""
+    st.session_state.genesis_intent = "fast_deck"
+    st.session_state.show_create_form = True
+    st.session_state.genesis_go_studio_after = True
+    st.switch_page(get_app_page("project-genesis"))
 
-    render_first_run_steps(current_step=1)
-    st.caption(
-        "Archium 会评估当前知识状态（已知 / 未知），并建议下一步："
-        "探索方向、补充研究、澄清问题或上传部分资料。"
-    )
-    with st.expander("五阶段说明（首次使用）", expanded=True):
-        st.caption(f"推荐主流程：{product_flow_chain()}")
-        for index, line in enumerate(product_flow_home_steps(), start=1):
-            st.markdown(f"{index}. {line}")
-        for stage in primary_stages():
-            st.page_link(
-                get_app_page(stage.page_key),
-                label=f"{stage.title} — {stage.caption}",
-                icon=stage.icon,
-            )
+
+def _go_open_projects() -> None:
+    st.session_state.home_show_project_picker = True
+    st.switch_page(get_app_page("project-management"))
+
+
+def _go_tool_hub() -> None:
+    st.switch_page(get_app_page("tool-hub"))
+
+
+def _render_task_entries(*, empty: bool = False) -> None:
+    """Homepage only exposes tasks — not the five-stage system flow."""
+    st.markdown(f"### {greeting_for_now()}")
+    if empty:
+        st.caption("选择要做的事。不必先了解系统流程，也不必创建 Mission。")
+    else:
+        st.caption("从任务进入。完整五阶段在侧栏「制作」中，仅在你需要时使用。")
+
+    cols = st.columns(2)
+    with cols[0]:
+        with st.container(border=True):
+            st.markdown("**新项目**")
+            st.caption("描述想法或项目情况，让 Archium 评估知识状态。")
+            if st.button("开始新项目", key="home_entry_new", type="primary", width="stretch"):
+                _go_new_project()
+        with st.container(border=True):
+            st.markdown("**快速生成一份汇报**")
+            st.caption("少追问、尽快出初稿，完成后可进工作室预览。")
+            if st.button("快速出稿", key="home_entry_fast", width="stretch"):
+                _go_fast_deck()
+    with cols[1]:
+        with st.container(border=True):
+            st.markdown("**打开已有项目**")
+            st.caption("继续最近项目，或到项目列表中选择。")
+            if st.button("打开项目", key="home_entry_open", width="stretch"):
+                _go_open_projects()
+        with st.container(border=True):
+            st.markdown("**使用单项工具**")
+            st.caption("只做一件事：复活页面、套模板、查事实等。")
+            if st.button("打开工具台", key="home_entry_tools", width="stretch"):
+                _go_tool_hub()
 
 
 def _render_load_failed(exc: Exception) -> None:
@@ -275,7 +296,6 @@ def _render_partner_next_steps(snapshot: ProjectProgressSnapshot) -> None:
     st.markdown("**下一步**")
     st.caption(
         f"点击下方「继续工作」进入 **{snapshot.continue_work_label}**。"
-        "侧栏显示当前阶段与资料/大纲/交付状态。"
     )
 
 
@@ -415,90 +435,86 @@ def _render_project_details(snapshot: ProjectProgressSnapshot) -> None:
 
 
 def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
-    header_l, header_r = st.columns([3.2, 1])
-    with header_l:
-        st.markdown(f"### {snapshot.project_name}")
-        st.caption(f"{greeting_for_now()} · 当前项目")
-    with header_r:
-        if st.button("切换项目", width="stretch", key="home_switch_project"):
-            st.switch_page(get_app_page("project-management"))
-
-    try:
-        from archium.ui.project_knowledge_profile import render_ai_understanding_panel
-
-        render_ai_understanding_panel(
-            snapshot.project_id,
-            compact=True,
-            show_actions=False,
-            key_prefix=f"home_understand_{snapshot.project_id}",
-            title="AI 当前理解",
-        )
-    except Exception:
-        logger.exception("Failed to render home understanding panel")
-
-    st.markdown(f"**汇报任务**  \n{_task_statement_for(snapshot)}")
-
     with st.container(border=True):
-        st.markdown("**项目动作**")
-        st.caption("按当前项目上下文打开任务理解、概念方向或项目设置。")
-        with st.container(horizontal=True):
-            st.page_link(
-                get_app_page("project-mission"),
-                label="项目任务",
-                icon=":material/assignment:",
-            )
-            st.page_link(
-                get_app_page("concept-exploration"),
-                label="概念探索",
-                icon=":material/lightbulb:",
-            )
-            st.page_link(
-                get_app_page("project-management"),
-                label="项目管理",
-                icon=":material/folder_managed:",
-            )
+        header_l, header_r = st.columns([3.2, 1])
+        with header_l:
+            st.markdown(f"### 当前项目 · {snapshot.project_name}")
+            st.caption("打开后可继续工作；下方为简要状态，细节已收起。")
+        with header_r:
+            if st.button("切换项目", width="stretch", key="home_switch_project"):
+                st.switch_page(get_app_page("project-management"))
 
-    _render_home_starter_preview(snapshot)
+        st.markdown(f"**汇报任务**  \n{_task_statement_for(snapshot)}")
 
-    if snapshot.outline_changes_pending:
-        st.warning("大纲已编辑 · 待重新确认后再进入生成。")
-    elif (
-        snapshot.slide_count > 0
-        and not snapshot.outline_approved
-        and snapshot.has_outline
-    ):
-        st.info("Genesis 草稿已生成线框；确认大纲后可运行正式生成管线。")
+        _render_home_starter_preview(snapshot)
 
-    with st.container(horizontal=True):
-        st.metric("当前阶段", snapshot.current_stage_label, border=True)
-        st.metric("待完成页面", snapshot.pending_count, border=True)
-        st.metric("交付状态", snapshot.deliver_label, border=True)
-    st.caption(snapshot.narrative_summary)
-    st.caption("总体进度")
-    _render_progress_bar(snapshot)
-
-    st.space("small")
-    _render_partner_next_steps(snapshot)
-    details = st.expander(
-        "项目详情与高级信息",
-        expanded=False,
-        icon=":material/tune:",
-        on_change="rerun",
-    )
-    if details.open:
-        with details:
-            _render_project_details(snapshot)
-
-    st.space("small")
-    with st.container(horizontal=True, vertical_alignment="center"):
-        if st.button(
-            f"继续：{snapshot.continue_work_label}",
-            type="primary",
-            width="stretch",
-            key="home_continue_primary",
+        if snapshot.outline_changes_pending:
+            st.warning("大纲已编辑 · 待重新确认后再进入生成。")
+        elif (
+            snapshot.slide_count > 0
+            and not snapshot.outline_approved
+            and snapshot.has_outline
         ):
-            _select_and_continue(snapshot)
+            st.info("Genesis 草稿已生成线框；确认大纲后可运行正式生成管线。")
+
+        with st.container(horizontal=True):
+            st.metric("当前阶段", snapshot.current_stage_label, border=True)
+            st.metric("待完成页面", snapshot.pending_count, border=True)
+            st.metric("交付状态", snapshot.deliver_label, border=True)
         st.caption(snapshot.narrative_summary)
+        st.caption("总体进度")
+        _render_progress_bar(snapshot)
+
+        st.space("small")
+        _render_partner_next_steps(snapshot)
+        with st.container(horizontal=True, vertical_alignment="center"):
+            if st.button(
+                f"继续：{snapshot.continue_work_label}",
+                type="primary",
+                width="stretch",
+                key="home_continue_primary",
+            ):
+                _select_and_continue(snapshot)
+
+        details = st.expander(
+            "项目详情与高级信息",
+            expanded=False,
+            icon=":material/tune:",
+            on_change="rerun",
+        )
+        if details.open:
+            with details:
+                try:
+                    from archium.ui.project_knowledge_profile import render_ai_understanding_panel
+
+                    render_ai_understanding_panel(
+                        snapshot.project_id,
+                        compact=True,
+                        show_actions=True,
+                        key_prefix=f"home_understand_{snapshot.project_id}",
+                        title="AI 当前理解",
+                    )
+                except Exception:
+                    logger.exception("Failed to render home understanding panel")
+                with st.container(border=True):
+                    st.markdown("**项目动作**")
+                    with st.container(horizontal=True):
+                        st.page_link(
+                            get_app_page("project-mission"),
+                            label="项目任务",
+                            icon=":material/assignment:",
+                        )
+                        st.page_link(
+                            get_app_page("concept-exploration"),
+                            label="概念探索",
+                            icon=":material/lightbulb:",
+                        )
+                        st.page_link(
+                            get_app_page("project-management"),
+                            label="项目管理",
+                            icon=":material/folder_managed:",
+                        )
+                _render_project_details(snapshot)
 
 def _render_other_projects(
     snapshots: list[ProjectProgressSnapshot],
@@ -540,6 +556,8 @@ def render() -> None:
             "请在下方「项目成员与角色」中确认成员 ID 并兑换。"
         )
 
+    _render_task_entries(empty=False)
+
     try:
         snapshots = list_recent_project_snapshots(limit=6)
     except Exception as exc:
@@ -548,14 +566,11 @@ def render() -> None:
 
     primary = _resolve_primary(snapshots)
     if primary is None:
-        _render_empty_state()
+        st.caption("暂无项目。用上方「新项目」或「快速出稿」开始。")
         if pending_invite:
             st.caption("暂无项目时，可先到「项目管理」创建项目，或请邀请方确认项目仍有效。")
         return
 
+    st.divider()
     _render_project_cockpit(primary)
     _render_other_projects(snapshots, primary=primary)
-    with st.expander("五阶段说明（首次使用）", expanded=False):
-        st.caption(f"推荐主流程：{product_flow_chain()}")
-        for index, line in enumerate(product_flow_home_steps(), start=1):
-            st.markdown(f"{index}. {line}")

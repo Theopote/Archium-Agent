@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from archium.application.context.knowledge_claim_index import merge_claim_index_into_state
+from archium.application.context.nba_explainability import enrich_next_best_actions
 from archium.application.context.next_action_selector import resolve_action_target
 from archium.application.context.types import ContextAssessment
 from archium.application.context_evidence import ProjectEvidencePack
@@ -12,8 +13,18 @@ from archium.domain.intent.knowledge_state import KnowledgeState
 
 
 def finalize_assessment_context(assessment: ContextAssessment) -> None:
+    if assessment.actions:
+        assessment.actions = enrich_next_best_actions(list(assessment.actions))
     if assessment.project_context is None:
         return
+    if assessment.project_context.next_actions:
+        assessment.project_context = assessment.project_context.model_copy(
+            update={
+                "next_actions": enrich_next_best_actions(
+                    list(assessment.project_context.next_actions)
+                )
+            }
+        )
     assessment.project_context = apply_legacy_origin(assessment.project_context)
     assessment.suggested_origin_mode = assessment.project_context.suggested_origin_mode
 
@@ -40,16 +51,18 @@ def compose_project_context(
         sources.append("document_excerpts")
     # Topic 05 / APP-018 — typed visual evidence lines (site_photo:N, drawing:N, …)
     sources.extend(list(getattr(pack, "visual_input_sources", ()) or ()))
+    actions = enrich_next_best_actions(list(assessment.actions))
+    assessment.actions = actions
     primary = ""
-    if assessment.actions:
+    if actions:
         primary = resolve_action_target(
-            assessment.actions[0].action,
+            actions[0].action,
             pending_fact_count=pack.pending_fact_count,
             conflict_fact_count=pack.conflict_fact_count,
         ).page_key
     return ProjectContext.compose(
         knowledge_state=assessment.knowledge_state,
-        next_actions=assessment.actions,
+        next_actions=actions,
         understanding_summary=assessment.understanding_summary,
         suggested_origin_mode=assessment.suggested_origin_mode,
         input_sources=sources,

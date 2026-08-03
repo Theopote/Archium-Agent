@@ -43,6 +43,7 @@ def build_app_pages() -> dict[str, list[Any]]:
         template_induction,
         template_library,
         template_studio,
+        tool_hub,
         workspace,
     )
     from archium.ui.pages.flow import (
@@ -132,6 +133,12 @@ def build_app_pages() -> dict[str, list[Any]]:
         icon=icons.SLIDE_RECOVERY,
         url_path="slide-recovery",
     )
+    tool_hub_page = st.Page(
+        tool_hub.render,
+        title="单项工具",
+        icon=icons.TOOL_HUB,
+        url_path="tool-hub",
+    )
     settings_page = st.Page(
         settings.render, title="设置", icon=icons.SETTINGS, url_path="settings"
     )
@@ -176,6 +183,7 @@ def build_app_pages() -> dict[str, list[Any]]:
     _PAGES.update(stage_pages)
     _PAGES.update({"template-library": template_library_page})
     _PAGES.update({"slide-recovery": slide_recovery_page})
+    _PAGES.update({"tool-hub": tool_hub_page})
     _PAGES.update({"settings": settings_page})
     _PAGES.update(hidden_pages)
     # Keep legacy deep-link key resolvable; do not put it in sidebar sections.
@@ -199,6 +207,7 @@ def build_app_pages() -> dict[str, list[Any]]:
             hidden_pages[LEGACY_STUDIO_PAGE_KEY],
         ],
         RESOURCE_SECTION: [
+            tool_hub_page,
             template_library_page,
             slide_recovery_page,
             hidden_pages["template-studio"],
