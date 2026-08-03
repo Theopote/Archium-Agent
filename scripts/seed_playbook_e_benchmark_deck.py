@@ -103,13 +103,21 @@ def seed_deck(*, count: int, project_name: str) -> dict[str, object]:
     from archium.application.artifact_policy_service import save_render_scene
     from archium.application.visual.scene_history_service import SceneHistoryService
     from archium.config.settings import get_settings
-    from archium.domain.enums import ApprovalStatus, RevisionSource, SlideType
+    from archium.domain.document import SourceDocument
+    from archium.domain.enums import (
+        ApprovalStatus,
+        DocumentType,
+        ProcessingStatus,
+        RevisionSource,
+        SlideType,
+    )
     from archium.domain.presentation import Presentation, PresentationBrief, Storyline
     from archium.domain.project import Project
     from archium.domain.slide import SlideSpec
     from archium.domain.visual.defaults import default_presentation_design_system
     from archium.domain.visual.render_scene import RenderScene
     from archium.infrastructure.database.repositories import (
+        DocumentRepository,
         PresentationRepository,
         ProjectRepository,
     )
@@ -131,6 +139,24 @@ def seed_deck(*, count: int, project_name: str) -> dict[str, object]:
     with get_session() as session:
         project = ProjectRepository(session).create(
             Project(name=project_name, description="Playbook E HITL — architectural_slides import")
+        )
+        # Minimal materials so 交付 formal PPTX gate is not blocked by concept-draft.
+        materials_dir = storage_root / str(project.id) / "materials"
+        materials_dir.mkdir(parents=True, exist_ok=True)
+        stub = materials_dir / "playbook-e-materials-stub.pdf"
+        if not stub.exists():
+            stub.write_bytes(b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n")
+        DocumentRepository(session).create_document(
+            SourceDocument(
+                project_id=project.id,
+                filename=stub.name,
+                original_path=str(stub.resolve()),
+                stored_path=str(stub.resolve()),
+                file_type=DocumentType.PDF,
+                file_hash="b" * 64,
+                size_bytes=stub.stat().st_size,
+                processing_status=ProcessingStatus.COMPLETED,
+            )
         )
         presentations = PresentationRepository(session)
         presentation = presentations.create_presentation(

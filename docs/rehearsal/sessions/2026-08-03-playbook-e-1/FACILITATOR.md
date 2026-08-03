@@ -16,6 +16,8 @@
 - [x] Streamlit 已用当前 venv 启动于 `:8501`
 - [x] 工程预演 `evidence/run_e_dry_run.py`：**set_text → Scene → PPTX 含标记 → Undo** 全绿
 - [x] 种子脚本写入 **baseline SceneRevision**（修复首次编辑无法 Undo）
+- [x] 已绑定资料 stub（解锁正式「导出 PPTX」；交付页曾见 96/100 可正式导出）
+- [x] 浏览器工程预演见 `ENGINEER_REHEARSAL.md`（E0/E1 通过；E2–E5 服务层通过；**不能关 UI-006**）
 - [ ] 操作者已就位（**优先非开发**；Developer 预演不能关 UI-006）
 - [ ] 本机 PowerPoint 或 WPS 可打开 `.pptx`
 
