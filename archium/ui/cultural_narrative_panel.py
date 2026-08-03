@@ -6,7 +6,7 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.application.api.session import api_from_session
+from archium.application.unit_of_work import UnitOfWork
 from archium.application.cultural_narrative_service import (
     is_cultural_village_scenario,
     validate_narrative,
@@ -20,7 +20,7 @@ def render_cultural_narrative_panel(project_id: UUID) -> None:
     st.caption("文化名村/遗产类项目的结构化故事框架，供 Storyline 与 Outline 引用。")
 
     with get_session() as session:
-        api = api_from_session(session)
+        api = UnitOfWork.bind(session).api
         try:
             project = api.project.get(project_id)
         except ProjectNotFoundError:

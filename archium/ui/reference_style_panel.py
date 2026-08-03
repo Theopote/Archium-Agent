@@ -6,7 +6,7 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.application.api.session import api_from_session
+from archium.application.unit_of_work import UnitOfWork
 from archium.application.reference_style_service import (
     has_reference_style_documents,
     validate_reference_style_profile,
@@ -20,7 +20,7 @@ def render_reference_style_panel(project_id: UUID) -> None:
     st.caption("从标记为「参考风格」的资料中提炼视觉语言，供 ArtDirection 借鉴（非项目事实）。")
 
     with get_session() as session:
-        api = api_from_session(session)
+        api = UnitOfWork.bind(session).api
         try:
             project = api.project.get(project_id)
         except ProjectNotFoundError:

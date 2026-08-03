@@ -28,6 +28,7 @@ from archium.ui.components.design_rationale_details import render_design_rationa
 from archium.ui.components.spatial_design_details import render_spatial_design_layer
 from archium.ui.error_handlers import report_user_error
 from archium.ui.planning_service import update_mission_fields
+from archium.application.unit_of_work import UnitOfWork
 
 TASK_NATURE_LABELS = {
     TaskNature.NEW_BUILD: "新建",
@@ -435,8 +436,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
     if critique_warnings:
         st.warning("设计批判（选定前独立质疑）\n\n" + "\n\n".join(critique_warnings))
 
-    from archium.application.api.session import api_from_session
-    from archium.domain.enums import ConceptDirectionStatus
+        from archium.domain.enums import ConceptDirectionStatus
     from archium.exceptions import ProjectNotFoundError
     from archium.ui.app_navigation import get_app_page
     from archium.ui.components.design_revise_ask_panel import (
@@ -507,7 +507,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
 
     with get_session() as session:
         try:
-            project = api_from_session(session).project.get(mission.project_id)
+            project = UnitOfWork.bind(session).api.project.get(mission.project_id)
         except ProjectNotFoundError:
             project = None
         from archium.application.project_context_routing import is_concept_leaning

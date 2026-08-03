@@ -96,3 +96,24 @@ def test_ui_does_not_import_export_services() -> None:
                 f"{path.relative_to(package_root)}:{line_no}: {match.group(0).strip()}"
             )
     assert hits == [], "ui must use DeliveryApi/RenderApi for export:\n" + "\n".join(hits)
+
+
+def test_ui_pages_prefer_application_api_entry() -> None:
+    """APP-029/UoW: pages that open their own DB txn should use application_api/unit_of_work."""
+    root = Path(__file__).resolve().parents[2] / "archium" / "ui" / "pages"
+    package_root = root.parent.parent.parent
+    hits: list[str] = []
+    pattern = re.compile(
+        r"^\s*(?:from|import)\s+archium\.application\.api\.session\b.*api_from_session"
+    )
+    for path in root.rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        for match in pattern.finditer(text):
+            line_no = text.count("\n", 0, match.start()) + 1
+            hits.append(
+                f"{path.relative_to(package_root)}:{line_no}: {match.group(0).strip()}"
+            )
+    assert hits == [], (
+        "pages should use application_api()/unit_of_work(), not api_from_session:\n"
+        + "\n".join(hits)
+    )

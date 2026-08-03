@@ -107,10 +107,10 @@ def render_job_progress_strip(
 ) -> None:
     """Unified WorkflowRun + ArtifactJob + BackgroundJob progress."""
     try:
-        from archium.application.api.session import api_from_session
+        from archium.application.unit_of_work import application_api
 
-        with get_session() as session:
-            jobs = api_from_session(session).jobs.list_for_project(
+        with application_api() as api:
+            jobs = api.jobs.list_operations(
                 project_id, limit=limit, active_only=active_only
             )
     except Exception:
@@ -121,11 +121,13 @@ def render_job_progress_strip(
     if not jobs:
         st.caption("暂无任务。")
     for job in jobs:
-        pct = job.progress_pct
+        pct = None if job.progress is None else int(round(job.progress * 100))
         if pct is not None:
             st.progress(min(1.0, max(0.0, pct / 100.0)), text=job.display_line())
         else:
             st.caption(job.display_line())
+        if job.message:
+            st.caption(job.message)
     if allow_process_once:
         if show_worker_hint:
             st.caption("独立 worker：`archium-worker` 或 `python -m archium.workers.background`")
@@ -136,6 +138,7 @@ def render_job_progress_strip(
         ):
             try:
                 from archium.application.background_job_worker import BackgroundJobWorker
+                from archium.infrastructure.database.session import get_session
 
                 with get_session() as session:
                     done = BackgroundJobWorker(session).process_once()
@@ -146,5 +149,3 @@ def render_job_progress_strip(
                 st.rerun()
             except Exception as exc:
                 st.error(f"执行失败：{exc}")
-        if job.message:
-            st.caption(job.message)

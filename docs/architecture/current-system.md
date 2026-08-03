@@ -144,7 +144,7 @@ Studio 的编辑闭环不是直接覆写导出文件：
    - **编排 run**：策划 / 视觉 / 生成等 LangGraph 路径可先落 `WorkflowRun` + `BackgroundWorkflowRunner`；与 `BackgroundJob` 双轨并存，逐步收敛，**不得假装已全部 job 化**
 3. **幂等范围** — 同 `project_id` + `idempotency_key` → **同一 BackgroundJob**；不承诺业务产物（文件、版式候选等）永不重复生成。
 4. **刷新恢复范围** — 活跃 Job 可按 `job_id` / project 拉回；用户侧列表优先 `JobsApi.list_operations`（`OperationView`，可合并 WorkflowRun）；**不**覆盖仅存于 Streamlit `session_state`、未落库的临时 UI 草稿。
-5. **事务** — 遵守 APP-003：调用方 `get_session()`；UI / API 门面不 `commit`（`ProjectApi` 类型补丁只 `flush`）。`api_from_session(session)` 为过渡兼容入口；未来公共入口应经 Unit of Work 隐藏 Session。
+5. **事务 / UoW** — 遵守 APP-003。**首选** `with application_api() as api:` 或 `Application().api()`（Session 不进入 UI）；嵌套/测试可用 `UnitOfWork.bind(session).api` / `api_from_session(session)`。`get_session()` 仍负责 commit/rollback；API 只 flush（`UnitOfWork.flush`）。
 6. **ApiContext** — 资源属性有明确返回类型，并按实例 `cached_property` 缓存（同一 context 内共享同一 facade）。
 
 **UI 侧已落实的偏好路径：** Studio/Visual/Planning 读路径走对应 API；交付记录与任务进度走 `DeliveryApi` / `JobsApi`；同步导出不直连 `FormalPptxExportService` / `PresentationExportService`。

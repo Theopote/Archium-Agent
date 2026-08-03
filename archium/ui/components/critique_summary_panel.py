@@ -8,6 +8,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.infrastructure.database.session import get_session
+from archium.application.unit_of_work import UnitOfWork
 
 
 def render_visual_critic_findings(critic: dict[str, Any] | None) -> None:
@@ -130,11 +131,10 @@ def render_presentation_critique_card(
 
 
 def _compute_presentation_critique(presentation_id: UUID) -> dict[str, Any] | None:
-    from archium.application.api.session import api_from_session
-    from archium.application.presentation_critic import critique_presentation
+        from archium.application.presentation_critic import critique_presentation
 
     with get_session() as session:
-        api = api_from_session(session)
+        api = UnitOfWork.bind(session).api
         presentation = api.slides.get_presentation(presentation_id)
         if presentation is None:
             return None

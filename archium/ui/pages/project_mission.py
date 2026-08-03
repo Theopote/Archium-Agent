@@ -48,6 +48,7 @@ from archium.ui.workflow_progress_panel import (
 )
 from archium.ui.workspace_service import list_projects
 from archium.ui.workstream_panel import render_workstream_panel
+from archium.application.unit_of_work import UnitOfWork
 
 STEP_LABELS = [
     "1. 描述任务",
@@ -281,10 +282,9 @@ def _render_describe(project_id: UUID) -> None:
         st.session_state.mission_task_draft = genesis_task
     example_pool = TASK_EXAMPLE_PROMPTS
     with get_session() as session:
-        from archium.application.api.session import api_from_session
-
+        
         try:
-            project_for_examples = api_from_session(session).project.get(project_id)
+            project_for_examples = UnitOfWork.bind(session).api.project.get(project_id)
         except Exception:
             project_for_examples = None
         if project_for_examples is not None:

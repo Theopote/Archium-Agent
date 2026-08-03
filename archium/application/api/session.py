@@ -28,9 +28,9 @@ if TYPE_CHECKING:
 class ApiContext:
     """Bundle of resource APIs for one unit-of-work session.
 
-    Callers own commit via ``get_session()`` (APP-003). This context is the
-    stable UI/worker entry; it is not an HTTP router. Resource facades are
-    cached per context instance (same ``session`` shared).
+    Prefer constructing via :func:`archium.application.unit_of_work.unit_of_work`
+    or :func:`archium.application.unit_of_work.application_api` so UI does not
+    handle Session lifecycle. ``session`` remains for services/tests.
     """
 
     session: Session
@@ -115,9 +115,12 @@ class ApiContext:
 
 
 def api_from_session(session: Session) -> ApiContext:
-    """Compatibility entry: UI/tests already hold a Session (APP-003).
+    """Compatibility: build API on an existing Session.
 
-    Future public entry should prefer a Unit-of-Work factory that hides the
-    Session; keep this helper until that migration lands.
+    Prefer :func:`archium.application.unit_of_work.application_api` or
+    :class:`~archium.application.unit_of_work.Application` in new UI code.
+    Equivalent to ``UnitOfWork.bind(session).api``.
     """
-    return ApiContext(session=session)
+    from archium.application.unit_of_work import UnitOfWork
+
+    return UnitOfWork.bind(session).api

@@ -13,7 +13,6 @@ from archium.domain.intent.intent_evolution import (
     IntentEvolutionKind,
 )
 from archium.domain.project import Project
-from archium.infrastructure.database.session import get_session
 
 _KIND_LABELS: dict[IntentEvolutionKind, str] = {
     IntentEvolutionKind.SEED: "初始想法",
@@ -104,12 +103,12 @@ def render_project_knowledge_and_evolution(
     title: str = "知识状态与意图演进",
 ) -> None:
     """Load project and show KnowledgeState + IntentEvolution timeline."""
-    from archium.application.api.session import api_from_session
+    from archium.application.unit_of_work import application_api
     from archium.exceptions import ProjectNotFoundError
 
-    with get_session() as session:
+    with application_api() as api:
         try:
-            project = api_from_session(session).project.get(project_id)
+            project = api.project.get(project_id)
         except ProjectNotFoundError:
             return
     render_knowledge_and_evolution(

@@ -37,6 +37,7 @@ from archium.ui.pages.flow import (
 )
 from archium.ui.planning_service import TASK_EXAMPLE_PROMPTS, PlanningSnapshot
 from archium.ui.workspace_service import list_project_presentations
+from archium.application.unit_of_work import UnitOfWork
 
 _PAGE_TYPE_LABELS = {
     "general": "通用内容",
@@ -764,9 +765,8 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
                 with get_session() as session:
                     from uuid import UUID as _UUID
 
-                    from archium.application.api.session import api_from_session
-
-                    api = api_from_session(session)
+                    
+                    api = UnitOfWork.bind(session).api
                     presentation_id: _UUID | None = None
                     selected_presentation = st.session_state.get("selected_presentation_id")
                     if selected_presentation:

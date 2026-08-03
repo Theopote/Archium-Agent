@@ -18,6 +18,7 @@ from archium.infrastructure.database.session import get_session
 from archium.ui.delivery.export_policy_panel import EXPORT_POLICY_PRESETS
 from archium.ui.error_handlers import report_user_error
 from archium.ui.slide_recovery_region_panel import render_slide_recovery_region_editor
+from archium.application.unit_of_work import UnitOfWork
 
 
 def render_slide_recovery_result_panel(
@@ -197,9 +198,8 @@ def _render_delivery_actions(
     )
 
     with get_session() as session:
-        from archium.application.api.session import api_from_session
-
-        deck_options = api_from_session(session).project.list_presentations(project_id)
+        
+        deck_options = UnitOfWork.bind(session).api.project.list_presentations(project_id)
 
     deck_labels = {str(item.id): item.title for item in deck_options}
     deck_ids = list(deck_labels.keys())

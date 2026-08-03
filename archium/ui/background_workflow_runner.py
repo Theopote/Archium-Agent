@@ -30,11 +30,11 @@ from archium.application.workflow_models import WorkflowRunResult
 from archium.config.settings import Settings
 from archium.domain.enums import WorkflowStatus
 from archium.exceptions import WorkflowError
-from archium.application.api.session import api_from_session
 from archium.infrastructure.database.session import get_session
 from archium.infrastructure.llm.base import LLMProvider
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
+from archium.application.unit_of_work import UnitOfWork
 
 
 class BackgroundJobStatus(StrEnum):
@@ -627,7 +627,7 @@ def find_running_workflow_run_id(
 ) -> UUID | None:
     """Return the newest in-flight workflow run for a project (browser refresh recovery)."""
     with get_session(scoped=False) as session:
-        runs = api_from_session(session).planning.list_runs(project_id)
+        runs = UnitOfWork.bind(session).api.planning.list_runs(project_id)
     for run in runs:
         if run.status != WorkflowStatus.RUNNING:
             continue

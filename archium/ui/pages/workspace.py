@@ -53,6 +53,7 @@ from archium.ui.workflow_resume_ux import (
     render_resume_failure,
 )
 from archium.ui.workspace_service import (
+from archium.application.unit_of_work import UnitOfWork
     UploadKnowledgeTip,
     backfill_project_asset_vision,
     build_presentation_request,
@@ -208,10 +209,9 @@ def _render_documents(project_id: UUID, *, show_uploader: bool = True) -> None:
                 is_concept_leaning,
                 is_research_programming,
             )
-            from archium.application.api.session import api_from_session
-
+            
             try:
-                project = api_from_session(session).project.get(project_id)
+                project = UnitOfWork.bind(session).api.project.get(project_id)
             except Exception:
                 project = None
             if project is not None and is_concept_leaning(session, project) and not is_research_programming(
@@ -429,12 +429,11 @@ def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
 
 def _load_generation_contract(project_id: UUID):
     """Load the selected persisted plan; generation must not re-plan it."""
-    from archium.application.api.session import api_from_session
-    from archium.application.review_service import PresentationReviewService
+        from archium.application.review_service import PresentationReviewService
 
     preferred = st.session_state.get("selected_presentation_id")
     with get_session() as session:
-        presentations = api_from_session(session).project.list_presentations(project_id)
+        presentations = UnitOfWork.bind(session).api.project.list_presentations(project_id)
         if preferred:
             presentations.sort(key=lambda item: str(item.id) != str(preferred))
         for presentation in presentations:

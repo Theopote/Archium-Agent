@@ -185,12 +185,12 @@ def _render_recent_versions(snapshot: ProjectProgressSnapshot) -> None:
 
     export_records: list[DeliveryRecord | dict[str, object]] = []
     try:
-        from archium.application.api.session import api_from_session
+        from archium.application.unit_of_work import UnitOfWork, application_api
 
-        with get_session() as session:
+        with application_api() as api:
             export_records = [
                 record
-                for record in api_from_session(session).delivery.list_for_project(
+                for record in api.delivery.list_for_project(
                     snapshot.project_id, limit=4
                 )
             ]
@@ -253,15 +253,14 @@ def _render_recent_design_changes(snapshot: ProjectProgressSnapshot) -> None:
     """Partner-facing design timeline snippet for Project Home."""
     st.markdown("**最近设计变化**")
     try:
-        from archium.application.api.session import api_from_session
-        from archium.ui.intent_evolution_panel import (
+                from archium.ui.intent_evolution_panel import (
             format_intent_event_time,
             intent_evolution_kind_label,
         )
 
         with get_session() as session:
             try:
-                project = api_from_session(session).project.get(snapshot.project_id)
+                project = UnitOfWork.bind(session).api.project.get(snapshot.project_id)
             except Exception:
                 project = None
         evolution = project.intent_evolution if project is not None else None

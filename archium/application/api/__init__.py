@@ -8,6 +8,8 @@ Resource paths (product-facing names, not HTTP yet):
 Contract summary (see docs/architecture/current-system.md §APP-029):
 
 - UI must not touch Repositories; Application services still may.
+- Prefer ``application_api()`` / ``Application`` (Unit of Work); 
+  ``api_from_session`` is a compatibility alias for ``UnitOfWork.bind(session).api``.
 - Durable cross-refresh work goes through JobsApi (progress / cancel /
   idempotency_key / list_active). Sync export and LangGraph WorkflowRun
   are explicit non-job paths — do not claim everything is a BackgroundJob.
@@ -32,9 +34,17 @@ from archium.application.api.session import ApiContext, api_from_session
 from archium.application.api.slides import SlidesApi
 from archium.application.api.storyline import StorylineApi
 from archium.application.api.visual import VisualApi
+from archium.application.unit_of_work import (
+    Application,
+    UnitOfWork,
+    application_api,
+    get_application,
+    unit_of_work,
+)
 
 __all__ = [
     "ApiContext",
+    "Application",
     "ContextApi",
     "DeliveryApi",
     "DocumentsApi",
@@ -47,6 +57,10 @@ __all__ = [
     "ScenesApi",
     "SlidesApi",
     "StorylineApi",
+    "UnitOfWork",
     "VisualApi",
     "api_from_session",
+    "application_api",
+    "get_application",
+    "unit_of_work",
 ]

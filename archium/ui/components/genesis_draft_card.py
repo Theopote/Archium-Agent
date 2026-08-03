@@ -8,16 +8,15 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.application.api.session import api_from_session
+from archium.application.unit_of_work import application_api
 from archium.application.genesis_starter_service import GenesisStarterResult
-from archium.infrastructure.database.session import get_session
 from archium.ui.app_navigation import get_app_page
 from archium.ui.label_map import slide_role_label
 
 
 def _load_cover_preview(presentation_id: UUID) -> tuple[str, str] | None:
-    with get_session() as session:
-        slides = api_from_session(session).slides.list_for_presentation(presentation_id)
+    with application_api() as api:
+        slides = api.slides.list_for_presentation(presentation_id)
     if not slides:
         return None
     slide = sorted(slides, key=lambda item: item.order)[0]
@@ -25,8 +24,8 @@ def _load_cover_preview(presentation_id: UUID) -> tuple[str, str] | None:
 
 
 def _load_outline_sections(presentation_id: UUID) -> list[tuple[str, str]]:
-    with get_session() as session:
-        outlines = api_from_session(session).slides.list_outlines(presentation_id)
+    with application_api() as api:
+        outlines = api.slides.list_outlines(presentation_id)
         if not outlines:
             return []
         outline = outlines[0]
@@ -40,22 +39,24 @@ def _resolve_cover_preview_path(result: GenesisStarterResult) -> str | None:
     if not result.has_cover_layout:
         return None
     from archium.application.genesis_cover_layout_service import cover_wireframe_preview_path
+    from archium.application.unit_of_work import unit_of_work
 
-    with get_session() as session:
-        return cover_wireframe_preview_path(session, result.presentation_id)
+    with unit_of_work() as uow:
+        return cover_wireframe_preview_path(uow.session, result.presentation_id)
 
 
 def _load_slide_wireframe_rows(
     presentation_id: UUID,
 ) -> list[tuple[int, str, str, str | None]]:
     """Return (order, title, role_label, wireframe_path_or_none) for each slide."""
+    from archium.application.unit_of_work import unit_of_work
     from archium.application.visual.slide_preview_service import SlidePreviewService
     from archium.config.settings import get_settings
 
     preview_service = SlidePreviewService(get_settings())
     rows: list[tuple[int, str, str, str | None]] = []
-    with get_session() as session:
-        api = api_from_session(session)
+    with unit_of_work() as uow:
+        api = uow.api
         slides = sorted(
             api.slides.list_for_presentation(presentation_id),
             key=lambda item: item.order,
