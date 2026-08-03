@@ -16,7 +16,6 @@ from archium.application.asset_vision_rag_service import (
 from archium.application.api.session import api_from_session
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.chunk_service import ChunkService
-from archium.application.export_service import PresentationExportService
 from archium.application.ingestion_service import ImportItemResult
 from archium.application.llm_settings_resolver import get_effective_settings
 from archium.application.presentation_models import PresentationRequest
@@ -652,11 +651,12 @@ def export_presentation_pptx_legacy(
     *,
     settings: Settings | None = None,
 ) -> RenderResult:
-    """Export editable PPTX via FormalPptxExportService (Scene preferred; Spec fallback)."""
+    """Export editable PPTX via DeliveryApi (Scene preferred; Spec fallback)."""
     resolved_settings = _resolve_runtime_settings(settings)
-    return PresentationExportService(session, settings=resolved_settings).reexport(
+    return api_from_session(session).delivery.reexport(
         presentation_id,
         export_json=False,
         export_marp=False,
         export_editable_pptx=True,
+        settings=resolved_settings,
     )

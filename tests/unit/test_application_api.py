@@ -247,6 +247,66 @@ def test_delivery_api_list_empty(db_session: Session) -> None:
     assert api.delivery.list_for_project(project.id) == []
 
 
+def test_render_and_delivery_sync_export_delegate(db_session: Session, monkeypatch, tmp_path) -> None:
+    from pathlib import Path
+
+    from archium.application.api import delivery as delivery_mod
+    from archium.application.api import render as render_mod
+    from archium.application.formal_pptx_export_service import FormalPptxExportResult
+    from archium.domain.export_authority import FORMAL_EDITABLE_PPTX_AUTHORITY
+    from archium.domain.presentation import Presentation
+    from archium.infrastructure.database.repositories import PresentationRepository
+
+    project = ProjectRepository(db_session).create(Project(name="Sync Export", description=""))
+    presentation = PresentationRepository(db_session).create_presentation(
+        Presentation(project_id=project.id, title="导出")
+    )
+    pptx = tmp_path / "presentation.pptx"
+    pptx.write_bytes(b"PK")
+
+    calls: list[str] = []
+
+    class _FakeFormal:
+        def __init__(self, session, *, settings=None):
+            pass
+
+        def export_editable_pptx(self, presentation_id, **kwargs):
+            calls.append("formal")
+            return FormalPptxExportResult(
+                path=pptx,
+                authority=FORMAL_EDITABLE_PPTX_AUTHORITY,
+                warnings=["ok"],
+            )
+
+    class _FakeExportService:
+        def __init__(self, session, *, settings=None):
+            pass
+
+        def reexport(self, presentation_id, **kwargs):
+            calls.append("reexport")
+            from archium.domain.render import RenderResult
+
+            return RenderResult(editable_pptx_path=pptx)
+
+    monkeypatch.setattr(render_mod, "FormalPptxExportService", _FakeFormal)
+    monkeypatch.setattr(delivery_mod, "PresentationExportService", _FakeExportService)
+    monkeypatch.setattr(
+        render_mod,
+        "convert_pptx_to_pdf",
+        lambda src, dest: Path(dest) / "presentation.pdf",
+    )
+
+    api = api_from_session(db_session)
+    formal = api.render.export_editable_pptx_result(presentation.id)
+    assert formal.editable_pptx_path == pptx
+    assert "ok" in formal.warnings
+    pdf = api.delivery.export_pdf(presentation.id)
+    assert pdf.pdf_path is not None
+    legacy = api.delivery.reexport(presentation.id, export_json=False, export_editable_pptx=True)
+    assert legacy.editable_pptx_path == pptx
+    assert calls == ["formal", "formal", "reexport"]
+
+
 def test_planning_api_resolve_run_and_session(db_session: Session) -> None:
     from archium.domain.enums import WorkflowStatus
     from archium.domain.planning_session import PlanningSession

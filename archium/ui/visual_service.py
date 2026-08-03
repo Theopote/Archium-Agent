@@ -178,17 +178,11 @@ def export_presentation_pptx_from_layout_plans(
     chart_export_mode: ChartExportMode | None = None,
 ) -> RenderResult:
     """Export formal editable PPTX from RenderScenes (DOM-003 authority)."""
-    from archium.application.formal_pptx_export_service import FormalPptxExportService
-
-    resolved = _resolve_runtime_settings(settings)
-    formal = FormalPptxExportService(session, settings=resolved).export_editable_pptx(
+    return api_from_session(session).render.export_editable_pptx_result(
         presentation_id,
         chart_export_mode=chart_export_mode,
         allow_legacy_spec_fallback=False,
-    )
-    return RenderResult(
-        editable_pptx_path=formal.path,
-        warnings=list(formal.warnings),
+        settings=_resolve_runtime_settings(settings),
     )
 
 

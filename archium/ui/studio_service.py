@@ -33,11 +33,9 @@ from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
 from archium.domain.visual.vision_generation import VisionGenerationResult
 from archium.exceptions import WorkflowError
 from archium.application.api.session import api_from_session
-from archium.infrastructure.renderers.pptx_pdf import convert_pptx_to_pdf
 from archium.ui.visual_service import (
     PresentationVisualSnapshot,
     SlideVisualSnapshot,
-    export_presentation_pptx_from_layout_plans,
     get_presentation_visual_snapshot,
     presentation_has_visual_layout,
 )
@@ -242,11 +240,11 @@ def export_presentation_from_studio(
     settings: object | None = None,
     chart_export_mode: object | None = None,
 ) -> RenderResult:
-    return export_presentation_pptx_from_layout_plans(
-        session,
+    return api_from_session(session).delivery.export_formal_pptx_result(
         presentation_id,
-        settings=settings,  # type: ignore[arg-type]
         chart_export_mode=chart_export_mode,  # type: ignore[arg-type]
+        allow_legacy_spec_fallback=False,
+        settings=_resolve_runtime_settings(settings),  # type: ignore[arg-type]
     )
 
 
@@ -257,24 +255,9 @@ def export_presentation_pdf_from_studio(
     settings: object | None = None,
 ) -> RenderResult:
     """Export PDF by rendering Scene PPTX then converting with LibreOffice."""
-    pptx_result = export_presentation_from_studio(
-        session,
+    return api_from_session(session).delivery.export_pdf(
         presentation_id,
-        settings=settings,
-    )
-    pptx_path = pptx_result.editable_pptx_path
-    if pptx_path is None:
-        raise WorkflowError("PPTX 导出失败，无法继续生成 PDF。")
-    pdf_path = convert_pptx_to_pdf(pptx_path, pptx_path.parent)
-    if pdf_path is None:
-        pptx_result.warnings.append(
-            "未检测到 LibreOffice，无法将 PPTX 转为 PDF。请安装 LibreOffice 后重试。"
-        )
-        return pptx_result
-    return RenderResult(
-        editable_pptx_path=pptx_path,
-        pdf_path=pdf_path,
-        warnings=list(pptx_result.warnings),
+        settings=_resolve_runtime_settings(settings),  # type: ignore[arg-type]
     )
 
 
