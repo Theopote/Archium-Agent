@@ -1,4 +1,4 @@
-"""Product-flow stage: 大纲 — tree | intent cards | task meta."""
+"""Product-flow stage: 方案 — tree | intent cards | task meta."""
 
 from __future__ import annotations
 

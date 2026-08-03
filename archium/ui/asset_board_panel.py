@@ -22,7 +22,7 @@ from archium.ui.web_image_preview_panel import render_web_image_preview_panel
 
 
 def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None:
-    st.markdown(f"#### {entity_label('AssetBoard')}")
+    st.markdown(f"#### 资料库")
     st.caption("逐页视觉需求 · 候选素材匹配 · 人工确认")
 
     with get_session() as session:
@@ -31,20 +31,20 @@ def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None
         assets = service.list_project_assets(project_id)
 
     summary = st.columns(4)
-    summary[0].metric("项目素材", board.asset_count)
+    summary[0].metric("项目资料", board.asset_count)
     summary[1].metric("已匹配", board.matched_count)
     summary[2].metric("已确认", board.confirmed_count)
     summary[3].metric("待确认", board.pending_count)
 
-    if st.button("重新匹配素材", key=f"rematch_assets_{presentation_id}", use_container_width=True):
+    if st.button("重新匹配资料", key=f"rematch_assets_{presentation_id}", use_container_width=True):
         with get_session() as session:
             AssetBoardService(session).rematch(project_id, presentation_id)
-        st.success("素材匹配已更新（已确认项保持不变）。")
+        st.success("资料匹配已更新（已确认项保持不变）。")
         st.rerun()
 
     if not board.rows:
         st.info(
-            f"当前汇报暂无视觉需求。生成{entity_label('SlideSpec')}并运行工作流后会在此显示匹配结果。"
+            f"当前汇报暂无视觉需求。生成{entity_label('SlideSpec')}并运行任务后会在此显示匹配结果。"
         )
         return
 

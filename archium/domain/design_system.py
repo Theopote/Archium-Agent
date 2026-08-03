@@ -183,6 +183,15 @@ class FontToken:
         )
 
 
+def _nearest_font_size(size_px: int) -> FontSize:
+    """Snap a computed pixel size to the nearest defined FontSize token."""
+    candidates = sorted(
+        ((int(token.value.rstrip("px")), token) for token in FontSize),
+        key=lambda item: item[0],
+    )
+    return min(candidates, key=lambda item: abs(item[0] - size_px))[1]
+
+
 @dataclass
 class TypographyScale:
     """Typography scale with consistent sizing ratios."""
@@ -192,7 +201,11 @@ class TypographyScale:
     scale: dict[str, FontToken] = field(default_factory=dict)
     
     def generate_scale(self, base_token: FontToken) -> dict[str, FontToken]:
-        """Generate typography scale from base token."""
+        """Generate typography scale from base token.
+
+        Computed sizes are snapped to the nearest FontSize enum value so
+        ratio-based steps never invent tokens outside the design system.
+        """
         scale = {}
         sizes = [
             ("xs", -3),
@@ -218,7 +231,7 @@ class TypographyScale:
             scale[name] = FontToken(
                 family=base_token.family,
                 weight=base_token.weight,
-                size=FontSize(f"{size_px}px"),
+                size=_nearest_font_size(size_px),
                 line_height=base_token.line_height,
                 letter_spacing=base_token.letter_spacing,
                 fallback=base_token.fallback,

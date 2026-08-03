@@ -123,7 +123,7 @@ def _load_result_for_scope(
 
 def _default_success_message(scope: WorkflowScope, result: Any) -> str | None:
     if scope == "planning":
-        return "规划工作流步骤已完成。"
+        return "规划任务已完成。"
     if scope == "visual":
         return "视觉编排完成。"
     if scope == "slide_recovery":
@@ -134,12 +134,12 @@ def _default_success_message(scope: WorkflowScope, result: Any) -> str | None:
 
 def _default_awaiting_message(scope: WorkflowScope) -> str:
     if scope == "planning":
-        return "规划工作流已暂停，请按当前步骤继续审核或编辑。"
+        return "规划任务已暂停，请按当前步骤继续审核或编辑。"
     if scope == "visual":
         return "视觉编排已暂停，请审核视觉方向或版式后继续。"
     if scope == "slide_recovery":
         return "页面复活已暂停，请复核恢复质量与混合可编辑降级说明。"
-    return f"工作流已暂停，请切换到「审核」标签页继续处理 {brief_storyline_pair()}。"
+    return f"任务已暂停，请切换到「审核」标签页继续处理 {brief_storyline_pair()}。"
 
 
 def _apply_job_completion(
@@ -155,7 +155,7 @@ def _apply_job_completion(
     rerun_on_complete: bool,
 ) -> None:
     if job.status == BackgroundJobStatus.FAILED:
-        st.error(job.error or "工作流执行失败")
+        st.error(job.error or "任务执行失败")
         set_active_job_id(project_id, None, scope, presentation_id=presentation_id)
         return
 
@@ -197,7 +197,7 @@ def _render_progress_body(workflow_run_id: UUID) -> None:
     with get_session() as session:
         run = WorkflowRunRepository(session).get_by_id(workflow_run_id)
     if run is None:
-        st.info("正在启动工作流…")
+        st.info("正在启动任务…")
         return
 
     snapshot = snapshot_from_run(run)
@@ -370,7 +370,7 @@ def _poll_once(
                 if message:
                     st.success(message)
             elif run.status == WorkflowStatus.FAILED:
-                st.error("工作流执行失败。")
+                st.error("任务执行失败。")
             set_active_job_id(project_id, None, scope, presentation_id=presentation_id)
             if rerun_on_complete:
                 st.rerun()
@@ -404,7 +404,7 @@ def render_workflow_progress_panel(
     if resolved_job_id is None and resolved_run_id is None:
         return False
 
-    st.markdown("#### 工作流进度")
+    st.markdown("#### 任务进度")
     placeholder = st.empty()
 
     def _draw() -> bool:

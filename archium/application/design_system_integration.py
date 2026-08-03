@@ -349,14 +349,14 @@ class DesignSystemIntegrationService:
         # Search chart templates
         if element_type is None or element_type == "chart":
             for template_id, template in self.visual_library.chart_templates.items():
-            if query.lower() in template.name.lower():
-                results.append({
-                    "type": "chart",
-                    "id": template.id,
-                    "name": template.name,
-                    "chart_type": template.chart_type.value,
-                    "description": template.description,
-                })
+                if query.lower() in template.name.lower():
+                    results.append({
+                        "type": "chart",
+                        "id": template.id,
+                        "name": template.name,
+                        "chart_type": template.chart_type.value,
+                        "description": template.description,
+                    })
         
         return results
     
