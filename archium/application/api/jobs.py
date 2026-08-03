@@ -15,8 +15,10 @@ from sqlalchemy.orm import Session
 
 from archium.application.background_job_service import BackgroundJobService
 from archium.application.job_progress_service import JobProgressService
+from archium.application.operation_view_service import OperationViewService
 from archium.domain.background_job import BackgroundJob, BackgroundJobKind, BackgroundJobStatus
 from archium.domain.job_progress import JobProgressView
+from archium.domain.operation_view import OperationView
 from archium.exceptions import ValidationError
 
 
@@ -27,6 +29,7 @@ class JobsApi:
         self._session = session
         self._jobs = BackgroundJobService(session)
         self._progress = JobProgressService(session)
+        self._operations = OperationViewService(session)
 
     def create(
         self,
@@ -85,3 +88,19 @@ class JobsApi:
     def list_active(self, project_id: UUID, *, limit: int = 12) -> list[JobProgressView]:
         """Jobs still recoverable after page refresh."""
         return self._progress.list_for_project(project_id, limit=limit, active_only=True)
+
+    def list_operations(
+        self,
+        project_id: UUID,
+        *,
+        limit: int = 24,
+        active_only: bool = False,
+        include_workflows: bool = True,
+    ) -> list[OperationView]:
+        """Unified user-facing operations (jobs + optional WorkflowRun)."""
+        return self._operations.list_for_project(
+            project_id,
+            limit=limit,
+            active_only=active_only,
+            include_workflows=include_workflows,
+        )

@@ -1,10 +1,24 @@
 # 模块检查台账
 
 **用途：** 按稳定模块记录架构 / 质量问题，跟踪修复与验收。  
-**更新：** 2026-07-26  
+**更新：** 2026-08-04（对齐 Application API / UI 边界 / Jobs 契约落地；开放 P0 仍以各模块文件为准）  
 **原则：** 不再用 Stage / Round / Phase 命名修复批次；统一用 **模块文件 + Issue ID**。
 
 第二轮「生命系统」判断（世界模型 / 知识 / 推理链等）见 [../life-system/](../life-system/README.md)；修复 Issue 仍登记本台账。
+
+## 近期工程收敛（相对 2026-07-26）
+
+已显著推进（详见各模块文件与 `docs/architecture/current-system.md` §APP-029）：
+
+- Application API 进程内门面（含 `/planning` `/visual` `/jobs`）
+- 整个 `archium/ui/` 禁直连 Repository
+- Jobs：幂等键 / 进度 / 取消 / 刷新恢复（契约测试）
+- 同步导出经 RenderApi / DeliveryApi；OperationView 统一用户侧操作语义（底层仍可双轨）
+- 首页任务入口、工具台、QA 三分类、UI 异常卫生等
+
+**仍未关闭的 Beta 证据：** 最新 master 远端 CI 全绿证明；至少一名非开发用户完成主链 + 可量化修改成本（见 `docs/v0.2-beta-release-decision.md`）。
+
+开放 P0 一览仍以 [12-qa-delivery](12-qa-delivery.md) / [14-tests-security](14-tests-security.md) 等模块文件为准（QD-010、TS-010 等）；合入修复须回填 **提交 SHA**（禁止长期 `-`）。
 
 ## 目录
 
@@ -79,12 +93,13 @@
 2. 填满十个字段；`open` 时 SHA 为 `-`。
 3. 合入后把状态改为 `done` 并填 SHA；同步更新本 README「开放 P0 一览」若涉及 P0。
 
-## 开放 P0 一览（2026-07-24）
+## 开放 P0 一览（2026-08-04）
 
 | 编号 | 模块 | 一句话 |
 |------|------|--------|
 | [QD-010](12-qa-delivery.md) | qa-delivery | 试点门已过；交付接受仍为 0（占位素材/Hero） |
 | [TS-010](14-tests-security.md) | tests-security | 非开发者剧本 A + 修改成本（Beta B10；工具就绪，待真人） |
+| *CI 证据* | foundation | 最新 master 远端 CI Combined Status 须在 GitHub 证实（本环境 `gh` 未认证时记 ❓） |
 
 P0 已关闭：`APP-003`；`QD-006`/`B8`；`WF-002`/`WF-008`；`DB-001`/`DB-002`/`DB-003`/`DB-005`/`DB-007`；`KN-001`/`KN-007`；`TS-008` chromadb CVE **mitigated**（allowlist → 2026-10-01）。
 

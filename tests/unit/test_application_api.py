@@ -101,6 +101,42 @@ def test_jobs_api_cancel_running_cooperative(db_session: Session) -> None:
     assert finalized.status == BackgroundJobStatus.CANCELLED
 
 
+def test_jobs_complete_honors_cancel_request(db_session: Session) -> None:
+    """Cancel mid-run must win over a subsequent complete()."""
+    project = ProjectRepository(db_session).create(Project(name="Cancel Complete", description=""))
+    api = api_from_session(db_session)
+    job = api.jobs.create(project.id, BackgroundJobKind.GENERIC, label="race")
+    claimed = api.jobs._jobs.claim_next()
+    assert claimed is not None
+    api.jobs.cancel(job.id)
+    finished = api.jobs._jobs.complete(job.id, result={"pptx": "should-not-publish"})
+    assert finished is not None
+    assert finished.status == BackgroundJobStatus.CANCELLED
+    assert not (finished.result or {}).get("pptx")
+
+
+def test_worker_honors_cancel_after_dispatch(db_session: Session, monkeypatch) -> None:
+    project = ProjectRepository(db_session).create(Project(name="Cancel Worker", description=""))
+    api = api_from_session(db_session)
+    api.jobs.create(project.id, BackgroundJobKind.GENERIC, label="dispatch-cancel")
+    worker = BackgroundJobWorker(db_session)
+
+    def _cancel_during_dispatch(job):
+        api.jobs.cancel(job.id, message="user cancel")
+        return {"ack": True}
+
+    monkeypatch.setattr(worker, "_dispatch", _cancel_during_dispatch)
+    out = worker.process_once()
+    assert out is not None
+    assert out.status == BackgroundJobStatus.CANCELLED
+
+
+def test_api_context_caches_resource_facades(db_session: Session) -> None:
+    api = api_from_session(db_session)
+    assert api.jobs is api.jobs
+    assert api.delivery is api.delivery
+
+
 def test_jobs_api_progress_after_refresh(db_session: Session) -> None:
     project = ProjectRepository(db_session).create(Project(name="Progress", description=""))
     api = api_from_session(db_session)
@@ -241,9 +277,19 @@ def test_project_api_create_with_type_does_not_extra_commit(
     assert commits == [1]
 
 
-def test_application_api_resource_surface_includes_planning_visual_jobs(
-    db_session: Session,
-) -> None:
+def test_jobs_api_list_operations_includes_jobs(db_session: Session) -> None:
+    from archium.domain.operation_view import OperationStatus
+
+    project = ProjectRepository(db_session).create(Project(name="Ops", description=""))
+    api = api_from_session(db_session)
+    job = api.jobs.create(project.id, BackgroundJobKind.GENERIC, label="解析资料")
+    ops = api.jobs.list_operations(project.id, include_workflows=False)
+    assert any(item.operation_id == job.id for item in ops)
+    row = next(item for item in ops if item.operation_id == job.id)
+    assert row.source_kind == "job"
+    assert row.status == OperationStatus.QUEUED
+    assert row.cancellable is True
+
     """APP-029 surface must include planning/visual/jobs — not only the original ten."""
     api = api_from_session(db_session)
     for name in (
