@@ -27,7 +27,7 @@ def test_ledger_uses_project_type_aware_missing_keys(db_session: Session) -> Non
 
     assert "bed_count" not in ledger.missing_standard_keys
     assert "plot_ratio" not in ledger.missing_standard_keys
-    assert "project_name" in ledger.missing_standard_keys
+    assert "project_name" not in ledger.missing_standard_keys
 
 
 def test_ledger_lists_standard_keys_and_missing(db_session: Session) -> None:
@@ -47,7 +47,7 @@ def test_ledger_lists_standard_keys_and_missing(db_session: Session) -> None:
     assert ledger.confirmed_count == 0
     assert ledger.pending_count == 1
     assert "bed_count" not in ledger.missing_standard_keys
-    assert "project_name" in ledger.missing_standard_keys
+    assert "project_name" not in ledger.missing_standard_keys
 
 
 def test_confirm_fact_clears_conflict_group(db_session: Session) -> None:

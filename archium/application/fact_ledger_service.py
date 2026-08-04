@@ -85,10 +85,15 @@ class FactLedgerService:
         )
         required_key_set = set(required_keys)
 
+        known_project_name = (project.name or "").strip() if project is not None else ""
         for definition in STANDARD_FACT_KEYS:
             fact = by_key.get(definition.key)
             if definition.key in required_key_set and fact is None:
-                missing.append(definition.key)
+                # Project entity name already answers the identity fact key.
+                if definition.key == "project_name" and known_project_name:
+                    pass
+                else:
+                    missing.append(definition.key)
             entries.append(
                 FactLedgerEntry(
                     key=definition.key,

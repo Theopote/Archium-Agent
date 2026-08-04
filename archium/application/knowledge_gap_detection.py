@@ -97,11 +97,13 @@ def detect_knowledge_gaps(
     mission_gaps: list[KnowledgeGap] | None = None,
     required_fact_keys: tuple[str, ...] | None = None,
     lightweight_mode: bool = False,
+    project_name: str = "",
 ) -> KnowledgeGapReport:
     """Identify missing or unconfirmed knowledge before formal generation."""
     report = KnowledgeGapReport(project_id=project_id)
     active_facts = [f for f in facts if f.verification_status != VerificationStatus.REJECTED]
     by_key = {fact.key: fact for fact in active_facts}
+    known_project_name = project_name.strip()
 
     keys_to_check = required_fact_keys or tuple(d.key for d in STANDARD_FACT_KEYS)
     for key in keys_to_check:
@@ -109,6 +111,9 @@ def detect_knowledge_gaps(
         label = definition.label if definition else key
         fact = by_key.get(key)
         if fact is None:
+            # Project entity name already answers the identity fact key.
+            if key == "project_name" and known_project_name:
+                continue
             report.gaps.append(
                 KnowledgeGapEntry(
                     gap_id=f"missing:{key}",

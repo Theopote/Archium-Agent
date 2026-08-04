@@ -131,17 +131,19 @@ def gather_project_evidence(
     chunks = DocumentRepository(session).list_chunks_by_project(project_id)
     chunk_lines = _format_chunks(chunks, limit=max_chunks, max_chars=chunk_chars)
 
+    project_name = _project_name(session, project_id)
     gap_report = detect_knowledge_gaps(
         project_id,
         facts=facts,
         knowledge_items=knowledge_items,
         required_fact_keys=resolve_required_fact_keys(
             facts=facts,
-            project_name=_project_name(session, project_id),
+            project_name=project_name,
             project_description=_project_description(session, project_id),
             lightweight=_project_lightweight(session, project_id),
         ),
         lightweight_mode=_project_lightweight(session, project_id),
+        project_name=project_name,
     )
     ordered_gaps = sorted(
         gap_report.gaps,

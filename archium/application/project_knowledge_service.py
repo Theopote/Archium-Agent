@@ -100,6 +100,7 @@ class ProjectKnowledgeService:
             knowledge_items=combined,
             required_fact_keys=required_keys,
             lightweight_mode=lightweight,
+            project_name=project.name if project else "",
         )
         return ProjectKnowledgeView(
             project_id=project_id,

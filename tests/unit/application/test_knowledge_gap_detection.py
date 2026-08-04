@@ -41,3 +41,18 @@ def test_lightweight_mode_skips_blocking_missing_metrics() -> None:
     )
     assert report.gap_count == 2
     assert report.blocking_gaps == []
+
+
+def test_project_entity_name_satisfies_project_name_gap() -> None:
+    project_id = uuid4()
+    report = detect_knowledge_gaps(
+        project_id,
+        facts=[],
+        required_fact_keys=("project_name", "location", "main_function"),
+        project_name="滨江城市客厅文化中心",
+    )
+    assert all(gap.related_keys != ("project_name",) for gap in report.gaps)
+    assert {gap.description for gap in report.gaps} == {
+        "缺少标准事实：项目位置",
+        "缺少标准事实：主要功能",
+    }
