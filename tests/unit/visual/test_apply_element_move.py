@@ -80,19 +80,19 @@ def slide_with_plan(db_session: Session) -> tuple[SlideSpec, LayoutPlan]:
                 id="hero",
                 role=LayoutElementRole.HERO_VISUAL,
                 content_type=LayoutContentType.IMAGE,
-                x=1,
-                y=1,
-                width=4,
-                height=2,
+                x=0.75,
+                y=0.5,
+                width=8.5,
+                height=3.2,
             ),
             LayoutElement(
                 id="caption",
                 role=LayoutElementRole.CAPTION,
                 content_type=LayoutContentType.TEXT,
                 x=1,
-                y=3.5,
+                y=3.9,
                 width=4,
-                height=0.5,
+                height=0.4,
                 text_content="说明",
             ),
         ],
@@ -112,12 +112,12 @@ def test_apply_element_move_updates_geometry(
 ) -> None:
     slide, plan = slide_with_plan
     service = VisualEditService(db_session)
-    result = service.apply_element_move(slide.id, "caption", x=1.5, y=3.6)
+    result = service.apply_element_move(slide.id, "caption", x=1.5, y=4.0)
     assert result.layout_plan is not None
     moved = result.layout_plan.element_by_id("caption")
     assert moved is not None
     assert moved.x == pytest.approx(1.5)
-    assert moved.y == pytest.approx(3.6)
+    assert moved.y == pytest.approx(4.0)
 
 
 def test_apply_element_move_rejects_locked_element(
@@ -142,7 +142,7 @@ def test_apply_element_move_rejects_locked_element(
 
     service = VisualEditService(db_session)
     with pytest.raises(WorkflowError):
-        service.apply_element_move(slide.id, "caption", x=8.0, y=4.5)
+        service.apply_element_move(slide.id, "caption", x=8.0, y=4.0)
 
 
 def test_apply_element_move_rejects_drawing_element(
@@ -185,7 +185,7 @@ def test_restore_previous_after_move_returns_prior_position(
     service = VisualEditService(db_session)
     before = plan.element_by_id("caption")
     assert before is not None
-    service.apply_element_move(slide.id, "caption", x=1.5, y=3.6)
+    service.apply_element_move(slide.id, "caption", x=1.5, y=4.0)
     restored = service.restore_previous(slide.id)
     assert restored.layout_plan is not None
     caption = restored.layout_plan.element_by_id("caption")
