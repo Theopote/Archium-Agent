@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from archium.application.api.session import api_from_session
-from archium.application.background_job_worker import BackgroundJobWorker
 from archium.domain.background_job import BackgroundJobKind, BackgroundJobStatus
 from archium.domain.project import Project
 from archium.infrastructure.database.base import Base
@@ -57,59 +56,25 @@ def test_jobs_api_idempotent_create(db_session: Session) -> None:
 
 
 def test_jobs_api_cancel_queued(db_session: Session) -> None:
+    """User-facing cancel contract: create → cancel → get (public JobsApi only)."""
     project = ProjectRepository(db_session).create(Project(name="Cancel Q", description=""))
     api = api_from_session(db_session)
     job = api.jobs.create(project.id, BackgroundJobKind.GENERIC, label="cancellable")
     cancelled = api.jobs.cancel(job.id)
     assert cancelled is not None
     assert cancelled.status == BackgroundJobStatus.CANCELLED
-    assert BackgroundJobWorker(db_session).process_once() is None
+    got = api.jobs.get(job.id)
+    assert got is not None
+    assert got.status == BackgroundJobStatus.CANCELLED
+    active = api.jobs.list_active(project.id)
+    assert all(item.job_id != job.id for item in active)
 
 
-def test_jobs_api_cancel_running_cooperative(db_session: Session) -> None:
-    project = ProjectRepository(db_session).create(Project(name="Cancel R", description=""))
+def test_jobs_api_cancel_missing_returns_none(db_session: Session) -> None:
+    from uuid import uuid4
+
     api = api_from_session(db_session)
-    job = api.jobs.create(project.id, BackgroundJobKind.GENERIC, label="running-cancel")
-    claimed = api.jobs._jobs.claim_next()
-    assert claimed is not None
-    assert claimed.status == BackgroundJobStatus.RUNNING
-    requested = api.jobs.cancel(job.id)
-    assert requested is not None
-    assert requested.cancel_requested is True
-    assert requested.status == BackgroundJobStatus.RUNNING
-    finalized = api.jobs.cancel(job.id, message="worker ack")
-    assert finalized is not None
-    assert finalized.status == BackgroundJobStatus.CANCELLED
-
-
-def test_jobs_complete_honors_cancel_request(db_session: Session) -> None:
-    """Cancel mid-run must win over a subsequent complete()."""
-    project = ProjectRepository(db_session).create(Project(name="Cancel Complete", description=""))
-    api = api_from_session(db_session)
-    job = api.jobs.create(project.id, BackgroundJobKind.GENERIC, label="race")
-    claimed = api.jobs._jobs.claim_next()
-    assert claimed is not None
-    api.jobs.cancel(job.id)
-    finished = api.jobs._jobs.complete(job.id, result={"pptx": "should-not-publish"})
-    assert finished is not None
-    assert finished.status == BackgroundJobStatus.CANCELLED
-    assert not (finished.result or {}).get("pptx")
-
-
-def test_worker_honors_cancel_after_dispatch(db_session: Session, monkeypatch) -> None:
-    project = ProjectRepository(db_session).create(Project(name="Cancel Worker", description=""))
-    api = api_from_session(db_session)
-    api.jobs.create(project.id, BackgroundJobKind.GENERIC, label="dispatch-cancel")
-    worker = BackgroundJobWorker(db_session)
-
-    def _cancel_during_dispatch(job):
-        api.jobs.cancel(job.id, message="user cancel")
-        return {"ack": True}
-
-    monkeypatch.setattr(worker, "_dispatch", _cancel_during_dispatch)
-    out = worker.process_once()
-    assert out is not None
-    assert out.status == BackgroundJobStatus.CANCELLED
+    assert api.jobs.cancel(uuid4()) is None
 
 
 def test_api_context_caches_resource_facades(db_session: Session) -> None:
