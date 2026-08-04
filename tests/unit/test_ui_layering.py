@@ -162,9 +162,10 @@ def test_ui_does_not_unwrap_sqlalchemy_session() -> None:
     """
     root = Path(__file__).resolve().parents[2] / "archium" / "ui"
     package_root = root.parent.parent
-    unwrap = re.compile(r"\b(?:api\.session|api\.uow|uow\.session)\b")
+    # Do not match package paths like ``application.api.session`` (TYPE_CHECKING imports).
+    unwrap = re.compile(r"(?<![\w.])(?:api\.session|api\.uow|uow\.session)\b")
     raw_ops = re.compile(
-        r"\b(?:api|uow)\.session\.(?:commit|rollback|execute|flush)\b"
+        r"(?<![\w.])(?:api|uow)\.session\.(?:commit|rollback|execute|flush)\b"
     )
     hits: list[str] = []
     for path in root.rglob("*.py"):
