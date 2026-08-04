@@ -312,7 +312,7 @@ def render_project_knowledge_action_buttons(
 
     def _on_action(action_type) -> None:
         with unit_of_work() as uow:
-            session = uow.session
+            session = uow
             result = dispatch_next_best_action(
                 session,
                 as_session_state(st.session_state),

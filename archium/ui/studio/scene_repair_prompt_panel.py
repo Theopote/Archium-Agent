@@ -66,7 +66,7 @@ def _create_overflow_proposal(slide_id: UUID, node_ids: list[str]) -> None:
     unique_nodes = list(dict.fromkeys(node_ids))
     try:
         with st.spinner("正在生成溢出修复提案…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             proposal = create_slide_overflow_repair_proposal(
                 session,
                 slide_id,

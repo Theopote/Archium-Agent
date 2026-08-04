@@ -103,7 +103,7 @@ def _render_project_context_readiness(project_id: UUID) -> None:
         if st.button(f"建议：{label}", key=f"generate_gate_{readiness.suggested_action.value}"):
             settings = get_settings()
             with unit_of_work() as uow:
-                session = uow.session
+                session = uow
                 dispatch_next_best_action(
                     session,
                     as_session_state(st.session_state),

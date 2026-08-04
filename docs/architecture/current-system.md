@@ -144,13 +144,13 @@ Studio 的编辑闭环不是直接覆写导出文件：
    - **编排 run**：策划 / 视觉 / 生成等 LangGraph 路径可先落 `WorkflowRun` + `BackgroundWorkflowRunner`；与 `BackgroundJob` 双轨并存，逐步收敛，**不得假装已全部 job 化**
 3. **幂等范围** — 同 `project_id` + `idempotency_key` → **同一 BackgroundJob**；不承诺业务产物（文件、版式候选等）永不重复生成。
 4. **刷新恢复范围** — 活跃 Job 可按 `job_id` / project 拉回；用户侧列表优先 `JobsApi.list_operations`（`OperationView`，可合并 WorkflowRun）；**不**覆盖仅存于 Streamlit `session_state`、未落库的临时 UI 草稿。
-5. **事务 / UoW** — 遵守 APP-003。**首选** `with application_api() as api:`（纯 API）或 `with unit_of_work() as uow:`（可直接 `Service(uow)` / `helper(uow, …)`）。Application 服务与资源 API 构造函数接受 `SessionLike`（内部 `session_of`）。嵌套/测试可用 `api_bound` / `api_from_session`。`ApiContext` **只持有** `UnitOfWork`；`api.session` 为 escape hatch。`get_session()` 仅经 `unit_of_work` 负责 commit/rollback；API 只 flush。
+5. **事务 / UoW** — 遵守 APP-003。**首选** `with application_api() as api:`（纯 API）或 `with unit_of_work() as uow:`（可直接 `Service(uow)` / `helper(uow, …)`）。Application 服务与资源 API 构造函数接受 `SessionLike`（内部 `session_of`）。嵌套/测试可用 `api_bound` / `api_from_session`。`ApiContext` **只持有** `UnitOfWork`；`api.session` 为 Application 内部 / 测试 escape hatch，**UI 禁止** `api.session` / `uow.session`（由 `test_ui_layering` 强制）；UI 应走 resource API，或传 `api.uow` / `uow`（`SessionLike`）。`get_session()` 仅经 `unit_of_work` 负责 commit/rollback；API 只 flush。
 6. **ApiContext** — 资源属性有明确返回类型，并按实例 `cached_property` 缓存。**`archium/ui/` 禁止直接调用 `get_session(`**（统一 `unit_of_work` / `application_api`）；后台线程用 `unit_of_work(scoped=False)`。
 
 **UoW / Repository 分层（刻意设计，非遗漏）：**
 
 - `UnitOfWork` 是进程内 SQLAlchemy 事务门面（`session` / `api` / `flush`），**不是**带 `projects` / `workflow_runs` 等 repository 属性的 Application Port。
-- Application → concrete Repository **允许**（服务内 `XxxRepository(session)`）；禁止的是 Application → ORM `models`，以及 UI → Repository / 直调 `get_session`。
+- Application → concrete Repository **允许**（服务内 `XxxRepository(session)`）；禁止的是 Application → ORM `models`，以及 UI → Repository / 直调 `get_session` / 解包 `api.session`·`uow.session`（传 `uow` / `api.uow` 或走 resource API）。
 - 完整 hexagonal（`application/ports/*` + `SQLAlchemyUnitOfWork` + Repository Port）**暂缓**，除非出现可陈述驱动：换库、跨进程 API 假实现，或单测无法用 in-memory SQLite / 注入 `UnitOfWorkFactory` 解决。
 - 已有可注入点保持即可：`UnitOfWorkFactory` / `Application(uow_factory=…)`（测试与未来 HTTP 薄适配）；不必为此再拆 ports 包。`commit` / `rollback` 仍由 Infrastructure `get_session` 拥有（APP-003），不迁入 Application `UnitOfWork`。
 

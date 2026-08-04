@@ -302,7 +302,7 @@ def _accept_proposal(
         slide = slide_snapshot.slide
         current_scene = slide_snapshot.render_scene
         with st.spinner("正在接受提案并创建 Scene Revision…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             service = SceneProposalService(session, settings=settings)
             if current_scene is not None and service.is_stale(proposal, current_scene):
                 service.mark_proposal_superseded(proposal)

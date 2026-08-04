@@ -154,7 +154,7 @@ def _run_scoped_proposal(
         return
     try:
         with st.spinner("正在生成修改提案…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             if scope_label == "当前页面" or not bound_nodes:
                 proposal = create_slide_scene_proposal_from_text(session, slide_id, text)
             elif scope_label == "选区(包围盒)" and len(bound_nodes) >= 1:
@@ -242,7 +242,7 @@ def _render_legacy_panel(*, slide_id: UUID) -> None:
     if st.button("撤销上一步", use_container_width=True, key=f"studio_undo_edit_{slide_id}"):
         try:
             with st.spinner("正在撤销…"), unit_of_work() as uow:
-                session = uow.session
+                session = uow
                 restore_slide_visual_edit(session, slide_id)
             st.success("已撤销一步视觉修改。")
             st.rerun()
@@ -258,7 +258,7 @@ def _run_edit(*, slide_id: UUID, text: str) -> None:
         return
     try:
         with st.spinner("正在应用…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             apply_slide_visual_edit(session, slide_id, text=text)
         st.success("已直接应用视觉修改。")
         st.rerun()

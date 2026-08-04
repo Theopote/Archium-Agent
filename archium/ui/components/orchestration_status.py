@@ -98,7 +98,7 @@ def render_orchestration_status(
 
     settings = get_ui_effective_settings()
     with unit_of_work() as uow:
-        session = uow.session
+        session = uow
         llm = create_llm_provider(settings)
         service = WorkflowOrchestrationService(session, llm, settings=settings)
         run = service.get_active_run(project_id)
@@ -243,7 +243,7 @@ def _render_advance_replan_buttons(
     ):
         try:
             with unit_of_work() as uow:
-                advance_session = uow.session
+                advance_session = uow
                 advance_llm = create_llm_provider(settings)
                 advance_service = WorkflowOrchestrationService(
                     advance_session, advance_llm, settings=settings
@@ -270,7 +270,7 @@ def _render_advance_replan_buttons(
     ):
         try:
             with unit_of_work() as uow:
-                replan_session = uow.session
+                replan_session = uow
                 replan_llm = create_llm_provider(settings)
                 replan_service = WorkflowOrchestrationService(
                     replan_session, replan_llm, settings=settings

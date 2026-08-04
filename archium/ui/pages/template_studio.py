@@ -45,7 +45,7 @@ def _render_upload_panel() -> None:
         staged.write_bytes(uploaded.getvalue())
         try:
             with st.spinner("正在导入、截图并提取结构…"), unit_of_work() as uow:
-                session = uow.session
+                session = uow
                 result = TemplateStudioService(session).import_pptx(
                     staged,
                     name=name.strip() or Path(uploaded.name).stem,
@@ -258,7 +258,7 @@ def _render_layout_editor(template_id: UUID) -> None:
     st.markdown("#### 5. 测试内容填充")
     if st.button("用测试内容填充并预览本页", type="primary"):
         with st.spinner("正在填充并渲染预览…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             try:
                 preview = TemplateStudioService(session).fill_test_content_preview(
                     template_id,

@@ -222,7 +222,7 @@ def _render_progress_body(workflow_run_id: UUID) -> None:
 
         project_id = _project_id_from_run(run)
         with application_api() as api:
-            board = PageStatusBoardService(api.session).build_board(
+            board = PageStatusBoardService(api.uow).build_board(
                 presentation_id,
                 workflow_step=snapshot.current_step,
             )

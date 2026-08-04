@@ -51,7 +51,7 @@ def _apply_suggestion(
 ) -> None:
     try:
         with st.spinner("正在应用整套修复建议…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             apply_deck_repair_suggestion(session, suggestion)
         if slide_index is not None:
             st.session_state.studio_selected_slide_index = slide_index

@@ -24,7 +24,7 @@ def render_reference_style_panel(project_id: UUID) -> None:
         except ProjectNotFoundError:
             project = None
         profiles = api.project.list_reference_style_profiles(project_id)
-        has_style_docs = has_reference_style_documents(api.session, project_id)
+        has_style_docs = has_reference_style_documents(api.uow, project_id)
 
     if project is None:
         st.warning("项目不存在")

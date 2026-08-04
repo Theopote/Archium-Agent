@@ -214,7 +214,7 @@ def _render_documents(project_id: UUID, *, show_uploader: bool = True) -> None:
             except Exception:
                 project = None
             if project is not None and is_concept_leaning(uow, project) and not is_research_programming(
-                uow.session, project
+                uow, project
             ):
                 st.caption("概念探索中 — 资料可后续补充 enrich 任务理解。")
             elif project is not None and is_research_programming(uow, project):
@@ -813,7 +813,7 @@ def _render_pptx_export_section(project_id: UUID) -> None:
             st.session_state.pop(prompt_key, None)
             try:
                 with st.spinner("正在按 RenderScene 导出 PPTX…"), unit_of_work() as uow:
-                    session = uow.session
+                    session = uow
                     export_result = export_presentation_pptx_from_layout_plans(
                         session,
                         presentation_id,
@@ -884,7 +884,7 @@ def _render_pptx_export_section(project_id: UUID) -> None:
             st.session_state.pop(prompt_key, None)
             try:
                 with st.spinner("正在使用旧版模板导出 PPTX…"), unit_of_work() as uow:
-                    session = uow.session
+                    session = uow
                     export_result = export_presentation_pptx_legacy(
                         session,
                         presentation_id,

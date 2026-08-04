@@ -160,7 +160,7 @@ def render_deck_theme_panel(
         )
         try:
             with st.spinner("正在应用 Token、编译样本页并跑 QA…"), unit_of_work() as uow:
-                session = uow.session
+                session = uow
                 proposal = create_theme_proposal(
                     session,
                     presentation_id,
@@ -264,7 +264,7 @@ def render_deck_theme_panel(
     ):
         try:
             with st.spinner("正在切换 DesignSystem 并重编译全稿…"), unit_of_work() as uow:
-                session = uow.session
+                session = uow
                 accepted = accept_theme_proposal(
                     session,
                     proposal,

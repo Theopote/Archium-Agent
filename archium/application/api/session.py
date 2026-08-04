@@ -32,8 +32,12 @@ class ApiContext:
 
     Construct via ``application_api()``, ``UnitOfWork.bind(session).api``, or
     ``api_from_session(session)``. Product code should use resource properties
-    (``project``, ``jobs``, …); ``session`` is an escape hatch for legacy
-    services that still require SQLAlchemy Session.
+    (``project``, ``jobs``, …).
+
+    ``session`` remains available for Application-layer resource construction and
+    tests, but is **deprecated for UI**: Streamlit must use resource APIs or pass
+    ``api.uow`` / ``uow`` as ``SessionLike`` into application services (enforced by
+    ``test_ui_layering``).
     """
 
     _uow: UnitOfWork
@@ -52,7 +56,11 @@ class ApiContext:
 
     @property
     def session(self) -> Session:
-        """Escape hatch — prefer resource APIs; do not commit (APP-003)."""
+        """Escape hatch for Application internals/tests — **deprecated for UI**.
+
+        UI: prefer resource APIs, or pass ``api.uow`` (``SessionLike``). Do not
+        commit (APP-003).
+        """
         return self._uow.session
 
     def flush(self) -> None:

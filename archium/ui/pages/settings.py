@@ -83,7 +83,7 @@ def _resolve_model_choice(
 def _load_profile_and_status() -> tuple[LLMProfile, CredentialStatus]:
     base_settings = get_settings()
     with unit_of_work() as uow:
-        session = uow.session
+        session = uow
         service = LLMProfileService(session)
         profile = service.get_or_create_default_profile()
         status = service.credential_status(
@@ -104,7 +104,7 @@ def _resolve_api_key_for_action(
     if typed_key.strip():
         return normalize_api_key(typed_key)
     with unit_of_work() as uow:
-        session = uow.session
+        session = uow
         service = LLMProfileService(session)
         session_key = st.session_state.get("llm_session_api_key")
         api_key, _ = service.resolve_api_key(
@@ -240,7 +240,7 @@ def render() -> None:
 
     if delete_clicked:
         with unit_of_work() as uow:
-            session = uow.session
+            session = uow
             delete_service = LLMProfileService(session)
             delete_service.delete_api_key(
                 draft_profile, session_store=cast(dict[str, object], st.session_state)

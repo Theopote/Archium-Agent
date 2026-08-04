@@ -302,7 +302,7 @@ def _starter_from_payload(payload: dict, project_id: str) -> GenesisStarterResul
             project = None
         name = project.name if project is not None else "新汇报"
         return ensure_genesis_starter_draft(
-            uow.session,
+            uow,
             UUID(project_id),
             prompt=prompt,
             project_name=name,
@@ -410,7 +410,7 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
             try:
                 with unit_of_work() as uow:
                     assessment = reassess_project_context(
-                        uow.session,
+                        uow,
                         UUID(project_id),
                         user_text=st.session_state.get("genesis_task_description"),
                         settings=settings,
@@ -424,7 +424,7 @@ def _render_assessment_card(project_id: str, payload: dict) -> None:
                     except Exception:
                         project = None
                     starter = ensure_genesis_starter_draft(
-                        uow.session,
+                        uow,
                         UUID(project_id),
                         prompt=st.session_state.get("genesis_task_description") or "",
                         project_name=project.name if project is not None else "新汇报",
@@ -586,7 +586,7 @@ def _dispatch_action(action: NextBestActionType) -> None:
     settings = get_ui_effective_settings()
     project_id = UUID(str(project_raw))
     with unit_of_work() as uow:
-        session = uow.session
+        session = uow
         result = dispatch_next_best_action(
             session,
             as_session_state(st.session_state),

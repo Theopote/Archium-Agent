@@ -213,7 +213,7 @@ def _render_split_proposal(proposal: SlideSplitProposal) -> None:
 def _propose_split(*, slide_id: UUID) -> None:
     try:
         with st.spinner("正在生成拆页提案…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             from archium.application.content_adaptation_service import ContentAdaptationService
 
             proposal = ContentAdaptationService(session).propose_split(slide_id)
@@ -229,7 +229,7 @@ def _propose_split(*, slide_id: UUID) -> None:
 def _accept_split(proposal: SlideSplitProposal) -> None:
     try:
         with st.spinner("正在执行拆页…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             from archium.application.content_adaptation_service import ContentAdaptationService
 
             result = ContentAdaptationService(session).accept_split_proposal(proposal)
@@ -258,7 +258,7 @@ def _load_suggestions(slide_snapshot: SlideVisualSnapshot) -> list[ContentAdapta
 def _run_adaptation(*, slide_id: UUID, action: str) -> None:
     try:
         with st.spinner("正在适配页面内容并更新版式…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             result = apply_slide_content_adaptation(session, slide_id, action=action)
         message = getattr(result, "message", None) or "内容适配已完成。"
         st.success(message)
@@ -272,7 +272,7 @@ def _run_adaptation(*, slide_id: UUID, action: str) -> None:
 def _run_restore(*, slide_id: UUID) -> None:
     try:
         with st.spinner("正在撤销内容修改…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             restore_slide_content_adaptation(session, slide_id)
         st.success("已撤销一步内容修改。")
         st.rerun()

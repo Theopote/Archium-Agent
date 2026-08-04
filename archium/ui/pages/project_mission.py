@@ -615,7 +615,7 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
 
     try:
         with unit_of_work() as uow:
-            session = uow.session
+            session = uow
             bridge = get_presentation_bridge(
                 session,
                 UUID(st.session_state.planning_workflow_run_id),
@@ -638,7 +638,7 @@ def _render_execute(snapshot: PlanningSnapshot, project_id: UUID) -> None:
             from archium.ui.planning_service import refresh_presentation_request_draft
 
             with unit_of_work() as uow:
-                session = uow.session
+                session = uow
                 bridge = refresh_presentation_request_draft(
                     session,
                     UUID(st.session_state.planning_workflow_run_id),
@@ -743,7 +743,7 @@ def render(*, embedded: bool = False) -> None:
 
     project_id = selected_project_id
     with unit_of_work() as uow:
-        session = uow.session
+        session = uow
         from archium.application.context.workflow_navigation import (
             as_session_state,
             sync_mission_step_from_context,

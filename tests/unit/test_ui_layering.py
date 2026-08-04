@@ -151,3 +151,31 @@ def test_ui_does_not_import_get_session() -> None:
                         f"{path.relative_to(package_root)}:{line_no}: {line.strip()}"
                     )
     assert hits == [], "ui must not call get_session():\n" + "\n".join(hits)
+
+
+def test_ui_does_not_unwrap_sqlalchemy_session() -> None:
+    """APP-029: UI must not use api.session / uow.session escape hatch.
+
+    Pass ``uow`` / ``api.uow`` (SessionLike) into application services, or use
+    resource APIs (``api.project``, …). Never commit/execute via the hatch.
+    """
+    root = Path(__file__).resolve().parents[2] / "archium" / "ui"
+    package_root = root.parent.parent
+    unwrap = re.compile(r"\b(?:api|uow)\.session\b")
+    raw_ops = re.compile(
+        r"\b(?:api|uow)\.session\.(?:commit|rollback|execute|flush)\b"
+    )
+    hits: list[str] = []
+    for path in root.rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        for pattern in (raw_ops, unwrap):
+            for match in pattern.finditer(text):
+                line_no = text.count("\n", 0, match.start()) + 1
+                line = text.splitlines()[line_no - 1].strip()
+                hits.append(f"{path.relative_to(package_root)}:{line_no}: {line}")
+    # de-dupe if both patterns hit the same span
+    hits = list(dict.fromkeys(hits))
+    assert hits == [], (
+        "ui must not unwrap Session via api.session / uow.session "
+        "(pass uow / api.uow, or use resource APIs):\n" + "\n".join(hits)
+    )

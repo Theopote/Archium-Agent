@@ -266,7 +266,7 @@ def _export_pptx(
                 export_format="PPTX",
             )
         with st.spinner("正在评估导出忠实度…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             from archium.application.evidence_readiness_service import (
                 latest_presentation_revision_id,
             )
@@ -287,7 +287,7 @@ def _export_pptx(
             )
 
         with st.spinner("正在导出 PPTX…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             pptx_export_result: RenderResult = export_presentation_from_studio(
                 session,
                 presentation_id,
@@ -307,7 +307,7 @@ def _export_pptx(
             round_trip_report = None
             qa_status = qa_status
             with st.spinner("正在执行 Round-trip QA…"), unit_of_work() as uow:
-                session = uow.session
+                session = uow
                 from archium.application.evidence_readiness_service import (
                     latest_presentation_revision_id,
                 )
@@ -455,7 +455,7 @@ def _export_pdf(
             export_format="PDF",
         )
         with st.spinner("正在导出 PDF…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             pdf_export_result: RenderResult = export_presentation_pdf_from_studio(
                 session,
                 presentation_id,

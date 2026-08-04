@@ -46,7 +46,7 @@ def render_design_critique_card(
             )
 
             with application_api() as api:
-                data = load_latest_design_critique_report(api.session, project_id)
+                data = load_latest_design_critique_report(api.uow, project_id)
             if isinstance(data, dict) and data:
                 st.session_state["last_design_critique_report"] = data
         except Exception:

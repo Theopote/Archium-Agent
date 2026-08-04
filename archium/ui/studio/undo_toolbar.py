@@ -75,7 +75,7 @@ def render_undo_toolbar(*, slide_snapshot: SlideVisualSnapshot | None) -> None:
 def _run_visual_undo(*, slide_id: UUID) -> None:
     try:
         with st.spinner("正在撤销视觉修改…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             result = undo_slide_visual_edit(session, slide_id)
         st.success(_visual_history_message(result, fallback="已撤销一步视觉修改。"))
         st.rerun()
@@ -88,7 +88,7 @@ def _run_visual_undo(*, slide_id: UUID) -> None:
 def _run_visual_redo(*, slide_id: UUID) -> None:
     try:
         with st.spinner("正在重做视觉修改…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             result = redo_slide_visual_edit(session, slide_id)
         st.success(_visual_history_message(result, fallback="已重做一步视觉修改。"))
         st.rerun()
@@ -113,7 +113,7 @@ def _visual_history_message(result: object, *, fallback: str) -> str:
 def _run_content_undo(*, slide_id: UUID) -> None:
     try:
         with st.spinner("正在撤销内容修改…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             undo_slide_content_adaptation(session, slide_id)
         st.success("已撤销一步内容修改。")
         st.rerun()
@@ -126,7 +126,7 @@ def _run_content_undo(*, slide_id: UUID) -> None:
 def _run_content_redo(*, slide_id: UUID) -> None:
     try:
         with st.spinner("正在重做内容修改…"), unit_of_work() as uow:
-            session = uow.session
+            session = uow
             redo_slide_content_adaptation(session, slide_id)
         st.success("已重做一步内容修改。")
         st.rerun()

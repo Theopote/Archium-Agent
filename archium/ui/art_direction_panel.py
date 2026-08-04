@@ -201,7 +201,7 @@ def render_art_direction_panel(
         }
         try:
             with unit_of_work() as uow:
-                session = uow.session
+                session = uow
                 update_art_direction(session, art_direction.id, updates)
                 if approve_clicked or approve_continue:
                     approve_art_direction(session, art_direction.id)

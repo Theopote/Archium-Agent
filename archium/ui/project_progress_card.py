@@ -420,7 +420,7 @@ def load_project_progress_snapshot() -> ProjectProgressSnapshot | None:
                 preferred = None
 
         snapshot = _snapshot_for_project(
-            api.session,
+            api.uow,
             project,
             preferred_presentation_id=preferred,
         )
@@ -439,7 +439,7 @@ def list_recent_project_snapshots(*, limit: int = 6) -> list[ProjectProgressSnap
         projects = api.project.list()
         if not projects:
             return []
-        snapshots = [_snapshot_for_project(api.session, project) for project in projects]
+        snapshots = [_snapshot_for_project(api.uow, project) for project in projects]
     snapshots.sort(key=lambda item: item.updated_at, reverse=True)
     return snapshots[:limit]
 
@@ -458,7 +458,7 @@ def load_cockpit_task_summary(snapshot: ProjectProgressSnapshot) -> CockpitTaskS
     if snapshot.presentation_id is not None:
         try:
             with application_api() as api:
-                board = PageStatusBoardService(api.session).build_board(snapshot.presentation_id)
+                board = PageStatusBoardService(api.uow).build_board(snapshot.presentation_id)
                 for row in board.rows:
                     if row.phase == PagePipelinePhase.ASSET_MISSING:
                         missing_assets += 1
@@ -529,7 +529,7 @@ def continue_work_page_key(snapshot: ProjectProgressSnapshot) -> str:
 
         with application_api() as api:
             return resolve_continue_work_page_key(
-                api.session,
+                api.uow,
                 snapshot.project_id,
                 presentation_stage_id=snapshot.current_stage_id,
                 slide_count=snapshot.slide_count,

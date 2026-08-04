@@ -145,7 +145,7 @@ def _render_template_match_controls(slide_snapshot: SlideVisualSnapshot) -> None
     ):
         try:
             with st.spinner("正在匹配模板并填充内容…"), unit_of_work() as uow:
-                session = uow.session
+                session = uow
                 apply_template_to_slide(
                     session,
                     slide_id=slide_id,
