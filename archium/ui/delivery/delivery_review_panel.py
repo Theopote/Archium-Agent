@@ -102,13 +102,26 @@ def build_delivery_checklist(
         and blocker_count == 0
         and verdict.deck_qa_blocker_count == 0
     )
-    qa_detail = (
-        "Deck QA 无阻塞"
-        if qa_ok
-        else "Deck QA 尚未执行"
-        if not qa_executed
-        else "存在需处理的 QA 项"
+    from archium.domain.export_round_trip import (
+        ROUND_TRIP_STATUS_LABELS_ZH,
+        RoundTripStatus,
     )
+    from archium.ui.delivery.fidelity_report_panel import get_stored_round_trip_report
+
+    round_trip = get_stored_round_trip_report()
+    round_trip_pass = round_trip is not None and round_trip.status in {
+        RoundTripStatus.PASS,
+        RoundTripStatus.PASS_WITH_WARNINGS,
+    }
+    if qa_ok:
+        qa_detail = "Deck QA 无阻塞"
+    elif not qa_executed and round_trip_pass:
+        # Round-trip proves export loop; Deck QA still needs formal visual workflow.
+        qa_detail = "Deck QA 尚未执行（导出 Round-trip 已通过；正式版式生成后可得）"
+    elif not qa_executed:
+        qa_detail = "Deck QA 尚未执行（正式版式生成后可得）"
+    else:
+        qa_detail = "存在需处理的 QA 项"
     items.append(
         DeliveryCheckItem(
             label="整套一致性",
@@ -117,6 +130,18 @@ def build_delivery_checklist(
             tone="ok" if qa_ok else "info" if not qa_executed else "warn",
         )
     )
+    if round_trip is not None:
+        rt_label = ROUND_TRIP_STATUS_LABELS_ZH.get(
+            round_trip.status, round_trip.status.value
+        )
+        items.append(
+            DeliveryCheckItem(
+                label="导出 Round-trip",
+                passed=round_trip_pass,
+                detail=rt_label,
+                tone="ok" if round_trip_pass else "warn",
+            )
+        )
     items.append(
         DeliveryCheckItem(
             label="证据与引用",

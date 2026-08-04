@@ -28,6 +28,53 @@ _HERITAGE_OPTIONAL_METRICS = frozenset(
 _TEMPLE_HINTS = ("寺", "庙", "庵", "观", "宗教", "文物", "古建", "遗产", "复原", "重建")
 _HOSPITAL_HINTS = ("医院", "医疗", "床位", "hospital", "clinic")
 
+# Map partner/gap labels onto KnowledgeState.known keys.
+_UNKNOWN_LABEL_ALIASES: dict[str, frozenset[str]] = {
+    "项目名称": frozenset({"name", "project_name", "项目名称"}),
+    "项目位置": frozenset({"location", "项目位置"}),
+    "主要功能": frozenset({"main_function", "主要功能"}),
+    "项目阶段": frozenset({"project_stage", "项目阶段"}),
+    "用地面积": frozenset({"site_area", "用地面积"}),
+}
+
+
+def _strip_unknown_prefix(text: str) -> str:
+    topic = text.strip()
+    for prefix in ("待补充：", "缺少标准事实：", "缺少：", "需先确认："):
+        if topic.startswith(prefix):
+            return topic[len(prefix) :].strip()
+    return topic
+
+
+def filter_unknowns_satisfied_by_known(
+    unknowns: list[str] | tuple[str, ...] | None,
+    *,
+    known: dict[str, object] | None,
+) -> list[str]:
+    """Drop cached unknown labels already answered in KnowledgeState.known."""
+    if not unknowns:
+        return []
+    known = known or {}
+    present = {
+        str(key).strip().lower()
+        for key, value in known.items()
+        if str(value or "").strip()
+    }
+    if not present:
+        return [str(item).strip() for item in unknowns if str(item).strip()]
+
+    kept: list[str] = []
+    for raw in unknowns:
+        text = str(raw).strip()
+        if not text:
+            continue
+        topic = _strip_unknown_prefix(text)
+        aliases = _UNKNOWN_LABEL_ALIASES.get(topic, frozenset({topic.lower()}))
+        if any(alias.lower() in present for alias in aliases):
+            continue
+        kept.append(text)
+    return kept
+
 
 @dataclass(frozen=True)
 class KnowledgeGapEntry:

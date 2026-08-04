@@ -43,9 +43,12 @@ def _apply_fresh_gap_report(
 
     fresh_blocking = len(gap_report.blocking_gaps)
     if not gap_report.gaps:
-        if fresh_blocking != display.blocking_unknown_count:
-            return replace(display, blocking_unknown_count=fresh_blocking)
-        return display
+        # Clear stale KnowledgeState "仍缺" rows once live detection is empty.
+        return replace(
+            display,
+            missing_highlights=(),
+            blocking_unknown_count=fresh_blocking,
+        )
 
     known_blob = " ".join(display.known_highlights).lower()
     partner_lines: list[str] = []
@@ -55,13 +58,17 @@ def _apply_fresh_gap_report(
             continue
         if "location" in keys and ("项目位置" in known_blob or "location" in known_blob):
             continue
+        if "main_function" in keys and (
+            "主要功能" in known_blob or "main_function" in known_blob
+        ):
+            continue
         partner_lines.append(_partner_gap_text(gap.description, blocking=gap.blocking))
         if len(partner_lines) >= 6:
             break
 
     return replace(
         display,
-        missing_highlights=tuple(partner_lines) if partner_lines else display.missing_highlights,
+        missing_highlights=tuple(partner_lines),
         blocking_unknown_count=fresh_blocking,
     )
 

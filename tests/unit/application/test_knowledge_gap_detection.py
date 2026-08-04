@@ -56,3 +56,20 @@ def test_project_entity_name_satisfies_project_name_gap() -> None:
         "缺少标准事实：项目位置",
         "缺少标准事实：主要功能",
     }
+
+
+def test_filter_unknowns_satisfied_by_known_drops_answered_labels() -> None:
+    from archium.application.knowledge_gap_detection import filter_unknowns_satisfied_by_known
+
+    kept = filter_unknowns_satisfied_by_known(
+        [
+            "缺少标准事实：项目名称",
+            "缺少标准事实：项目位置",
+            "缺少标准事实：甲方",
+        ],
+        known={
+            "name": "滨江城市客厅文化中心",
+            "location": "杭州市滨江区",
+        },
+    )
+    assert kept == ["缺少标准事实：甲方"]

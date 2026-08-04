@@ -196,6 +196,10 @@ def flow_stage_caption(
                 return "运行内容生成管线，生成页面文字与结构。"
             if snapshot.pending_count > 0:
                 return "部分页面版式待完成；可在工作室补做版式。"
+            if snapshot.formal_delivery_ready:
+                return "页面已齐，可升级正式版式或前往交付导出。"
+            if has_docs:
+                return "生成页面内容与版式；资料已绑定，可继续升级预览。"
 
         if stage_id == "edit":
             if genesis_shortcut:

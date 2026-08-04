@@ -248,12 +248,25 @@ def _known_highlights(state: KnowledgeState, *, limit: int = 6) -> tuple[str, ..
 
 
 def _missing_highlights(state: KnowledgeState, *, limit: int = 6) -> tuple[str, ...]:
+    from archium.application.knowledge_gap_detection import filter_unknowns_satisfied_by_known
+
     rows: list[str] = []
     if state.open_unknowns:
-        for gap in state.open_unknowns[:limit]:
+        descriptions = [gap.description for gap in state.open_unknowns]
+        kept = filter_unknowns_satisfied_by_known(descriptions, known=state.known)
+        kept_set = set(kept)
+        for gap in state.open_unknowns:
+            if gap.description not in kept_set:
+                continue
             rows.append(_partner_gap_text(gap.description, blocking=gap.blocking))
+            if len(rows) >= limit:
+                break
         return tuple(rows)
-    for item in (state.unknown or state.missing_information or [])[:limit]:
+    filtered = filter_unknowns_satisfied_by_known(
+        state.unknown or state.missing_information or [],
+        known=state.known,
+    )
+    for item in filtered[:limit]:
         text = str(item).strip()
         if text:
             rows.append(_partner_gap_text(text))

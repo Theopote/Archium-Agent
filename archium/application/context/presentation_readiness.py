@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import StrEnum
 
+from archium.application.knowledge_gap_detection import filter_unknowns_satisfied_by_known
 from archium.domain.context.project_context import ProjectContext
 from archium.domain.context.recommended_workflow import RecommendedWorkflow
 from archium.domain.intent.next_best_action import NextBestActionType
@@ -144,7 +145,10 @@ def presentation_readiness_from_context(
             f"知识完整度约 {completeness_pct}%：可出概念草稿，正式交付前建议补证据。"
         )
 
-    unknowns = [u.strip() for u in (state.unknown or []) if str(u).strip()]
+    unknowns = filter_unknowns_satisfied_by_known(
+        [u.strip() for u in (state.unknown or []) if str(u).strip()],
+        known=state.known,
+    )
     if unknowns:
         preview = "、".join(unknowns[:3])
         suffix = "…" if len(unknowns) > 3 else ""
