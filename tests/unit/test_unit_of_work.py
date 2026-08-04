@@ -103,8 +103,15 @@ def test_api_from_session_delegates_to_uow(db_session: Session) -> None:
     assert ProjectRepository(db_session).get_by_id(project.id) is not None
 
 
-def test_application_api_hides_session(memory_engine: Engine) -> None:
+def test_application_api_opens_api_context(memory_engine: Engine) -> None:
+    """Preferred UI entry yields ApiContext with resource APIs (not a bare Session).
+
+    ``api.session`` / ``api.uow`` remain Application escape hatches; UI unwrap is
+    forbidden by ``test_ui_does_not_unwrap_sqlalchemy_session`` (APP-029), not by
+    deleting the attributes.
+    """
     with application_api(memory_engine) as api:
+        assert isinstance(api, ApiContext)
         created = api.project.create("网关项目", "")
         assert created.name == "网关项目"
         assert isinstance(api.uow, UnitOfWork)

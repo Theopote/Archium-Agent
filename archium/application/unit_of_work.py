@@ -1,4 +1,4 @@
-"""Unit of Work — hides SQLAlchemy Session behind the Application API boundary.
+"""Unit of Work — Application API entry over a transactional SQLAlchemy Session.
 
 Preferred UI / future HTTP entry:
 
@@ -7,7 +7,7 @@ Preferred UI / future HTTP entry:
 
     with unit_of_work() as uow:
         uow.api.jobs.create(...)
-        LegacyService(uow.session).run(...)
+        LegacyService(uow).run(...)
 
     app = Application()
     with app.api() as api:
@@ -21,6 +21,10 @@ Transaction ownership still follows APP-003: the outer ``get_session()``
 (used inside :func:`unit_of_work`) commits on success / rolls back on error.
 Application API methods flush only; :meth:`UnitOfWork.flush` is the explicit
 mid-transaction sync point.
+
+UI must prefer resource APIs (``api.project``, …) or pass ``uow`` / ``api.uow``
+as ``SessionLike``; unwrapping ``api.session`` / ``uow.session`` in ``archium/ui``
+is forbidden by layering tests (Session is not deleted from the public types).
 """
 
 from __future__ import annotations
@@ -108,13 +112,13 @@ def application_api(
     *,
     scoped: bool | None = None,
 ) -> Iterator[ApiContext]:
-    """Preferred UI entry: yield Application API without exposing Session."""
+    """Preferred UI entry: yield :class:`ApiContext` (resource APIs), not a bare Session."""
     with unit_of_work(engine, scoped=scoped) as uow:
         yield uow.api
 
 
 class Application:
-    """Gateway that never surfaces Session to callers.
+    """Gateway yielding :class:`ApiContext` (resource APIs) for adapters.
 
     Use for future FastAPI / desktop adapters::
 
@@ -123,7 +127,8 @@ class Application:
             api.project.list()
 
     Streamlit may keep using :func:`application_api` directly; both share the
-    same :class:`UnitOfWorkFactory`.
+    same :class:`UnitOfWorkFactory`. ``ApiContext.session`` remains an Application
+    escape hatch; UI must not unwrap it (layering tests).
     """
 
     def __init__(self, uow_factory: UnitOfWorkFactory | None = None) -> None:
