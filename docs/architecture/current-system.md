@@ -154,6 +154,13 @@ Studio 的编辑闭环不是直接覆写导出文件：
 - 完整 hexagonal（`application/ports/*` + `SQLAlchemyUnitOfWork` + Repository Port）**暂缓**，除非出现可陈述驱动：换库、跨进程 API 假实现，或单测无法用 in-memory SQLite / 注入 `UnitOfWorkFactory` 解决。
 - 已有可注入点保持即可：`UnitOfWorkFactory` / `Application(uow_factory=…)`（测试与未来 HTTP 薄适配）；不必为此再拆 ports 包。`commit` / `rollback` 仍由 Infrastructure `get_session` 拥有（APP-003），不迁入 Application `UnitOfWork`。
 
+**SessionLike 含义（类型兼容，≠ UoW ports 完成）：**
+
+- `SessionLike`（`Session | UnitOfWork`）与 `session_of` 的目的：调用点可传 `Session` 或 `UnitOfWork`；服务构造函数内仍 `session_of(...)` → SQLAlchemy `Session` → concrete Repository。
+- 这是 **调用点 / 类型兼容**，**不是** 事务边界或 Repository 与 SQLAlchemy 的解耦。不要据此宣称 hexagonal UoW / Repository ports 已完成。
+- **不要** 为「更干净」而强推全员 `UnitOfWorkPort` 或给现有服务贴迁移期限；驱动条件同上方 ports 暂缓条。
+- 新建 Application 服务：继续 `SessionLike` + `session_of` + Repository（与现网一致）。明确只碰 SQLAlchemy API、且不经 Application 用例编排的代码（多在 Infrastructure）可直接标注 `Session`。
+
 **UI 侧已落实的偏好路径：** Studio/Visual/Planning 读路径走对应 API；交付记录与任务进度走 `DeliveryApi` / `JobsApi`；同步导出不直连 `FormalPptxExportService` / `PresentationExportService`。
 
 ### Domain 对象准入

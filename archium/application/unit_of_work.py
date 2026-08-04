@@ -84,6 +84,10 @@ class UnitOfWork:
         self._session.flush()
 
 
+# Call-site union (Session | UnitOfWork): UI/facades may pass ``uow`` without
+# unwrapping ``.session``. Not a persistence port — services still use
+# :func:`session_of` → SQLAlchemy Session → concrete repositories.
+# See ``docs/architecture/current-system.md`` §APP-029.
 SessionLike = Session | UnitOfWork
 
 
@@ -163,7 +167,11 @@ def api_bound(session_or_uow: SessionLike) -> ApiContext:
 
 
 def session_of(session_or_uow: SessionLike) -> Session:
-    """Normalize Session | UnitOfWork to a SQLAlchemy Session (escape hatch)."""
+    """Unwrap ``SessionLike`` to the underlying SQLAlchemy ``Session``.
+
+    Application services use this at the boundary, then talk to concrete
+    repositories. Compatibility only — not a repository/UoW port abstraction.
+    """
     if isinstance(session_or_uow, UnitOfWork):
         return session_or_uow.session
     return session_or_uow
