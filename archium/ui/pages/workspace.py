@@ -208,7 +208,8 @@ def _render_documents(project_id: UUID, *, show_uploader: bool = True) -> None:
                 "文件名": doc.filename,
                 "类型": doc.file_type.value,
                 "状态": doc.processing_status.value,
-                "页数": doc.page_count or "-",
+                # Keep as str so mixed missing/present counts stay Arrow-compatible.
+                "页数": str(doc.page_count) if doc.page_count else "-",
             }
             for doc in documents
         ]
