@@ -36,6 +36,6 @@
 ## 证据
 
 - `evidence/browser-rehearsal-service.json`
-- `evidence/browser-rehearsal-export.pptx`
+- `evidence/browser-rehearsal-export.pptx`（本地生成，已 gitignore，勿提交）
 - `evidence/E1-canvas-selection.png`
 - `evidence/E5-deliver-gate-blocked.png`

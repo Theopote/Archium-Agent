@@ -93,6 +93,9 @@ alerts.log
 
 # Rehearsal runtime copies (fixtures stay; app storage dumps do not)
 docs/rehearsal/sessions/*/storage/
+# Playbook evidence exports — regenerate locally; do not commit
+docs/rehearsal/sessions/*/evidence/*.pptx
+docs/rehearsal/sessions/*/evidence/*.pdf
 
 # Showcase Case packs — large binaries only (manifests / text fixtures stay tracked)
 scripts/showcase/**/outputs/

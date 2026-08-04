@@ -28,7 +28,7 @@ Required files:
 - `session-meta.json` — E0–E5 step pass flags + `overall_pass` + (`deck_page_count` / `worst_slide_id` / `total_session_seconds`)
 - `playbook-e-step-log.csv`
 - `playbook-e-issues.csv` (if any)
-- `evidence/` — local screenshots only; **do not commit** client-sensitive images
+- `evidence/` — local screenshots / exports only; **do not commit** client-sensitive images or `*.pptx` / `*.pdf` exports (gitignored)
 
 Scaffold:
 
@@ -49,7 +49,7 @@ Required files:
 - `session-meta.json` — F1–F7 step pass flags + `overall_pass`
 - `playbook-f-step-log.csv`
 - `playbook-f-issues.csv` (if any)
-- `evidence/` — local screenshots only; **do not commit** client-sensitive images
+- `evidence/` — local screenshots / exports only; **do not commit** client-sensitive images or `*.pptx` / `*.pdf` exports (gitignored)
 
 Scaffold:
 
