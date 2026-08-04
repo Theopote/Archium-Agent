@@ -270,6 +270,9 @@ def test_jobs_api_list_operations_includes_jobs(db_session: Session) -> None:
     assert row.source_kind == "job"
     assert row.status == OperationStatus.QUEUED
     assert row.cancellable is True
+    assert row.started_at is not None
+    assert row.last_activity_at is not None
+    assert row.completed_at is None
 
     """APP-029 surface must include planning/visual/jobs — not only the original ten."""
     api = api_from_session(db_session)

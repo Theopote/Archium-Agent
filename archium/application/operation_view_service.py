@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.job_progress_service import JobProgressService
@@ -24,6 +24,16 @@ _STATUS_MAP = {
 }
 
 
+def _activity_stamp(
+    *,
+    updated_at: datetime | None,
+    completed_at: datetime | None,
+    started_at: datetime | None,
+    created_at: datetime | None,
+) -> datetime | None:
+    return updated_at or completed_at or started_at or created_at
+
+
 def operation_from_job_progress(view: JobProgressView) -> OperationView:
     status = _STATUS_MAP.get(str(view.status).lower(), OperationStatus.RUNNING)
     pct = view.progress_pct
@@ -33,6 +43,10 @@ def operation_from_job_progress(view: JobProgressView) -> OperationView:
         OperationStatus.FAILED,
         OperationStatus.CANCELLED,
     }
+    started_at = view.started_at or view.created_at
+    completed_at = view.completed_at if terminal else None
+    if completed_at is None and terminal:
+        completed_at = view.updated_at
     return OperationView(
         operation_id=view.job_id,
         project_id=view.project_id,
@@ -43,8 +57,15 @@ def operation_from_job_progress(view: JobProgressView) -> OperationView:
         message=view.message,
         cancellable=not terminal and view.kind == JobKind.BACKGROUND,
         retryable=status == OperationStatus.FAILED,
-        started_at=None,
-        completed_at=view.updated_at if terminal else None,
+        started_at=started_at,
+        completed_at=completed_at,
+        last_activity_at=view.last_activity_at()
+        or _activity_stamp(
+            updated_at=view.updated_at,
+            completed_at=completed_at,
+            started_at=started_at,
+            created_at=view.created_at,
+        ),
         source_kind="job",
         detail=dict(view.detail),
     )
@@ -64,6 +85,8 @@ def operation_from_workflow_run(run: WorkflowRun) -> OperationView:
         OperationStatus.FAILED,
         OperationStatus.CANCELLED,
     }
+    started_at = run.created_at
+    completed_at = run.updated_at if terminal else None
     return OperationView(
         operation_id=run.id,
         project_id=run.project_id,
@@ -74,8 +97,14 @@ def operation_from_workflow_run(run: WorkflowRun) -> OperationView:
         message=step,
         cancellable=False,
         retryable=status == OperationStatus.FAILED,
-        started_at=run.created_at,
-        completed_at=run.updated_at if terminal else None,
+        started_at=started_at,
+        completed_at=completed_at,
+        last_activity_at=_activity_stamp(
+            updated_at=run.updated_at,
+            completed_at=completed_at,
+            started_at=started_at,
+            created_at=run.created_at,
+        ),
         source_kind="workflow",
         detail={"errors": list(run.errors or [])},
     )
@@ -104,6 +133,9 @@ class OperationViewService:
             )
         ]
         if not include_workflows:
+            # JobProgressService also surfaces WorkflowRun rows — drop them when
+            # callers only want durable BackgroundJob / ArtifactJob operations.
+            jobs = [item for item in jobs if item.operation_type != JobKind.WORKFLOW.value]
             return jobs[:limit]
         runs = self._runs.list_by_project(project_id)
         workflow_ops = [operation_from_workflow_run(run) for run in runs]
@@ -118,10 +150,12 @@ class OperationViewService:
                     OperationStatus.AWAITING_USER,
                 }
             ]
+        # Prefer workflow-shaped rows; drop JobProgress WORKFLOW duplicates.
+        jobs = [item for item in jobs if item.operation_type != JobKind.WORKFLOW.value]
         merged = jobs + workflow_ops
 
         def _sort_key(item: OperationView) -> tuple[float, str]:
-            stamp = item.completed_at or item.started_at
+            stamp = item.last_activity_at or item.completed_at or item.started_at
             epoch = stamp.timestamp() if stamp is not None else 0.0
             return (epoch, str(item.operation_id))
 

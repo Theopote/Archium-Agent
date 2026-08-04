@@ -35,6 +35,7 @@ class OperationView(DomainModel):
     retryable: bool = False
     started_at: datetime | None = None
     completed_at: datetime | None = None
+    last_activity_at: datetime | None = None
     source_kind: Literal["job", "workflow", "sync"] = "job"
     detail: dict[str, object] = Field(default_factory=dict)
 

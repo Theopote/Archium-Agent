@@ -106,7 +106,19 @@ class JobProgressService:
                     status=run.status.value,
                     progress_pct=_workflow_progress_pct(run.status, state),
                     message=message,
+                    created_at=run.created_at,
+                    started_at=run.created_at,
                     updated_at=run.updated_at,
+                    completed_at=(
+                        run.updated_at
+                        if run.status
+                        in {
+                            WorkflowStatus.COMPLETED,
+                            WorkflowStatus.FAILED,
+                            WorkflowStatus.CANCELLED,
+                        }
+                        else None
+                    ),
                     detail={
                         "presentation_id": (
                             str(run.presentation_id) if run.presentation_id else ""
@@ -135,7 +147,10 @@ class JobProgressService:
                     status=job.status.value,
                     progress_pct=_artifact_progress_pct(job.status),
                     message=(job.message or job.error_message or "")[:200],
+                    created_at=job.created_at,
+                    started_at=job.started_at,
                     updated_at=job.updated_at,
+                    completed_at=job.completed_at,
                     detail={"deliverable_id": job.deliverable_id},
                 )
             )
@@ -160,13 +175,18 @@ class JobProgressService:
                     status=bg_job.status.value,
                     progress_pct=bg_job.progress_pct,
                     message=(bg_job.message or bg_job.error_message or "")[:200],
+                    created_at=bg_job.created_at,
+                    started_at=bg_job.started_at,
                     updated_at=bg_job.updated_at,
+                    completed_at=bg_job.completed_at,
                     detail={"kind": bg_job.kind.value},
                 )
             )
 
         rows.sort(
-            key=lambda item: item.updated_at.timestamp() if item.updated_at else 0.0,
+            key=lambda item: (
+                item.last_activity_at().timestamp() if item.last_activity_at() else 0.0
+            ),
             reverse=True,
         )
         return rows[:limit]
@@ -190,7 +210,19 @@ class JobProgressService:
                 status=run.status.value,
                 progress_pct=_workflow_progress_pct(run.status, state),
                 message=message,
+                created_at=run.created_at,
+                started_at=run.created_at,
                 updated_at=run.updated_at,
+                completed_at=(
+                    run.updated_at
+                    if run.status
+                    in {
+                        WorkflowStatus.COMPLETED,
+                        WorkflowStatus.FAILED,
+                        WorkflowStatus.CANCELLED,
+                    }
+                    else None
+                ),
                 detail={
                     "presentation_id": (
                         str(run.presentation_id) if run.presentation_id else ""
@@ -211,7 +243,10 @@ class JobProgressService:
                 status=artifact.status.value,
                 progress_pct=_artifact_progress_pct(artifact.status),
                 message=(artifact.message or artifact.error_message or "")[:200],
+                created_at=artifact.created_at,
+                started_at=artifact.started_at,
                 updated_at=artifact.updated_at,
+                completed_at=artifact.completed_at,
                 detail={"deliverable_id": artifact.deliverable_id},
             )
         bg_job = self._background.get_by_id(job_id)
@@ -225,7 +260,10 @@ class JobProgressService:
             status=bg_job.status.value,
             progress_pct=bg_job.progress_pct,
             message=(bg_job.message or bg_job.error_message or "")[:200],
+            created_at=bg_job.created_at,
+            started_at=bg_job.started_at,
             updated_at=bg_job.updated_at,
+            completed_at=bg_job.completed_at,
             detail={
                 "kind": bg_job.kind.value,
                 "idempotency_key": bg_job.idempotency_key or "",
