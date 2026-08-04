@@ -110,128 +110,120 @@ def _render_design_system_panel(
 ) -> None:
     """Render the professional design system panel in Studio."""
     from archium.application.design_system_integration import DesignSystemIntegrationService
+    from archium.ui.components.chrome import render_stat_chips
 
-    st.markdown("### 🎨 专业设计系统")
-    st.caption("应用专业模板、优化布局、评估设计质量")
+    st.caption("模板、布局建议与质量评估。按需展开，避免挤占画布注意力。")
 
     with unit_of_work() as uow:
         design_system_service = DesignSystemIntegrationService(uow)
-    
-    # Template selection
-    st.markdown("#### 📋 模板选择")
-    available_templates = design_system_service.get_available_templates()
-    
-    if available_templates:
-        template_options = {t["id"]: f"{t['name']} - {t['type']}" for t in available_templates}
-        selected_template = st.selectbox(
-            "选择专业模板",
-            options=list(template_options.keys()),
-            format_func=lambda x: template_options.get(x, x),
-            key="studio_template_select",
-        )
-        
-        if st.button("应用模板", key="apply_template_btn"):
-            try:
-                template_result = design_system_service.apply_template_to_presentation(
-                    presentation_id,
-                    selected_template,
-                    {"title": "演示文稿", "slides_count": 1},
-                )
-                st.success(f"已应用模板: {template_result['template_name']}")
-            except Exception as e:
-                st.error(f"应用模板失败: {str(e)}")
-    else:
-        st.info("暂无可用模板")
-    
-    st.divider()
-    
-    # Intelligent layout optimization
-    st.markdown("#### 🧠 智能布局优化")
-    
-    if slide_snapshot and slide_snapshot.slide:
-        if st.button("优化当前幻灯片布局", key="optimize_layout_btn"):
-            try:
-                slide_data = {
-                    "id": str(slide_snapshot.slide.id),
-                    "title": slide_snapshot.slide.title,
-                    "body": slide_snapshot.slide.body,
-                }
-                
-                layout_result = design_system_service.optimize_slide_layout(slide_data)
-                
-                st.success(f"推荐布局: {layout_result['recommended_layout']}")
-                st.metric("布局评分", f"{layout_result['layout_score']:.1f}/100")
-                
-                with st.expander("布局详情"):
-                    st.json(layout_result["layout_details"])
-            except Exception as e:
-                st.error(f"布局优化失败: {str(e)}")
-    else:
-        st.info("请先选择幻灯片以进行布局优化")
-    
-    st.divider()
-    
-    # Design quality assessment
-    st.markdown("#### 📊 设计质量评估")
-    
-    if st.button("评估当前幻灯片质量", key="assess_quality_btn"):
-        if slide_snapshot and slide_snapshot.slide:
-            try:
-                slide_data = [{
-                    "id": str(slide_snapshot.slide.id),
-                    "title": slide_snapshot.slide.title,
-                    "body": slide_snapshot.slide.body,
-                }]
-                
-                quality_result = design_system_service.assess_presentation_quality(
-                    presentation_id,
-                    slide_data,
-                )
-                
-                summary = quality_result["summary"]
-                
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("总体评分", f"{summary['average_score']}/100")
-                with col2:
-                    st.metric("质量等级", summary['overall_level'].upper())
-                with col3:
-                    needs_review = len(summary.get('needs_review', []))
-                    st.metric("需要改进", needs_review)
-                
-                if summary.get('priority_improvements'):
-                    st.markdown("**优先改进建议:**")
-                    for i, improvement in enumerate(summary['priority_improvements'][:3], 1):
-                        st.markdown(f"{i}. {improvement}")
-            except Exception as e:
-                st.error(f"质量评估失败: {str(e)}")
+
+    with st.expander("模板", expanded=True):
+        available_templates = design_system_service.get_available_templates()
+        if available_templates:
+            template_options = {
+                t["id"]: f"{t['name']} - {t['type']}" for t in available_templates
+            }
+            selected_template = st.selectbox(
+                "选择专业模板",
+                options=list(template_options.keys()),
+                format_func=lambda x: template_options.get(x, x),
+                key="studio_template_select",
+            )
+            if st.button("应用模板", key="apply_template_btn", width="stretch"):
+                try:
+                    template_result = design_system_service.apply_template_to_presentation(
+                        presentation_id,
+                        selected_template,
+                        {"title": "演示文稿", "slides_count": 1},
+                    )
+                    st.success(f"已应用模板: {template_result['template_name']}")
+                except Exception as e:
+                    st.error(f"应用模板失败: {str(e)}")
         else:
-            st.warning("请先选择幻灯片以进行质量评估")
-    
-    st.divider()
-    
-    # Visual elements library
-    st.markdown("#### 🎨 视觉元素库")
-    
-    search_query = st.text_input("搜索图标、图表等", key="visual_elements_search")
-    
-    if search_query:
-        try:
-            results = design_system_service.search_visual_elements(search_query)
-            if results:
-                st.markdown(f"找到 {len(results)} 个元素")
-                for element in results[:5]:
-                    with st.container():
-                        col1, col2 = st.columns([1, 3])
-                        with col1:
-                            st.markdown("🎨")
-                        with col2:
-                            st.markdown(f"**{element['name']}**")
-                            st.caption(f"{element['type']} - {element.get('description', '')}")
+            st.info("暂无可用模板")
+
+    with st.expander("布局优化", expanded=False):
+        if slide_snapshot and slide_snapshot.slide:
+            if st.button("优化当前幻灯片布局", key="optimize_layout_btn", width="stretch"):
+                try:
+                    slide_data = {
+                        "id": str(slide_snapshot.slide.id),
+                        "title": slide_snapshot.slide.title,
+                        "body": slide_snapshot.slide.body,
+                    }
+                    layout_result = design_system_service.optimize_slide_layout(slide_data)
+                    st.success(f"推荐布局: {layout_result['recommended_layout']}")
+                    render_stat_chips(
+                        [
+                            (
+                                "布局评分",
+                                f"{layout_result['layout_score']:.1f}/100",
+                                "info",
+                            )
+                        ]
+                    )
+                    with st.expander("布局详情", expanded=False):
+                        st.json(layout_result["layout_details"])
+                except Exception as e:
+                    st.error(f"布局优化失败: {str(e)}")
+        else:
+            st.info("请先选择幻灯片以进行布局优化")
+
+    with st.expander("质量评估", expanded=False):
+        if st.button("评估当前幻灯片质量", key="assess_quality_btn", width="stretch"):
+            if slide_snapshot and slide_snapshot.slide:
+                try:
+                    slide_data = [
+                        {
+                            "id": str(slide_snapshot.slide.id),
+                            "title": slide_snapshot.slide.title,
+                            "body": slide_snapshot.slide.body,
+                        }
+                    ]
+                    quality_result = design_system_service.assess_presentation_quality(
+                        presentation_id,
+                        slide_data,
+                    )
+                    summary = quality_result["summary"]
+                    needs_review = len(summary.get("needs_review", []))
+                    render_stat_chips(
+                        [
+                            ("总体评分", f"{summary['average_score']}/100", "info"),
+                            ("质量等级", str(summary["overall_level"]).upper(), "neutral"),
+                            (
+                                "需要改进",
+                                str(needs_review),
+                                "warn" if needs_review else "ok",
+                            ),
+                        ]
+                    )
+                    if summary.get("priority_improvements"):
+                        st.markdown("**优先改进建议**")
+                        for i, improvement in enumerate(
+                            summary["priority_improvements"][:3], 1
+                        ):
+                            st.markdown(f"{i}. {improvement}")
+                except Exception as e:
+                    st.error(f"质量评估失败: {str(e)}")
             else:
-                st.info("未找到匹配元素")
-        except Exception as e:
-            st.error(f"搜索失败: {str(e)}")
+                st.warning("请先选择幻灯片以进行质量评估")
+
+    with st.expander("视觉元素库", expanded=False):
+        search_query = st.text_input("搜索图标、图表等", key="visual_elements_search")
+        if search_query:
+            try:
+                results = design_system_service.search_visual_elements(search_query)
+                if results:
+                    st.caption(f"找到 {len(results)} 个元素")
+                    for element in results[:5]:
+                        st.markdown(f"**{element['name']}**")
+                        st.caption(
+                            f"{element['type']} - {element.get('description', '')}"
+                        )
+                else:
+                    st.info("未找到匹配元素")
+            except Exception as e:
+                st.error(f"搜索失败: {str(e)}")
 
 
 _INSPECTOR_TABS = ("属性", "布局", "内容", "修改", "评论", "风格", "设计系统", "检查")
@@ -285,7 +277,6 @@ def _render_inspector_tabs(
 
     active = _select_inspector_tab()
     if active == "属性":
-        render_inspector_section("属性")
         render_slide_properties(
             slide_snapshot=slide_snapshot,
             advanced=advanced,
@@ -293,15 +284,12 @@ def _render_inspector_tabs(
         )
         return
     if active == "布局":
-        render_inspector_section("布局")
         render_layout_candidates_panel(slide_snapshot=slide_snapshot, advanced=advanced)
         return
     if active == "内容":
-        render_inspector_section("内容")
         render_content_adaptation_panel(slide_snapshot=slide_snapshot)
         return
     if active == "修改":
-        render_inspector_section("修改与提案")
         render_ai_workspace(
             slide_snapshot=slide_snapshot,
             presentation_id=presentation_id,
@@ -311,7 +299,6 @@ def _render_inspector_tabs(
     if active == "评论":
         from archium.ui.studio.comment_inbox_panel import render_comment_inbox
 
-        render_inspector_section("评论 Inbox")
         render_comment_inbox(
             presentation_id=presentation_id,
             slide_snapshot=slide_snapshot,
@@ -320,16 +307,16 @@ def _render_inspector_tabs(
     if active == "风格":
         from archium.ui.studio.deck_theme_panel import render_deck_theme_panel
 
-        render_inspector_section("汇报气质")
-        _render_studio_art_direction(project_id=project_id, presentation_id=presentation_id)
-        st.divider()
-        render_inspector_section("全稿风格")
-        render_deck_theme_panel(
-            presentation_id=presentation_id,
-        )
+        render_inspector_section("风格", "汇报气质与全稿主题")
+        with st.expander("汇报气质", expanded=True):
+            _render_studio_art_direction(
+                project_id=project_id, presentation_id=presentation_id
+            )
+        with st.expander("全稿风格", expanded=False):
+            render_deck_theme_panel(presentation_id=presentation_id)
         return
     if active == "设计系统":
-        render_inspector_section("专业设计系统")
+        render_inspector_section("设计系统")
         _render_design_system_panel(
             project_id=project_id,
             presentation_id=presentation_id,
@@ -339,16 +326,14 @@ def _render_inspector_tabs(
 
     render_inspector_section(
         "检查",
-        "自动安全修复可静默应用；其余归入修改建议，需确认。",
+        "安全修复可自动应用；其余修改建议需确认。",
     )
-    st.markdown("`安全修复 · 可自动应用`　　`AI / QA 修改 · 需确认`")
     render_deferred_scene_repair_panel(slide_snapshot=slide_snapshot)
-    st.divider()
-    render_inspector_section("人工复核")
-    render_human_review_panel(
-        presentation_id=presentation_id,
-        slide_snapshot=slide_snapshot,
-    )
+    with st.expander("人工复核", expanded=False):
+        render_human_review_panel(
+            presentation_id=presentation_id,
+            slide_snapshot=slide_snapshot,
+        )
 
 
 def _render_view_controls(*, compact: bool = False) -> None:
@@ -657,7 +642,7 @@ def _render_partner_right_rail(
     render_design_assistant_panel(slide_snapshot=slide_snapshot)
     expanded = bool(st.session_state.get("studio_inspector_expanded", False))
     inspector = st.expander(
-        "检查器（属性 / 布局 / 内容 / 修改…）",
+        "检查器",
         expanded=expanded,
         on_change="rerun",
     )

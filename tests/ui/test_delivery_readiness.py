@@ -133,5 +133,5 @@ def test_delivery_records_survive_new_session(
 
 def test_deliver_page_reads_delivery_record_service() -> None:
     text = DELIVER.read_text(encoding="utf-8")
-    assert "DeliveryRecordService" in text
     assert "list_for_presentation" in text
+    assert "api.delivery" in text

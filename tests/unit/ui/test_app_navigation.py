@@ -61,7 +61,7 @@ def test_build_app_pages_registers_four_sections_and_hidden_keys() -> None:
     }
     assert len(sections[PROJECT_SECTION]) == 5
     assert len(sections[MAKE_SECTION]) == 6  # 5 stages + legacy studio redirect
-    assert len(sections[RESOURCE_SECTION]) == 4  # 2 visible + 2 hidden template tools
+    assert len(sections[RESOURCE_SECTION]) == 5  # tool hub + library + recovery + 2 hidden templates
     assert len(sections[SYSTEM_SECTION]) == 2  # settings + hidden workspace
 
     # Stage titles come from product_flow (st.Page.title needs ScriptRunContext).
@@ -187,15 +187,14 @@ def test_home_is_project_cockpit_not_welcome_wall() -> None:
     assert "总体进度" in text
     assert "待处理问题" in text
     assert "最近版本" in text
-    assert "五阶段说明（首次使用）" in text
     assert "list_recent_project_snapshots" in text
     assert "_render_project_cockpit" in text
     assert "_render_project_details" in text
     assert 'on_change="rerun"' in text
     assert "if details.open:" in text
-    assert 'st.metric("当前阶段"' in text
-    assert 'st.metric("待完成页面"' in text
-    assert 'st.metric("交付状态"' in text
+    assert "render_stat_chips" in text
+    assert "待完成页面" in text
+    assert "交付状态" in text
 
 
 def test_sidebar_uses_project_progress_not_module_status() -> None:
@@ -235,10 +234,11 @@ def test_materials_stage_uses_four_tabs() -> None:
     assert "load_materials_summary" in text
     assert "更多工具" in text
     assert "上传资料" in text
-    assert "个文件" in text
-    assert "条事实" in text
-    assert "项素材" in text
-    assert "个待确认问题" in text
+    assert "render_stat_chips" in text
+    assert '("文件"' in text
+    assert '("事实"' in text
+    assert '("素材"' in text
+    assert '("待确认"' in text
 
 
 def test_outline_default_does_not_embed_mission_unconditionally() -> None:
@@ -338,7 +338,7 @@ def test_studio_inspector_uses_lazy_tabs_with_ai_workspace() -> None:
     studio_src = Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "studio.py"
     text = studio_src.read_text(encoding="utf-8")
     assert "_INSPECTOR_TABS" in text
-    assert '("属性", "布局", "内容", "修改", "评论", "风格", "检查")' in text
+    assert '("属性", "布局", "内容", "修改", "评论", "风格", "设计系统", "检查")' in text
     assert "def _render_inspector_tabs" in text
     assert "_select_inspector_tab" in text
     assert "st.tabs(" not in text

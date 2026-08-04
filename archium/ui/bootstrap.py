@@ -8,9 +8,10 @@ ARCHIUM_CSS = """
 <style>
 :root {
     --archium-ink: #1a1a1a;
-    --archium-muted: #8a8780;
-    --archium-line: #e8e6e1;
-    --archium-surface: #f7f6f3;
+    --archium-muted: #6f6c64;
+    --archium-line: #c9c4b8;
+    --archium-control-border: #b5b0a4;
+    --archium-surface: #f0eee8;
     --archium-surface-raised: #ffffff;
     --archium-accent: #2c2a26;
     --archium-accent-hover: #1a1a1a;
@@ -40,7 +41,7 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stText, .stCaption {
 
 /* —— Sidebar —— */
 [data-testid="stSidebar"] {
-    background-color: var(--archium-surface);
+    background-color: #e9e6df;
     border-right: 1px solid var(--archium-line);
 }
 [data-testid="stSidebar"] .block-container {
@@ -117,9 +118,10 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stText, .stCaption {
 
 /* —— Panel / card —— */
 [data-testid="stVerticalBlockBorderWrapper"] {
-    background: var(--archium-surface-raised);
-    border-color: var(--archium-line) !important;
+    background: var(--archium-surface-raised) !important;
+    border: 1px solid var(--archium-line) !important;
     border-radius: var(--archium-radius) !important;
+    box-shadow: 0 1px 0 rgba(44, 42, 38, 0.04);
 }
 .archium-panel-title {
     font-size: 0.78rem;
@@ -210,7 +212,7 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stText, .stCaption {
     align-items: center;
     justify-content: space-between;
     padding: 0.55rem 0;
-    border-bottom: 1px solid #eceae4;
+    border-bottom: 1px solid var(--archium-line);
     font-size: 0.85rem;
 }
 .status-dot {
@@ -220,9 +222,103 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stText, .stCaption {
     display: inline-block;
     margin-right: 6px;
 }
-.dot-green  { background: #4a9e6e; box-shadow: 0 0 6px #4a9e6e88; }
-.dot-yellow { background: #c4a035; box-shadow: 0 0 6px #c4a03588; }
-.dot-red    { background: #c45c5c; box-shadow: 0 0 6px #c45c5c88; }
+.dot-green  { background: #4a9e6e; }
+.dot-yellow { background: #c4a035; }
+.dot-red    { background: #c45c5c; }
+
+/* —— App canvas —— */
+.stApp {
+    background: var(--archium-surface);
+}
+.stApp [data-testid="stAppViewContainer"] > .main {
+    background: var(--archium-surface);
+}
+.block-container {
+    padding-top: 1.75rem;
+    padding-bottom: 3rem;
+}
+
+.archium-stat-chip-row,
+.archium-status-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0.35rem 0 0.65rem 0;
+}
+.archium-stat-chip {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.08rem;
+    min-width: 5.5rem;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid var(--archium-line);
+    border-radius: var(--archium-radius);
+    background: var(--archium-surface-raised);
+}
+.archium-stat-chip-label {
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--archium-muted);
+}
+.archium-stat-chip-value {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--archium-ink);
+    line-height: 1.25;
+}
+.archium-stat-chip-ok { border-color: var(--archium-ok-border); background: var(--archium-ok-bg); }
+.archium-stat-chip-ok .archium-stat-chip-value { color: var(--archium-ok); }
+.archium-stat-chip-warn { border-color: var(--archium-warn-border); background: var(--archium-warn-bg); }
+.archium-stat-chip-warn .archium-stat-chip-value { color: var(--archium-warn); }
+.archium-stat-chip-error { border-color: var(--archium-error-border); background: var(--archium-error-bg); }
+.archium-stat-chip-error .archium-stat-chip-value { color: var(--archium-error); }
+.archium-stat-chip-info { border-color: var(--archium-info-border); background: var(--archium-info-bg); }
+.archium-stat-chip-info .archium-stat-chip-value { color: var(--archium-info); }
+
+.archium-home-hero {
+    margin: 0 0 1.1rem 0;
+}
+.archium-home-hero-title {
+    font-family: var(--archium-font-serif);
+    font-size: 1.65rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    margin: 0 0 0.25rem 0;
+    color: var(--archium-ink);
+}
+.archium-home-hero-caption {
+    margin: 0;
+    color: var(--archium-muted);
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+.archium-task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0.35rem 0 0.85rem 0;
+    border-top: 1px solid var(--archium-line);
+}
+.archium-task-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--archium-line);
+}
+.archium-task-row-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--archium-ink);
+}
+.archium-task-row-caption {
+    font-size: 0.82rem;
+    color: var(--archium-muted);
+    margin-top: 0.15rem;
+}
 
 .status-chip {
     display: inline-flex;
@@ -316,7 +412,7 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stText, .stCaption {
     justify-content: space-between;
     gap: 0.5rem;
     padding: 0.15rem 0;
-    border-bottom: 1px solid #eceae4;
+    border-bottom: 1px solid var(--archium-line);
     font-size: 0.84rem;
 }
 .delivery-check-detail {
@@ -365,12 +461,36 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stText, .stCaption {
     color: var(--archium-muted);
 }
 
+
+.archium-sidebar-project {
+    margin: 0 0 0.45rem 0;
+}
+.archium-sidebar-project-name {
+    font-family: var(--archium-font-serif);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--archium-ink);
+    line-height: 1.3;
+}
+.archium-sidebar-project-summary {
+    margin-top: 0.2rem;
+    font-size: 0.78rem;
+    color: var(--archium-muted);
+    line-height: 1.4;
+}
+.archium-sidebar-footer {
+    margin-top: 2rem;
+    font-size: 0.72rem;
+    color: #bbb9b2;
+    line-height: 1.6;
+}
+
 .section-label {
     font-size: 0.68rem;
     font-weight: 500;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: #aaa8a2;
+    color: #7a776f;
     margin: 1.5rem 0 0.6rem 0;
 }
 
@@ -378,18 +498,18 @@ html, body, [class*="css"], .stApp, .stMarkdown, .stText, .stCaption {
 div.stButton > button,
 button[data-testid="baseButton-secondary"],
 button[kind="secondary"] {
-    border: 1px solid var(--archium-line) !important;
+    border: 1px solid var(--archium-control-border) !important;
     background: var(--archium-surface-raised) !important;
     color: var(--archium-ink) !important;
     border-radius: var(--archium-radius) !important;
     font-family: var(--archium-font-sans) !important;
     font-size: 0.86rem !important;
     letter-spacing: 0.02em;
-    box-shadow: none !important;
+    box-shadow: 0 1px 0 rgba(44, 42, 38, 0.05) !important;
 }
 div.stButton > button:hover {
-    border-color: #cfcabe !important;
-    background: var(--archium-surface) !important;
+    border-color: #8f8a7e !important;
+    background: #fafaf7 !important;
 }
 button[data-testid="baseButton-primary"],
 button[kind="primary"],
@@ -399,6 +519,7 @@ div.stButton > button[kind="primary"] {
     color: #fafaf8 !important;
     border-radius: var(--archium-radius) !important;
     font-weight: 500 !important;
+    box-shadow: none !important;
 }
 button[data-testid="baseButton-primary"]:hover,
 button[kind="primary"]:hover {
@@ -412,8 +533,8 @@ button[kind="primary"]:hover {
 }
 
 .stDownloadButton button {
-    border: 1px solid var(--archium-ink) !important;
-    background: transparent !important;
+    border: 1px solid var(--archium-control-border) !important;
+    background: var(--archium-surface-raised) !important;
     color: var(--archium-ink) !important;
     border-radius: var(--archium-radius) !important;
     font-size: 0.8rem !important;
@@ -422,47 +543,111 @@ button[kind="primary"]:hover {
 
 /* —— Inputs / tables / dialogs —— */
 div[data-testid="stTextInput"] input,
+div[data-testid="stNumberInput"] input,
+div[data-testid="stDateInput"] input,
 div[data-testid="stTextArea"] textarea,
 div[data-testid="stSelectbox"] > div,
-div[data-baseweb="select"] > div {
+div[data-testid="stMultiSelect"] > div,
+div[data-baseweb="select"] > div,
+div[data-testid="stTimeInput"] input {
+    border-radius: var(--archium-radius) !important;
+    border: 1px solid var(--archium-control-border) !important;
+    background: var(--archium-surface-raised) !important;
+    color: var(--archium-ink) !important;
+    box-shadow: none !important;
+}
+div[data-testid="stTextInput"] input:focus,
+div[data-testid="stNumberInput"] input:focus,
+div[data-testid="stTextArea"] textarea:focus,
+div[data-baseweb="select"] > div:focus-within {
+    border-color: var(--archium-ink) !important;
+    outline: 1px solid rgba(44, 42, 38, 0.18) !important;
+}
+[data-testid="stFileUploader"] section,
+[data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"] {
+    border: 1px dashed var(--archium-control-border) !important;
+    background: var(--archium-surface-raised) !important;
     border-radius: var(--archium-radius) !important;
 }
 [data-testid="stDataFrame"],
 [data-testid="stTable"] {
     border: 1px solid var(--archium-line);
     border-radius: var(--archium-radius);
+    background: var(--archium-surface-raised);
 }
 div[data-testid="stDialog"],
 div[role="dialog"] {
     border-radius: var(--archium-radius) !important;
     border: 1px solid var(--archium-line) !important;
+    background: var(--archium-surface-raised) !important;
 }
 div[data-testid="stPopoverBody"] {
     border-radius: var(--archium-radius) !important;
     border: 1px solid var(--archium-line) !important;
+    background: var(--archium-surface-raised) !important;
+}
+
+/* —— Tabs / pills / segmented —— */
+button[data-baseweb="tab"] {
+    color: var(--archium-muted) !important;
+}
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: var(--archium-ink) !important;
+    border-bottom-color: var(--archium-ink) !important;
+}
+div[data-testid="stSegmentedControl"] > div,
+div[data-testid="stPills"] {
+    background: var(--archium-surface-raised) !important;
+    border: 1px solid var(--archium-line) !important;
+    border-radius: var(--archium-radius) !important;
+    padding: 0.15rem !important;
 }
 
 /* —— Chat —— */
 [data-testid="stChatMessage"] {
-    border-bottom: 1px solid #f0eeea;
+    border-bottom: 1px solid var(--archium-line);
     padding-bottom: 1rem;
 }
 div[data-testid="stChatInput"] textarea {
-    border: 1px solid #ddd9d0 !important;
+    border: 1px solid var(--archium-control-border) !important;
     border-radius: var(--archium-radius) !important;
-    background: #fafaf8 !important;
+    background: var(--archium-surface-raised) !important;
 }
 
-/* —— Metrics / expanders —— */
+/* —— Metrics (legacy) / expanders —— */
 [data-testid="stMetric"] {
-    background: var(--archium-surface);
+    background: var(--archium-surface-raised);
     border: 1px solid var(--archium-line);
     border-radius: var(--archium-radius);
-    padding: 0.35rem 0.55rem;
+    padding: 0.45rem 0.6rem;
+}
+[data-testid="stMetricLabel"] {
+    color: var(--archium-muted) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.7rem !important;
+}
+[data-testid="stMetricValue"] {
+    font-family: var(--archium-font-serif) !important;
+    font-size: 1.15rem !important;
+    color: var(--archium-ink) !important;
 }
 [data-testid="stExpander"] {
-    border-color: var(--archium-line) !important;
+    border: 1px solid var(--archium-line) !important;
     border-radius: var(--archium-radius) !important;
+    background: var(--archium-surface-raised) !important;
+}
+[data-testid="stExpander"] details {
+    background: var(--archium-surface-raised) !important;
+}
+
+/* —— Stat chips sit clearly on cream —— */
+.archium-stat-chip {
+    border-color: var(--archium-control-border) !important;
+    box-shadow: 0 1px 0 rgba(44, 42, 38, 0.04);
+}
+.status-chip {
+    box-shadow: 0 1px 0 rgba(44, 42, 38, 0.03);
 }
 
 /* —— Selected / focus —— */

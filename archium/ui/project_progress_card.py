@@ -542,6 +542,8 @@ def continue_work_page_key(snapshot: ProjectProgressSnapshot) -> str:
 
 def render_project_progress_card() -> None:
     """User-facing current project / progress summary for the sidebar."""
+    import html as _html
+
     st.markdown('<div class="section-label">当前项目</div>', unsafe_allow_html=True)
     try:
         snapshot = load_project_progress_snapshot()
@@ -563,8 +565,13 @@ def render_project_progress_card() -> None:
         )
         return
 
-    st.markdown(f"**{snapshot.project_name}**")
-    st.caption(snapshot.narrative_summary)
+    st.markdown(
+        f'<div class="archium-sidebar-project">'
+        f'<div class="archium-sidebar-project-name">{_html.escape(snapshot.project_name)}</div>'
+        f'<div class="archium-sidebar-project-summary">{_html.escape(snapshot.narrative_summary)}</div>'
+        f"</div>",
+        unsafe_allow_html=True,
+    )
     meta_bits = []
     if snapshot.presentation_title:
         meta_bits.append(snapshot.presentation_title)

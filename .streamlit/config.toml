@@ -1,0 +1,27 @@
+# Archium Streamlit theme — keep in sync with archium/ui/bootstrap.py :root tokens.
+[theme]
+base = "light"
+primaryColor = "#2c2a26"
+backgroundColor = "#f0eee8"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#1a1a1a"
+font = "sans serif"
+borderColor = "#c9c4b8"
+showWidgetBorder = true
+baseRadius = "none"
+buttonRadius = "none"
+linkColor = "#3d5a80"
+codeBackgroundColor = "#e4e0d7"
+
+[theme.sidebar]
+backgroundColor = "#e9e6df"
+secondaryBackgroundColor = "#ffffff"
+borderColor = "#c9c4b8"
+
+[client]
+toolbarMode = "minimal"
+showSidebarNavigation = true
+
+[server]
+# Prefer headless local runs; CI smoke sets its own flags.
+headless = false

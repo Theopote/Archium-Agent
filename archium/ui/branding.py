@@ -32,7 +32,7 @@ def render_version_footer() -> None:
     import streamlit as st
 
     st.markdown(
-        '<div style="margin-top:2rem;font-size:0.72rem;color:#bbb9b2;line-height:1.6;">'
+        f'<div class="archium-sidebar-footer">'
         f"{DISPLAY_VERSION}<br>{SIDEBAR_VALUE_HINT}"
         "</div>",
         unsafe_allow_html=True,

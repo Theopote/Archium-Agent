@@ -616,7 +616,7 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
 
     preview = st.session_state.get(f"{key_prefix}_direction_request_preview")
     if preview is not None:
-        with st.expander("汇报请求预览（设计迭代）", expanded=True):
+        with st.expander("汇报请求预览（设计迭代）", expanded=False):
             st.write(f"- 标题：{preview.title}")
             st.write(f"- 目的：{preview.purpose}")
             st.write(f"- 核心信息：{preview.core_message}")
@@ -809,7 +809,7 @@ def _render_research_vision_seeds(mission: ProjectMission, *, key_prefix: str) -
     if not bundles:
         return
 
-    with st.expander(f"Research→Vision 视觉种子（{len(bundles)}）", expanded=True):
+    with st.expander(f"Research→Vision 视觉种子（{len(bundles)}）", expanded=False):
         st.caption("示意种子，非证据图。可写入尚未有 visual_prompt 的概念方向。")
         for bundle in bundles[:4]:
             st.markdown(f"**{bundle.topic or '研究洞察'}**")
@@ -846,12 +846,10 @@ def _render_research_vision_seeds(mission: ProjectMission, *, key_prefix: str) -
 
 def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission") -> None:
     """Render structured mission understanding with per-field editing."""
-    st.markdown("#### 我对任务的理解")
-    st.caption(
-        f"{mission.title} · v{mission.version} · "
-        "任务定义（实时未知/把握度见下方知识状态）"
-    )
-    st.caption("可纠正 AI 对任务性质、服务深度、利益相关方等关键分类，避免误判无法回改。")
+    from archium.ui.components.chrome import render_page_header
+
+    render_page_header("我对任务的理解", f"{mission.title} · v{mission.version}")
+    st.caption("可纠正任务性质、服务深度、利益相关方等关键分类，避免误判无法回改。")
 
     _render_knowledge_state_summary(mission.project_id)
 
@@ -887,7 +885,7 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
             render_spatial_design_layer(
                 spatial_intent=intent.spatial_intent,
                 design_rules=intent.design_rules,
-                expanded=True,
+                expanded=False,
             )
             _render_concept_direction_section(mission, key_prefix=key_prefix)
             if research_topics:
@@ -896,7 +894,7 @@ def render_mission_panel(mission: ProjectMission, *, key_prefix: str = "mission"
         with st.expander("概念方向草稿", expanded=False):
             _render_concept_direction_section(mission, key_prefix=key_prefix)
         if research_topics:
-            with st.expander("自主研究", expanded=True):
+            with st.expander("自主研究", expanded=False):
                 _render_autonomous_research_section(mission, key_prefix=key_prefix)
 
     narrative_suggestion = suggest_narrative_mode(mission)

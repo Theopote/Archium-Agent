@@ -150,6 +150,7 @@ def _render_readiness(context: StudioPresentationContext) -> None:
         warn_count = int(deck_qa_report.get("warning_count") or 0)
 
     from archium.application.export_gate import resolve_export_verdict_safe
+    from archium.ui.components.chrome import render_stat_chips
     from archium.ui.components.critique_summary_panel import (
         render_design_critique_card,
         render_presentation_critique_card,
@@ -189,16 +190,19 @@ def _render_readiness(context: StudioPresentationContext) -> None:
     with st.container(border=True):
         st.markdown(f"**{title}**")
         notice(f"{detail} {verdict.partner_summary()}", icon=icon)
-        with st.container(horizontal=True):
-            ready = (
-                f"{context.layout_ready_count}/{context.slide_count}"
-                if context.slide_count
-                else "0/0"
-            )
-            st.metric("页面就绪", ready, border=True)
-            st.metric("待完成", pending, border=True)
-            st.metric("阻塞", blockers, border=True)
-            st.metric("提醒", warnings, border=True)
+        ready = (
+            f"{context.layout_ready_count}/{context.slide_count}"
+            if context.slide_count
+            else "0/0"
+        )
+        render_stat_chips(
+            [
+                ("页面就绪", ready, "ok" if pending == 0 else "info"),
+                ("待完成", str(pending), "warn" if pending else "ok"),
+                ("阻塞", str(blockers), "error" if blockers else "ok"),
+                ("提醒", str(warnings), "warn" if warnings else "neutral"),
+            ]
+        )
         st.caption(
             ("PPTX 可导出" if verdict.pptx_ready else "PPTX 未就绪")
             + " · "

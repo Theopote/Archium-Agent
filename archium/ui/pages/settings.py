@@ -116,8 +116,17 @@ def _resolve_api_key_for_action(
 
 
 def render() -> None:
-    st.markdown("### AI 服务")
-    st.caption("配置 LLM 服务商、API Key 与模型。密钥优先保存在本机操作系统凭据库，不会写入项目数据库。")
+    from archium.ui.components.chrome import (
+        render_page_header,
+        render_section_label,
+        render_status_chip_row,
+    )
+
+    render_page_header(
+        "设置",
+        "AI 服务、联网研究与搜图。密钥优先保存在本机凭据库，不会写入项目数据库。",
+    )
+    render_section_label("AI 服务")
 
     profile, credential_status = _load_profile_and_status()
 
@@ -164,15 +173,19 @@ def render() -> None:
         horizontal=True,
     )
 
-    st.markdown(
-        f"**当前密钥来源：** {_SOURCE_LABELS[credential_status.source]}"
-        + (f"（{credential_status.masked_hint}）" if credential_status.masked_hint else "")
+    source_tone = "ok" if credential_status.configured else "warn"
+    hint = credential_status.masked_hint or "未配置"
+    render_status_chip_row(
+        [
+            (f"密钥 · {_SOURCE_LABELS[credential_status.source]}", source_tone),
+            (hint, "neutral" if credential_status.configured else "warn"),
+        ]
     )
 
     test_col, save_col, delete_col = st.columns(3)
-    test_clicked = test_col.button("测试连接", type="secondary", use_container_width=True)
-    save_clicked = save_col.button("保存配置", type="primary", use_container_width=True)
-    delete_clicked = delete_col.button("删除密钥", use_container_width=True)
+    test_clicked = test_col.button("测试连接", type="secondary", width="stretch")
+    save_clicked = save_col.button("保存配置", type="primary", width="stretch")
+    delete_clicked = delete_col.button("删除密钥", width="stretch")
 
     draft_profile = profile.model_copy(
         update={
@@ -256,15 +269,18 @@ def render() -> None:
         st.warning("尚未配置可用的 LLM API Key。可在此页面配置，或在 `.env` 中设置 `GEMINI_API_KEY`。")
 
     st.divider()
-    _render_model_role_mapping(draft_profile)
-    st.divider()
-    _render_system_diagnostics()
-    st.divider()
-    _render_about()
-    st.divider()
-    _render_web_research_settings()
-    st.divider()
-    _render_image_search_settings()
+    with st.expander("联网研究", expanded=False):
+        _render_web_research_settings()
+    with st.expander("网络搜图", expanded=False):
+        _render_image_search_settings()
+    with st.expander("高级：模型角色映射", expanded=False):
+        _render_model_role_mapping(draft_profile)
+    with st.expander("系统诊断", expanded=False):
+        _render_system_diagnostics()
+    with st.expander("关于 Archium", expanded=False):
+        _render_about()
+    with st.expander("开发者与验收（研发专用）", expanded=False):
+        _render_developer_acceptance()
 
 
 def _render_model_role_mapping(draft_profile: LLMProfile) -> None:
@@ -276,7 +292,6 @@ def _render_model_role_mapping(draft_profile: LLMProfile) -> None:
         model_profile_from_llm_profile,
     )
 
-    st.markdown("### 高级：模型角色映射")
     st.caption(
         "日常生成使用上方默认 LLM 配置。"
         "可选角色（OCR、图像生成等）未配置时不影响普通生成流程。"
@@ -342,7 +357,6 @@ def _render_model_role_mapping(draft_profile: LLMProfile) -> None:
 def _render_system_diagnostics() -> None:
     from archium.ui.system_diagnostics import render_system_diagnostics
 
-    st.markdown("### 系统诊断")
     st.caption("运行依赖与导出工具状态。日常进度请看侧栏「当前项目」。")
     render_system_diagnostics()
 
@@ -362,7 +376,6 @@ def _render_web_research_settings() -> None:
         tavily_credential_status,
     )
 
-    st.markdown("### 联网研究")
     st.caption(
         "任务理解中的「启动自主研究」会先检索公开网页，再基于真实摘要生成知识条目。"
         "概念探索项目在分析任务后会自动触发（可关闭）。"
@@ -417,8 +430,8 @@ def _render_web_research_settings() -> None:
     )
 
     save_col, delete_col = st.columns(2)
-    save_clicked = save_col.button("保存联网研究配置", type="primary", use_container_width=True)
-    delete_clicked = delete_col.button("删除 Tavily 密钥", use_container_width=True)
+    save_clicked = save_col.button("保存联网研究配置", type="primary", width="stretch")
+    delete_clicked = delete_col.button("删除 Tavily 密钥", width="stretch")
 
     if save_clicked:
         with unit_of_work() as uow:
@@ -462,7 +475,6 @@ def _render_image_search_settings() -> None:
         unsplash_credential_status,
     )
 
-    st.markdown("### 网络搜图")
     st.caption(
         "导出 PPTX 时，若项目素材缺失，可为效果图/现场照片/参考案例页自动检索授权图。"
         "不会用于总平、平面图等需精确标注的图纸类型。"
@@ -521,9 +533,9 @@ def _render_image_search_settings() -> None:
     )
 
     save_col, delete_pexels_col, delete_unsplash_col = st.columns(3)
-    save_clicked = save_col.button("保存搜图配置", type="primary", use_container_width=True)
-    delete_pexels_clicked = delete_pexels_col.button("删除 Pexels 密钥", use_container_width=True)
-    delete_unsplash_clicked = delete_unsplash_col.button("删除 Unsplash 密钥", use_container_width=True)
+    save_clicked = save_col.button("保存搜图配置", type="primary", width="stretch")
+    delete_pexels_clicked = delete_pexels_col.button("删除 Pexels 密钥", width="stretch")
+    delete_unsplash_clicked = delete_unsplash_col.button("删除 Unsplash 密钥", width="stretch")
 
     if save_clicked:
         if not pexels_configured and not unsplash_configured and not pexels_key_input.strip() and not unsplash_key_input.strip():
@@ -569,29 +581,29 @@ def _render_image_search_settings() -> None:
     else:
         st.warning("尚未配置搜图 API Key。可在此页面配置，或在 `.env` 中设置 `PEXELS_API_KEY` / `UNSPLASH_ACCESS_KEY`。")
 
+
+def _render_developer_acceptance() -> None:
+    st.warning(
+        "以下工具会绕过产品五阶段门禁，仅供研发验收与调试。"
+        "日常项目请使用侧栏「制作」流程。"
+    )
+    st.caption("Benchmark、视觉语料与深层工作台不属于日常项目交付。")
+    from archium.ui import icons
+    from archium.ui.app_navigation import get_app_page
+
+    st.page_link(
+        get_app_page("workspace"),
+        label="打开项目工作台（深层工具）",
+        icon=icons.WORKSPACE,
+    )
+    from archium.ui.benchmark_review_panel import render_benchmark_review_panel
+    from archium.ui.visual_qa_corpus_panel import render_visual_qa_corpus_panel
+
+    render_benchmark_review_panel()
     st.divider()
-    with st.expander("开发者与验收（研发专用）", expanded=False):
-        st.warning(
-            "以下工具会绕过产品五阶段门禁，仅供研发验收与调试。"
-            "日常项目请使用侧栏「制作」流程。"
-        )
-        st.caption("Benchmark、视觉语料与深层工作台不属于日常项目交付。")
-        from archium.ui import icons
-        from archium.ui.app_navigation import get_app_page
+    from archium.ui.showcase_case_001_panel import render_showcase_case_001_panel
 
-        st.page_link(
-            get_app_page("workspace"),
-            label="打开项目工作台（深层工具）",
-            icon=icons.WORKSPACE,
-        )
-        from archium.ui.benchmark_review_panel import render_benchmark_review_panel
-        from archium.ui.visual_qa_corpus_panel import render_visual_qa_corpus_panel
-
-        render_benchmark_review_panel()
-        st.divider()
-        from archium.ui.showcase_case_001_panel import render_showcase_case_001_panel
-
-        with st.expander("Showcase Case 001（本地基准）", expanded=False):
-            render_showcase_case_001_panel()
-        st.divider()
-        render_visual_qa_corpus_panel()
+    with st.expander("Showcase Case 001（本地基准）", expanded=False):
+        render_showcase_case_001_panel()
+    st.divider()
+    render_visual_qa_corpus_panel()

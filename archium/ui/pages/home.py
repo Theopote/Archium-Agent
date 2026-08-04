@@ -94,35 +94,42 @@ def _go_tool_hub() -> None:
 
 def _render_task_entries(*, empty: bool = False) -> None:
     """Homepage only exposes tasks — not the five-stage system flow."""
-    st.markdown(f"### {greeting_for_now()}")
-    if empty:
-        st.caption("选择要做的事。不必先了解系统流程，也不必创建 Mission。")
-    else:
-        st.caption("从任务进入。完整五阶段在侧栏「制作」中，仅在你需要时使用。")
+    import html as _html
 
-    cols = st.columns(2)
-    with cols[0]:
-        with st.container(border=True):
-            st.markdown("**新项目**")
-            st.caption("描述想法或项目情况，让 Archium 评估知识状态。")
-            if st.button("开始新项目", key="home_entry_new", type="primary", width="stretch"):
-                _go_new_project()
-        with st.container(border=True):
-            st.markdown("**快速生成一份汇报**")
-            st.caption("少追问、尽快出初稿，完成后可进工作室预览。")
-            if st.button("快速出稿", key="home_entry_fast", width="stretch"):
-                _go_fast_deck()
-    with cols[1]:
-        with st.container(border=True):
-            st.markdown("**打开已有项目**")
-            st.caption("继续最近项目，或到项目列表中选择。")
-            if st.button("打开项目", key="home_entry_open", width="stretch"):
-                _go_open_projects()
-        with st.container(border=True):
-            st.markdown("**使用单项工具**")
-            st.caption("只做一件事：复活页面、套模板、查事实等。")
-            if st.button("打开工具台", key="home_entry_tools", width="stretch"):
-                _go_tool_hub()
+    caption = (
+        "选择要做的事。不必先了解系统流程，也不必创建 Mission。"
+        if empty
+        else "从任务进入。完整五阶段在侧栏「制作」中，仅在你需要时使用。"
+    )
+    st.markdown(
+        f'<div class="archium-home-hero">'
+        f'<div class="archium-home-hero-title">{_html.escape(greeting_for_now())}</div>'
+        f'<p class="archium-home-hero-caption">{_html.escape(caption)}</p>'
+        f"</div>",
+        unsafe_allow_html=True,
+    )
+
+    primary, secondary = st.columns([1.35, 1])
+    with primary:
+        st.markdown("**新项目**")
+        st.caption("描述想法或项目情况，让 Archium 评估知识状态。")
+        if st.button("开始新项目", key="home_entry_new", type="primary", width="stretch"):
+            _go_new_project()
+        st.markdown("")
+        st.markdown("**快速生成一份汇报**")
+        st.caption("少追问、尽快出初稿，完成后可进工作室预览。")
+        if st.button("快速出稿", key="home_entry_fast", width="stretch"):
+            _go_fast_deck()
+    with secondary:
+        st.markdown("**打开已有项目**")
+        st.caption("继续最近项目，或到项目列表中选择。")
+        if st.button("打开项目", key="home_entry_open", width="stretch"):
+            _go_open_projects()
+        st.markdown("")
+        st.markdown("**使用单项工具**")
+        st.caption("只做一件事：复活页面、套模板、查事实等。")
+        if st.button("打开工具台", key="home_entry_tools", width="stretch"):
+            _go_tool_hub()
 
 
 def _render_load_failed(exc: Exception) -> None:
@@ -437,6 +444,8 @@ def _render_project_details(snapshot: ProjectProgressSnapshot) -> None:
 
 
 def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
+    from archium.ui.components.chrome import render_stat_chips
+
     with st.container(border=True):
         header_l, header_r = st.columns([3.2, 1])
         with header_l:
@@ -459,10 +468,15 @@ def _render_project_cockpit(snapshot: ProjectProgressSnapshot) -> None:
         ):
             st.info("Genesis 草稿已生成线框；确认大纲后可运行正式生成管线。")
 
-        with st.container(horizontal=True):
-            st.metric("当前阶段", snapshot.current_stage_label, border=True)
-            st.metric("待完成页面", snapshot.pending_count, border=True)
-            st.metric("交付状态", snapshot.deliver_label, border=True)
+        deliver_tone = "ok" if snapshot.ready_for_export else "neutral"
+        pending_tone = "warn" if snapshot.pending_count else "ok"
+        render_stat_chips(
+            [
+                ("当前阶段", snapshot.current_stage_label, "info"),
+                ("待完成页面", str(snapshot.pending_count), pending_tone),
+                ("交付状态", snapshot.deliver_label, deliver_tone),
+            ]
+        )
         st.caption(snapshot.narrative_summary)
         st.caption("总体进度")
         _render_progress_bar(snapshot)

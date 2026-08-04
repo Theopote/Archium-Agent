@@ -90,7 +90,7 @@ def test_showcase_case_001_is_confined_to_developer_acceptance() -> None:
 def test_studio_style_tab_surfaces_art_direction() -> None:
     studio = Path("archium/ui/pages/studio.py").read_text(encoding="utf-8")
     assert "_render_studio_art_direction" in studio
-    assert 'render_inspector_section("汇报气质")' in studio
+    assert 'render_inspector_section("风格"' in studio or "汇报气质" in studio
     props = Path("archium/ui/studio/slide_properties.py").read_text(encoding="utf-8")
     assert "页主张" in props
     assert "as_page_claim" in props

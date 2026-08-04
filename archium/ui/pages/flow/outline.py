@@ -59,17 +59,21 @@ def page_type_label(value: str) -> str:
 
 
 def _render_task_composer(project_id: UUID) -> None:
-    st.markdown("#### 汇报任务")
+    from archium.ui.components.chrome import render_section_label
+
+    render_section_label("汇报任务")
     st.caption("用一两段话说明对象、目的与必须出现的内容。")
     if "outline_task_draft" not in st.session_state:
         st.session_state.outline_task_draft = st.session_state.get("mission_task_draft", "")
-    example = st.selectbox(
-        "示例（可选）",
-        options=["（不使用示例）", *TASK_EXAMPLE_PROMPTS],
-        key="outline_task_example",
-    )
-    if example != "（不使用示例）" and not st.session_state.outline_task_draft:
-        st.session_state.outline_task_draft = example
+    with st.expander("插入示例任务", expanded=False):
+        example = st.selectbox(
+            "示例",
+            options=["（不使用示例）", *TASK_EXAMPLE_PROMPTS],
+            key="outline_task_example",
+            label_visibility="collapsed",
+        )
+        if example != "（不使用示例）" and not st.session_state.outline_task_draft:
+            st.session_state.outline_task_draft = example
     task = st.text_area(
         "任务描述",
         height=140,
@@ -461,19 +465,24 @@ def _render_intent_cards(
             if intents
             else cards[int(choice)]
         )
-        with st.container(border=True):
-            st.markdown(f"**页面标题**  \n{card['title']}")
-            st.markdown(f"**中心结论**  \n{card['conclusion']}")
+        from archium.ui.components.chrome import render_stat_chips
+
+        st.markdown(f"**{card['title']}**")
+        st.caption(str(card["conclusion"]))
+        with st.expander("页面任务与证据", expanded=False):
             st.markdown(f"**页面任务**  \n{card['task']}")
             st.markdown(f"**证据**  \n{card['evidence']}")
             st.markdown(f"**指定素材**  \n{card['assets']}")
-            meta = st.columns(3)
-            meta[0].markdown(f"**页面类型**  \n{page_type_label(str(card['page_type']))}")
-            meta[1].markdown(f"**视觉语法**  \n{card.get('page_archetype', '自动识别')}")
-            meta[2].markdown(f"**状态**  \n{card['status']}")
-            slots = card.get("grammar_slots") or "—"
-            if slots != "—":
-                st.caption(f"证据槽位：{slots}")
+        render_stat_chips(
+            [
+                ("页面类型", page_type_label(str(card["page_type"])), "info"),
+                ("视觉语法", str(card.get("page_archetype", "自动识别")), "neutral"),
+                ("状态", str(card["status"]), "neutral"),
+            ]
+        )
+        slots = card.get("grammar_slots") or "—"
+        if slots != "—":
+            st.caption(f"证据槽位：{slots}")
         return
 
     intent = intents[int(choice)]

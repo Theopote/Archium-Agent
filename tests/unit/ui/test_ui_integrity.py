@@ -120,6 +120,7 @@ def test_ui_chrome_component_layer_exists() -> None:
         "render_page_header",
         "render_panel",
         "render_status_badge",
+        "render_stat_chips",
         "render_empty_state",
         "render_primary_action",
         "render_warning_callout",

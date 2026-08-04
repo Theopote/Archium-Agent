@@ -153,7 +153,7 @@ def _render_create_project() -> None:
             format_func=lambda value: PROJECT_TYPE_LABELS[value],
         )
         description = st.text_area("项目说明（可选）", height=80)
-        submitted = st.form_submit_button("创建项目", use_container_width=True)
+        submitted = st.form_submit_button("创建项目", width="stretch")
         if submitted:
             if not name.strip():
                 st.error("请填写项目名称")
@@ -175,17 +175,26 @@ def _render_create_project() -> None:
 
 
 def _render_overview(project_id: UUID) -> None:
+    from archium.ui.components.chrome import render_stat_chips
+
     with unit_of_work() as uow:
         overview = get_project_overview(uow, project_id)
     if overview is None:
         st.warning("项目不存在或已被删除。")
         return
 
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("资料文件", overview.document_count)
-    col2.metric("文本片段", overview.chunk_count)
-    col3.metric("汇报版本", overview.presentation_count)
-    col4.metric("项目类型", PROJECT_TYPE_LABELS.get(overview.project.project_type, "其他"))
+    render_stat_chips(
+        [
+            ("资料文件", str(overview.document_count), "info"),
+            ("文本片段", str(overview.chunk_count), "neutral"),
+            ("汇报版本", str(overview.presentation_count), "info"),
+            (
+                "项目类型",
+                PROJECT_TYPE_LABELS.get(overview.project.project_type, "其他"),
+                "neutral",
+            ),
+        ]
+    )
 
 
 def _render_documents(project_id: UUID, *, show_uploader: bool = True) -> None:
@@ -203,7 +212,7 @@ def _render_documents(project_id: UUID, *, show_uploader: bool = True) -> None:
             }
             for doc in documents
         ]
-        st.dataframe(rows, use_container_width=True, hide_index=True)
+        st.dataframe(rows, width="stretch", hide_index=True)
     else:
         with unit_of_work() as uow:
             from archium.application.project_context_routing import (
@@ -282,7 +291,7 @@ def _consume_upload_feedback(project_id: UUID, *, key_prefix: str) -> None:
             tip.primary_action_label,
             key=f"{key_prefix}_ks_next_{project_id}",
             type="primary",
-            use_container_width=True,
+            width="stretch",
         ):
             st.session_state.pop(_UPLOAD_FEEDBACK_KEY, None)
             pending = 0
@@ -317,7 +326,7 @@ def _consume_upload_feedback(project_id: UUID, *, key_prefix: str) -> None:
     if dismiss_col.button(
         "收起提示",
         key=f"{key_prefix}_ks_dismiss_{project_id}",
-        use_container_width=True,
+        width="stretch",
     ):
         st.session_state.pop(_UPLOAD_FEEDBACK_KEY, None)
         st.rerun()
@@ -343,7 +352,7 @@ def _render_upload_controls(project_id: UUID, *, key_prefix: str) -> None:
     if uploads and st.button(
         "上传资料",
         type="primary",
-        use_container_width=True,
+        width="stretch",
         key=f"{key_prefix}_import_{project_id}",
     ):
         results = []
@@ -468,23 +477,30 @@ def _render_approved_generation_contract(project_id: UUID, settings) -> bool:
     if not briefs_ready:
         blockers.extend(brief_missing)
 
+    from archium.ui.components.chrome import render_stat_chips
+
     with st.container(border=True):
         st.markdown("#### 本次生成输入")
         st.caption("以下内容是生成合同。页面生成会复用这些已批准版本，不会重新规划任务或大纲。")
-        with st.container(horizontal=True):
-            st.metric("汇报", context.presentation.title, border=True)
-            st.metric("Outline", f"v{outline.version}", border=True)
-            st.metric("页面意图", len(outline.page_intents), border=True)
-            approved_briefs = sum(
-                1
-                for item in outline.page_design_briefs
-                if item.status == ApprovalStatus.APPROVED
-            )
-            st.metric(
-                "设计摘要",
-                f"{approved_briefs}/{len(outline.page_design_briefs)}",
-                border=True,
-            )
+        approved_briefs = sum(
+            1
+            for item in outline.page_design_briefs
+            if item.status == ApprovalStatus.APPROVED
+        )
+        render_stat_chips(
+            [
+                ("汇报", context.presentation.title, "info"),
+                ("Outline", f"v{outline.version}", "info"),
+                ("页面意图", str(len(outline.page_intents)), "neutral"),
+                (
+                    "设计摘要",
+                    f"{approved_briefs}/{len(outline.page_design_briefs)}",
+                    "ok"
+                    if approved_briefs == len(outline.page_design_briefs)
+                    else "warn",
+                ),
+            ]
+        )
         st.markdown(f"**对象：** {outline.audience}  ")
         st.markdown(f"**目的：** {outline.purpose}  ")
         st.markdown(f"**核心论点：** {outline.thesis}")
@@ -631,7 +647,7 @@ def _render_generation_form(project_id: UUID) -> None:
                 f"{entity_label('SlideSpec')} 生成后暂停审核",
                 value=False,
             )
-        submitted = st.form_submit_button(CONTENT_PIPELINE_ACTION, use_container_width=True)
+        submitted = st.form_submit_button(CONTENT_PIPELINE_ACTION, width="stretch")
 
     if not submitted:
         return
@@ -783,7 +799,7 @@ def _render_last_result() -> None:
         preview_cols = st.columns(min(3, len(result.render.preview_images)))
         for index, image_path in enumerate(result.render.preview_images):
             with preview_cols[index % len(preview_cols)]:
-                st.image(str(image_path), caption=f"第 {index + 1} 页", use_container_width=True)
+                st.image(str(image_path), caption=f"第 {index + 1} 页", width="stretch")
     if download_paths:
         render_file_downloads(download_paths, key_prefix="workflow_result")
 
@@ -809,7 +825,7 @@ def _render_pptx_export_section(project_id: UUID) -> None:
     if st.button(
         "导出 PPTX",
         type="primary",
-        use_container_width=True,
+        width="stretch",
         key=f"export_pptx_main_{presentation_id}",
     ):
         if has_visual_layout:
@@ -841,7 +857,7 @@ def _render_pptx_export_section(project_id: UUID) -> None:
         if col_recommended.button(
             "现在生成（推荐）",
             type="primary",
-            use_container_width=True,
+            width="stretch",
             key=f"export_pptx_generate_{presentation_id}",
         ):
             st.session_state.pop(prompt_key, None)
@@ -881,7 +897,7 @@ def _render_pptx_export_section(project_id: UUID) -> None:
 
         if col_legacy.button(
             "直接用旧版模板导出",
-            use_container_width=True,
+            width="stretch",
             key=f"export_pptx_legacy_{presentation_id}",
         ):
             st.session_state.pop(prompt_key, None)
@@ -930,15 +946,16 @@ def _render_history(project_id: UUID) -> None:
         }
         for presentation in presentations
     ]
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def render() -> None:
+    from archium.ui.components.chrome import render_page_header
+
     _init_session_state()
-    st.markdown("### 项目工作台")
-    st.caption(
-        "开发者深层工具页（不在侧栏）。日常请走制作五阶段；"
-        "也可从「设置 → 开发者与验收」打开本页。"
+    render_page_header(
+        "项目工作台",
+        "开发者深层工具页（不在侧栏）。日常请走制作五阶段；也可从「设置 → 开发者与验收」打开本页。",
     )
     from archium.ui.product_flow import product_flow_chain
 
@@ -992,11 +1009,16 @@ def render_materials_stage(project_id: UUID) -> None:
     with unit_of_work() as uow:
         summary = load_materials_summary(uow, project_id)
 
-    st.markdown(
-        f"**{summary.file_count} 个文件**　"
-        f"**{summary.fact_count} 条事实**　"
-        f"**{summary.asset_count} 项素材**　"
-        f"**{summary.pending_confirm_count} 个待确认问题**"
+    from archium.ui.components.chrome import render_stat_chips
+
+    pending = summary.pending_confirm_count
+    render_stat_chips(
+        [
+            ("文件", str(summary.file_count), "info"),
+            ("事实", str(summary.fact_count), "info"),
+            ("素材", str(summary.asset_count), "neutral"),
+            ("待确认", str(pending), "warn" if pending else "ok"),
+        ]
     )
 
     focus = st.session_state.pop("materials_focus", None)
@@ -1008,7 +1030,7 @@ def render_materials_stage(project_id: UUID) -> None:
         with st.container(border=True):
             render_fact_ledger_panel(project_id, highlight_pending=True)
 
-    with st.container(border=True):
+    with st.container(border=False):
         st.markdown("**上传资料**")
         st.caption("任务书、图纸、调研文档或图片。导入成功后会刷新知识状态并提示下一步。")
         _render_upload_controls(project_id, key_prefix="materials_top")

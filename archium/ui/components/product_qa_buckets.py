@@ -27,10 +27,21 @@ def render_product_qa_buckets(
         st.caption(empty_caption)
         return summaries
 
+    from archium.ui.components.chrome import render_stat_chips
+
+    render_stat_chips(
+        [
+            (
+                summary.label,
+                str(summary.count),
+                "error" if summary.count else "ok",
+            )
+            for summary in summaries
+        ]
+    )
     cols = st.columns(3)
     for column, summary in zip(cols, summaries, strict=True):
         with column:
-            st.metric(summary.label, summary.count)
             st.caption(summary.caption)
             if not summary.findings:
                 st.caption("无")

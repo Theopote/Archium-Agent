@@ -45,7 +45,16 @@ def render_comment_inbox(
         st.error(report_user_error(exc))
         return
 
-    cols = st.columns(6)
+    from archium.ui.components.chrome import render_stat_chips
+
+    tone_for = {
+        "pending": "warn",
+        "proposed": "info",
+        "needs_rebase": "warn",
+        "resolved": "ok",
+        "accepted": "ok",
+        "rejected": "error",
+    }
     metrics = [
         ("pending", "待处理"),
         ("proposed", "已生成提案"),
@@ -54,8 +63,12 @@ def render_comment_inbox(
         ("accepted", "已接受"),
         ("rejected", "无法解析/拒绝"),
     ]
-    for column, (key, label) in zip(cols, metrics, strict=True):
-        column.metric(label, counts.get(key, 0))
+    render_stat_chips(
+        [
+            (label, str(counts.get(key, 0)), tone_for[key])
+            for key, label in metrics
+        ]
+    )
 
     filter_cols = st.columns(4)
     with filter_cols[0]:

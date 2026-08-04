@@ -54,6 +54,58 @@ def render_status_badge(label: str, *, tone: Tone = "neutral") -> None:
     )
 
 
+def render_stat_chips(
+    items: Sequence[tuple[str, str] | tuple[str, str, Tone]],
+) -> None:
+    """Compact label/value strip — prefer over ``st.metric`` dashboard rows.
+
+    Each item is ``(label, value)`` or ``(label, value, tone)``.
+    """
+    if not items:
+        return
+    chips: list[str] = []
+    for item in items:
+        label = html.escape(str(item[0]))
+        value = html.escape(str(item[1]))
+        tone: Tone = "neutral"
+        if len(item) >= 3:
+            candidate = item[2]
+            if candidate in _STATUS_MARK:
+                tone = candidate  # type: ignore[assignment]
+        chips.append(
+            f'<span class="archium-stat-chip archium-stat-chip-{tone}">'
+            f'<span class="archium-stat-chip-label">{label}</span>'
+            f'<span class="archium-stat-chip-value">{value}</span>'
+            f"</span>"
+        )
+    st.markdown(
+        f'<div class="archium-stat-chip-row">{"".join(chips)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_status_chip_row(
+    items: Sequence[tuple[str, Tone]],
+) -> None:
+    """Inline status badges in one row."""
+    if not items:
+        return
+    parts: list[str] = []
+    for label, tone in items:
+        mark = _STATUS_MARK.get(tone, "○")
+        safe_tone = tone if tone in _STATUS_MARK else "neutral"
+        parts.append(
+            f'<span class="status-chip status-chip-{safe_tone}">'
+            f'<span class="status-chip-mark">{mark}</span>'
+            f"{html.escape(label)}"
+            f"</span>"
+        )
+    st.markdown(
+        f'<div class="archium-status-chip-row">{"".join(parts)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def render_empty_state(
     title: str,
     body: str,
