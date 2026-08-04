@@ -103,18 +103,41 @@ class TestLayoutFamilyRegistry:
 
 class TestGenerators:
     def test_strategy_concept_uses_image_slot_for_text_led_intent(self) -> None:
+        from dataclasses import replace
+        from uuid import uuid4
+
         solver = LayoutSolver()
-        plan = solver.generate(
+        ctx = _context(
             LayoutFamily.STRATEGY_CARDS,
-            _context(
-                LayoutFamily.STRATEGY_CARDS,
-                content_type=VisualContentType.TEXT_ARGUMENT,
-                variant="strategy_concept",
-            ),
+            content_type=VisualContentType.TEXT_ARGUMENT,
+            variant="strategy_concept",
         )
+        ctx = replace(
+            ctx,
+            content=replace(ctx.content, hero_asset_ref=str(uuid4())),
+        )
+        plan = solver.generate(LayoutFamily.STRATEGY_CARDS, ctx)
         concept = plan.element_by_id("concept")
         assert concept is not None
         assert concept.content_type.value == "image"
+
+    def test_strategy_concept_without_hero_falls_back_to_cards_with_lead(self) -> None:
+        from dataclasses import replace
+
+        solver = LayoutSolver()
+        ctx = _context(
+            LayoutFamily.STRATEGY_CARDS,
+            content_type=VisualContentType.TEXT_ARGUMENT,
+            variant="strategy_concept",
+        )
+        ctx = replace(
+            ctx,
+            content=replace(ctx.content, hero_asset_ref=None),
+        )
+        plan = solver.generate(LayoutFamily.STRATEGY_CARDS, ctx)
+        assert plan.layout_variant == "cards_with_lead"
+        assert plan.element_by_id("concept") is None
+        assert plan.element_by_id("lead") is not None
 
     def test_hybrid_freeform_adds_grounding_panel(self) -> None:
         solver = LayoutSolver()

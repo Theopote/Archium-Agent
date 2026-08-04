@@ -180,7 +180,7 @@ class TextualArgumentLayoutGenerator(LayoutGenerator):
                     style_token="body",
                 )
             )
-            points = "\n".join(f"· {point}" for point in context.content.key_points) or "· 要点待补充"
+            points = "\n".join(f"· {point}" for point in context.content.key_points)
             elements.append(
                 LayoutElement(
                     id="body",
@@ -231,50 +231,100 @@ class TextualArgumentLayoutGenerator(LayoutGenerator):
                         z_index=1,
                     )
                 )
-            lead_h = body.height * (0.42 if not has_points else 0.35)
-            lead_h = min(
-                lead_h,
-                self._text_band_height(
-                    context,
-                    context.content.message,
-                    "subtitle",
-                    box_width_in=body.width * (0.82 if not has_points else 1.0),
-                    min_height=0.5 if not has_points else body.height * 0.28,
-                ),
-            )
-            elements.append(
-                LayoutElement(
-                    id="lead",
-                    role=(
-                        LayoutElementRole.CAPTION
-                        if not has_points
-                        else LayoutElementRole.LEAD_STATEMENT
+            # Without a hero image, put lead | points side-by-side so the page
+            # does not collapse into a left-stacked text column.
+            if has_points and not context.content.hero_asset_ref:
+                left, right = split_horizontal(body, left_ratio=0.48, gap=spacing.lg)
+                lead_h = min(
+                    left.height * 0.85,
+                    self._text_band_height(
+                        context,
+                        context.content.message,
+                        "subtitle",
+                        box_width_in=left.width,
+                        min_height=0.55,
                     ),
-                    content_type=LayoutContentType.TEXT,
-                    text_content=context.content.message,
-                    x=body.x + (0.28 if not has_points else 0.0),
-                    y=body.y + (spacing.sm if not has_points else 0.0),
-                    width=body.width * (0.82 if not has_points else 1.0),
-                    height=lead_h,
-                    style_token="caption" if not has_points else "subtitle",
-                    z_index=2,
                 )
-            )
-            if has_points:
+                elements.append(
+                    LayoutElement(
+                        id="lead",
+                        role=LayoutElementRole.LEAD_STATEMENT,
+                        content_type=LayoutContentType.TEXT,
+                        text_content=context.content.message,
+                        x=left.x,
+                        y=left.y,
+                        width=left.width,
+                        height=lead_h,
+                        style_token="subtitle",
+                    )
+                )
                 points = "\n".join(f"· {point}" for point in context.content.key_points)
+                point_h = min(
+                    max(0.7, 0.32 * len(context.content.key_points) + 0.25),
+                    right.height * 0.85,
+                )
                 elements.append(
                     LayoutElement(
                         id="body",
                         role=LayoutElementRole.BODY_TEXT,
                         content_type=LayoutContentType.TEXT,
                         text_content=points,
-                        x=body.x,
-                        y=body.y + lead_h + spacing.md,
-                        width=body.width * (0.7 if context.content.hero_asset_ref else 1.0),
-                        height=max(0.8, body.height - lead_h - spacing.md),
+                        x=right.x,
+                        y=right.y,
+                        width=right.width,
+                        height=point_h,
                         style_token="body",
                     )
                 )
+            else:
+                lead_h = body.height * (0.42 if not has_points else 0.35)
+                lead_h = min(
+                    lead_h,
+                    self._text_band_height(
+                        context,
+                        context.content.message,
+                        "subtitle",
+                        box_width_in=body.width * (0.82 if not has_points else 1.0),
+                        min_height=0.5 if not has_points else body.height * 0.28,
+                    ),
+                )
+                elements.append(
+                    LayoutElement(
+                        id="lead",
+                        role=(
+                            LayoutElementRole.CAPTION
+                            if not has_points
+                            else LayoutElementRole.LEAD_STATEMENT
+                        ),
+                        content_type=LayoutContentType.TEXT,
+                        text_content=context.content.message,
+                        x=body.x + (0.28 if not has_points else 0.0),
+                        y=body.y + (spacing.sm if not has_points else 0.0),
+                        width=body.width * (0.82 if not has_points else 1.0),
+                        height=lead_h,
+                        style_token="caption" if not has_points else "subtitle",
+                        z_index=2,
+                    )
+                )
+                if has_points:
+                    points = "\n".join(f"· {point}" for point in context.content.key_points)
+                    point_h = min(
+                        max(0.55, 0.28 * len(context.content.key_points) + 0.2),
+                        body.height - lead_h - spacing.md,
+                    )
+                    elements.append(
+                        LayoutElement(
+                            id="body",
+                            role=LayoutElementRole.BODY_TEXT,
+                            content_type=LayoutContentType.TEXT,
+                            text_content=points,
+                            x=body.x,
+                            y=body.y + lead_h + spacing.md,
+                            width=body.width * (0.7 if context.content.hero_asset_ref else 0.82),
+                            height=point_h,
+                            style_token="body",
+                        )
+                    )
 
         if context.content.source_text:
             page = context.design_system.page

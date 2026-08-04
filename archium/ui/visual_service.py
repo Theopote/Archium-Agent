@@ -520,9 +520,11 @@ def replan_slide(
     *,
     slide_id: UUID,
     preset: str | None = None,
-    candidate_count: int = 3,
+    candidate_count: int = 5,
     use_llm: bool = False,
     settings: Settings | None = None,
+    previous_layout_plan: LayoutPlan | None = None,
+    recent_layout_plans: list[LayoutPlan] | None = None,
 ) -> SlideVisualSnapshot:
     """Re-plan a single slide; optional preset tweaks VisualIntent before planning."""
     session = session_of(session)
@@ -569,8 +571,40 @@ def replan_slide(
 
     llm = create_llm_provider(resolved) if use_llm and resolved.llm_configured else None
     planner = LayoutPlanningService(session, llm=llm, settings=resolved)
-    previous_plan = visual.resolve_layout_plan_for_slide(slide)
     project_id = presentation.project_id if presentation is not None else None
+
+    # Prefer the caller's prior-slide plan; otherwise resolve the previous ordered slide.
+    prior_plan = previous_layout_plan
+    recent_plans = list(recent_layout_plans or [])
+    if prior_plan is None and presentation is not None:
+        ordered = sorted(
+            slides.list_for_presentation(slide.presentation_id),
+            key=lambda item: item.order,
+        )
+        for index, item in enumerate(ordered):
+            if item.id != slide.id:
+                continue
+            if index > 0:
+                prior_plan = visual.resolve_layout_plan_for_slide(ordered[index - 1])
+            if not recent_plans:
+                recent_plans = [
+                    plan
+                    for peer in ordered[:index]
+                    if (plan := visual.resolve_layout_plan_for_slide(peer)) is not None
+                ]
+            break
+
+    from archium.application.visual.deck_composition_service import (
+        DeckCompositionPlanningService,
+    )
+
+    deck_directive = DeckCompositionPlanningService()._initial_directive(
+        index=slide.order,
+        slide=slide,
+        intent=intent,
+        previous=None,
+    )
+
     candidates = planner.generate_candidates(
         slide=slide,
         visual_intent_id=intent.id,
@@ -578,14 +612,17 @@ def replan_slide(
         design_system_id=design.id,
         candidate_count=candidate_count,
         project_id=project_id,
-        previous_layout_plan=previous_plan,
+        deck_directive=deck_directive,
+        previous_layout_plan=prior_plan,
     )
     saved_candidates: list[LayoutPlan] = []
     for plan, _report in candidates:
         saved_candidates.append(visual.save_layout_plan(plan))
-    best = planner.select_best(
+    best = planner.select_best_for_deck(
         candidates,
-        previous_layout_plan=previous_plan,
+        deck_directive=deck_directive,
+        previous_layout_plan=prior_plan,
+        recent_layout_plans=recent_plans,
         style_preference=planner.last_style_preference,
     )
     best = visual.save_layout_plan(best)

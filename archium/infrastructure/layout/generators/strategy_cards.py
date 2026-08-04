@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from archium.domain.visual.enums import (
     ConstraintPriority,
     ImageFit,
@@ -20,7 +22,10 @@ class StrategyCardsLayoutGenerator(LayoutGenerator):
 
     def generate(self, context: LayoutGeneratorContext) -> LayoutPlan:
         if context.variant == "strategy_concept":
-            return self._generate_strategy_concept(context)
+            if context.content.hero_asset_ref:
+                return self._generate_strategy_concept(context)
+            # No concept image → lead + keyword cards, not an empty hero well.
+            context = replace(context, variant="cards_with_lead")
         return self._generate_cards(context)
 
     def _generate_strategy_concept(self, context: LayoutGeneratorContext) -> LayoutPlan:

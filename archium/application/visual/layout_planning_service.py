@@ -488,7 +488,19 @@ class LayoutPlanningService:
                 and plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
                 and plan.layout_variant == "quote_argument"
             ):
-                composition_bonus += 0.32
+                composition_bonus += 0.48
+            if (
+                deck_directive.pacing_role == PacingRole.CLOSING
+                and plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                and plan.layout_variant == "lead_and_points"
+            ):
+                composition_penalty += 0.28
+            # Quote posters are for closing/summary — don't steal body content pages.
+            if (
+                plan.layout_variant == "quote_argument"
+                and deck_directive.pacing_role != PacingRole.CLOSING
+            ):
+                composition_penalty += 0.2
 
             # Priority weights: hero / text / drawing must move candidate scores.
             if plan.layout_family in {
@@ -603,21 +615,53 @@ class LayoutPlanningService:
                 and not honor_explicit_preference
             ):
                 composition_penalty += 0.06
+            # Same text shell twice in a row reads as wallpaper — push alternate variants.
+            if (
+                previous_layout_plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                and previous_layout_plan.layout_variant == "lead_and_points"
+                and not honor_explicit_preference
+            ):
+                if (
+                    plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                    and plan.layout_variant == "lead_and_points"
+                ):
+                    composition_penalty += 0.22
+                elif plan.layout_variant in {"two_column_text", "quote_argument", "monument"}:
+                    composition_bonus += 0.18
+                elif plan.layout_family == LayoutFamily.STRATEGY_CARDS:
+                    composition_bonus += 0.12
 
         # Prevent an A-B-A wallpaper rhythm. The immediate predecessor already
         # receives the stronger penalty above; the second-most-recent page gets
         # a lighter penalty so a good family can still recur after a real beat.
         history = list(recent_layout_plans or [])
-        for distance, recent in enumerate(reversed(history[-2:]), start=1):
+        for distance, recent in enumerate(reversed(history[-3:]), start=1):
             if previous_layout_plan is not None and recent.id == previous_layout_plan.id:
                 continue
             if plan.layout_family == recent.layout_family:
-                composition_penalty += 0.05 / distance
+                composition_penalty += 0.06 / distance
             if (
                 plan.layout_family == recent.layout_family
                 and plan.layout_variant == recent.layout_variant
             ):
-                composition_penalty += 0.08 / distance
+                composition_penalty += 0.16 / distance
+                if plan.layout_variant in {"lead_and_points", "two_column_text"}:
+                    composition_penalty += 0.14 / distance
+            # Prefer a contrasting text variant when lead_and_points already appeared.
+            if (
+                recent.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                and recent.layout_variant == "lead_and_points"
+                and plan.layout_variant == "two_column_text"
+            ):
+                composition_bonus += 0.12 / distance
+            if (
+                recent.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                and recent.layout_variant == "lead_and_points"
+                and plan.layout_variant == "quote_argument"
+                and deck_directive is not None
+                and deck_directive.pacing_role == PacingRole.CLOSING
+            ):
+                composition_bonus += 0.1 / distance
 
         return (
             validity_rank + composition_penalty,
@@ -945,6 +989,21 @@ class LayoutPlanningService:
                 ),
                 style_pref,
             )
+            # strategy_concept needs a real hero image; without assets prefer cards.
+            if (
+                definition.family == LayoutFamily.STRATEGY_CARDS
+                and asset_count == 0
+                and intent.hero_asset_id is None
+            ):
+                variants = [
+                    v for v in variants if v != "strategy_concept"
+                ] or ["cards_with_lead"]
+            # four_cards with fewer than 4 points leaves an empty slot / mechanical grid.
+            if (
+                definition.family == LayoutFamily.STRATEGY_CARDS
+                and key_point_count < 4
+            ):
+                variants = [v for v in variants if v != "four_cards"] or variants
             for variant in variants:
                 decisions.append(
                     LayoutDecisionDraft(
