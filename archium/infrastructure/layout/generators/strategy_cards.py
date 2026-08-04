@@ -31,8 +31,10 @@ class StrategyCardsLayoutGenerator(LayoutGenerator):
 
         card_count = 3
         keywords = list(context.content.key_points[:card_count])
-        while len(keywords) < card_count:
-            keywords.append(f"策略 {len(keywords) + 1}")
+        if not keywords:
+            primary = (context.content.message or "").strip()
+            keywords = [primary] if primary else ["策略待补充"]
+        card_count = len(keywords)
 
         title_h = self._title_band_height(context)
         elements.append(
@@ -210,8 +212,11 @@ class StrategyCardsLayoutGenerator(LayoutGenerator):
 
         card_count = 4 if context.variant == "four_cards" else 3
         points = list(context.content.key_points[:card_count])
-        while len(points) < card_count:
-            points.append(f"策略 {len(points) + 1}")
+        # Never invent placeholder strategy cards — empty copy collapses to the lead message.
+        if not points:
+            primary = (context.content.message or "").strip()
+            points = [primary] if primary else ["要点待补充"]
+        card_count = len(points)
 
         title_h = self._title_band_height(context)
         elements.append(

@@ -672,6 +672,12 @@ class VisualCriticService:
     def _score_balance(self, plan: LayoutPlan, page_area: float) -> float:
         if not plan.elements:
             return 0.2
+        # Left-led monument / sparse text openers are intentional editorial asymmetry.
+        if plan.layout_variant == "monument" or (
+            plan.layout_variant == "lead_and_points"
+            and len([el for el in plan.elements if el.role != LayoutElementRole.DECORATION]) <= 2
+        ):
+            return 0.72
         center_x = plan.page_width / 2.0
         left = 0.0
         right = 0.0
@@ -689,9 +695,15 @@ class VisualCriticService:
         ratio = float(getattr(plan, "whitespace_ratio", 0.0) or 0.0)
         if ratio <= 0.0:
             return 0.45
-        target = 0.22
+        # Spacious text covers / sparse section openers keep more empty field.
+        sparse_opener = plan.layout_variant == "monument" or (
+            plan.layout_variant == "lead_and_points"
+            and len([el for el in plan.elements if el.role != LayoutElementRole.DECORATION]) <= 2
+        )
+        target = 0.68 if sparse_opener else 0.22
+        tolerance = 0.32 if sparse_opener else 0.22
         delta = abs(ratio - target)
-        return max(0.0, min(1.0, 1.0 - delta / 0.22))
+        return max(0.0, min(1.0, 1.0 - delta / tolerance))
 
     def _score_alignment(self, plan: LayoutPlan) -> float:
         boxes = [el for el in plan.elements if el.role != LayoutElementRole.DECORATION]

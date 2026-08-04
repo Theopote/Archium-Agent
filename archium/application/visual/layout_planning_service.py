@@ -27,12 +27,14 @@ from archium.application.visual.visual_grammar_intent import (
     order_variants_for_intent,
 )
 from archium.config.settings import Settings, get_settings
+from archium.domain.enums import SlideType
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.deck_composition import PacingRole, SlideCompositionDirective
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import (
+    ContinuityRole,
     DensityLevel,
     LayoutElementRole,
     LayoutFamily,
@@ -459,8 +461,18 @@ class LayoutPlanningService:
         composition_bonus = 0.0
 
         if deck_directive is not None:
+            monument_hero_fallback = (
+                plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                and plan.layout_variant == "monument"
+                and LayoutFamily.HERO in (deck_directive.preferred_layout_families or [])
+            )
             if plan.layout_family in deck_directive.forbidden_layout_families:
-                composition_penalty += 1.0
+                # Hero opening without assets must keep the text monument cover;
+                # page_direction often forbids textual_argument for image-led openings.
+                if not monument_hero_fallback:
+                    composition_penalty += 1.0
+                else:
+                    composition_bonus += 0.5
             preferred = deck_directive.preferred_layout_families
             if preferred and plan.layout_family == preferred[0]:
                 composition_bonus += (
@@ -468,6 +480,9 @@ class LayoutPlanningService:
                 )
             elif preferred and plan.layout_family in preferred[1:]:
                 composition_bonus += 0.03
+            elif monument_hero_fallback:
+                # Treat monument as the realized preferred opener when HERO is unavailable.
+                composition_bonus += 0.3
             if (
                 deck_directive.pacing_role == PacingRole.CLOSING
                 and plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
@@ -523,6 +538,31 @@ class LayoutPlanningService:
                 plan.layout_family,
                 plan.layout_variant,
             )
+            # No-asset hero openings: prefer monument only when HERO is primary intent.
+            primary_pref = (
+                style_preference.preferred_families[0]
+                if style_preference.preferred_families
+                else None
+            )
+            if (
+                primary_pref == LayoutFamily.HERO
+                and plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                and plan.layout_variant == "monument"
+            ):
+                composition_bonus += 0.45
+            if (
+                primary_pref == LayoutFamily.HERO
+                and plan.layout_family == LayoutFamily.PROCESS_NARRATIVE
+            ):
+                composition_penalty += 0.25
+            # Sparse text pages should not win with strategy-card shells.
+            if (
+                plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                and plan.layout_variant == "lead_and_points"
+            ):
+                composition_bonus += 0.2
+            if plan.layout_family == LayoutFamily.STRATEGY_CARDS:
+                composition_penalty += 0.15
 
         if previous_layout_plan is not None:
             preferred_primary = (
@@ -607,6 +647,8 @@ class LayoutPlanningService:
                 deck_directive,
                 preferred_order=preferred_for_registry,
             )
+            key_point_count = len(slide.key_points)
+            is_title_slide = slide.slide_type == SlideType.TITLE
             try:
                 request, skill_audit = apply_skills_to_request(
                     LLMRequest(
@@ -642,6 +684,8 @@ class LayoutPlanningService:
                         candidate_count,
                         deck_directive=deck_directive,
                         style_preference=style_pref,
+                        key_point_count=key_point_count,
+                        is_title_slide=is_title_slide,
                     )
                     merged = [primary]
                     for extra in extras:
@@ -664,6 +708,8 @@ class LayoutPlanningService:
                     candidate_count,
                     deck_directive=deck_directive,
                     style_preference=style_pref,
+                    key_point_count=key_point_count,
+                    is_title_slide=is_title_slide,
                 )
                 self._record_llm_fallback(
                     error_type="DisallowedLayoutFamily",
@@ -678,6 +724,8 @@ class LayoutPlanningService:
                     candidate_count,
                     deck_directive=deck_directive,
                     style_preference=style_pref,
+                    key_point_count=key_point_count,
+                    is_title_slide=is_title_slide,
                 )
                 self._record_llm_fallback(
                     error_type=type(exc).__name__,
@@ -691,6 +739,8 @@ class LayoutPlanningService:
             candidate_count,
             deck_directive=deck_directive,
             style_preference=style_pref,
+            key_point_count=len(slide.key_points),
+            is_title_slide=slide.slide_type == SlideType.TITLE,
         )
 
     def _record_llm_fallback(
@@ -748,6 +798,9 @@ class LayoutPlanningService:
         candidate_count: int,
         deck_directive: SlideCompositionDirective | None = None,
         style_preference: LayoutStylePreference | None = None,
+        *,
+        key_point_count: int = 0,
+        is_title_slide: bool = False,
     ) -> list[LayoutDecisionDraft]:
         style_pref = style_preference or LayoutStylePreference()
         preferred = merge_preferred_families(
@@ -794,11 +847,32 @@ class LayoutPlanningService:
                 VisualContentType.ELEVATION,
             }
         )
-        if prefers_hero and intent.hero_asset_id is None and asset_count == 0:
+        if (
+            prefers_hero
+            and intent.hero_asset_id is None
+            and asset_count == 0
+            and (is_title_slide or intent.continuity_role == ContinuityRole.OPENING)
+        ):
             decisions.append(
                 LayoutDecisionDraft(
                     layout_family=LayoutFamily.TEXTUAL_ARGUMENT.value,
                     layout_variant="monument",
+                    reading_order=list(intent.reading_order),
+                    density_adjustment=DensityLevel.SPACIOUS.value,
+                )
+            )
+        # Sparse text pages: never prefer strategy/process shells that invent cards.
+        if (
+            intent.dominant_content_type == VisualContentType.TEXT_ARGUMENT
+            and asset_count == 0
+            and key_point_count < 2
+        ):
+            decisions.append(
+                LayoutDecisionDraft(
+                    layout_family=LayoutFamily.TEXTUAL_ARGUMENT.value,
+                    layout_variant=(
+                        "monument" if is_title_slide else "lead_and_points"
+                    ),
                     reading_order=list(intent.reading_order),
                     density_adjustment=DensityLevel.SPACIOUS.value,
                 )
@@ -833,7 +907,17 @@ class LayoutPlanningService:
                 and deck_directive.pacing_role == PacingRole.CLOSING
                 and definition.family == LayoutFamily.TEXTUAL_ARGUMENT
             )
-            if definition.family in grammar_forbidden and not closing_poster_override:
+            monument_cover_override = (
+                prefers_hero
+                and intent.hero_asset_id is None
+                and asset_count == 0
+                and definition.family == LayoutFamily.TEXTUAL_ARGUMENT
+            )
+            if (
+                definition.family in grammar_forbidden
+                and not closing_poster_override
+                and not monument_cover_override
+            ):
                 continue
             variants = self._order_variants(
                 definition.family,
@@ -952,10 +1036,6 @@ class LayoutPlanningService:
             return []
         style_pref = style_preference or LayoutStylePreference()
         pool = list(decisions)
-        if deck_directive is not None:
-            forbidden = {family.value for family in deck_directive.forbidden_layout_families}
-            filtered = [item for item in pool if item.layout_family not in forbidden]
-            pool = filtered or list(decisions)
 
         preferred_families = merge_preferred_families(
             list(deck_directive.preferred_layout_families) if deck_directive else None,
@@ -966,8 +1046,34 @@ class LayoutPlanningService:
         preferred_variant_keys = [
             (family.value, variant) for family, variant in style_pref.preferred_variants
         ]
+        hero_without_asset_cover = (
+            bool(preferred_families) and preferred_families[0] == LayoutFamily.HERO
+        )
 
-        def sort_key(item: LayoutDecisionDraft) -> tuple[int, int, int, str, str]:
+        if deck_directive is not None:
+            forbidden = {family.value for family in deck_directive.forbidden_layout_families}
+            filtered = []
+            for item in pool:
+                if item.layout_family not in forbidden:
+                    filtered.append(item)
+                    continue
+                if (
+                    hero_without_asset_cover
+                    and item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
+                    and item.layout_variant == "monument"
+                ):
+                    filtered.append(item)
+            pool = filtered or list(decisions)
+
+        def sort_key(item: LayoutDecisionDraft) -> tuple[int, int, int, int, str, str]:
+            # No-asset hero openings must keep the text monument ahead of process/cards.
+            monument_rank = (
+                0
+                if hero_without_asset_cover
+                and item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
+                and item.layout_variant == "monument"
+                else 1
+            )
             if preferred_family_values and item.layout_family in preferred_family_values:
                 family_rank = preferred_family_values.index(item.layout_family)
             else:
@@ -986,6 +1092,7 @@ class LayoutPlanningService:
                 else 1
             )
             return (
+                monument_rank,
                 family_rank,
                 closing_rank,
                 variant_rank,
