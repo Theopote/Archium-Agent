@@ -33,7 +33,7 @@ def test_embedding_configured_requires_model_for_remote_provider() -> None:
     settings = Settings(
         _env_file=None,
         embedding_provider="openai_compatible",
-        embedding_api_key="test-key",
+        embedding_api_key="test-api-key",
         embedding_model=None,
     )
     assert settings.embedding_configured is False
@@ -41,7 +41,7 @@ def test_embedding_configured_requires_model_for_remote_provider() -> None:
     configured = Settings(
         _env_file=None,
         embedding_provider="openai_compatible",
-        embedding_api_key="test-key",
+        embedding_api_key="test-api-key",
         embedding_model="text-embedding-3-small",
     )
     assert configured.embedding_configured is True

@@ -87,7 +87,7 @@ def test_enrich_mission_with_llm_updates_context(
         key_unknowns=["具体用地尚未确定"],
         note="test",
     )
-    settings = Settings(_env_file=None, llm_api_key="test-key")
+    settings = Settings(_env_file=None, llm_api_key="test-api-key")
     service = MissionResearchEnrichmentService(db_session, llm, settings=settings)
 
     result = service.enrich_mission(mission.id, prefer_llm=True)
@@ -125,7 +125,7 @@ def test_revise_mission_from_written_research_updates_task_fields(
     revision_service = MissionResearchEnrichmentService(
         db_session,
         llm,
-        settings=Settings(_env_file=None, llm_api_key="test-key"),
+        settings=Settings(_env_file=None, llm_api_key="test-api-key"),
     )
 
     result = revision_service.revise_mission_from_written_research(mission.id)

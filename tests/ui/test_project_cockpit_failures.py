@@ -15,7 +15,8 @@ def test_home_source_has_load_failed_path() -> None:
     text = HOME.read_text(encoding="utf-8")
     assert "_render_load_failed" in text
     assert "项目列表暂时无法加载" in text
-    assert "_render_empty_state" in text
+    assert "无法加载项目" in text
+    assert "暂无项目。用上方「新项目」或「快速出稿」开始。" in text
     # Must not swallow exceptions into an empty snapshot list.
     assert "except Exception:\n        snapshots = []" not in text
     assert "except Exception as exc:" in text
@@ -23,10 +24,7 @@ def test_home_source_has_load_failed_path() -> None:
 
 def test_home_load_failure_does_not_call_empty_state(monkeypatch: pytest.MonkeyPatch) -> None:
     """When snapshot loading raises, UI must show failure — not first-project empty."""
-    calls: dict[str, int] = {"empty": 0, "failed": 0}
-
-    def fake_empty() -> None:
-        calls["empty"] += 1
+    calls: dict[str, int] = {"failed": 0}
 
     def fake_failed(exc: Exception) -> None:
         calls["failed"] += 1
@@ -34,7 +32,6 @@ def test_home_load_failure_does_not_call_empty_state(monkeypatch: pytest.MonkeyP
 
     import archium.ui.pages.home as home
 
-    monkeypatch.setattr(home, "_render_empty_state", fake_empty)
     monkeypatch.setattr(home, "_render_load_failed", fake_failed)
 
     with patch(
@@ -44,7 +41,6 @@ def test_home_load_failure_does_not_call_empty_state(monkeypatch: pytest.MonkeyP
         home.render()
 
     assert calls["failed"] == 1
-    assert calls["empty"] == 0
 
 
 def test_home_other_projects_continue_into_work() -> None:

@@ -236,7 +236,7 @@ def test_architectural_review_llm_when_enabled(
     ]
     settings = Settings(
         _env_file=None,
-        llm_api_key="test-key",
+        llm_api_key="test-api-key",
         llm_professional_review_enabled=True,
     )
     llm = MockLLMProvider(selector=pipeline_mock_selector)
@@ -284,7 +284,7 @@ def test_brief_alignment_llm_flags_semantic_gap(
     ]
     settings = Settings(
         _env_file=None,
-        llm_api_key="test-key",
+        llm_api_key="test-api-key",
         llm_professional_review_enabled=True,
     )
     llm = MockLLMProvider(selector=pipeline_mock_selector)
@@ -327,7 +327,7 @@ def test_brief_alignment_llm_passes_when_aligned(
     ]
     settings = Settings(
         _env_file=None,
-        llm_api_key="test-key",
+        llm_api_key="test-api-key",
         llm_professional_review_enabled=True,
     )
     llm = MockLLMProvider(selector=brief_alignment_ok_selector)

@@ -28,10 +28,10 @@ def test_create_llm_provider_falls_back_to_effective_settings() -> None:
 def test_resolve_provider_settings_uses_registered_effective_provider() -> None:
     from archium.infrastructure.llm import factory
 
-    ui_settings = Settings(_env_file=None, llm_api_key="ui-key")
+    ui_settings = Settings(_env_file=None, llm_api_key="ui-api-key")
     set_effective_settings_provider(lambda: ui_settings)
     try:
         resolved = factory._resolve_provider_settings(None)
-        assert resolved.llm_api_key == "ui-key"
+        assert resolved.llm_api_key == "ui-api-key"
     finally:
         set_effective_settings_provider(None)

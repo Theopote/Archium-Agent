@@ -57,7 +57,7 @@ def test_resolve_api_key_priority_session_over_keyring_over_env() -> None:
 
 def test_get_effective_settings_applies_profile_and_session_key() -> None:
     profile = _profile(model="resolved-model", base_url="https://resolved.test/v1/")
-    base = Settings(_env_file=None, llm_api_key="env-key", llm_model="env-model")
+    base = Settings(_env_file=None, llm_api_key="env-api-key", llm_model="env-model")
     store = MagicMock()
     store.get.return_value = None
 

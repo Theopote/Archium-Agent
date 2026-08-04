@@ -150,7 +150,7 @@ def test_process_document_assets_llm_caption(
             _env_file=None,
             asset_vision_rag_enabled=True,
             asset_vision_llm_enabled=True,
-            llm_api_key="test",
+            llm_api_key="test-api-key",
         ),
     )
     result = service.process_document_assets(

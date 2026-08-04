@@ -58,7 +58,7 @@ def test_settings_llm_configured() -> None:
     assert settings.llm_configured is False
 
     # With API key
-    settings = Settings(_env_file=None, llm_api_key="test-key")
+    settings = Settings(_env_file=None, llm_api_key="test-api-key")
     assert settings.llm_configured is True
 
 
@@ -66,16 +66,16 @@ def test_settings_embedding_api_key_fallback() -> None:
     """Test embedding API key falls back to LLM key."""
     settings = Settings(
         _env_file=None,
-        llm_api_key="llm-key",
+        llm_api_key="llm-api-key",
         embedding_api_key=None,
     )
 
-    assert settings.effective_embedding_api_key == "llm-key"
+    assert settings.effective_embedding_api_key == "llm-api-key"
 
     # With explicit embedding key
     settings = Settings(
         _env_file=None,
-        llm_api_key="llm-key",
+        llm_api_key="llm-api-key",
         embedding_api_key="embedding-key",
     )
 
@@ -124,7 +124,7 @@ def test_settings_retrieval_configured() -> None:
     settings = Settings(
         _env_file=None,
         retrieval_enabled=True,
-        embedding_api_key="key",
+        embedding_api_key="test-api-key",
         embedding_model="text-embedding-3-small",
     )
     assert settings.retrieval_configured is True

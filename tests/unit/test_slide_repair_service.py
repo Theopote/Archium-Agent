@@ -78,7 +78,7 @@ def test_repair_disabled_is_noop(
     slides, repaired, records = SlideRepairService(
         db_session,
         llm=mock_llm,
-        settings=Settings(_env_file=None, slide_repair_enabled=False, llm_api_key="test"),
+        settings=Settings(_env_file=None, slide_repair_enabled=False, llm_api_key="test-api-key"),
     ).repair_slides(presentation_id, [slide], [issue])
 
     assert repaired == 0
@@ -213,7 +213,7 @@ def test_repair_updates_slide_and_resolves_issue(
     slides, repaired, records = SlideRepairService(
         db_session,
         llm=mock_llm,
-        settings=Settings(_env_file=None, slide_repair_enabled=True, llm_api_key="test"),
+        settings=Settings(_env_file=None, slide_repair_enabled=True, llm_api_key="test-api-key"),
     ).repair_slides(presentation_id, [slide], [issue], brief=brief)
 
     assert repaired == 1

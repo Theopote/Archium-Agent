@@ -23,7 +23,7 @@ def _mock_completion(content: str) -> MagicMock:
 def test_openai_provider_generate_text() -> None:
     client = MagicMock()
     client.chat.completions.create.return_value = _mock_completion("hello world")
-    settings = Settings(_env_file=None, llm_api_key="test-key", llm_model="test-model")
+    settings = Settings(_env_file=None, llm_api_key="test-api-key", llm_model="test-model")
     provider = OpenAICompatibleProvider(settings, client=client)
 
     result = provider.generate_text(
@@ -38,7 +38,7 @@ def test_openai_provider_generate_structured() -> None:
     client.chat.completions.create.return_value = _mock_completion(
         '{"summary": "ok", "steps": []}'
     )
-    settings = Settings(_env_file=None, llm_api_key="test-key", llm_model="test-model")
+    settings = Settings(_env_file=None, llm_api_key="test-api-key", llm_model="test-model")
     provider = OpenAICompatibleProvider(settings, client=client)
 
     plan = provider.generate_structured(
@@ -60,7 +60,7 @@ def test_openai_provider_retries_transient_errors() -> None:
     ]
     settings = Settings(
         _env_file=None,
-        llm_api_key="test-key",
+        llm_api_key="test-api-key",
         llm_model="test-model",
         llm_max_retries=1,
     )

@@ -90,7 +90,10 @@ def test_apply_reduce_text_records_revision_and_replans(
 
     restored = service.restore_previous(slide_with_visual.id)
     assert restored.restored is True
-    assert restored.layout_plan is not None
+    assert restored.visual_intent is not None
+    slide = PresentationRepository(db_session).get_slide(slide_with_visual.id)
+    assert slide is not None
+    assert slide.layout_plan_id is not None
 
 
 def test_restore_previous_without_history_raises(

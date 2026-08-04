@@ -112,7 +112,7 @@ def test_openai_provider_captures_usage() -> None:
     response.usage = usage
     client.chat.completions.create.return_value = response
 
-    settings = Settings(_env_file=None, llm_api_key="k", llm_model="gpt-test")
+    settings = Settings(_env_file=None, llm_api_key="test-api-key", llm_model="gpt-test")
     provider = OpenAICompatibleProvider(settings, client=client)
     text = provider.generate_text(LLMRequest(system_prompt="s", user_prompt="u"))
     assert text == '{"title": "ok"}'

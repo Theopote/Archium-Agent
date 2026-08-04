@@ -99,7 +99,7 @@ def test_import_uploaded_file_triggers_reassess(
     fake_result = ImportItemResult(source_path=Path("brief.pdf"))
     with (
         patch(
-            "archium.ui.workspace_service.IngestionService.import_file",
+            "archium.application.api.documents.DocumentsApi.upload_file",
             return_value=fake_result,
         ),
         patch(
@@ -132,7 +132,7 @@ def test_import_uploaded_file_can_skip_reassess(
     fake_result = ImportItemResult(source_path=Path("a.pdf"))
     with (
         patch(
-            "archium.ui.workspace_service.IngestionService.import_file",
+            "archium.application.api.documents.DocumentsApi.upload_file",
             return_value=fake_result,
         ),
         patch(
@@ -213,7 +213,7 @@ def test_import_uploaded_file_survives_reassess_failure(
     fake_result = ImportItemResult(source_path=Path("site.jpg"))
     with (
         patch(
-            "archium.ui.workspace_service.IngestionService.import_file",
+            "archium.application.api.documents.DocumentsApi.upload_file",
             return_value=fake_result,
         ),
         patch(

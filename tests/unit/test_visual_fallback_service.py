@@ -8,6 +8,11 @@ import pytest
 from archium.application.visual_fallback_service import VisualFallbackService
 from archium.config.settings import Settings
 from archium.domain.asset import Asset
+from archium.domain.asset_presentation_readiness import (
+    ASSET_PRESENTATION_READINESS_KEY,
+    AssetPresentationReadiness,
+    AssetPresentationRole,
+)
 from archium.domain.enums import AssetType, ProjectType, VisualType
 from archium.domain.fallback_image import FallbackImage
 from archium.domain.presentation import Presentation
@@ -30,6 +35,25 @@ def project_id(db_session: Session) -> object:
     ).id
 
 
+def _with_hero_readiness(asset: Asset) -> Asset:
+    readiness = AssetPresentationReadiness(
+        pixel_analyzed=True,
+        presentation_ready=True,
+        visual_information_density=0.8,
+        readable_at_slide_scale=True,
+        recommended_role=AssetPresentationRole.HERO_DRAWING,
+    )
+    metadata = dict(asset.metadata or {})
+    metadata[ASSET_PRESENTATION_READINESS_KEY] = readiness.to_metadata()
+    return asset.model_copy(
+        update={
+            "metadata": metadata,
+            "width": asset.width or 2000,
+            "height": asset.height or 1500,
+        }
+    )
+
+
 def test_relaxed_matching_uses_drawing_classifier(
     tmp_path: Path,
     db_session: Session,
@@ -38,11 +62,13 @@ def test_relaxed_matching_uses_drawing_classifier(
     pytest.importorskip("PIL")
     asset_repo = AssetRepository(db_session)
     site_asset = asset_repo.create(
-        Asset(
-            project_id=project_id,  # type: ignore[arg-type]
-            filename="IMG_001.jpg",
-            path=str(tmp_path / "site.jpg"),
-            asset_type=AssetType.IMAGE,
+        _with_hero_readiness(
+            Asset(
+                project_id=project_id,  # type: ignore[arg-type]
+                filename="IMG_001.jpg",
+                path=str(tmp_path / "site.jpg"),
+                asset_type=AssetType.IMAGE,
+            )
         )
     )
     (tmp_path / "site.jpg").write_bytes(b"fake")

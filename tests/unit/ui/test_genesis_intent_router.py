@@ -32,7 +32,7 @@ def test_genesis_uses_context_intelligence_not_mode_cards() -> None:
 def test_home_empty_state_invites_idea_not_mode_choice() -> None:
     src = Path(__file__).resolve().parents[3] / "archium" / "ui" / "pages" / "home.py"
     text = src.read_text(encoding="utf-8")
-    assert "建筑想法" in text or "描述你的项目" in text
+    assert "描述想法或项目情况" in text or "开始新项目" in text
     assert "知识状态" in text
     assert "开始项目（选主路径）" not in text
 

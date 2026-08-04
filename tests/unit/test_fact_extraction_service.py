@@ -92,7 +92,7 @@ def test_extract_from_context_merges_existing_and_adds_missing_via_llm(
     facts, created = FactExtractionService(
         db_session,
         llm=mock_llm,
-        settings=Settings(_env_file=None, fact_extraction_enabled=True, llm_api_key="test"),
+        settings=Settings(_env_file=None, fact_extraction_enabled=True, llm_api_key="test-api-key"),
     ).extract_from_context(project.id, context_bundle)
 
     assert created == 1
@@ -111,7 +111,7 @@ def test_extract_persists_new_facts(
     facts, created = FactExtractionService(
         db_session,
         llm=mock_llm,
-        settings=Settings(_env_file=None, fact_extraction_enabled=True, llm_api_key="test"),
+        settings=Settings(_env_file=None, fact_extraction_enabled=True, llm_api_key="test-api-key"),
     ).extract_from_context(project.id, context_bundle)
 
     assert created >= 2
