@@ -5,9 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.knowledge_gap_detection import KnowledgeGapReport, detect_knowledge_gaps
 from archium.application.knowledge_isolation import (
     fact_to_knowledge_item,
@@ -15,6 +12,7 @@ from archium.application.knowledge_isolation import (
     filter_generation_knowledge,
     is_reference_document,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.design_knowledge import DesignKnowledge
 from archium.domain.enums import (
     DocumentPurpose,

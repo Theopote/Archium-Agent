@@ -6,13 +6,14 @@ from uuid import uuid4
 
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.domain.enums import SlideType, VisualType
-from archium.domain.slide import SlideSpec, VisualRequirement as SlideVisualRequirement
+from archium.domain.slide import SlideSpec
+from archium.domain.slide import VisualRequirement as SlideVisualRequirement
 from archium.domain.visual import (
-    default_presentation_design_system,
     LayoutFamily,
     LayoutIssueSeverity,
     VisualContentType,
     VisualIntent,
+    default_presentation_design_system,
 )
 from archium.domain.visual.validation import (
     LAYOUT_HERO_NOT_DOMINANT,

@@ -6,10 +6,10 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.unit_of_work import unit_of_work
 from archium.config.settings import Settings
 from archium.domain.visual.edit_intent import INTENT_USER_LABELS, VisualEditIntent
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio.proposal_compare_panel import (
     get_stored_proposal,

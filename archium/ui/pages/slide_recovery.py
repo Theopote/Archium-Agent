@@ -13,11 +13,11 @@ from archium.application.slide_recovery_workflow_service import (
     SlideRecoveryWorkflowRequest,
     SlideRecoveryWorkflowResult,
 )
+from archium.application.unit_of_work import unit_of_work
 from archium.config.settings import Settings
 from archium.domain.enums import WorkflowStatus
 from archium.domain.slide_recovery import PAGE_KIND_LABELS_ZH, SlideRecoveryPageKind
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.background_workflow_runner import (
     SlideRecoveryJobAction,
     background_workflows_enabled,

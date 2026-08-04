@@ -8,10 +8,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Literal
-from uuid import UUID, uuid4
+from typing import Any
 
-from archium.domain.design_system import DesignSystem, create_default_design_system, ColorRole
+from archium.domain.design_system import ColorRole, DesignSystem, create_default_design_system
 
 
 class IconCategory(str, Enum):
@@ -125,13 +124,13 @@ class ChartTemplate:
         """Validate if data matches template requirements."""
         errors = []
         
-        for field, requirement in self.data_requirements.items():
-            if field not in data:
-                errors.append(f"Missing required field: {field}")
-            elif requirement.get("type") == "array" and not isinstance(data[field], list):
-                errors.append(f"Field {field} must be an array")
-            elif requirement.get("type") == "number" and not isinstance(data[field], (int, float)):
-                errors.append(f"Field {field} must be a number")
+        for req_field, requirement in self.data_requirements.items():
+            if req_field not in data:
+                errors.append(f"Missing required field: {req_field}")
+            elif requirement.get("type") == "array" and not isinstance(data[req_field], list):
+                errors.append(f"Field {req_field} must be an array")
+            elif requirement.get("type") == "number" and not isinstance(data[req_field], (int, float)):
+                errors.append(f"Field {req_field} must be a number")
         
         return len(errors) == 0, errors
 
@@ -161,9 +160,9 @@ class DiagramElement:
     scale_factor: float = 1.0
     editable_properties: list[str] = field(default_factory=list)
     
-    def to_svg(self, width: int = 100, height: int = 100, color: str = None) -> str:
+    def to_svg(self, width: int = 100, height: int = 100, color: str | None = None) -> str:
         """Generate SVG for the diagram element."""
-        fill_color = color or self.default_color
+        _fill_color = color or self.default_color
         return f'''
         <svg width="{width}" height="{height}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
             {self.svg_definition}

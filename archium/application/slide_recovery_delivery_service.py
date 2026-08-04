@@ -8,9 +8,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.artifact_policy_service import (
     ArtifactMutationOperation,
     save_render_scene,
@@ -21,6 +18,7 @@ from archium.application.export_policy_service import (
     export_policy_from_preset,
 )
 from archium.application.slide_recovery_workflow_service import SlideRecoveryWorkflowResult
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.application.visual.template_studio_service import (

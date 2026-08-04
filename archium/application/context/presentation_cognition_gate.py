@@ -10,15 +10,13 @@ from dataclasses import dataclass, field
 from typing import Literal
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.context.presentation_readiness import (
     PresentationContextReadiness,
     PresentationGateVerdict,
     presentation_readiness_from_context,
 )
 from archium.application.context.project_context_builder import build_project_context
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.intent.next_best_action import NextBestActionType
 from archium.exceptions import WorkflowError

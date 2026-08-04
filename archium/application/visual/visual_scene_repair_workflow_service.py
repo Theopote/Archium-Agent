@@ -7,10 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.artifact_policy_service import save_render_scene
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.application.visual.asset_reference import (
     build_asset_reference_context,
     content_refs_from_plan,

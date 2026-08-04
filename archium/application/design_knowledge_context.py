@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.architecture_case_library import ArchitectureCaseLibraryService
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.design_knowledge import DesignKnowledge
 from archium.domain.enums import InformationOrigin, KnowledgeItemStatus
 from archium.domain.intent.design_intent import DesignIntent

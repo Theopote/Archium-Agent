@@ -9,6 +9,7 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.unit_of_work import application_api, unit_of_work
 from archium.application.workflow_progress import (
     STATUS_LABELS,
     format_step_log_entry,
@@ -16,7 +17,6 @@ from archium.application.workflow_progress import (
 )
 from archium.domain.enums import WorkflowStatus
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import application_api, unit_of_work
 from archium.ui.background_workflow_runner import (
     BackgroundJobStatus,
     BackgroundWorkflowJob,

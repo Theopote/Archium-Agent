@@ -7,9 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.visual.art_direction_service import ArtDirectionService
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import PresentationWorkflowStep, WorkflowStatus

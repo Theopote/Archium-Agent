@@ -6,10 +6,8 @@ import json
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.human_visual_review_service import HumanVisualReviewService
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.visual.benchmark import HumanVisualReview
 

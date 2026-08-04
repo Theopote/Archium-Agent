@@ -5,10 +5,8 @@ from __future__ import annotations
 import json
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.knowledge_isolation import document_purpose_from_metadata
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.document import DocumentChunk, SourceDocument
 from archium.domain.enums import DocumentPurpose
 from archium.domain.presentation import PresentationBrief

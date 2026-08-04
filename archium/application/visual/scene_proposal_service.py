@@ -5,10 +5,8 @@ from __future__ import annotations
 import contextlib
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.artifact_policy_service import save_render_scene
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.application.visual.asset_binding_validator import AssetBindingValidator
 from archium.application.visual.drawing_readability_service import parse_geometry_token
 from archium.application.visual.partial_edit_preservation import (

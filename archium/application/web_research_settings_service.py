@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.config.settings import Settings, get_settings
 from archium.infrastructure.database.user_preference_repository import UserPreferenceRepository
 

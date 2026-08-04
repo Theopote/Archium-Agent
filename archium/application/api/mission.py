@@ -4,14 +4,12 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.project_mission_service import (
     MissionGenerationResult,
     MissionPatch,
     ProjectMissionService,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.deliverable import DeliverablePlan
 from archium.domain.knowledge_gap import Assumption, ClarifyingQuestion, KnowledgeGap
 from archium.domain.project_mission import ProjectMission
@@ -68,5 +66,17 @@ class MissionApi:
     def update(self, mission_id: UUID, patch: MissionPatch) -> ProjectMission:
         return self._mission_service().update_mission(mission_id, patch)
 
-    def approve(self, mission_id: UUID, **kwargs) -> ProjectMission:
-        return self._mission_service().approve_mission(mission_id, **kwargs)
+    def approve(
+        self,
+        mission_id: UUID,
+        *,
+        user_id: str | None = None,
+        actor_id: str | None = None,
+        note: str | None = None,
+    ) -> ProjectMission:
+        return self._mission_service().approve_mission(
+            mission_id,
+            user_id=user_id,
+            actor_id=actor_id,
+            note=note,
+        )

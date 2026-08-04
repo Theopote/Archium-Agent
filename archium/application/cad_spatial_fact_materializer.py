@@ -7,10 +7,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.cad_bim_analysis import CadAssetAnalysis
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.citation import Citation
 from archium.domain.document import SourceDocument
 from archium.domain.enums import VerificationStatus

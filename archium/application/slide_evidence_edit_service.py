@@ -5,14 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.slide_history_service import SlideHistoryService
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import RevisionSource, VisualType
 from archium.domain.slide import SlideSpec, VisualRequirement
-from archium.domain.visual.layout_evidence_item import EvidenceItemRole, LayoutEvidenceItem
+from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
 from archium.exceptions import WorkflowError
 from archium.infrastructure.database.repositories import PresentationRepository
 

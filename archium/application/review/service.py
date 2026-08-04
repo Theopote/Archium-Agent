@@ -5,9 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.review.architectural import ArchitecturalReviewer
 from archium.application.review.content import ContentReviewer
@@ -16,6 +13,7 @@ from archium.application.review.evidence import EvidenceReviewer
 from archium.application.review.layout import LayoutReviewer
 from archium.application.review.scene_render_qa import PostRenderReviewer, SceneSemanticReviewer
 from archium.application.review.slide_semantic import SlideSemanticReviewer
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import PresentationBrief, Storyline

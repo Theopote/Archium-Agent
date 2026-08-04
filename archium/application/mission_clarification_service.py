@@ -5,9 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application._helpers import to_json
 from archium.application.mission_history_service import MissionHistoryService
 from archium.application.mission_parser import parse_mission_draft, validate_mission_draft
@@ -15,6 +12,7 @@ from archium.application.project_mission_service import (
     MissionGenerationResult,
     ProjectMissionService,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import (
     ApprovalStatus,
@@ -318,7 +316,7 @@ class MissionClarificationService:
     @classmethod
     def readiness_for_mission(cls, session: SessionLike, mission_id: UUID) -> ClarificationReadiness:
         """Load clarification rows and compute readiness without an LLM provider."""
-        missions = MissionRepository(session)
+        missions = MissionRepository(session_of(session))
         if missions.get_mission(mission_id) is None:
             raise WorkflowError(f"任务理解 {mission_id} 不存在")
         return cls.build_readiness(

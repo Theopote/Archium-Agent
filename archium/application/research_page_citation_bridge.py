@@ -11,9 +11,7 @@ from __future__ import annotations
 import re
 from uuid import UUID
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.domain.project_knowledge import ProjectKnowledgeItem
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_role import SlideRole

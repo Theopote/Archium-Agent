@@ -6,14 +6,12 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.model_role_router import (
     ModelRoleRegistryService,
     ModelRoleRouter,
     audit_model_call,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.model_roles import ModelRole
 from archium.domain.slide_recovery import RecoveredPageRegion, SlideRecoveryPageKind

@@ -7,9 +7,6 @@ import json
 from dataclasses import dataclass, field
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application._helpers import to_json
 from archium.application.deliverable_parser import (
     parse_deliverable_plan_draft,
@@ -18,6 +15,7 @@ from archium.application.deliverable_parser import (
 from archium.application.mission_clarification_service import MissionClarificationService
 from archium.application.mission_history_service import DeliverablePlanHistoryService
 from archium.application.project_mission_service import ensure_mission_approval_current
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.deliverable import DeliverablePlan, PlannedDeliverable
 from archium.domain.enums import ApprovalStatus, DeliverableType, RevisionSource

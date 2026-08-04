@@ -8,9 +8,6 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.architecture_case_library import ArchitectureCaseLibraryService
 from archium.application.fact_retrieval import match_fact_keys_from_query, rank_facts_for_context
 from archium.application.knowledge_isolation import filter_generation_facts, is_reference_document
@@ -28,6 +25,7 @@ from archium.application.retrieval_credibility import (
 from archium.application.retrieval_filters import RetrievalFilters
 from archium.application.retrieval_hybrid import keyword_overlap_score
 from archium.application.retrieval_service import create_retrieval_service
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.architectural_chunk import (
     ArchitecturalChunkType,

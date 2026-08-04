@@ -6,10 +6,8 @@ import json
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.slide_generation_context_service import SlideGenerationContextService
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.application.visual.outline_template_co_planning_service import (
     OutlineTemplateCoPlanningService,
 )

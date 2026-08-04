@@ -31,15 +31,13 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.ingestion_service import IngestionService
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_service import PresentationService
 from archium.application.project_acceptance_service import (
     _attach_project_assets,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.application.visual.deck_qa_service import DeckQAService
 from archium.application.visual.layout_planning_service import LayoutPlanningService
 from archium.application.visual.layout_validation_service import LayoutValidationService

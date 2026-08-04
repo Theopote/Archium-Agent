@@ -8,9 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import ProjectStatus
 from archium.domain.presentation import Presentation

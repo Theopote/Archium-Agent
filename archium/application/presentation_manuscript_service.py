@@ -4,13 +4,11 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.fact_knowledge_manuscript_mapping import (
     knowledge_item_to_evidence,
     knowledge_item_to_manuscript_fact,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.enums import InformationOrigin, KnowledgeItemStatus
 from archium.domain.outline import OutlinePlan, OutlineSection
 from archium.domain.presentation import PresentationBrief, Storyline

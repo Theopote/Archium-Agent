@@ -18,6 +18,7 @@ class RenderResult:
     pdf_path: Path | None = None
     preview_images: list[Path] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    metadata: dict[str, object] = field(default_factory=dict)
 
     @classmethod
     def from_state_paths(

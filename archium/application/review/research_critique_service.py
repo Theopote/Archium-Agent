@@ -7,9 +7,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.config.settings import Settings, get_settings
 from archium.domain.design_knowledge import DesignKnowledge
 from archium.domain.project_knowledge import ProjectKnowledgeItem

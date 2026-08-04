@@ -8,8 +8,6 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 from pydantic import Field
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application._helpers import build_project_context, to_json
 from archium.application.fact_ledger_service import FactLedgerService
@@ -19,6 +17,7 @@ from archium.application.mission_parser import (
     parse_mission_draft,
     validate_mission_draft,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain._base import DomainModel
 from archium.domain.architectural_narrative_mode import ArchitecturalNarrativeMode

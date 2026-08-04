@@ -9,8 +9,6 @@ from enum import StrEnum
 from typing import Any, cast
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Session
-
 from archium.application.planning_workflow_service import (
     PlanningWorkflowResult,
     PlanningWorkflowService,
@@ -22,6 +20,7 @@ from archium.application.slide_recovery_workflow_service import (
     SlideRecoveryWorkflowResult,
     SlideRecoveryWorkflowService,
 )
+from archium.application.unit_of_work import SessionLike, application_api, unit_of_work
 from archium.application.visual.visual_workflow_service import (
     VisualWorkflowResult,
     VisualWorkflowService,
@@ -33,7 +32,6 @@ from archium.exceptions import WorkflowError
 from archium.infrastructure.llm.base import LLMProvider
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
-from archium.application.unit_of_work import application_api, unit_of_work
 
 
 class BackgroundJobStatus(StrEnum):
@@ -100,7 +98,7 @@ def _resolve_settings(settings: Settings | None) -> Settings:
 
 
 def _create_presentation_service(
-    session: Session, llm: LLMProvider, settings: Settings
+    session: SessionLike, llm: LLMProvider, settings: Settings
 ) -> PresentationWorkflowService:
     return PresentationWorkflowService(
         session,
@@ -110,7 +108,7 @@ def _create_presentation_service(
     )
 
 
-def _create_planning_service(session: Session, settings: Settings) -> PlanningWorkflowService:
+def _create_planning_service(session: SessionLike, settings: Settings) -> PlanningWorkflowService:
     llm = create_llm_provider(settings)
     return PlanningWorkflowService(
         session,
@@ -121,7 +119,7 @@ def _create_planning_service(session: Session, settings: Settings) -> PlanningWo
 
 
 def _create_slide_recovery_service(
-    session: Session, settings: Settings
+    session: SessionLike, settings: Settings
 ) -> SlideRecoveryWorkflowService:
     return SlideRecoveryWorkflowService(session, settings=settings)
 
@@ -143,7 +141,7 @@ def _set_slide_recovery_job_result(
 
 
 def _create_visual_service(
-    session: Session, settings: Settings, *, use_llm: bool
+    session: SessionLike, settings: Settings, *, use_llm: bool
 ) -> VisualWorkflowService:
     llm = create_llm_provider(settings) if use_llm and settings.llm_configured else None
     return VisualWorkflowService(

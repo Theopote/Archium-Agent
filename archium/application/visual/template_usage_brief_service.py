@@ -6,9 +6,7 @@ import json
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.domain.visual.architectural_template import (
     ArchitecturalTemplate,
     ArchitecturalTemplateLayout,
@@ -220,9 +218,9 @@ class TemplateUsageBriefService:
                 TemplateUsageBriefRepository,
             )
 
-            brief = TemplateUsageBriefRepository(session).save_new_version(brief)
+            brief = TemplateUsageBriefRepository(session_of(session)).save_new_version(brief)
             if bind_art_direction_id is not None:
-                arts = ArtDirectionRepository(session)
+                arts = ArtDirectionRepository(session_of(session))
                 art = arts.get(bind_art_direction_id)
                 if art is not None:
                     arts.save(bind_brief_to_art_direction(art, brief))
@@ -245,9 +243,9 @@ class TemplateUsageBriefService:
             TemplateUsageBriefRepository,
         )
 
-        saved = TemplateUsageBriefRepository(session).save_new_version(brief)
+        saved = TemplateUsageBriefRepository(session_of(session)).save_new_version(brief)
         if art_direction_id is not None:
-            arts = ArtDirectionRepository(session)
+            arts = ArtDirectionRepository(session_of(session))
             art = arts.get(art_direction_id)
             if art is not None:
                 arts.save(bind_brief_to_art_direction(art, saved))

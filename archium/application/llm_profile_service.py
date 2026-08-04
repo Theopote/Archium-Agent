@@ -5,9 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.domain.llm_profile import (
     DEFAULT_CREDENTIAL_KEY,
     DEFAULT_PROFILE_NAME,

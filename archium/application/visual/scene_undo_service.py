@@ -4,11 +4,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.revision_service import RevisionService
 from archium.application.scene_revision_timeline_service import SceneRevisionTimelineService
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.application.visual.scene_history_service import (
     SCENE_STATE_SNAPSHOT_KIND,
     SceneHistoryService,

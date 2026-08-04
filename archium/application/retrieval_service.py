@@ -4,11 +4,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.retrieval_filters import RetrievalFilters
 from archium.application.retrieval_hybrid import rerank_retrieved_chunks
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.architectural_chunk import infer_types_from_query
 from archium.domain.document import DocumentChunk

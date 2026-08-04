@@ -24,6 +24,7 @@ from archium.application.slide_recovery_region_edit_service import (
     sanitize_region,
 )
 from archium.application.slide_recovery_workflow_service import SlideRecoveryWorkflowResult
+from archium.application.unit_of_work import unit_of_work
 from archium.config.settings import Settings
 from archium.domain.enums import WorkflowStatus
 from archium.domain.slide_recovery import (
@@ -33,7 +34,6 @@ from archium.domain.slide_recovery import (
     RecoveredPageRegion,
 )
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import unit_of_work
 from archium.infrastructure.slide_recovery.region_overlay_renderer import render_region_overlay
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio.slide_canvas_enhanced import parse_canvas_editor_event

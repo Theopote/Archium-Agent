@@ -8,13 +8,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.artifact_policy_service import (
     ArtifactMutationGuard,
     ArtifactMutationOperation,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.artifact_ownership import ArtifactKind, ArtifactRecord
 from archium.domain.delivery_record import DeliveryRecord
 from archium.infrastructure.database.repositories import DeliveryRecordRepository

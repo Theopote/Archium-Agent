@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import AliasChoices, Field, field_validator, model_validator, HttpUrl, AnyUrl
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -1090,7 +1090,7 @@ class Settings(BaseSettings):
         return v
 
     @model_validator(mode="after")
-    def validate_settings_consistency(self) -> "Settings":
+    def validate_settings_consistency(self) -> Settings:
         """Validate cross-field consistency."""
         # Check that if retrieval is enabled, embedding is properly configured
         if self.retrieval_enabled and not self.embedding_configured:

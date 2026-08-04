@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.artifact_history_service import (
     BriefHistoryService,
     OutlineHistoryService,
@@ -28,6 +25,7 @@ from archium.application.review_models import (
     StorylineUpdate,
 )
 from archium.application.slide_history_service import SlideHistoryService
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.enums import (
     ApprovalStatus,
     NarrativeStage,
@@ -44,13 +42,13 @@ from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import ManuscriptStatus, PresentationManuscript
 from archium.domain.review import ReviewIssue
 from archium.domain.slide import SlideSpec
-from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
 from archium.domain.slide_asset_binding import SlideAssetBinding
 from archium.domain.slide_design_brief import (
     SlideDesignBrief,
     coerce_brief_approval_status,
 )
 from archium.domain.slide_intent import SlideIntent
+from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
 from archium.domain.visual.layout_family_normalize import coerce_layout_family
 from archium.domain.visual.visual_grammar import coerce_page_archetype
 from archium.domain.workflow import WorkflowRun

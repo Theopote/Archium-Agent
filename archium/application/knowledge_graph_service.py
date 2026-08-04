@@ -5,12 +5,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.architecture_case_library import ArchitectureCaseLibraryService
 from archium.application.retrieval_credibility import rank_relevance
 from archium.application.retrieval_hybrid import keyword_overlap_score
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.architecture_case import ArchitectureCase
 from archium.domain.enums import KnowledgeItemStatus, VerificationStatus

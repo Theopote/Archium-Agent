@@ -10,11 +10,10 @@ This module provides smart layout optimization algorithms that consider:
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Literal
-from uuid import UUID
-import math
+from typing import Any
 
 from archium.domain.design_system import DesignSystem, create_default_design_system
 from archium.domain.presentation_templates import SlideLayout
@@ -91,7 +90,7 @@ class LayoutScore:
     score: float
     details: dict[str, Any] = field(default_factory=dict)
     
-    def __lt__(self, other: "LayoutScore") -> bool:
+    def __lt__(self, other: LayoutScore) -> bool:
         return self.score < other.score
 
 
@@ -407,11 +406,11 @@ class LayoutOptimizer:
             return 0.5  # Neutral score
         
         # Calculate center of mass for content
-        total_weight = 0
-        weighted_x = 0
-        weighted_y = 0
+        total_weight = 0.0
+        weighted_x = 0.0
+        weighted_y = 0.0
         
-        for i, block in enumerate(content_blocks):
+        for i, _block in enumerate(content_blocks):
             if i < len(zones):
                 zone = zones[i]
                 center_x, center_y = zone.get_center()
@@ -522,13 +521,11 @@ class LayoutOptimizer:
         
         if "require_columns" in constraints:
             required_columns = constraints["require_columns"]
-            if required_columns == 2 and layout == SlideLayout.TWO_COLUMN:
-                satisfied_constraints += 1
-            elif required_columns == 3 and layout == SlideLayout.THREE_COLUMN:
+            if required_columns == 2 and layout == SlideLayout.TWO_COLUMN or required_columns == 3 and layout == SlideLayout.THREE_COLUMN:
                 satisfied_constraints += 1
         
         if "max_content_blocks" in constraints:
-            max_blocks = constraints["max_content_blocks"]
+            _max_blocks = constraints["max_content_blocks"]
             # This would need actual content block count, simplified here
             satisfied_constraints += 1  # Placeholder
         
@@ -554,7 +551,7 @@ class LayoutOptimizer:
         container_width, container_height = container_size
         
         # Use design system spacing scale
-        spacing_scale = self.design_system.spacing.scale
+        _spacing_scale = self.design_system.spacing.scale
         
         # Calculate base spacing based on container size
         base_spacing = min(container_width, container_height) * 0.02
@@ -592,7 +589,7 @@ class LayoutOptimizer:
         # Calculate optimal spacing
         spacing = self.calculate_optimal_spacing(content_blocks, slide_size)
         
-        for i, (block, zone) in enumerate(zip(content_blocks, layout_zones)):
+        for _i, (block, zone) in enumerate(zip(content_blocks, layout_zones, strict=True)):
             # Convert normalized zone coordinates to pixels
             zone_x, zone_y, zone_width, zone_height = zone.position
             

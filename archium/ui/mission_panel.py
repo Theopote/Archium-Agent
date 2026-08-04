@@ -7,6 +7,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.project_mission_service import MissionPatch, suggest_narrative_mode
+from archium.application.unit_of_work import unit_of_work
 from archium.domain.architectural_narrative_mode import ArchitecturalNarrativeMode
 from archium.domain.enums import (
     InterventionScale,
@@ -27,7 +28,6 @@ from archium.ui.components.design_rationale_details import render_design_rationa
 from archium.ui.components.spatial_design_details import render_spatial_design_layer
 from archium.ui.error_handlers import report_user_error
 from archium.ui.planning_service import update_mission_fields
-from archium.application.unit_of_work import application_api, unit_of_work
 
 TASK_NATURE_LABELS = {
     TaskNature.NEW_BUILD: "新建",

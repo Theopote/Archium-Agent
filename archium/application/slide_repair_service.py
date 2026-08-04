@@ -9,9 +9,6 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application._helpers import sanitize_slide_message
 from archium.application.asset_matching_service import AssetMatchingService
 from archium.application.slide_context_prompt import format_slide_generation_context
@@ -25,6 +22,7 @@ from archium.application.slide_repair_policy import (
     slide_involves_numbers,
     validate_llm_repair,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import (
     ReviewCategory,

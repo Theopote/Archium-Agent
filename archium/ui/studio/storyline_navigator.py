@@ -8,9 +8,9 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.unit_of_work import unit_of_work
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation import Storyline
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.page_status_board_panel import status_badge
 from archium.ui.studio.slide_navigator import (
     _resolve_selected_index,

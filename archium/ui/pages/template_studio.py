@@ -7,6 +7,7 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.unit_of_work import unit_of_work
 from archium.application.visual.template_studio_service import TemplateStudioService
 from archium.domain.visual.architectural_template import (
     ArchitecturalTemplateLayout,
@@ -16,7 +17,6 @@ from archium.domain.visual.architectural_template import (
     TemplateStatus,
 )
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 
 

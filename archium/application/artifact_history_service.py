@@ -4,12 +4,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.artifact_snapshots import brief_to_snapshot, storyline_to_snapshot
 from archium.application.revision_service import RevisionService
 from archium.application.slide_diff import change_source_label
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.enums import RevisionEntityType, RevisionSource
 from archium.domain.outline import OutlinePlan

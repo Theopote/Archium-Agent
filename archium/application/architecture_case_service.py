@@ -5,9 +5,7 @@ from __future__ import annotations
 import re
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.domain.architecture_case import ArchitectureCase
 from archium.domain.case_ref import case_id_from_ref, normalize_case_id, normalize_precedent_ref
 from archium.domain.design_knowledge import DesignKnowledge

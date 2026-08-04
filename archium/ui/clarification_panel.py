@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import streamlit as st
 
 from archium.application.mission_clarification_service import ClarificationReadiness
+from archium.application.unit_of_work import unit_of_work
 from archium.domain.enums import (
     AssumptionStatus,
     KnowledgeGapStatus,
@@ -18,7 +19,6 @@ from archium.domain.fact import ProjectFact
 from archium.domain.knowledge_gap import Assumption, ClarifyingQuestion, KnowledgeGap
 from archium.domain.project_mission import MissionConstraint
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.planning_service import (
     answer_clarifying_question,

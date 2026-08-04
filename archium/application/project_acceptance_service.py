@@ -8,9 +8,6 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.presentation_workflow_service import PresentationWorkflowService
 from archium.application.project_acceptance_metrics import (
     derive_acceptance_human_metrics,
@@ -18,6 +15,7 @@ from archium.application.project_acceptance_metrics import (
     seed_acceptance_reviews_from_layout,
 )
 from archium.application.studio_human_review_store import load_presentation_reviews
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.application.visual.visual_workflow_service import VisualWorkflowService
 from archium.config.settings import Settings
 from archium.domain.asset import Asset

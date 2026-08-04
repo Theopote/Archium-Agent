@@ -8,8 +8,8 @@ import streamlit as st
 
 from archium.application.fact_retrieval import match_fact_keys_from_query
 from archium.application.knowledge_fusion import KnowledgeFusionService
-from archium.domain.knowledge_reference import KnowledgeSourceKind
 from archium.application.unit_of_work import unit_of_work
+from archium.domain.knowledge_reference import KnowledgeSourceKind
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.workspace_service import preview_project_retrieval
 

@@ -12,8 +12,8 @@ from archium.application.artifact_history_service import (
     StorylineHistoryService,
 )
 from archium.application.slide_diff import change_source_label
-from archium.domain.revision import EntityRevision
 from archium.application.unit_of_work import unit_of_work
+from archium.domain.revision import EntityRevision
 from archium.ui.label_map import revision_history_label
 
 

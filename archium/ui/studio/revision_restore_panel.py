@@ -7,9 +7,9 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.slide_diff import change_source_label
+from archium.application.unit_of_work import unit_of_work
 from archium.domain.revision import EntityRevision
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio_service import (
     list_slide_content_revisions,

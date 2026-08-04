@@ -6,11 +6,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
-from archium.config.settings import Settings, get_settings
 from archium.application.design_system_integration import DesignSystemIntegrationService
+from archium.application.unit_of_work import SessionLike, session_of
+from archium.config.settings import Settings, get_settings
 from archium.domain.export_authority import (
     FORMAL_DELIVERY_PPTX_FILENAME,
     FORMAL_EDITABLE_PPTX_AUTHORITY,
@@ -234,7 +232,7 @@ class FormalPptxExportService:
         
         # Apply template if specified
         if template_id:
-            template_result = self._design_system_integration.apply_template_to_presentation(
+            _template_result = self._design_system_integration.apply_template_to_presentation(
                 presentation_id,
                 template_id,
                 {"title": brief.title, "slides_count": len(slides)},
@@ -244,7 +242,7 @@ class FormalPptxExportService:
         if use_intelligent_layout:
             from archium.ui.visual_service import apply_intelligent_layout_to_visual_workflow
             
-            layout_optimizations = apply_intelligent_layout_to_visual_workflow(
+            _layout_optimizations = apply_intelligent_layout_to_visual_workflow(
                 self._session,
                 presentation_id,
                 slides,
@@ -282,6 +280,8 @@ class FormalPptxExportService:
         if use_intelligent_layout:
             warnings.append("已应用智能布局优化")
         
+        if extras.editable_pptx_path is None:
+            raise WorkflowError("增强渲染器未生成可编辑 PPTX")
         return FormalPptxExportResult(
             path=extras.editable_pptx_path,
             authority=FormalExportAuthority.RENDER_SCENE,  # Use formal authority

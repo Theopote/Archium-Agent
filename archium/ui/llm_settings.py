@@ -7,8 +7,8 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.llm_settings_resolver import get_effective_settings
-from archium.config.settings import Settings
 from archium.application.unit_of_work import unit_of_work
+from archium.config.settings import Settings
 
 
 def session_api_key() -> str | None:
@@ -45,7 +45,6 @@ def render_project_llm_tier_selector(
         tier_label,
     )
     from archium.domain.project_llm_tier import ProjectLLMTier
-    from archium.application.unit_of_work import unit_of_work
 
     with unit_of_work() as uow:
         service = ProjectLLMTierService(uow)

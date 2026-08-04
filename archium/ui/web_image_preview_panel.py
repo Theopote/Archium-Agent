@@ -7,11 +7,11 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.image_search_settings_service import ImageSearchSettingsService
+from archium.application.unit_of_work import unit_of_work
 from archium.application.web_image_preview_service import WebImagePreviewService
 from archium.config.settings import get_settings
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.image_search_settings import session_pexels_api_key, session_unsplash_api_key
 
 

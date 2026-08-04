@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.project_context_builder import build_project_context
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.context.project_context import ProjectContext
 from archium.domain.fact import ProjectFact
 from archium.infrastructure.database.repositories import FactRepository

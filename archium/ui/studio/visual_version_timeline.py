@@ -10,12 +10,12 @@ from archium.application.scene_revision_timeline_service import (
     SceneRevisionTimelineService,
     timeline_source_label,
 )
+from archium.application.unit_of_work import unit_of_work
 from archium.config.settings import Settings, get_settings
 from archium.domain.scene_revision_summary import SceneRevisionSummary
 from archium.exceptions import WorkflowError
 from archium.ui.error_handlers import report_user_error
 from archium.ui.visual_service import SlideVisualSnapshot
-from archium.application.unit_of_work import unit_of_work
 
 
 def _compare_session_key(slide_id: UUID) -> str:

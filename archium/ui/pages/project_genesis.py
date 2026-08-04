@@ -6,6 +6,7 @@ import streamlit as st
 
 from archium.application.genesis_starter_service import GenesisStarterResult
 from archium.application.project_management_service import ProjectManagementService
+from archium.application.unit_of_work import application_api, unit_of_work
 from archium.domain.context.lifecycle_stage import ProjectLifecycleStage
 from archium.domain.context.recommended_workflow import RecommendedWorkflow
 from archium.domain.enums import ProjectOriginMode
@@ -15,7 +16,6 @@ from archium.ui.app_navigation import get_app_page
 from archium.ui.components.chrome import render_page_header
 from archium.ui.error_handlers import report_user_error
 from archium.ui.llm_settings import get_ui_effective_settings
-from archium.application.unit_of_work import application_api, unit_of_work
 
 _ASSESSMENT_KEY = "genesis_context_assessment"
 _PROJECT_KEY = "genesis_assessed_project_id"

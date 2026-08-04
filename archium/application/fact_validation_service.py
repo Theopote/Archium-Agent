@@ -5,9 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.domain.enums import VerificationStatus
 from archium.domain.fact import FactValue, ProjectFact
 from archium.domain.fact_ledger import SEMANTIC_ALIAS_GROUPS

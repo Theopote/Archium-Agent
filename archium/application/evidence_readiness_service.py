@@ -5,11 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.review.export_gating import export_blocking_open_issues
 from archium.application.review_service import PresentationReviewService
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.enums import EvidenceAvailability
 from archium.domain.export_verdict import ExportVerdict, ExportVerdictStatus
 from archium.domain.slide_role import SlideRole

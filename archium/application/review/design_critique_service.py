@@ -7,10 +7,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.reasoning_artifact import ensure_direction_reasoning
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.design_critique import (

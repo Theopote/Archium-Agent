@@ -7,8 +7,8 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.asset_metadata_service import AssetMetadataService
-from archium.domain.plan_overlay import PlanLegendItem, PlanOverlayMetadata, plan_overlay_from_asset
 from archium.application.unit_of_work import unit_of_work
+from archium.domain.plan_overlay import PlanLegendItem, PlanOverlayMetadata, plan_overlay_from_asset
 
 _PLAN_VISUAL_TYPES = {"site_plan", "map", "floor_plan"}
 

@@ -43,7 +43,7 @@ def render_section_label(label: str) -> None:
     )
 
 
-def render_status_badge(label: str, *, tone: Tone = "neutral") -> None:
+def render_status_badge(label: str, *, tone: str = "neutral") -> None:
     mark = _STATUS_MARK.get(tone, "○")
     st.markdown(
         f'<span class="status-chip status-chip-{tone}">'
@@ -55,7 +55,7 @@ def render_status_badge(label: str, *, tone: Tone = "neutral") -> None:
 
 
 def render_stat_chips(
-    items: Sequence[tuple[str, str] | tuple[str, str, Tone]],
+    items: Sequence[tuple[str, str] | tuple[str, str, str]],
 ) -> None:
     """Compact label/value strip — prefer over ``st.metric`` dashboard rows.
 
@@ -67,11 +67,11 @@ def render_stat_chips(
     for item in items:
         label = html.escape(str(item[0]))
         value = html.escape(str(item[1]))
-        tone: Tone = "neutral"
+        tone = "neutral"
         if len(item) >= 3:
             candidate = item[2]
             if candidate in _STATUS_MARK:
-                tone = candidate  # type: ignore[assignment]
+                tone = candidate
         chips.append(
             f'<span class="archium-stat-chip archium-stat-chip-{tone}">'
             f'<span class="archium-stat-chip-label">{label}</span>'
@@ -85,7 +85,7 @@ def render_stat_chips(
 
 
 def render_status_chip_row(
-    items: Sequence[tuple[str, Tone]],
+    items: Sequence[tuple[str, str]],
 ) -> None:
     """Inline status badges in one row."""
     if not items:

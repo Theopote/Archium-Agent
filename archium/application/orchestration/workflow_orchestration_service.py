@@ -7,12 +7,10 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.orchestration.workstream_execution_service import (
     WorkstreamExecutionService,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.context.project_context import ProjectContext
 from archium.domain.enums import WorkflowStatus

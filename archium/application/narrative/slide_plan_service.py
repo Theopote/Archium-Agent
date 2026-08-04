@@ -5,9 +5,6 @@ from __future__ import annotations
 import logging
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application._helpers import (
     build_retrieval_query_from_storyline,
     resolve_design_context_bundle,
@@ -20,6 +17,7 @@ from archium.application.slide_generation_context_service import SlideGeneration
 from archium.application.slide_history_service import SlideHistoryService
 from archium.application.slide_lineage import apply_slide_lineage
 from archium.application.slide_plan_slots import SlidePlanSlot, build_slide_plan_slots
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.application.visual.visual_grammar_recognition import recognize_page_archetype
 from archium.application.visual.visual_grammar_slots import ensure_evidence_slots_on_slide
 from archium.config.settings import Settings, get_settings

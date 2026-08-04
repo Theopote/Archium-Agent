@@ -14,6 +14,7 @@ from archium.application.review_models import (
     SlideIntentUpdate,
 )
 from archium.application.review_service import PresentationReviewService
+from archium.application.unit_of_work import application_api, unit_of_work
 from archium.application.visual.visual_grammar_labels import (
     archetype_label,
     archetype_select_options,
@@ -28,6 +29,7 @@ from archium.domain.presentation import Storyline
 from archium.domain.slide_intent import SlideIntent, slide_intents_from_page_instructions
 from archium.domain.visual.visual_grammar import PageArchetype
 from archium.ui.app_navigation import get_app_page
+from archium.ui.error_handlers import report_user_error
 from archium.ui.pages import project_mission
 from archium.ui.pages.flow import (
     render_flow_project_context,
@@ -36,7 +38,6 @@ from archium.ui.pages.flow import (
 )
 from archium.ui.planning_service import TASK_EXAMPLE_PROMPTS, PlanningSnapshot
 from archium.ui.workspace_service import list_project_presentations
-from archium.application.unit_of_work import application_api, unit_of_work
 
 _PAGE_TYPE_LABELS = {
     "general": "通用内容",
@@ -886,7 +887,6 @@ def _render_default_outline(project_id: UUID, snapshot: PlanningSnapshot) -> Non
 def _confirm_outline(project_id: UUID, *, outline: OutlinePlan | None) -> None:
     from archium.application.outline_approval_service import OutlineApprovalService
     from archium.exceptions import WorkflowError
-    from archium.ui.error_handlers import format_user_error
 
     try:
         with unit_of_work() as uow:

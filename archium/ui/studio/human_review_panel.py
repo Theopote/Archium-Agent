@@ -12,6 +12,7 @@ from archium.application.studio_human_review_store import (
     load_slide_review,
     save_slide_review,
 )
+from archium.application.unit_of_work import unit_of_work
 from archium.domain.visual.benchmark import (
     HUMAN_REVIEW_MAX_SCORE,
     HUMAN_REVIEW_MIN_SCORE,
@@ -19,7 +20,6 @@ from archium.domain.visual.benchmark import (
     HumanVisualReview,
     HumanVisualReviewSource,
 )
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.llm_settings import get_ui_effective_settings
 from archium.ui.visual_service import SlideVisualSnapshot
 

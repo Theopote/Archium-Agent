@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Literal
-from pydantic import BaseModel, Field
+from typing import Any
 
 
 class ColorRole(str, Enum):
@@ -52,7 +51,8 @@ class ColorToken:
     def to_rgb(self) -> tuple[int, int, int]:
         """Convert hex to RGB tuple."""
         hex_value = self.hex_value.lstrip('#')
-        return tuple(int(hex_value[i:i+2], 16) for i in (0, 2, 4))
+        channels = tuple(int(hex_value[i:i+2], 16) for i in (0, 2, 4))
+        return (channels[0], channels[1], channels[2])
     
     def to_css(self) -> str:
         """Convert to CSS color string."""
@@ -94,20 +94,19 @@ class ColorPalette:
     
     def _get_luminance(self, color: ColorToken) -> float:
         """Calculate relative luminance for accessibility."""
-        r, g, b = color.to_rgb()
+        red, green, blue = color.to_rgb()
         # Convert to linear RGB
-        r = self._linearize(r / 255)
-        g = self._linearize(g / 255)
-        b = self._linearize(b / 255)
+        red_lin = self._linearize(red / 255)
+        green_lin = self._linearize(green / 255)
+        blue_lin = self._linearize(blue / 255)
         # Calculate luminance
-        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+        return 0.2126 * red_lin + 0.7152 * green_lin + 0.0722 * blue_lin
     
     def _linearize(self, value: float) -> float:
         """Linearize RGB value for luminance calculation."""
         if value <= 0.03928:
             return value / 12.92
-        else:
-            return ((value + 0.055) / 1.055) ** 2.4
+        return float(((value + 0.055) / 1.055) ** 2.4)
 
 
 class FontFamily(str, Enum):

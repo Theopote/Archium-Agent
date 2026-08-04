@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.visual_qa_policy import (
     DRAWING_TYPE_MISMATCH_MIN_CONFIDENCE,
     decide_check_issue,

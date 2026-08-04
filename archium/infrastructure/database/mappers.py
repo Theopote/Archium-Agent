@@ -95,6 +95,7 @@ from archium.domain.slide_asset_binding import SlideAssetBinding
 from archium.domain.slide_design_brief import SlideDesignBrief
 from archium.domain.slide_intent import SlideIntent
 from archium.domain.spatial_design import DesignRule, SpatialIntent
+from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
 from archium.domain.visual.vision_generation import ArchitectureImageType, VisionStylePreset
 from archium.domain.visual.visual_concept_brief import VisualConceptBrief
 from archium.domain.visual.visual_grammar import coerce_page_archetype
@@ -171,7 +172,7 @@ def evidence_items_to_json(items: list) -> list[dict[str, object]]:
     return [item.model_dump(mode="json") for item in items if isinstance(item, LayoutEvidenceItem)]
 
 
-def evidence_items_from_json(data: list[dict[str, object]]):
+def evidence_items_from_json(data: list[dict[str, object]]) -> list[LayoutEvidenceItem]:
     from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
 
     return [LayoutEvidenceItem.model_validate(item) for item in data]

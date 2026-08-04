@@ -4,11 +4,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.context_evidence import ProjectEvidencePack, gather_project_evidence
 from archium.application.knowledge_gap_detection import KnowledgeGapEntry
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.enums import KnowledgeItemStatus, VerificationStatus
 from archium.domain.fact import ProjectFact
 from archium.domain.intent.knowledge_claim import (

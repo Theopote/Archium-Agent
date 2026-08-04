@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.agents.brief_builder import BriefBuilder
 from archium.application._helpers import (
     build_retrieval_query_from_request,
@@ -24,6 +21,7 @@ from archium.application.mission_context_bridge import (
     resolve_project_mission,
 )
 from archium.application.presentation_models import PresentationRequest
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import PresentationStatus, RevisionSource
 from archium.domain.presentation import PresentationBrief

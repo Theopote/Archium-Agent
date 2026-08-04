@@ -6,9 +6,7 @@ from datetime import UTC, datetime
 from typing import Any, cast
 from uuid import UUID
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.enums import (
     ApprovalStatus,

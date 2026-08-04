@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.visual.comment_to_command_planner import CommentToCommandPlanner
 from archium.application.visual.scene_history_service import SceneHistoryService
 from archium.application.visual.scene_proposal_service import SceneProposalService

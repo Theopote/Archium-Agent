@@ -5,11 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.asset_board_service import AssetBoardService
 from archium.application.image_search_settings_service import ImageSearchPreferences
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.application.web_image_asset_service import WebImageAssetService
 from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset

@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import ReviewCategory, ReviewLayer, ReviewSeverity, SlideType
 from archium.domain.review import ReviewIssue

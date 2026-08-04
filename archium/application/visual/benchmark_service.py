@@ -15,9 +15,9 @@ from archium.domain.visual.benchmark import BenchmarkCaseDefinition, BenchmarkRu
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutFamily, VisualContentType
 from archium.domain.visual.layout import LayoutPlan
+from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent
-from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
 from archium.infrastructure.layout.generators.base import (
     LayoutContentBundle,
     LayoutGeneratorContext,

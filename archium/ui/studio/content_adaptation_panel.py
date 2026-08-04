@@ -7,6 +7,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.content_adaptation_heuristics import parse_content_adaptation_text
+from archium.application.unit_of_work import unit_of_work
 from archium.domain.content_adaptation import (
     ACTION_USER_LABELS,
     ContentAdaptationAction,
@@ -18,7 +19,6 @@ from archium.domain.visual.slide_capacity_budget import (
     SlideCapacityBudget,
 )
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio_service import (
     analyze_slide_content_adaptation,

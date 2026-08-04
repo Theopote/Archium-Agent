@@ -7,6 +7,7 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.unit_of_work import unit_of_work
 from archium.application.visual.template_induction_service import TemplateInductionService
 from archium.domain.enums import PipelineRole
 from archium.domain.visual.template_induction import (
@@ -20,7 +21,6 @@ from archium.domain.visual.template_induction import (
 from archium.exceptions import WorkflowError
 from archium.ui.error_handlers import report_user_error
 from archium.ui.pipeline_role_ui import role_button_label, role_caption
-from archium.application.unit_of_work import unit_of_work
 
 
 def _render_presentation_binding_selector(*, key_prefix: str = "induction") -> UUID | None:
@@ -836,7 +836,7 @@ def _render_template_editing_panel(workspace: Path, co_plan: OutlineTemplateCoPl
                     presentation,
                     template=template,
                     workspace=workspace,
-                    uow=uow,
+                    session=uow,
                 )
         except Exception as exc:  # noqa: BLE001
             st.error(report_user_error(exc))

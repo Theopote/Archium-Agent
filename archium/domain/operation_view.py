@@ -46,8 +46,5 @@ class OperationView(DomainModel):
     detail: dict[str, object] = Field(default_factory=dict)
 
     def display_line(self) -> str:
-        if self.progress is None:
-            pct = "—"
-        else:
-            pct = f"{int(round(self.progress * 100))}%"
+        pct = "—" if self.progress is None else f"{int(round(self.progress * 100))}%"
         return f"{self.label or self.operation_type} · {self.status.value} · {pct}"

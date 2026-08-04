@@ -6,6 +6,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from archium.application.unit_of_work import unit_of_work
 from archium.application.visual.vision.visual_thinking_slots import (
     VISUAL_THINKING_SLOTS,
     focus_hint_for_slot,
@@ -13,7 +14,6 @@ from archium.application.visual.vision.visual_thinking_slots import (
 )
 from archium.domain.concept_direction import ConceptDirection
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 
 

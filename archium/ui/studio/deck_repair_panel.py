@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import streamlit as st
 
+from archium.application.unit_of_work import unit_of_work
 from archium.application.visual.deck_repair_service import DeckRepairService
 from archium.domain.visual.deck_repair import DeckRepairSuggestion
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio_service import StudioPresentationContext, apply_deck_repair_suggestion
 

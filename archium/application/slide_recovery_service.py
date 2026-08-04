@@ -9,10 +9,8 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.slide_recovery_region_analyzer import SlideRecoveryRegionAnalyzer
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.export_fidelity import ExportFidelityLevel
 from archium.domain.slide_recovery import (

@@ -5,9 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.domain.enums import ProjectOriginMode, ProjectStatus
 from archium.domain.project import Project
 from archium.exceptions import ProjectNotFoundError, ValidationError, WorkflowError

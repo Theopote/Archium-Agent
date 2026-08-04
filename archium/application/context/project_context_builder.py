@@ -6,14 +6,12 @@ import contextlib
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.context.knowledge_claim_index import merge_claim_index_into_state
 from archium.application.context.next_action_selector import default_actions_for_stage
 from archium.application.context.project_context_composer import compose_project_context
 from archium.application.context.types import ContextAssessment
 from archium.application.context_evidence import ProjectEvidencePack, gather_project_evidence
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.context.legacy_origin import apply_legacy_origin
 from archium.domain.context.project_context import ProjectContext
 from archium.domain.project import Project

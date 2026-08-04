@@ -7,6 +7,7 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.unit_of_work import unit_of_work
 from archium.domain.enums import EvidenceAvailability
 from archium.ui.app_navigation import get_app_page
 from archium.ui.components.chrome import (
@@ -28,7 +29,6 @@ from archium.ui.project_progress_card import (
     load_project_progress_snapshot,
 )
 from archium.ui.session_context import select_project_context
-from archium.application.unit_of_work import unit_of_work
 
 _NEXT_ACTION_LABELS = {
     "materials": "确认资料并进入大纲 →",
@@ -58,8 +58,8 @@ def _append_cognition_gate_warnings(project_id: UUID, warnings: list[str]) -> No
         from archium.application.context.presentation_readiness import (
             PresentationGateVerdict,
         )
-        from archium.config.settings import get_settings
         from archium.application.unit_of_work import unit_of_work
+        from archium.config.settings import get_settings
 
         mode = (get_settings().presentation_cognition_gate or "warn").strip().lower()
         if mode == "off":

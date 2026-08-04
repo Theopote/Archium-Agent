@@ -34,7 +34,7 @@ from collections.abc import Generator, Iterator
 from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass
 from functools import cached_property
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, overload
 
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
@@ -172,12 +172,22 @@ def api_bound(session_or_uow: SessionLike) -> ApiContext:
     return UnitOfWork.bind(session_or_uow).api
 
 
-def session_of(session_or_uow: SessionLike) -> Session:
+@overload
+def session_of(session_or_uow: None) -> None: ...
+
+
+@overload
+def session_of(session_or_uow: SessionLike) -> Session: ...
+
+
+def session_of(session_or_uow: SessionLike | None) -> Session | None:
     """Unwrap ``SessionLike`` to the underlying SQLAlchemy ``Session``.
 
     Application services use this at the boundary, then talk to concrete
     repositories. Compatibility only — not a repository/UoW port abstraction.
     """
+    if session_or_uow is None:
+        return None
     if isinstance(session_or_uow, UnitOfWork):
         return session_or_uow.session
     return session_or_uow

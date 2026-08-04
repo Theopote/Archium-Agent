@@ -12,10 +12,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Literal
-from uuid import UUID, uuid4
+from typing import Any
 
-from archium.domain.design_system import DesignSystem, create_default_design_system, ColorRole, ColorShade
+from archium.domain.design_system import (
+    ColorRole,
+    ColorShade,
+    DesignSystem,
+    create_default_design_system,
+)
 
 
 class PresentationType(str, Enum):

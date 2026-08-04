@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.narrative.brief_service import BriefService
 from archium.application.narrative.outline_plan_service import OutlinePlanService
 from archium.application.narrative.slide_plan_service import SlidePlanService
@@ -17,6 +14,7 @@ from archium.application.narrative.specialty_plan_services import (
 )
 from archium.application.narrative.storyline_service import StorylineService
 from archium.application.presentation_models import PresentationRequest
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.outline import OutlinePlan

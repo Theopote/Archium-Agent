@@ -11,13 +11,13 @@ from archium.application.asset_vision_rag_service import (
     AssetVisionBackfillResult,
     AssetVisionBackfillService,
 )
-from archium.application.unit_of_work import SessionLike, api_bound, session_of, unit_of_work
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.chunk_service import ChunkService
 from archium.application.ingestion_service import ImportItemResult
 from archium.application.llm_settings_resolver import get_effective_settings
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_workflow_service import PresentationWorkflowService
+from archium.application.unit_of_work import SessionLike, api_bound, session_of, unit_of_work
 from archium.application.workflow_models import WorkflowRunResult
 from archium.config.settings import Settings
 from archium.domain.document import DocumentChunk, SourceDocument
@@ -181,11 +181,12 @@ def resolve_generation_form_defaults(session: SessionLike, project_id: UUID) -> 
             if brief.target_slide_count:
                 target_slide_count = int(brief.target_slide_count)
 
+        slides_api = api_bound(session).slides
         outline = None
         if deck.current_outline_id is not None:
-            outline = presentations.get_outline(deck.current_outline_id)
+            outline = slides_api.get_outline(deck.current_outline_id)
         if outline is None:
-            outlines = presentations.list_outlines(deck.id)
+            outlines = slides_api.list_outlines(deck.id)
             outline = outlines[0] if outlines else None
         if outline is not None:
             section_titles = [

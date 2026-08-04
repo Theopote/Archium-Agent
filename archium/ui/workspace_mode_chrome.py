@@ -8,6 +8,7 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.context.workflow_navigation import workflow_entry_for_project
+from archium.application.unit_of_work import unit_of_work
 from archium.application.workspace_mode_service import (
     WorkspaceModeService,
     profile_for,
@@ -15,7 +16,6 @@ from archium.application.workspace_mode_service import (
 )
 from archium.domain.enums import ArchitecturalWorkspaceMode
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.app_navigation import get_app_page
 from archium.ui.error_handlers import report_user_error
 from archium.ui.llm_settings import get_ui_effective_settings

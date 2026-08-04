@@ -6,8 +6,8 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.domain.access import LOCAL_ACTOR_ID, ProjectRole
 from archium.application.unit_of_work import unit_of_work
+from archium.domain.access import LOCAL_ACTOR_ID, ProjectRole
 
 _ROLE_LABELS = {
     ProjectRole.OWNER: "负责人",

@@ -4,13 +4,11 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_service import PresentationService
 from archium.application.review_service import PresentationReviewService
 from archium.application.slide_history_service import SlideHistoryService
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.deck_delivery import apply_deck_delivery_to_presentation
 from archium.domain.enums import (

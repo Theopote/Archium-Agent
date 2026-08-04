@@ -7,8 +7,8 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.ui.components.design_reflection_details import render_design_reflection
 from archium.application.unit_of_work import unit_of_work
+from archium.ui.components.design_reflection_details import render_design_reflection
 
 
 def hydrate_pending_revise_from_db(project_id: UUID | None) -> None:

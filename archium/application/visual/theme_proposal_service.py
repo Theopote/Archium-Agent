@@ -5,10 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.artifact_policy_service import save_render_scene
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.application.visual.deck_theme_apply import apply_tokens_to_design_system
 from archium.application.visual.scene_deterministic_qa_service import run_proposal_scene_qa
 from archium.application.visual.studio_scene_service import StudioSceneService

@@ -6,9 +6,6 @@ from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.context_evidence import build_verified_constraints_block
 from archium.application.design_intent_from_direction import design_intent_from_direction
 from archium.application.design_knowledge_context import (
@@ -17,6 +14,7 @@ from archium.application.design_knowledge_context import (
 )
 from archium.application.design_rationale_fallback import ensure_direction_design_rationale
 from archium.application.project_mission_service import MissionPatch, ProjectMissionService
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.concept_direction import ConceptDirection
 from archium.domain.enums import (

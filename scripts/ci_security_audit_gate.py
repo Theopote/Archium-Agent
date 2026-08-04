@@ -68,7 +68,12 @@ def _pip_findings() -> list[dict[str, Any]]:
     readable = _ROOT / "pip-audit-enforce.txt"
     lines: list[str] = []
     findings: list[dict[str, Any]] = []
-    deps = payload.get("dependencies", payload if isinstance(payload, list) else [])
+    if isinstance(payload, list):
+        deps = payload
+    elif isinstance(payload, dict):
+        deps = payload.get("dependencies") or []
+    else:
+        deps = []
     for dep in deps:
         for vuln in dep.get("vulns") or []:
             item = {

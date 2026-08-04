@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.content_adaptation_heuristics import parse_content_adaptation_text
 from archium.application.content_adaptation_service import ContentAdaptationService
+from archium.application.unit_of_work import SessionLike
 from archium.application.visual.visual_edit_service import VisualEditService
 from archium.config.settings import get_settings
 from archium.domain.content_adaptation import action_from_value

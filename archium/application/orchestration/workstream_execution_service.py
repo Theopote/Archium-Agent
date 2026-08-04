@@ -6,14 +6,12 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.orchestration.workstream_handlers import SimpleHandlerRuntime
 from archium.application.orchestration.workstream_node_registry import (
     compile_workstream_node_specs,
     selected_workstreams,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import WorkflowStatus, WorkstreamStatus
 from archium.domain.workflow import WorkflowRun

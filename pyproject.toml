@@ -145,7 +145,8 @@ src = ["archium", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
-ignore = ["B008", "E501"]
+# UP042: domain/application keep intentional ``str, Enum`` for JSON/serialization.
+ignore = ["B008", "E501", "UP042"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["E402"]

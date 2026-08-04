@@ -7,6 +7,7 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.unit_of_work import unit_of_work
 from archium.application.workflow_models import WorkflowRunResult
 from archium.domain.enums import ProjectType
 from archium.domain.render import RenderResult
@@ -64,7 +65,6 @@ from archium.ui.workspace_service import (
     list_projects,
     reassess_knowledge_after_upload,
 )
-from archium.application.unit_of_work import unit_of_work
 
 _UPLOAD_FEEDBACK_KEY = "materials_upload_feedback"
 

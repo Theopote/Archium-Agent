@@ -9,9 +9,9 @@ import streamlit as st
 
 from archium.application.review_analytics import summarize_rule_codes
 from archium.application.review_service import PresentationReviewService
+from archium.application.unit_of_work import unit_of_work
 from archium.domain.enums import ReviewStatus
 from archium.domain.review import ReviewIssue
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.workspace_service import list_project_presentations
 
 REPAIR_STRATEGY_LABELS = {

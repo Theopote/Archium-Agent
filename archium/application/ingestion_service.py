@@ -6,11 +6,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.asset_vision_rag_service import AssetVisionRagResult, AssetVisionRagService
 from archium.application.retrieval_service import RetrievalService, create_retrieval_service
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
 from archium.domain.document import DocumentChunk, SourceDocument

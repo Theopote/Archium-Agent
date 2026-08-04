@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import contextlib
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
+from archium.application.design_system_integration import DesignSystemIntegrationService
+from archium.application.intelligent_layout import LayoutConsistencyChecker
+from archium.application.unit_of_work import SessionLike, api_bound, session_of
 from archium.application.visual.art_direction_service import ArtDirectionService
 from archium.application.visual.layout_planning_service import LayoutPlanningService
 from archium.application.visual.layout_validation_service import LayoutValidationService
@@ -18,8 +21,6 @@ from archium.application.visual.visual_workflow_service import (
     VisualWorkflowResult,
     VisualWorkflowService,
 )
-from archium.application.design_system_integration import DesignSystemIntegrationService
-from archium.application.intelligent_layout import LayoutOptimizer, LayoutConsistencyChecker
 from archium.config.settings import Settings
 from archium.domain.export_fidelity import ChartExportMode
 from archium.domain.render import RenderResult
@@ -33,7 +34,6 @@ from archium.domain.visual.preferences import VisualPreferences
 from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent
-from archium.application.unit_of_work import SessionLike, api_bound, session_of
 from archium.exceptions import WorkflowError
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.llm.factory import create_llm_provider
@@ -506,8 +506,8 @@ def optimize_slide_layout_with_intelligent_algorithm(
     session: SessionLike,
     slide: SlideSpec,
     design_system_integration: DesignSystemIntegrationService,
-    constraints: dict[str, any] | None = None,
-) -> dict[str, any]:
+    constraints: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Optimize slide layout using intelligent layout algorithm.
     
     This function integrates the new intelligent layout optimizer with the
@@ -527,8 +527,8 @@ def optimize_slide_layout_with_intelligent_algorithm(
     slide_data = {
         "id": str(slide.id),
         "title": slide.title,
-        "body": slide.body,
-        "image": slide.visual_requirements[0].image_path if slide.visual_requirements else None,
+        "body": slide.message,
+        "image": None,
         # Add more slide data as needed
     }
     
@@ -559,7 +559,7 @@ def apply_intelligent_layout_to_visual_workflow(
     presentation_id: UUID,
     slides: list[SlideSpec],
     design_system_integration: DesignSystemIntegrationService,
-) -> list[dict[str, any]]:
+) -> list[dict[str, Any]]:
     """Apply intelligent layout optimization to entire presentation.
     
     This function applies the intelligent layout algorithm to all slides
@@ -577,7 +577,7 @@ def apply_intelligent_layout_to_visual_workflow(
     session = session_of(session)
     consistency_checker = LayoutConsistencyChecker()
     
-    optimization_results = []
+    optimization_results: list[dict[str, Any]] = []
     for i, slide in enumerate(slides):
         # Get previous slides for consistency checking
         previous_slides_data = []
@@ -585,15 +585,15 @@ def apply_intelligent_layout_to_visual_workflow(
             previous_slides_data.append({
                 "id": str(prev_slide.id),
                 "title": prev_slide.title,
-                "body": prev_slide.body,
+                "body": prev_slide.message,
             })
         
         # Optimize current slide
         slide_data = {
             "id": str(slide.id),
             "title": slide.title,
-            "body": slide.body,
-            "image": slide.visual_requirements[0].image_path if slide.visual_requirements else None,
+            "body": slide.message,
+            "image": None,
         }
         
         layout_result = design_system_integration.optimize_slide_layout(slide_data)

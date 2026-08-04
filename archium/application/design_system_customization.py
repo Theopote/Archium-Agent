@@ -6,26 +6,18 @@ including colors, typography, spacing, and other design tokens.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Optional
-from uuid import UUID
-from pathlib import Path
 import json
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+from uuid import UUID
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
+from archium.config.settings import Settings, get_settings
 from archium.domain.design_system import (
     DesignSystem,
     create_default_design_system,
-    ColorRole,
-    ColorShade,
-    FontFamily,
-    FontWeight,
-    FontSize,
-    SpacingToken,
 )
-from archium.config.settings import Settings, get_settings
 
 
 @dataclass
@@ -54,7 +46,7 @@ class CustomColorScheme:
         }
     
     @classmethod
-    def from_dict(cls, data: dict[str, str]) -> "CustomColorScheme":
+    def from_dict(cls, data: dict[str, str]) -> CustomColorScheme:
         """Create from dictionary."""
         return cls(
             primary=data.get("primary", "#0EA5E9"),
@@ -92,7 +84,7 @@ class CustomTypography:
         }
     
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "CustomTypography":
+    def from_dict(cls, data: dict[str, Any]) -> CustomTypography:
         """Create from dictionary."""
         return cls(
             font_family=data.get("font_family", "Arial"),
@@ -125,7 +117,7 @@ class CustomSpacing:
         }
     
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "CustomSpacing":
+    def from_dict(cls, data: dict[str, Any]) -> CustomSpacing:
         """Create from dictionary."""
         return cls(
             base_unit=data.get("base_unit", 4),
@@ -158,7 +150,7 @@ class CustomLayout:
         }
     
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "CustomLayout":
+    def from_dict(cls, data: dict[str, Any]) -> CustomLayout:
         """Create from dictionary."""
         return cls(
             grid_columns=data.get("grid_columns", 12),
@@ -194,7 +186,7 @@ class CustomDesignSystem:
         }
     
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "CustomDesignSystem":
+    def from_dict(cls, data: dict[str, Any]) -> CustomDesignSystem:
         """Create from dictionary."""
         return cls(
             name=data.get("name", "Custom Design System"),

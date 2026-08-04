@@ -4,13 +4,11 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.asset_matching_service import score_asset_for_requirement
 from archium.application.context_budget_manager import ContextBudgetManager
 from archium.application.fact_retrieval import rank_facts_for_context
 from archium.application.knowledge_isolation import filter_generation_facts
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.asset import Asset
 from archium.domain.citation import Citation
 from archium.domain.enums import VerificationStatus

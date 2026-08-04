@@ -7,9 +7,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.domain.intent.intent_evolution import IntentEvolution, IntentEvolutionKind
 from archium.domain.orchestration.process_timeline import (
     PROCESS_TIMELINE_KEY,

@@ -8,10 +8,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.knowledge_isolation import document_purpose_from_metadata
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.application.visual_evidence_service import document_purpose_for_asset
 from archium.config.settings import Settings, get_settings
 from archium.domain.architectural_asset import (

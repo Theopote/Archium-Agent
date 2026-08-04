@@ -4,29 +4,30 @@ from __future__ import annotations
 
 import logging
 import traceback
-from typing import Any, Callable, TypeVar, ParamSpec
-from functools import wraps
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from functools import wraps
+from typing import Any, ParamSpec, TypeVar
 
 from archium.exceptions import (
+    AccessDeniedError,
     ArchiumError,
+    ConcurrencyError,
     ConfigurationError,
     DocumentParseError,
-    LLMProviderError,
-    StructuredOutputError,
-    RenderingError,
-    RepositoryError,
-    AccessDeniedError,
-    WorkflowError,
-    ValidationError,
-    ProjectNotFoundError,
-    PresentationNotFoundError,
-    SlideRevisionNotFoundError,
-    UnsupportedOperationError,
     ExternalServiceError,
     FileOperationError,
-    ConcurrencyError,
+    LLMProviderError,
+    PresentationNotFoundError,
+    ProjectNotFoundError,
     RateLimitError,
+    RenderingError,
+    RepositoryError,
+    SlideRevisionNotFoundError,
+    StructuredOutputError,
+    UnsupportedOperationError,
+    ValidationError,
+    WorkflowError,
 )
 
 logger = logging.getLogger(__name__)
@@ -86,10 +87,7 @@ class ErrorHandler:
         )
         
         # Determine user-friendly message
-        if user_friendly:
-            message = self._get_user_message(error)
-        else:
-            message = str(error)
+        message = self._get_user_message(error) if user_friendly else str(error)
         
         # Determine HTTP status code
         status_code = self._get_status_code(error)
@@ -154,7 +152,7 @@ def handle_errors(
     error_mapping: dict[type[Exception], str] | None = None,
     default_message: str = "操作失败，请稍后重试",
     raise_on_error: bool = False,
-):
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Decorator for consistent error handling in functions.
     
     Args:
@@ -207,7 +205,7 @@ def handle_errors(
 def error_context(
     operation: str,
     **context: Any,
-):
+) -> Iterator[None]:
     """Context manager for error handling with context.
     
     Args:

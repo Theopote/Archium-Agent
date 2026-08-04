@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
+from archium.application.design_system_integration import DesignSystemIntegrationService
 from archium.application.pptxgen_renderer_factory import create_pptxgen_renderer
 from archium.application.render_export import export_marp_extras
-from archium.application.design_system_integration import DesignSystemIntegrationService
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.render import RenderResult
 from archium.exceptions import WorkflowError
@@ -139,7 +138,7 @@ class PresentationExportService:
                     slides_data.append({
                         "id": str(slide.id),
                         "title": slide.title,
-                        "body": slide.body,
+                        "body": slide.message,
                         # Add more slide data as needed for quality assessment
                     })
                 
@@ -169,7 +168,7 @@ class PresentationExportService:
     def assess_presentation_quality(
         self,
         presentation_id: UUID,
-    ) -> dict[str, any]:
+    ) -> dict[str, Any]:
         """Assess design quality of a presentation.
         
         This is a separate method that can be called independently of export
@@ -196,7 +195,7 @@ class PresentationExportService:
             slides_data.append({
                 "id": str(slide.id),
                 "title": slide.title,
-                "body": slide.body,
+                "body": slide.message,
                 # Add more slide data as needed for quality assessment
             })
         

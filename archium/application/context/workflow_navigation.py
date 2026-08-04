@@ -6,13 +6,11 @@ from collections.abc import MutableMapping
 from typing import Any, cast
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.context.next_action_selector import resolve_workflow_entry
 from archium.application.context.project_context_builder import build_project_context
 from archium.application.context.types import WorkflowEntryDispatch
 from archium.application.fact_ledger_service import FactLedgerService
+from archium.application.unit_of_work import SessionLike, session_of
 
 # Streamlit SessionStateProxy is dict-like at runtime; stubs disagree with Protocol.get.
 SessionStateLike = MutableMapping[str, Any]

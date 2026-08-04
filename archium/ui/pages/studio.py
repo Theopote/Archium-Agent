@@ -11,8 +11,8 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.application.visual.visual_workflow_service import VisualWorkflowResult
 from archium.application.unit_of_work import unit_of_work
+from archium.application.visual.visual_workflow_service import VisualWorkflowResult
 from archium.ui.studio.ai_workspace_panel import render_ai_workspace
 from archium.ui.studio.content_adaptation_panel import render_content_adaptation_panel
 from archium.ui.studio.export_panel import render_studio_toolbar
@@ -149,7 +149,7 @@ def _render_design_system_panel(
                     slide_data = {
                         "id": str(slide_snapshot.slide.id),
                         "title": slide_snapshot.slide.title,
-                        "body": slide_snapshot.slide.body,
+                        "body": slide_snapshot.slide.message,
                     }
                     layout_result = design_system_service.optimize_slide_layout(slide_data)
                     st.success(f"推荐布局: {layout_result['recommended_layout']}")
@@ -173,18 +173,18 @@ def _render_design_system_panel(
         if st.button("评估当前幻灯片质量", key="assess_quality_btn", width="stretch"):
             if slide_snapshot and slide_snapshot.slide:
                 try:
-                    slide_data = [
+                    quality_slide_data = [
                         {
                             "id": str(slide_snapshot.slide.id),
                             "title": slide_snapshot.slide.title,
-                            "body": slide_snapshot.slide.body,
+                            "body": slide_snapshot.slide.message,
                         }
                     ]
-                    quality_result = design_system_service.assess_presentation_quality(
+                    quality_reports = design_system_service.assess_presentation_quality(
                         presentation_id,
-                        slide_data,
+                        quality_slide_data,
                     )
-                    summary = quality_result["summary"]
+                    summary = design_system_service.get_quality_summary(quality_reports)
                     needs_review = len(summary.get("needs_review", []))
                     render_stat_chips(
                         [
@@ -313,7 +313,10 @@ def _render_inspector_tabs(
                 project_id=project_id, presentation_id=presentation_id
             )
         with st.expander("全稿风格", expanded=False):
-            render_deck_theme_panel(presentation_id=presentation_id)
+            render_deck_theme_panel(
+                presentation_id=presentation_id,
+                slide_snapshot=slide_snapshot,
+            )
         return
     if active == "设计系统":
         render_inspector_section("设计系统")

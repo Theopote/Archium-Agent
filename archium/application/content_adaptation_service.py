@@ -7,9 +7,6 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.content_adaptation_heuristics import suggest_content_adaptations
 from archium.application.slide_history_service import SlideHistoryService
 from archium.application.slide_repair_policy import (
@@ -19,6 +16,7 @@ from archium.application.slide_repair_policy import (
     smart_shorten_text,
 )
 from archium.application.slide_split_planner import build_split_plan
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.application.visual.visual_edit_service import VisualEditService
 from archium.config.settings import Settings
 from archium.domain.content_adaptation import (

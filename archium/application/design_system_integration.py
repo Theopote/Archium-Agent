@@ -6,42 +6,30 @@ assessment into the existing presentation workflow.
 
 from __future__ import annotations
 
-from typing import Any, Optional
-from uuid import UUID
 from pathlib import Path
+from typing import Any
+from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
-from archium.domain.design_system import (
-    DesignSystem, 
-    create_default_design_system,
-    ColorRole,
-    ColorShade
-)
-from archium.domain.presentation_templates import (
-    PresentationTemplate,
-    PresentationType,
-    get_template,
-    list_templates,
-    SlideLayout
-)
-from archium.domain.visual_elements import (
-    VisualElementsLibrary,
-    get_visual_elements_library
-)
+from archium.application.design_quality_assessment import DesignQualityAssessor, DesignQualityReport
 from archium.application.intelligent_layout import (
-    LayoutOptimizer,
-    LayoutConsistencyChecker,
     ContentBlock,
     ContentType,
-    LayoutPriority
+    LayoutConsistencyChecker,
+    LayoutOptimizer,
+    LayoutPriority,
 )
-from archium.application.design_quality_assessment import (
-    DesignQualityAssessor,
-    DesignQualityReport
-)
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
+from archium.domain.design_system import (
+    DesignSystem,
+    create_default_design_system,
+)
+from archium.domain.presentation_templates import (
+    SlideLayout,
+    get_template,
+    list_templates,
+)
+from archium.domain.visual_elements import get_visual_elements_library
 
 
 class DesignSystemIntegrationService:
@@ -265,7 +253,7 @@ class DesignSystemIntegrationService:
         average_score = sum(overall_scores) / total_slides
         
         # Count quality levels
-        level_counts = {}
+        level_counts: dict[str, int] = {}
         for report in quality_reports.values():
             level = report.overall_level.value
             level_counts[level] = level_counts.get(level, 0) + 1
@@ -313,10 +301,7 @@ class DesignSystemIntegrationService:
             raise ValueError(f"Visual element {element_id} not found")
         
         # Apply style overrides
-        if style_overrides:
-            svg = element.apply_style(style_overrides)
-        else:
-            svg = element.svg_definition
+        svg = element.apply_style(style_overrides) if style_overrides else element.svg_definition
         
         return {
             "id": element.id,
@@ -350,7 +335,7 @@ class DesignSystemIntegrationService:
         
         # Search chart templates
         if element_type is None or element_type == "chart":
-            for template_id, template in self.visual_library.chart_templates.items():
+            for _template_id, template in self.visual_library.chart_templates.items():
                 if query.lower() in template.name.lower():
                     results.append({
                         "type": "chart",
@@ -386,9 +371,9 @@ class DesignSystemIntegrationService:
         """Import a custom design system from a JSON file."""
         
         import json
-        from archium.domain.design_system import DesignSystem
+
         
-        design_system_data = json.loads(design_system_path.read_text(encoding='utf-8'))
+        _design_system_data = json.loads(design_system_path.read_text(encoding='utf-8'))
         
         # Create DesignSystem from imported data
         # This would need proper deserialization logic

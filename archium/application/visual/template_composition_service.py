@@ -5,9 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.visual.layout_locked import preserve_locked_elements
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.template_layout_filler import fill_layout_plan_from_template

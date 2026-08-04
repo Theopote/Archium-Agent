@@ -8,8 +8,8 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.application.unit_of_work import application_api
 from archium.application.genesis_starter_service import GenesisStarterResult
+from archium.application.unit_of_work import application_api
 from archium.ui.app_navigation import get_app_page
 from archium.ui.label_map import slide_role_label
 

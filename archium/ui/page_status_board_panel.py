@@ -10,6 +10,7 @@ from archium.application.page_status_board_service import (
     PageStatusBoardService,
     action_label,
 )
+from archium.application.unit_of_work import unit_of_work
 from archium.domain.page_pipeline_status import (
     PAGE_PHASE_LABELS,
     PagePipelinePhase,
@@ -18,7 +19,6 @@ from archium.domain.page_pipeline_status import (
     PageStatusBoard,
 )
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.label_map import entity_label
 

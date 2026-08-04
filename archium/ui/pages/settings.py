@@ -7,9 +7,9 @@ from typing import cast
 import streamlit as st
 
 from archium.application.llm_profile_service import CredentialStatus, LLMProfileService
+from archium.application.unit_of_work import unit_of_work
 from archium.config import get_settings
 from archium.domain.llm_profile import LLMProfile
-from archium.application.unit_of_work import unit_of_work
 from archium.infrastructure.llm.connection_test import verify_llm_connection
 from archium.infrastructure.llm.factory import reset_llm_provider_cache
 from archium.infrastructure.llm.provider_presets import (

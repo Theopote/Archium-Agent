@@ -7,9 +7,10 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
-
-from archium.application.asset_matching_service import AssetMatchingService
-from archium.application.asset_matching_service import score_asset_for_requirement
+from archium.application.asset_matching_service import (
+    AssetMatchingService,
+    score_asset_for_requirement,
+)
 from archium.application.asset_presentation_readiness_service import (
     PRESENTATION_READINESS_UNKNOWN,
     analyze_and_cache_asset_presentation_readiness,

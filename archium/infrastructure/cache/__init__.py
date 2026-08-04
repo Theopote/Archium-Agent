@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, TypeVar, ParamSpec
-from functools import wraps
-from datetime import timedelta
 import hashlib
-import json
+from collections.abc import Callable
+from datetime import timedelta
+from functools import wraps
+from typing import Any, ParamSpec, TypeVar, cast
 
 T = TypeVar('T')
 P = ParamSpec('P')
@@ -89,7 +89,9 @@ class SimpleCache:
 _global_cache = SimpleCache()
 
 
-def cached(ttl: timedelta | None = None, key_prefix: str = ""):
+def cached(
+    ttl: timedelta | None = None, key_prefix: str = ""
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """Decorator to cache function results.
     
     Args:
@@ -113,7 +115,7 @@ def cached(ttl: timedelta | None = None, key_prefix: str = ""):
             # Try to get from cache
             cached_value = _global_cache.get(cache_key)
             if cached_value is not None:
-                return cached_value
+                return cast(T, cached_value)
             
             # Execute function and cache result
             result = func(*args, **kwargs)

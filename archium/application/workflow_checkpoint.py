@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.workflow_progress import append_step_log
 from archium.config.settings import Settings, get_settings
 from archium.domain.workflow import WorkflowRun

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from uuid import UUID
 from typing import Any
+from uuid import UUID
 
-from archium.infrastructure.cache import cached, get_cache, clear_cache
 from archium.config.settings import Settings, get_settings
+from archium.infrastructure.cache import get_cache
 
 
 class CacheService:

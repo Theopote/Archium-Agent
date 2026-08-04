@@ -6,6 +6,7 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.unit_of_work import unit_of_work
 from archium.application.visual.visual_workflow_service import VisualWorkflowResult
 from archium.config.settings import Settings
 from archium.domain.render import RenderResult
@@ -35,7 +36,6 @@ from archium.ui.studio_service import (
 )
 from archium.ui.visual_service import SlideVisualSnapshot
 from archium.ui.workflow_progress_panel import render_workflow_progress_panel, set_active_job_id
-from archium.application.unit_of_work import unit_of_work
 
 
 def _apply_visual_result(result: object) -> None:

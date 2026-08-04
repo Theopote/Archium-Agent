@@ -8,12 +8,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Literal
-from uuid import UUID
-import math
+from typing import Any
 
-from archium.domain.design_system import DesignSystem, create_default_design_system, ColorRole
-from archium.domain.presentation_templates import PresentationTemplate
+from archium.domain.design_system import DesignSystem, create_default_design_system
 
 
 class QualityCategory(str, Enum):

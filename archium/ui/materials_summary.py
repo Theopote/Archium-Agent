@@ -5,11 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-
 from archium.application.asset_metadata_service import AssetMetadataService
 from archium.application.fact_ledger_service import FactLedgerService
 from archium.application.project_knowledge_service import ProjectKnowledgeService
+from archium.application.unit_of_work import SessionLike
 from archium.ui.workspace_service import get_project_overview
 
 
@@ -26,7 +25,7 @@ class MaterialsSummary:
         return f"{self.pending_confirm_count} 个待确认问题"
 
 
-def load_materials_summary(session: Session, project_id: UUID) -> MaterialsSummary:
+def load_materials_summary(session: SessionLike, project_id: UUID) -> MaterialsSummary:
     overview = get_project_overview(session, project_id)
     file_count = overview.document_count if overview is not None else 0
 

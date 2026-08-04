@@ -8,18 +8,16 @@ from pathlib import Path
 from typing import Any, cast
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
+from archium.application.design_system_integration import DesignSystemIntegrationService
 from archium.application.generation_contract import (
     build_generation_contract,
     validate_generation_contract,
 )
 from archium.application.presentation_models import PresentationRequest
 from archium.application.review_service import PresentationReviewService
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.application.workflow_models import WorkflowRunResult
 from archium.application.workflow_route_service import WorkflowRouteService
-from archium.application.design_system_integration import DesignSystemIntegrationService
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import PresentationWorkflowStep, WorkflowStatus
 from archium.domain.presentation import Presentation
@@ -208,11 +206,12 @@ class PresentationWorkflowService:
                 project_id, request, actor_id=actor_id
             )
         else:
-            presentation = PresentationRepository(self._session).get_presentation(
+            reused_presentation = PresentationRepository(self._session).get_presentation(
                 reuse_presentation_id
             )
-            if presentation is None or presentation.project_id != project_id:
+            if reused_presentation is None or reused_presentation.project_id != project_id:
                 raise WorkflowError("无法复用所选汇报：汇报不存在或不属于当前项目")
+            presentation = reused_presentation
             context = PresentationReviewService(self._session).get_review_context(
                 presentation.id
             )

@@ -104,16 +104,15 @@ def render() -> None:
     st.markdown("**可用**")
     cols = st.columns(2)
     for index, entry in enumerate(available):
-        with cols[index % 2]:
-            with st.container(border=True):
-                st.markdown(f"**{entry.title}**")
-                st.caption(entry.caption)
-                if entry.page_key:
-                    st.page_link(
-                        get_app_page(entry.page_key),
-                        label=f"打开 · {entry.title}",
-                        icon=entry.icon,
-                    )
+        with cols[index % 2], st.container(border=True):
+            st.markdown(f"**{entry.title}**")
+            st.caption(entry.caption)
+            if entry.page_key:
+                st.page_link(
+                    get_app_page(entry.page_key),
+                    label=f"打开 · {entry.title}",
+                    icon=entry.icon,
+                )
 
     if upcoming:
         st.markdown("**即将接入**")

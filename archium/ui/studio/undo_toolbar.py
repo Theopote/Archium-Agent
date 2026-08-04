@@ -6,8 +6,8 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.exceptions import WorkflowError
 from archium.application.unit_of_work import unit_of_work
+from archium.exceptions import WorkflowError
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio.undo_stack import content_redo_depth, visual_redo_depth
 from archium.ui.studio_service import (

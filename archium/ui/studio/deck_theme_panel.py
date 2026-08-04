@@ -6,6 +6,7 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.unit_of_work import unit_of_work
 from archium.application.visual.deck_theme_apply import deck_theme_tokens_from_design_system
 from archium.domain.visual.deck_theme_tokens import (
     DeckThemeTokens,
@@ -17,7 +18,6 @@ from archium.domain.visual.page_quality import IssueSeverity
 from archium.domain.visual.proposal_status import ProposalStatus
 from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.studio_service import (
     accept_theme_proposal,

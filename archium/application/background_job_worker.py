@@ -5,15 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.background_job_service import BackgroundJobService
 from archium.application.cad_bim_analysis import analyze_cad_bim_file, is_cad_bim_path
 from archium.application.cad_spatial_fact_materializer import (
     materialize_cad_spatial_facts,
     merge_cad_analysis_into_document,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.background_job import BackgroundJob, BackgroundJobKind, BackgroundJobStatus
 from archium.infrastructure.database.repositories import DocumentRepository
 

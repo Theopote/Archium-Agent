@@ -9,6 +9,7 @@ import streamlit as st
 
 from archium.application.slide_recovery_delivery_service import SlideRecoveryDeliveryService
 from archium.application.slide_recovery_workflow_service import SlideRecoveryWorkflowResult
+from archium.application.unit_of_work import application_api, unit_of_work
 from archium.config.settings import Settings
 from archium.domain.enums import WorkflowStatus
 from archium.domain.export_fidelity import FIDELITY_LABELS_ZH
@@ -17,7 +18,6 @@ from archium.exceptions import WorkflowError
 from archium.ui.delivery.export_policy_panel import EXPORT_POLICY_PRESETS
 from archium.ui.error_handlers import report_user_error
 from archium.ui.slide_recovery_region_panel import render_slide_recovery_region_editor
-from archium.application.unit_of_work import application_api, unit_of_work
 
 
 def render_slide_recovery_result_panel(

@@ -5,11 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.fact_extraction_service import FactExtractionService
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import VerificationStatus
 from archium.domain.fact import FactValue, ProjectFact

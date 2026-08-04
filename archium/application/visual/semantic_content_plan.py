@@ -5,9 +5,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from archium.domain.visual.layout_evidence_item import (
-    build_evidence_items_from_claims,
-)
 from archium.domain.citation import Citation
 from archium.domain.enums import SlideType
 from archium.domain.outline import OutlinePlan, OutlineSection
@@ -16,6 +13,9 @@ from archium.domain.slide_generation_context import SlideGenerationContext
 from archium.domain.visual.architectural_content_schema import (
     ArchitecturalContentSchema,
     ContentRole,
+)
+from archium.domain.visual.layout_evidence_item import (
+    build_evidence_items_from_claims,
 )
 from archium.domain.visual.template_induction import (
     ArchitecturalContentType,

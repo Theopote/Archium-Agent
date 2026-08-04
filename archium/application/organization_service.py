@@ -5,9 +5,7 @@ from __future__ import annotations
 import re
 from uuid import UUID
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.domain.organization import Organization
 from archium.domain.project import Project
 from archium.exceptions import ValidationError, WorkflowError

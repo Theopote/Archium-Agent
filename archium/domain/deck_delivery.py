@@ -7,7 +7,7 @@ from pydantic import Field
 from archium.domain._base import DomainModel
 from archium.domain.enums import DeckDeliveryStatus, SlideDeliveryStatus
 from archium.domain.presentation import Presentation
-from archium.domain.slide import SlideSpec
+from archium.domain.slide import SlideSpec, SlideVisualRequirement
 
 # Pages that can still appear in preview / Studio / draft export.
 _DELIVERABLE_SLIDE_STATUSES = frozenset(
@@ -184,7 +184,7 @@ def refresh_slide_asset_delivery(slide: SlideSpec) -> SlideSpec:
     return slide
 
 
-def _collect_missing_asset_blockers(requirements: list[object]) -> list[str]:
+def _collect_missing_asset_blockers(requirements: list[SlideVisualRequirement]) -> list[str]:
     reasons: list[str] = []
     for requirement in requirements:
         for instruction in getattr(requirement, "processing_instructions", []):

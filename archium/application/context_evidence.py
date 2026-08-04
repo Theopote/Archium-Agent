@@ -5,15 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application._helpers import _format_fact_line
 from archium.application.knowledge_gap_detection import (
     KnowledgeGapEntry,
     detect_knowledge_gaps,
     resolve_required_fact_keys,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.enums import KnowledgeItemStatus, VerificationStatus
 from archium.domain.fact import ProjectFact
 from archium.domain.project_knowledge import ProjectKnowledgeItem

@@ -12,6 +12,7 @@ from archium.domain.visual.enums import (
     LayoutFamily,
 )
 from archium.domain.visual.layout import LayoutConstraint, LayoutElement, LayoutPlan
+from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
 from archium.infrastructure.layout.generators.base import (
     LayoutGenerator,
     LayoutGeneratorContext,
@@ -41,7 +42,9 @@ class PresentationEvidenceBoardLayoutGenerator(LayoutGenerator):
         # Default and grid aliases: hierarchical 1+2 + conclusion (not equal 2×2).
         return self._generate_hierarchical(context)
 
-    def _collect_evidence_items(self, context: LayoutGeneratorContext, *, limit: int):
+    def _collect_evidence_items(
+        self, context: LayoutGeneratorContext, *, limit: int
+    ) -> list[LayoutEvidenceItem]:
         return resolve_layout_evidence_items(context.content, limit=limit)
 
     def _generate_diagnosis_split(self, context: LayoutGeneratorContext) -> LayoutPlan:

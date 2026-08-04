@@ -8,11 +8,11 @@ from uuid import UUID
 import streamlit as st
 
 from archium.application.asset_board_service import AssetBoardService
+from archium.application.unit_of_work import unit_of_work
 from archium.domain.visual.element_lock import canvas_geometry_locked, is_drawing_element
 from archium.domain.visual.enums import LayoutContentType
 from archium.domain.visual.layout_evidence_item import EvidenceItemRole, LayoutEvidenceItem
 from archium.domain.visual.render_scene import TextNode
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 from archium.ui.label_map import entity_label, field_label
 from archium.ui.layout_family_ui import format_layout_family_label, layout_family_implemented
@@ -626,7 +626,7 @@ def _render_evidence_items_panel(
                 value=item.source or "",
                 key=f"studio_evidence_source_{slide.id}_{index}",
             )
-            asset_value = item.asset or ""
+            asset_value: str | None = item.asset or ""
             if asset_options:
                 option_keys = ["", *asset_options.keys()]
                 default_index = option_keys.index(asset_value) if asset_value in option_keys else 0

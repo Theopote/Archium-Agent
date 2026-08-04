@@ -6,18 +6,17 @@ testing the integration of all major components.
 
 from __future__ import annotations
 
-import pytest
-from uuid import UUID, uuid4
 from pathlib import Path
+from uuid import uuid4
 
-from archium.application.ingestion_service import IngestionService
-from archium.application.presentation_workflow_service import PresentationWorkflowService
+import pytest
 from archium.application.asset_matching_service import AssetMatchingService
 from archium.application.export_service import PresentationExportService
-from archium.domain.project import Project
-from archium.domain.presentation import PresentationBrief
-from archium.domain.slide import SlideSpec
+from archium.application.ingestion_service import IngestionService
+from archium.application.presentation_workflow_service import PresentationWorkflowService
 from archium.config.settings import Settings
+from archium.domain.presentation import PresentationBrief
+from archium.domain.project import Project
 
 
 @pytest.mark.integration
@@ -153,7 +152,7 @@ def test_presentation_workflow_with_review(
     assert len(initial_result.slides) > 0
     
     # Simulate review feedback
-    review_comments = [
+    _review_comments = [
         "Slide 3 needs more specific data",
         "Add sustainability metrics to slide 5",
         "Clarify timeline in slide 7",

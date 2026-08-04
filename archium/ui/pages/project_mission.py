@@ -8,6 +8,7 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.unit_of_work import unit_of_work
 from archium.config.settings import Settings
 from archium.domain.enums import DeliverableType
 from archium.exceptions import WorkflowError
@@ -47,7 +48,6 @@ from archium.ui.workflow_progress_panel import (
 )
 from archium.ui.workspace_service import list_projects
 from archium.ui.workstream_panel import render_workstream_panel
-from archium.application.unit_of_work import unit_of_work
 
 STEP_LABELS = [
     "1. 描述任务",

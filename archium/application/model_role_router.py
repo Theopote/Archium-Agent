@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.llm_profile_service import LLMProfileService
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.llm_profile import LLMProfile
 from archium.domain.model_roles import (
     CORE_MODEL_ROLES,

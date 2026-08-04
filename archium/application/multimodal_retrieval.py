@@ -11,13 +11,12 @@ from typing import Protocol
 from uuid import UUID
 
 from pydantic import Field
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.retrieval_credibility import rank_relevance, score_chunk_credibility
 from archium.application.retrieval_filters import RetrievalFilters
 from archium.application.retrieval_hybrid import keyword_overlap_score
 from archium.application.retrieval_service import create_retrieval_service
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain._base import DomainModel
 from archium.domain.architectural_chunk import ArchitecturalChunkType

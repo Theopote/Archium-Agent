@@ -8,9 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.domain.visual.architectural_content_schema import ArchitecturalContentSchema
 from archium.domain.visual.architectural_template import (
     ArchitecturalTemplate,
@@ -206,7 +204,7 @@ class InductionArchitecturalTemplatePublisher:
             workspace=workspace,
             source_pptx=source_pptx,
         )
-        repo = ArchitecturalTemplateRepository(session)
+        repo = ArchitecturalTemplateRepository(session_of(session))
         saved = repo.save(result.template.model_copy(update={"project_id": project_id}))
         from archium.application.visual.template_usage_brief_service import (
             TemplateUsageBriefService,
@@ -217,7 +215,7 @@ class InductionArchitecturalTemplatePublisher:
 
         design = None
         if saved.design_system_id is not None:
-            design = DesignSystemRepository(session).get(saved.design_system_id)
+            design = DesignSystemRepository(session_of(session)).get(saved.design_system_id)
         TemplateUsageBriefService().write_for_template(
             workspace,
             saved,

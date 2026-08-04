@@ -12,9 +12,7 @@ import re
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.domain.architecture_case import ArchitectureCase
 from archium.domain.design_knowledge import DesignKnowledge
 from archium.domain.enums import ArchitectureCaseStatus

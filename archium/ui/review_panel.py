@@ -23,6 +23,7 @@ from archium.application.review_models import (
     parse_multiline_items,
 )
 from archium.application.review_service import PresentationReviewService
+from archium.application.unit_of_work import application_api, unit_of_work
 from archium.config import get_settings
 from archium.domain.enums import (
     ApprovalStatus,
@@ -36,12 +37,12 @@ from archium.domain.enums import (
     SlideType,
     VisualType,
 )
-from archium.domain.visual.layout_evidence_item import EvidenceItemRole, LayoutEvidenceItem
 from archium.domain.outline import OutlinePlan
 from archium.domain.presentation_manuscript import ManuscriptStatus
 from archium.domain.review import ReviewIssue
 from archium.domain.review_rules import repair_strategy_for_rule
 from archium.domain.slide import SlideSpec
+from archium.domain.visual.layout_evidence_item import EvidenceItemRole, LayoutEvidenceItem
 from archium.exceptions import WorkflowError
 from archium.ui.artifact_history_panel import (
     render_brief_history_panel,
@@ -78,7 +79,6 @@ from archium.ui.workspace_service import (
     regenerate_slide_plan,
     regenerate_storyline,
 )
-from archium.application.unit_of_work import application_api, unit_of_work
 
 FOCUS_SLIDE_SESSION_KEY = "review_focus_slide_id"
 
@@ -999,7 +999,7 @@ def _render_slide_evidence_items_section(
                     value=item.source or "",
                     key=f"review_evidence_source_{slide.id}_{index}",
                 )
-                asset_value = item.asset or ""
+                asset_value: str | None = item.asset or ""
                 if asset_options:
                     option_keys = ["", *asset_options.keys()]
                     default_index = (

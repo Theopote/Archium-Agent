@@ -12,17 +12,17 @@ from archium.application.asset_provenance import (
     format_asset_option_label,
     format_asset_vision_summary,
 )
+from archium.application.unit_of_work import application_api, unit_of_work
 from archium.config.settings import get_settings
 from archium.domain.slide import SlideSpec, VisualRequirement
 from archium.exceptions import WorkflowError
 from archium.ui.asset_metadata_panel import render_plan_overlay_editor_for_asset
 from archium.ui.label_map import entity_label
 from archium.ui.web_image_preview_panel import render_web_image_preview_panel
-from archium.application.unit_of_work import application_api, unit_of_work
 
 
 def render_asset_board_panel(*, project_id: UUID, presentation_id: UUID) -> None:
-    st.markdown(f"#### 资料库")
+    st.markdown("#### 资料库")
     st.caption("逐页视觉需求 · 候选素材匹配 · 人工确认")
 
     with unit_of_work() as uow:

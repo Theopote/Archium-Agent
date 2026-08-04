@@ -6,12 +6,12 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.unit_of_work import unit_of_work
 from archium.application.visual.element_geometry import (
     layout_bounds_from_percent,
     layout_coords_from_percent,
 )
 from archium.domain.visual.layout import LayoutPlan
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 
 

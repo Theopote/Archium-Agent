@@ -5,9 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.review_models import (
     OutlineSectionUpdate,
     OutlineUpdate,
@@ -20,6 +17,7 @@ from archium.application.slide_design_brief_heuristics import (
     default_protection_rules_for_page,
     infer_primary_visual_type,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.application.visual.visual_grammar_labels import merge_grammar_evidence
 from archium.domain.enums import ApprovalStatus, SlideAssetBindingRole
 from archium.domain.outline import OutlinePlan

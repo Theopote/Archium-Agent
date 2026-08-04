@@ -5,9 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.artifact_executors import (
     ArtifactOutput,
     CaseStudyExecutor,
@@ -22,6 +19,7 @@ from archium.application.deliverable_execution import (
     DeliverableExecutionRouter,
     supports_auto_generation,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.artifact_job import ArtifactJob
 from archium.domain.deliverable import PlannedDeliverable

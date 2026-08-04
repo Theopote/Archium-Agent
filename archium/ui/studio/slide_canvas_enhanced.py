@@ -6,13 +6,13 @@ from pathlib import Path
 
 import streamlit as st
 
+from archium.application.unit_of_work import unit_of_work
 from archium.domain.visual.enums import LayoutIssueSeverity
 from archium.domain.visual.layout import LayoutPlan
 from archium.ui.label_map import entity_label, field_label
 from archium.ui.layout_family_ui import format_layout_family_label
 from archium.ui.studio.element_labels import format_element_label
 from archium.ui.visual_service import SlideVisualSnapshot
-from archium.application.unit_of_work import unit_of_work
 
 
 def parse_canvas_editor_event(value: object) -> tuple[str, str | None, float | None, float | None, float | None, float | None, bool]:

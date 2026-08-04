@@ -4,9 +4,13 @@ from __future__ import annotations
 
 from contextlib import suppress
 from dataclasses import dataclass, field
-from typing import cast
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from archium.application.api.session import ApiContext
 from uuid import UUID
 
+from archium.application.api.mission import MissionApi
 from archium.application.artifact_executors import ArtifactOutput
 from archium.application.deliverable_planning_service import (
     DeliverablePlanningService,
@@ -29,6 +33,7 @@ from archium.application.planning_workflow_service import (
 from archium.application.presentation_models import PresentationRequest
 from archium.application.presentation_workflow_service import PresentationWorkflowService
 from archium.application.project_mission_service import MissionPatch, ProjectMissionService
+from archium.application.unit_of_work import SessionLike, api_bound, session_of, unit_of_work
 from archium.application.workflow_models import WorkflowRunResult
 from archium.application.workstream_planning_service import WorkstreamPlanningService
 from archium.config.settings import Settings
@@ -46,8 +51,6 @@ from archium.domain.project_mission import ProjectMission
 from archium.domain.workflow import WorkflowRun
 from archium.domain.workstream import Workstream
 from archium.exceptions import WorkflowError
-from archium.application.api.mission import MissionApi
-from archium.application.unit_of_work import SessionLike, api_bound, session_of, unit_of_work
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
 from archium.ui.workspace_service import _resolve_runtime_settings
@@ -226,30 +229,36 @@ class _PlanningRunState:
 
 
 def _resolve_planning_session(
-    api,
+    api: ApiContext,
     *,
     planning_session_id: UUID | None,
     workflow_run_id: UUID | None,
     project_id: UUID | None,
 ) -> PlanningSession | None:
-    return api.planning.resolve_session(
-        planning_session_id=planning_session_id,
-        workflow_run_id=workflow_run_id,
-        project_id=project_id,
+    return cast(
+        PlanningSession | None,
+        api.planning.resolve_session(
+            planning_session_id=planning_session_id,
+            workflow_run_id=workflow_run_id,
+            project_id=project_id,
+        ),
     )
 
 
 def _resolve_planning_run(
-    api,
+    api: ApiContext,
     *,
     workflow_run_id: UUID | None,
     planning_session: PlanningSession | None,
     project_id: UUID | None,
 ) -> tuple[WorkflowRun | None, PlanningSession | None]:
-    return api.planning.resolve_run(
-        workflow_run_id=workflow_run_id,
-        planning_session=planning_session,
-        project_id=project_id,
+    return cast(
+        tuple[WorkflowRun | None, PlanningSession | None],
+        api.planning.resolve_run(
+            workflow_run_id=workflow_run_id,
+            planning_session=planning_session,
+            project_id=project_id,
+        ),
     )
 
 

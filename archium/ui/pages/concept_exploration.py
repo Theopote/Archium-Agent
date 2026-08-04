@@ -6,11 +6,11 @@ from uuid import UUID
 
 import streamlit as st
 
+from archium.application.unit_of_work import unit_of_work
 from archium.domain.enums import ConceptDirectionStatus, ExplorationSessionStatus
 from archium.domain.exploration_session import ExplorationSession
 from archium.domain.intent.idea_seed import IdeaSeed
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.app_navigation import get_app_page
 from archium.ui.components.chrome import render_page_header
 from archium.ui.components.concept_direction_compare import render_concept_direction_compare

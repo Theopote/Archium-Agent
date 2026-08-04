@@ -7,9 +7,7 @@ from pathlib import Path
 from typing import cast
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.visual.image_derivative_executor import ImageDerivativeExecutor
 from archium.application.visual.vision.conditioned_editor import (
     ConditionedEditRequest,

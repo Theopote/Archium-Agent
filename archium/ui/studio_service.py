@@ -10,6 +10,7 @@ from uuid import UUID
 from archium.application.content_adaptation_service import ContentAdaptationService
 from archium.application.ingestion_service import ImportItemResult
 from archium.application.slide_evidence_edit_service import SlideEvidenceEditResult
+from archium.application.unit_of_work import SessionLike, api_bound, session_of
 from archium.application.visual.slide_preview_service import SlidePreviewService
 from archium.application.visual.studio_scene_service import StudioSceneService
 from archium.application.visual.visual_edit_service import VisualEditResult
@@ -22,15 +23,14 @@ from archium.domain.render import RenderResult
 from archium.domain.revision import EntityRevision
 from archium.domain.scene_revision_summary import SceneRevisionRestoreResult
 from archium.domain.slide import SlideSpec, build_slide_logical_key
-from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
 from archium.domain.visual.deck_repair import DeckRepairSuggestion
 from archium.domain.visual.design_system import DesignSystem
+from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
 from archium.domain.visual.scene_change_proposal import SceneChangeProposal
 from archium.domain.visual.slide_capacity_budget import SlideCapacityBudget
 from archium.domain.visual.theme_change_proposal import ThemeChangeProposal
 from archium.domain.visual.vision_generation import VisionGenerationResult
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import SessionLike, api_bound, session_of
 from archium.ui.visual_service import (
     PresentationVisualSnapshot,
     SlideVisualSnapshot,

@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 from uuid import UUID
-
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
 
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.citation_resolution import citation_from_draft, enrich_slide_citations
@@ -15,6 +13,7 @@ from archium.application.knowledge_isolation import (
     is_reference_document,
 )
 from archium.application.presentation_models import PresentationRequest
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings
 from archium.domain.document import DocumentChunk
 from archium.domain.enums import VerificationStatus
@@ -24,6 +23,7 @@ from archium.domain.presentation import Chapter, PresentationBrief, Storyline
 from archium.domain.presentation_manuscript import PresentationManuscript
 from archium.domain.project_knowledge import SourceCitation
 from archium.domain.slide import SlideSpec, VisualRequirement
+from archium.domain.visual.layout_evidence_item import LayoutEvidenceItem
 from archium.infrastructure.database.repositories import DocumentRepository, FactRepository
 from archium.infrastructure.llm.presentation_schemas import (
     BriefDraft,
@@ -499,20 +499,22 @@ def _visual_from_draft(item: VisualRequirementDraft) -> VisualRequirement:
     )
 
 
-def _evidence_from_draft(item) -> "LayoutEvidenceItem":
-    from archium.domain.visual.layout_evidence_item import EvidenceItemRole, LayoutEvidenceItem
+def _evidence_from_draft(item: object) -> LayoutEvidenceItem:
+    from archium.domain.visual.layout_evidence_item import EvidenceItemRole
 
     role = EvidenceItemRole.SUPPORTING
-    try:
-        role = EvidenceItemRole(str(item.role).strip().lower())
-    except ValueError:
-        pass
-    asset = str(item.asset_id).strip() if getattr(item, "asset_id", None) else None
+    with contextlib.suppress(ValueError):
+        role = EvidenceItemRole(str(getattr(item, "role", "")).strip().lower())
+    asset = (
+        str(getattr(item, "asset_id", "")).strip()
+        if getattr(item, "asset_id", None)
+        else None
+    )
     return LayoutEvidenceItem(
-        claim=item.claim,
+        claim=str(getattr(item, "claim", "")),
         role=role,
-        focus=item.focus,
-        source=item.source,
+        focus=getattr(item, "focus", None),
+        source=getattr(item, "source", None),
         asset=asset or None,
     )
 

@@ -5,11 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.api.jobs import JobsApi
 from archium.application.ingestion_service import ImportItemResult, IngestionService
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings
 from archium.domain.background_job import BackgroundJob, BackgroundJobKind
 from archium.domain.document import SourceDocument

@@ -143,13 +143,14 @@ def test_ui_does_not_import_get_session() -> None:
             line = text[line_start : text.find("\n", start)]
             if "get_session_export_policy" in line or "get_session_for_run" in line:
                 continue
-            if re.search(r"\bget_session\s*\(", line):
-                # Exact factory call
-                if re.search(r"(?<![A-Za-z0-9_])get_session\s*\(", line):
-                    line_no = text.count("\n", 0, start) + 1
-                    hits.append(
-                        f"{path.relative_to(package_root)}:{line_no}: {line.strip()}"
-                    )
+            if (
+                re.search(r"\bget_session\s*\(", line)
+                and re.search(r"(?<![A-Za-z0-9_])get_session\s*\(", line)
+            ):
+                line_no = text.count("\n", 0, start) + 1
+                hits.append(
+                    f"{path.relative_to(package_root)}:{line_no}: {line.strip()}"
+                )
     assert hits == [], "ui must not call get_session():\n" + "\n".join(hits)
 
 
@@ -214,12 +215,13 @@ def test_ui_unit_of_work_blocks_bind_session_before_use() -> None:
             )
             for line_no, bl in body:
                 code = bl.split("#")[0]
-                if re.search(r"(?<![\w.])session(?![\w])", code) and not re.match(
-                    r"^\s*session\s*=", code
+                if (
+                    re.search(r"(?<![\w.])session(?![\w])", code)
+                    and not re.match(r"^\s*session\s*=", code)
+                    and not assigns
                 ):
-                    if not assigns:
-                        rel = path.relative_to(package_root)
-                        hits.append(f"{rel}:{line_no}: {bl.strip()}")
+                    rel = path.relative_to(package_root)
+                    hits.append(f"{rel}:{line_no}: {bl.strip()}")
             i = j
     assert hits == [], (
         "unit_of_work() as uow blocks use bare session without "

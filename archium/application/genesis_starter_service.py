@@ -5,11 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.outline_service import infer_audience_mode
 from archium.application.outline_templates import detect_scenario_template, template_sections
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.enums import (
     ApprovalStatus,
     OutlineAudienceMode,

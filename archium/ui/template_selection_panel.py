@@ -2,21 +2,22 @@
 
 from __future__ import annotations
 
-from uuid import UUID
+from collections.abc import Callable
 from typing import Any
+from uuid import UUID
 
 import streamlit as st
 
 from archium.application.design_system_integration import DesignSystemIntegrationService
-from archium.domain.presentation_templates import PresentationType, get_template, list_templates
 from archium.application.unit_of_work import unit_of_work
+from archium.domain.presentation_templates import get_template, list_templates
 
 
 def render_template_selection_panel(
     *,
     project_id: UUID,
     presentation_id: UUID | None = None,
-    on_template_selected: callable | None = None,
+    on_template_selected: Callable[[str], None] | None = None,
 ) -> dict[str, Any] | None:
     """Render professional template selection interface.
     
@@ -33,7 +34,7 @@ def render_template_selection_panel(
     
     # Initialize design system integration
     with unit_of_work() as uow:
-        design_system_service = DesignSystemIntegrationService(uow)
+        _design_system_service = DesignSystemIntegrationService(uow)
     
     # Get available templates
     templates = list_templates()
@@ -43,7 +44,7 @@ def render_template_selection_panel(
         return None
     
     # Group templates by type
-    template_groups = {}
+    template_groups: dict[str, list[Any]] = {}
     for template in templates:
         group = template.presentation_type.value
         if group not in template_groups:
@@ -61,7 +62,7 @@ def render_template_selection_panel(
     
     tabs = st.tabs(tab_names)
     
-    for tab, (group_name, group_templates) in zip(tabs, template_groups.items()):
+    for tab, (_group_name, group_templates) in zip(tabs, template_groups.items(), strict=True):
         with tab:
             for template in group_templates:
                 with st.container():
@@ -101,7 +102,7 @@ def render_template_selection_panel(
                         
                         # Select button
                         if st.button(
-                            f"选择模板",
+                            "选择模板",
                             key=f"select_{template.id}",
                             use_container_width=True,
                         ):
@@ -201,19 +202,19 @@ def render_template_selection_panel(
         st.markdown("---")
         st.markdown("### 📋 模板详情")
         
-        template = get_template(selected_template["id"])
-        if template:
-            st.markdown(f"**{template.name}**")
-            st.write(template.description)
+        template_detail = get_template(selected_template["id"])
+        if template_detail is not None:
+            st.markdown(f"**{template_detail.name}**")
+            st.write(template_detail.description)
             
             st.markdown("#### 推荐幻灯片结构")
-            structure = template.get_recommended_structure()
+            structure = template_detail.get_recommended_structure()
             if structure:
                 for i, slide_info in enumerate(structure, 1):
                     st.markdown(f"{i}. **{slide_info.get('title', 'Slide')}** - {slide_info.get('layout', 'content')}")
             
             st.markdown("#### 包含的布局类型")
-            layout_types = set(t.layout.value for t in template.slide_templates)
+            layout_types = set(t.layout.value for t in template_detail.slide_templates)
             st.write(", ".join(layout_types))
     
     return selected_template
@@ -239,11 +240,15 @@ def render_design_quality_panel(
     
     # Assess quality
     with st.spinner("正在评估设计质量..."):
-        quality_result = design_system_service.assess_presentation_quality(
+        quality_reports = design_system_service.assess_presentation_quality(
             presentation_id,
             slides_data,
         )
-    
+        quality_result = {
+            "quality_reports": quality_reports,
+            "summary": design_system_service.get_quality_summary(quality_reports),
+        }
+
     summary = quality_result["summary"]
     
     # Overall score
@@ -387,7 +392,7 @@ def render_visual_elements_panel(
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    if st.button(f"使用", key=f"use_{element['id']}_{i}_{j}", use_container_width=True):
+                    if st.button("使用", key=f"use_{element['id']}_{i}_{j}", use_container_width=True):
                         st.session_state['selected_element'] = element
                         st.success(f"已选择: {element['name']}")
     else:

@@ -8,11 +8,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.chunk_models import ProjectContextBundle
 from archium.application.retrieval_service import create_retrieval_service
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.citation import Citation
 from archium.domain.document import DocumentChunk

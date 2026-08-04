@@ -4,11 +4,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.asset_matching_visual import drawing_type_match_adjustment
 from archium.application.asset_visual_utils import infer_visual_processing_flags
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.asset import Asset
 from archium.domain.enums import AssetType, VisualType

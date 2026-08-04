@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from archium.domain.enums import VisualType
-from archium.domain.slide import SlideSpec, VisualRequirement
+from archium.domain.slide import SlideSpec
+from archium.domain.visual import default_presentation_design_system
 from archium.domain.visual.enums import LayoutElementRole, LayoutFamily, VisualContentType
 from archium.domain.visual.layout_evidence_item import (
     EvidenceItemRole,
@@ -13,15 +13,14 @@ from archium.domain.visual.layout_evidence_item import (
     build_evidence_items_from_legacy,
     sort_evidence_items,
 )
+from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.layout.generators.base import (
     LayoutContentBundle,
+    LayoutGeneratorContext,
     content_from_slide,
     resolve_layout_evidence_items,
 )
 from archium.infrastructure.layout.layout_solver import LayoutSolver
-from archium.infrastructure.layout.generators.base import LayoutGeneratorContext
-from archium.domain.visual.visual_intent import VisualIntent
-from archium.domain.visual import default_presentation_design_system
 
 _PHOTO_A = UUID("aaaaaaaa-aaaa-aaaa-aaaa-000000000001")
 _PHOTO_B = UUID("bbbbbbbb-bbbb-bbbb-bbbb-000000000002")

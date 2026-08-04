@@ -6,15 +6,13 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.design_knowledge_mapping import design_knowledge_from_finding
 from archium.application.project_knowledge_service import ProjectKnowledgeService
 from archium.application.research_topics import (
     collect_mission_research_questions,
     collect_mission_research_topic_candidates,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import InformationOrigin, InformationReliability
 from archium.domain.intent.research_run import (

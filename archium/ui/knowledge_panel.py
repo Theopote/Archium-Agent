@@ -6,8 +6,8 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.application.unit_of_work import unit_of_work
 from archium.application.project_knowledge_service import ProjectKnowledgeService
+from archium.application.unit_of_work import unit_of_work
 from archium.domain.enums import DocumentPurpose, InformationOrigin, InformationReliability
 from archium.domain.project_knowledge import ProjectKnowledgeItem, SourceCitation
 

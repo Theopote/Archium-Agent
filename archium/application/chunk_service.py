@@ -5,10 +5,8 @@ from __future__ import annotations
 import contextlib
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.retrieval_service import RetrievalService, create_retrieval_service
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.document import DocumentChunk
 from archium.exceptions import RepositoryError

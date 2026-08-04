@@ -4,14 +4,12 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.slide_recovery_service import SlideRecoveryRequest, SlideRecoveryService
 from archium.application.slide_recovery_workflow_service import (
     SlideRecoveryWorkflowResult,
     SlideRecoveryWorkflowService,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.enums import WorkflowStatus
 from archium.domain.slide_recovery import (
     NormalizedBox,

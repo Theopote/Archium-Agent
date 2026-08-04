@@ -9,9 +9,7 @@ from datetime import UTC
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.visual.architectural_content_schema_extractor import (
     ArchitecturalContentSchemaExtractor,
 )
@@ -661,14 +659,14 @@ class TemplateInductionService:
             PresentationRepository,
         )
 
-        presentation = PresentationRepository(session).get_presentation(outline.presentation_id)
+        presentation = PresentationRepository(session_of(session)).get_presentation(outline.presentation_id)
         if presentation is None:
             return None
 
         review_context = PresentationReviewService(session).get_review_context(
             outline.presentation_id
         )
-        assets = AssetRepository(session).list_by_project(presentation.project_id)
+        assets = AssetRepository(session_of(session)).list_by_project(presentation.project_id)
         return TemplateEditingContextBundle(
             project_id=presentation.project_id,
             manuscript=review_context.manuscript if review_context else None,

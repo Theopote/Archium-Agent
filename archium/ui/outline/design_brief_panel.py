@@ -13,6 +13,7 @@ from archium.application.slide_design_brief_service import (
     design_briefs_ready,
     summarize_design_briefs,
 )
+from archium.application.unit_of_work import unit_of_work
 from archium.application.visual.visual_grammar_labels import (
     archetype_select_options,
     coerce_archetype_selection,
@@ -31,7 +32,6 @@ from archium.domain.slide_design_brief import (
 from archium.domain.slide_intent import SlideIntent
 from archium.domain.visual.visual_grammar import PageArchetype
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.error_handlers import report_user_error
 
 _PRIMARY_VISUAL_OPTIONS = [

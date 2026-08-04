@@ -8,10 +8,10 @@ import streamlit as st
 
 from archium.application.slide_diff import change_source_label
 from archium.application.slide_history_service import SlideHistoryService
+from archium.application.unit_of_work import unit_of_work
 from archium.domain.revision import SlideLineageOption
 from archium.domain.slide import SlideSpec
 from archium.domain.slide_history import SlideFieldChange, SlideRevision
-from archium.application.unit_of_work import unit_of_work
 from archium.ui.label_map import entity_label
 
 

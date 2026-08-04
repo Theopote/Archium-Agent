@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.architecture_case_library import ArchitectureCaseLibraryService
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.case_ref import normalize_case_id_list
 from archium.domain.concept_direction import ConceptDirection
 

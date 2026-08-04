@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.agents.narrative_architect import NarrativeArchitect
 from archium.application._helpers import (
     build_retrieval_query_from_brief,
@@ -18,6 +15,7 @@ from archium.application.mission_context_bridge import (
     enrich_mission_generation_context,
     resolve_project_mission,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.enums import RevisionSource

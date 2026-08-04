@@ -10,8 +10,8 @@ from archium.application.project_knowledge_display import (
     ProjectKnowledgeDisplay,
     build_project_knowledge_display,
 )
-from archium.domain.intent.knowledge_state import KnowledgeState
 from archium.application.unit_of_work import unit_of_work
+from archium.domain.intent.knowledge_state import KnowledgeState
 
 
 def load_project_knowledge_display(project_id: UUID) -> ProjectKnowledgeDisplay | None:

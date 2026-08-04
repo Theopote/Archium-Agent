@@ -6,15 +6,13 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.orchestration.workstream_node_registry import (
     HANDLER_PRESENTATION_SIGNAL,
     HANDLER_RESEARCH,
     HANDLER_SKIP,
     HANDLER_STRATEGY_NOTE,
 )
+from archium.application.unit_of_work import SessionLike
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import InformationOrigin, InformationReliability
 from archium.domain.orchestration.models import WorkstreamNodeSpec

@@ -5,9 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application._helpers import to_json
 from archium.application.mission_history_service import MissionHistoryService
 from archium.application.project_knowledge_service import ProjectKnowledgeService
@@ -16,6 +13,7 @@ from archium.application.project_mission_service import (
     ProjectMissionService,
     is_mission_approval_current,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.enums import RevisionSource
 from archium.domain.project_knowledge import ProjectKnowledgeItem

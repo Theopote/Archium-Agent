@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.agents.cultural_narrative_planner import CulturalNarrativePlanner
 from archium.agents.reference_style_profiler import ReferenceStyleProfiler
 from archium.agents.renovation_issue_planner import RenovationIssueMapPlanner
@@ -25,6 +22,7 @@ from archium.application.reference_style_service import (
     build_reference_style_context,
     has_reference_style_documents,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings, get_settings
 from archium.domain.cultural_narrative import CulturalNarrativePlan
 from archium.domain.enums import RevisionSource

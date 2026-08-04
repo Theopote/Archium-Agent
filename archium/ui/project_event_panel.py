@@ -5,8 +5,8 @@ from __future__ import annotations
 from uuid import UUID
 
 import streamlit as st
-from archium.application.unit_of_work import unit_of_work
 
+from archium.application.unit_of_work import unit_of_work
 
 _EVENT_LABELS = {
     "project_created": "创建项目",

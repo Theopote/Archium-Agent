@@ -5,13 +5,11 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.studio_human_review_store import (
     load_presentation_reviews,
     save_slide_review,
 )
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.config.settings import Settings
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.benchmark import HumanVisualReview, HumanVisualReviewSource

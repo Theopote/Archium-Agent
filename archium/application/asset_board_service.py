@@ -5,14 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.asset_matching_service import (
     AssetMatchingService,
     score_asset_for_requirement,
 )
 from archium.application.asset_provenance import format_asset_provenance
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.asset import Asset
 from archium.domain.enums import VisualType
 from archium.domain.slide import SlideSpec, VisualRequirement
