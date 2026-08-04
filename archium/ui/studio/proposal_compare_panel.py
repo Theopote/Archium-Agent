@@ -39,6 +39,7 @@ def get_stored_proposal(slide_id: UUID) -> SceneChangeProposal | None:
             st.session_state.pop(_proposal_session_key(slide_id), None)
 
     with unit_of_work() as uow:
+        session = uow
         from archium.application.visual.scene_proposal_service import SceneProposalService
 
         settings = get_settings()
@@ -50,6 +51,7 @@ def get_stored_proposal(slide_id: UUID) -> SceneChangeProposal | None:
 
 def store_proposal(proposal: SceneChangeProposal) -> None:
     with unit_of_work() as uow:
+        session = uow
         from archium.application.visual.scene_proposal_service import SceneProposalService
 
         settings = get_settings()
@@ -273,6 +275,7 @@ def _render_decision_buttons(
         key=f"studio_reject_proposal_{proposal.proposal_id}",
     ):
         with unit_of_work() as uow:
+            session = uow
             from archium.application.visual.scene_proposal_service import SceneProposalService
 
             rejected = SceneProposalService(session, settings=settings).reject_proposal(proposal)

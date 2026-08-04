@@ -28,6 +28,7 @@ from archium.ui.workspace_service import list_project_presentations
 def _selected_presentation_id(project_id: UUID) -> UUID | None:
     selected = st.session_state.get("selected_presentation_id")
     with unit_of_work() as uow:
+        session = uow
         from archium.application.presentation_selection import select_presentation
 
         presentations = list_project_presentations(session, project_id)

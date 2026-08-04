@@ -389,6 +389,7 @@ def _run_planning_job(
         job.workflow_run_id = workflow_run_id
     try:
         with unit_of_work(scoped=False) as uow:
+            session = uow
             service = _create_planning_service(uow, settings)
             try:
                 if action == PlanningJobAction.START:

@@ -165,6 +165,7 @@ def _render_item_row(
         cols = st.columns(2)
         if cols[0].button("确认", key=f"confirm_ki_{item.id}"):
             with unit_of_work() as uow:
+                session = uow
                 from archium.application.fact_ledger_service import FactLedgerService
                 from archium.infrastructure.llm.factory import create_llm_provider
                 from archium.ui.llm_settings import get_ui_effective_settings
@@ -184,6 +185,7 @@ def _render_item_row(
             st.rerun()
         if cols[1].button("驳回", key=f"reject_ki_{item.id}"):
             with unit_of_work() as uow:
+                session = uow
                 from archium.application.fact_ledger_service import FactLedgerService
 
                 FactLedgerService(session).reject_fact(item.linked_fact_id)

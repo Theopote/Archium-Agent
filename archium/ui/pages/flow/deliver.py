@@ -91,6 +91,7 @@ def _resolve_deliver_context() -> StudioPresentationContext | None:
     selected_presentation = st.session_state.get("selected_presentation_id")
     if selected_presentation not in presentation_options:
         with unit_of_work() as uow:
+            session = uow
             from archium.application.presentation_selection import select_presentation
 
             auto_picked = select_presentation(session, presentations)

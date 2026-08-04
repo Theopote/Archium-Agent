@@ -162,6 +162,7 @@ Studio 的编辑闭环不是直接覆写导出文件：
 - 这是 **调用点 / 类型兼容**，**不是** 事务边界或 Repository 与 SQLAlchemy 的解耦。不要据此宣称 hexagonal UoW / Repository ports 已完成。
 - **不要** 为「更干净」而强推全员 `UnitOfWorkPort` 或给现有服务贴迁移期限；驱动条件同上方 ports 暂缓条。
 - 新建 Application 服务：继续 `SessionLike` + `session_of` + Repository（与现网一致）。明确只碰 SQLAlchemy API、且不经 Application 用例编排的代码（多在 Infrastructure）可直接标注 `Session`。
+- **事务卫生（迁移后仍成立）**：UI 禁止 `session.commit` / `get_session` / 解包 `.session`（`test_commit_ownership` + `test_ui_layering`）。Application 显式 `commit` 仅 allowlist（APP-003）。SessionLike 服务不得 `session.close()` 外层会话，也不得随意再开 `get_session()`（`test_sessionlike_hygiene`）；已知短读 composition root：`llm_settings_resolver`、`evidence_readiness_service.resolve_*_safe`。
 
 **UI 侧已落实的偏好路径：** Studio/Visual/Planning 读路径走对应 API；交付记录与任务进度走 `DeliveryApi` / `JobsApi`；同步导出不直连 `FormalPptxExportService` / `PresentationExportService`。
 

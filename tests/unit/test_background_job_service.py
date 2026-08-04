@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-from sqlalchemy.pool import StaticPool
-
 from archium.application.background_job_service import BackgroundJobService
 from archium.domain.background_job import BackgroundJobKind, BackgroundJobStatus
 from archium.domain.project import Project
 from archium.infrastructure.database.base import Base
 from archium.infrastructure.database.repositories import ProjectRepository
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
 
 
 @pytest.fixture()

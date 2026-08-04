@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy.orm import Session
 from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.domain.background_job import BackgroundJobStatus
 from archium.domain.enums import ArtifactJobStatus, WorkflowStatus
 from archium.domain.job_progress import JobKind, JobProgressView
@@ -183,12 +181,11 @@ class JobProgressService:
                 )
             )
 
-        rows.sort(
-            key=lambda item: (
-                item.last_activity_at().timestamp() if item.last_activity_at() else 0.0
-            ),
-            reverse=True,
-        )
+        def _sort_key(item: JobProgressView) -> float:
+            stamp = item.last_activity_at()
+            return stamp.timestamp() if stamp is not None else 0.0
+
+        rows.sort(key=_sort_key, reverse=True)
         return rows[:limit]
 
     def get(self, job_id: UUID) -> JobProgressView | None:

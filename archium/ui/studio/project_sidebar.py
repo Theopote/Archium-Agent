@@ -120,6 +120,7 @@ def render_studio_selection(
         )
     else:
         with unit_of_work() as uow:
+            session = uow
             from archium.application.presentation_selection import select_presentation
 
             picked = select_presentation(session, presentations)

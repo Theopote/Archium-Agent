@@ -273,6 +273,7 @@ def _render_mission_reapproval_prompt(mission: ProjectMission, *, key_prefix: st
     ):
         try:
             with unit_of_work() as uow:
+                session = uow
                 from archium.ui.session_actor import get_current_actor_id
 
                 ProjectMissionService(
@@ -298,6 +299,7 @@ def _render_mission_reapproval_prompt(mission: ProjectMission, *, key_prefix: st
     ):
         try:
             with unit_of_work() as uow:
+                session = uow
                 from archium.ui.session_actor import get_current_actor_id
 
                 approve_mission_and_continue(

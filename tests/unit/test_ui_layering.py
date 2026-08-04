@@ -179,3 +179,49 @@ def test_ui_does_not_unwrap_sqlalchemy_session() -> None:
         "ui must not unwrap Session via api.session / uow.session "
         "(pass uow / api.uow, or use resource APIs):\n" + "\n".join(hits)
     )
+
+
+def test_ui_unit_of_work_blocks_bind_session_before_use() -> None:
+    """``with unit_of_work() as uow`` bodies must not use bare ``session`` unbound."""
+    root = Path(__file__).resolve().parents[2] / "archium" / "ui"
+    package_root = root.parent.parent
+    hits: list[str] = []
+    for path in root.rglob("*.py"):
+        lines = path.read_text(encoding="utf-8").splitlines()
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            if not re.search(r"unit_of_work\s*\([^)]*\)\s+as\s+uow\s*:", line):
+                i += 1
+                continue
+            base = len(line) - len(line.lstrip())
+            body: list[tuple[int, str]] = []
+            j = i + 1
+            while j < len(lines):
+                bl = lines[j]
+                if bl.strip() == "":
+                    body.append((j + 1, bl))
+                    j += 1
+                    continue
+                ind = len(bl) - len(bl.lstrip())
+                if ind <= base and bl.strip():
+                    break
+                body.append((j + 1, bl))
+                j += 1
+            body_text = "\n".join(text for _, text in body)
+            assigns = bool(
+                re.search(r"(?m)^\s*session\s*=\s*(uow|api\.uow)\b", body_text)
+            )
+            for line_no, bl in body:
+                code = bl.split("#")[0]
+                if re.search(r"(?<![\w.])session(?![\w])", code) and not re.match(
+                    r"^\s*session\s*=", code
+                ):
+                    if not assigns:
+                        rel = path.relative_to(package_root)
+                        hits.append(f"{rel}:{line_no}: {bl.strip()}")
+            i = j
+    assert hits == [], (
+        "unit_of_work() as uow blocks use bare session without "
+        "`session = uow` (or pass uow directly):\n" + "\n".join(hits)
+    )

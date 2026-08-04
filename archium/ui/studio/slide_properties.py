@@ -92,6 +92,7 @@ def _run_lock(
 ) -> None:
     try:
         with unit_of_work() as uow:
+            session = uow
             from archium.ui.studio_service import apply_slide_element_lock
 
             apply_slide_element_lock(
@@ -113,6 +114,7 @@ def _run_reorder(
 ) -> None:
     try:
         with unit_of_work() as uow:
+            session = uow
             from archium.ui.studio_service import apply_slide_element_reorder
 
             apply_slide_element_reorder(
@@ -141,6 +143,7 @@ def _run_visibility(
 ) -> None:
     try:
         with unit_of_work() as uow:
+            session = uow
             from archium.ui.studio_service import apply_slide_element_visibility
 
             apply_slide_element_visibility(
@@ -164,6 +167,7 @@ def _run_align(
 ) -> None:
     try:
         with unit_of_work() as uow:
+            session = uow
             from archium.ui.studio_service import apply_slide_element_align
 
             apply_slide_element_align(
@@ -278,6 +282,7 @@ def render_slide_properties(
                 ):
                     try:
                         with unit_of_work() as uow:
+                            session = uow
                             from archium.ui.studio_service import apply_slide_create_freeform
 
                             result = apply_slide_create_freeform(
@@ -933,6 +938,7 @@ def _render_element_properties(
                     )
                 try:
                     with unit_of_work() as uow:
+                        session = uow
                         from archium.ui.studio_service import apply_slide_element_text_runs
 
                         apply_slide_element_text_runs(
@@ -1000,6 +1006,7 @@ def _render_element_properties(
             ):
                 try:
                     with unit_of_work() as uow:
+                        session = uow
                         from archium.ui.studio_service import apply_slide_element_gradient_fill
 
                         apply_slide_element_gradient_fill(
@@ -1020,6 +1027,7 @@ def _render_element_properties(
             ):
                 try:
                     with unit_of_work() as uow:
+                        session = uow
                         from archium.ui.studio_service import apply_slide_element_silhouette
 
                         apply_slide_element_silhouette(
@@ -1104,6 +1112,7 @@ def _render_element_properties(
                 ):
                     try:
                         with unit_of_work() as uow:
+                            session = uow
                             from archium.ui.studio_service import (
                                 apply_slide_element_gradient_fill,
                             )
@@ -1231,6 +1240,7 @@ def _render_element_properties(
             ):
                 try:
                     with unit_of_work() as uow:
+                        session = uow
                         from archium.ui.studio_service import apply_slide_element_group
 
                         result = apply_slide_element_group(
@@ -1256,6 +1266,7 @@ def _render_element_properties(
             ):
                 try:
                     with unit_of_work() as uow:
+                        session = uow
                         from archium.ui.studio_service import apply_slide_element_connect
 
                         result = apply_slide_element_connect(
@@ -1282,6 +1293,7 @@ def _render_element_properties(
         ):
             try:
                 with unit_of_work() as uow:
+                    session = uow
                     from archium.ui.studio_service import apply_slide_element_ungroup
 
                     apply_slide_element_ungroup(
@@ -1354,6 +1366,7 @@ def _render_element_properties(
         ):
             try:
                 with unit_of_work() as uow:
+                    session = uow
                     from archium.ui.studio_service import apply_slide_element_duplicate
 
                     result = apply_slide_element_duplicate(
@@ -1379,6 +1392,7 @@ def _render_element_properties(
         ):
             try:
                 with unit_of_work() as uow:
+                    session = uow
                     from archium.ui.studio_service import apply_slide_element_delete
 
                     apply_slide_element_delete(

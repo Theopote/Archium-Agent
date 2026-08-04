@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session
 
-from archium.application.unit_of_work import UnitOfWork, SessionLike, session_of
+from archium.application.unit_of_work import SessionLike, UnitOfWork, session_of
 
 if TYPE_CHECKING:
     from archium.application.api.context import ContextApi

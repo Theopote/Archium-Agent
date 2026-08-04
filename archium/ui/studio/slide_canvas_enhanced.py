@@ -342,6 +342,7 @@ def _load_comment_anchors(
 
     try:
         with unit_of_work() as uow:
+            session = uow
             from archium.application.visual.element_comment_service import (
                 ElementCommentService,
             )

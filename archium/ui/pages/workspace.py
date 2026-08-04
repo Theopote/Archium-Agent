@@ -96,6 +96,7 @@ def _resolve_active_presentation_id(project_id: UUID) -> UUID | None:
         else st.session_state.get("selected_presentation_id")
     )
     with unit_of_work() as uow:
+        session = uow
         from archium.application.presentation_selection import select_presentation
 
         presentations = list_project_presentations(session, project_id)
@@ -158,6 +159,7 @@ def _render_create_project() -> None:
                 st.error("请填写项目名称")
                 return
             with unit_of_work() as uow:
+                session = uow
                 from archium.ui.session_actor import get_current_actor_id
 
                 project = create_project(
@@ -720,6 +722,7 @@ def _render_last_result() -> None:
 
     if result.presentation is not None:
         with unit_of_work() as uow:
+            session = uow
             from archium.application.review_service import PresentationReviewService
             from archium.domain.enums import ReviewSeverity, ReviewStatus
 

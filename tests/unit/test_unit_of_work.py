@@ -6,11 +6,6 @@ from collections.abc import Generator
 from contextlib import contextmanager
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
-from sqlalchemy.orm import Session
-from sqlalchemy.pool import StaticPool
-
 from archium.application.api.session import ApiContext, api_from_session
 from archium.application.unit_of_work import (
     Application,
@@ -23,6 +18,10 @@ from archium.application.unit_of_work import (
 from archium.domain.project import Project
 from archium.infrastructure.database.base import Base
 from archium.infrastructure.database.repositories import ProjectRepository
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
 
 
 @pytest.fixture()
@@ -159,12 +158,11 @@ def _insert_project(session: Session, name: str) -> Project:
 
 def test_unit_of_work_rolls_back_on_exception(memory_engine: Engine) -> None:
     project_id = None
-    with pytest.raises(RuntimeError, match="boom"):
-        with unit_of_work(memory_engine) as uow:
-            created = _insert_project(uow.session, "回滚项目")
-            project_id = created.id
-            uow.flush()
-            raise RuntimeError("boom")
+    with pytest.raises(RuntimeError, match="boom"), unit_of_work(memory_engine) as uow:
+        created = _insert_project(uow.session, "回滚项目")
+        project_id = created.id
+        uow.flush()
+        raise RuntimeError("boom")
 
     assert project_id is not None
     verify = Session(bind=memory_engine, autoflush=False, autocommit=False)
@@ -177,13 +175,12 @@ def test_unit_of_work_rolls_back_on_exception(memory_engine: Engine) -> None:
 def test_flush_does_not_commit(memory_engine: Engine) -> None:
     """Flush + exception still rolls back — flush is not a commit boundary."""
     project_id = None
-    with pytest.raises(ValueError, match="after-flush"):
-        with unit_of_work(memory_engine) as uow:
-            created = _insert_project(uow.session, "仅flush")
-            project_id = created.id
-            uow.flush()
-            assert ProjectRepository(uow.session).get_by_id(project_id) is not None
-            raise ValueError("after-flush")
+    with pytest.raises(ValueError, match="after-flush"), unit_of_work(memory_engine) as uow:
+        created = _insert_project(uow.session, "仅flush")
+        project_id = created.id
+        uow.flush()
+        assert ProjectRepository(uow.session).get_by_id(project_id) is not None
+        raise ValueError("after-flush")
 
     verify = Session(bind=memory_engine, autoflush=False, autocommit=False)
     try:
@@ -257,11 +254,10 @@ def test_commit_failure_rolls_back(memory_engine: Engine, monkeypatch: pytest.Mo
 
     monkeypatch.setattr(db_session_mod, "_independent_session", _failing_commit)
 
-    with pytest.raises(RuntimeError, match="commit failed"):
-        with unit_of_work(memory_engine) as uow:
-            created = _insert_project(uow.session, "提交失败")
-            project_id = created.id
-            uow.flush()
+    with pytest.raises(RuntimeError, match="commit failed"), unit_of_work(memory_engine) as uow:
+        created = _insert_project(uow.session, "提交失败")
+        project_id = created.id
+        uow.flush()
 
     verify = Session(bind=memory_engine, autoflush=False, autocommit=False)
     try:

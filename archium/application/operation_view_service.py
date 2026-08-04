@@ -5,14 +5,12 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from archium.application.unit_of_work import SessionLike, session_of
-
 from archium.application.job_progress_service import JobProgressService
+from archium.application.unit_of_work import SessionLike, session_of
 from archium.domain.job_progress import JobKind, JobProgressView
 from archium.domain.operation_view import OperationStatus, OperationView
 from archium.domain.workflow import WorkflowRun
 from archium.infrastructure.database.repositories import WorkflowRunRepository
-
 
 _STATUS_MAP = {
     "queued": OperationStatus.QUEUED,

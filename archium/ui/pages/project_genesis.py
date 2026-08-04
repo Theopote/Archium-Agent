@@ -100,6 +100,7 @@ def _render_entry_form() -> None:
 
             project_name = name.strip() or _default_name_from_prompt(prompt.strip())
             with unit_of_work() as uow:
+                session = uow
                 from archium.ui.session_actor import get_current_actor_id
 
                 project = ProjectManagementService(session).create_project(
