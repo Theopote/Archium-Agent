@@ -39,6 +39,8 @@ class PngRenderer:
     def render(self, scene: RenderScene, output_path: Path) -> Path:
         from PIL import Image, ImageDraw
 
+        scene = self._resolve_portable_uris(scene)
+
         width = max(1, int(scene.page_width * self._dpi))
         height = max(1, int(scene.page_height * self._dpi))
         bg = self._parse_color(scene.background.color)
@@ -60,6 +62,32 @@ class PngRenderer:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         image.save(output_path, format="PNG")
         return output_path
+
+    @staticmethod
+    def _resolve_portable_uris(scene: RenderScene) -> RenderScene:
+        """Fill resolved_path for storage:// / project:// URIs before rasterizing."""
+        needs_resolve = any(
+            isinstance(node, (ImageNode, DrawingNode))
+            and not (node.resolved_path and Path(str(node.resolved_path)).is_file())
+            and bool((node.storage_uri or node.asset_path or "").strip())
+            for node in scene.nodes
+        )
+        if not needs_resolve:
+            return scene
+        try:
+            from archium.config.settings import get_settings
+            from archium.infrastructure.storage.asset_path_resolver import (
+                AssetPathResolver,
+                build_export_resolve_context,
+            )
+        except Exception:
+            return scene
+        settings = get_settings()
+        ctx = build_export_resolve_context(
+            scene,
+            project_storage_root=settings.project_storage_path,
+        )
+        return AssetPathResolver().resolve_scene(scene, ctx)
 
     def _px(self, inches: float) -> int:
         return max(0, int(round(inches * self._dpi)))
@@ -204,8 +232,31 @@ class PngRenderer:
         canvas.paste(cropped, (box[0], box[1]), cropped)
 
     @staticmethod
-    def _resolve_existing_asset_path(raw_path: str) -> Path | None:
-        path = Path(raw_path).expanduser()
+    def _resolve_existing_asset_path(raw_path: str | None) -> Path | None:
+        text = (raw_path or "").strip()
+        if not text:
+            return None
+        if text.startswith(("storage://", "project://", "benchmark://")):
+            try:
+                from archium.config.settings import get_settings
+                from archium.infrastructure.storage.asset_path_resolver import (
+                    AssetPathResolver,
+                    AssetPathResolveContext,
+                )
+
+                settings = get_settings()
+                resolved = AssetPathResolver().resolve(
+                    text,
+                    AssetPathResolveContext(
+                        project_storage_root=settings.project_storage_path,
+                    ),
+                )
+                if resolved is not None and resolved.is_file():
+                    return resolved
+            except Exception:
+                return None
+            return None
+        path = Path(text).expanduser()
         if path.is_file():
             return path
         resolved = path.resolve()

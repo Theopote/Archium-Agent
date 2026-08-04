@@ -580,16 +580,31 @@ class LayoutPlanningService:
                 and plan.layout_variant == "monument"
             ):
                 composition_penalty += 0.3
-            # Sparse text pages should not win with strategy/process shells.
-            if (
-                plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
-                and plan.layout_variant == "lead_and_points"
-            ):
-                composition_bonus += 0.2
-            if plan.layout_family == LayoutFamily.STRATEGY_CARDS:
-                composition_penalty += 0.15
-            if plan.layout_family == LayoutFamily.PROCESS_NARRATIVE:
-                composition_penalty += 0.2
+            # When the intent wants an asset-led family we don't have assets for,
+            # prefer sparse text openers over strategy/process shells that invent cards.
+            # Do NOT demote STRATEGY_CARDS when it is the explicit primary preference.
+            asset_led = {
+                LayoutFamily.HERO,
+                LayoutFamily.HYBRID_CANVAS,
+                LayoutFamily.DRAWING_FOCUS,
+                LayoutFamily.EVIDENCE_BOARD,
+                LayoutFamily.ANALYTICAL_DIAGRAM,
+            }
+            if primary_pref in asset_led:
+                if (
+                    plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                    and plan.layout_variant == "lead_and_points"
+                ):
+                    composition_bonus += 0.2
+                if plan.layout_family == LayoutFamily.STRATEGY_CARDS:
+                    composition_penalty += 0.15
+                if plan.layout_family == LayoutFamily.PROCESS_NARRATIVE:
+                    composition_penalty += 0.2
+            elif primary_pref == LayoutFamily.STRATEGY_CARDS:
+                if plan.layout_family == LayoutFamily.STRATEGY_CARDS:
+                    composition_bonus += 0.28
+                if plan.layout_variant == "strategy_concept":
+                    composition_bonus += 0.12
 
         if previous_layout_plan is not None:
             preferred_primary = (

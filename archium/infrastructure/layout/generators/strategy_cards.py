@@ -56,7 +56,16 @@ class StrategyCardsLayoutGenerator(LayoutGenerator):
             )
         )
 
-        lead_h = 0.38
+        lead_h = max(
+            0.38,
+            self._text_band_height(
+                context,
+                context.content.message,
+                "subtitle",
+                box_width_in=safe.width * 0.92,
+                min_height=0.38,
+            ),
+        )
         elements.append(
             LayoutElement(
                 id="lead",
@@ -65,14 +74,14 @@ class StrategyCardsLayoutGenerator(LayoutGenerator):
                 text_content=context.content.message,
                 x=safe.x,
                 y=safe.y + title_h + spacing.xs,
-                width=safe.width,
+                width=safe.width * 0.92,
                 height=lead_h,
                 style_token="subtitle",
             )
         )
 
         cards_top = safe.y + title_h + spacing.xs + lead_h + spacing.sm
-        cards_h = 0.72
+        cards_h = 0.52
         cards_area = Rect(safe.x, cards_top, safe.width, cards_h)
         cells = grid_cells(cards_area, rows=1, cols=card_count, gap_x=spacing.md, gap_y=0)
 
@@ -95,17 +104,18 @@ class StrategyCardsLayoutGenerator(LayoutGenerator):
                 )
             )
 
-        concept_top = cards_area.bottom + spacing.md
-        source_reserve = 0.3 if context.content.source_text else 0.0
-        concept_h = max(1.0, safe.bottom - concept_top - source_reserve - spacing.sm)
+        concept_top = cards_area.bottom + spacing.sm
+        source_reserve = 0.28 if context.content.source_text else 0.0
+        concept_h = max(1.35, safe.bottom - concept_top - source_reserve - spacing.xs)
         concept_area = Rect(safe.x, concept_top, safe.width, concept_h)
 
         if context.content.hero_asset_ref:
-            concept_ratio = (0.58, 0.64, 0.70)[context.slide.order % 3]
+            # Prefer a dominant concept diagram; keep a narrow spatial caption rail.
+            concept_ratio = 0.72
             diagram, spatial_area = split_horizontal(
                 concept_area,
                 left_ratio=concept_ratio,
-                gap=spacing.lg,
+                gap=spacing.md,
             )
             elements.append(
                 LayoutElement(

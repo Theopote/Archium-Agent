@@ -60,7 +60,9 @@ def apply_visual_language_to_scene(
     for index, node in enumerate(nodes):
         if not isinstance(node, TextNode):
             continue
-        if node.semantic_role not in {"title", "lead_statement"}:
+        # Only the page title receives the architectural title scale.
+        # Lead / body copy must keep their layout style_token sizes.
+        if node.semantic_role != "title":
             continue
         updates: dict[str, object] = {
             "letter_spacing": primary.resolved_letter_spacing(),

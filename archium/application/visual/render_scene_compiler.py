@@ -24,6 +24,7 @@ from archium.application.visual.scene_fonts import (
 from archium.application.visual.style_overlay import apply_style_overlays
 from archium.application.visual.svg_icon_recolor import is_architectural_icon_ref
 from archium.application.visual.text_style_resolve import resolve_text_style
+from archium.domain.visual.text_style_resolve import TYPOGRAPHY_TOKEN_NAMES
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
@@ -408,8 +409,12 @@ class RenderSceneCompiler:
         semantic = "metric" if element.role == LayoutElementRole.METRIC else element.role.value
         if element.role == LayoutElementRole.SOURCE:
             semantic = "citation"
-        # Map role → typography token name for theme re-resolution.
-        typography_token = _typography_token_for_role(element.role)
+        # Prefer the layout author's style_token; fall back to role → token map.
+        typography_token = (
+            element.style_token
+            if element.style_token in TYPOGRAPHY_TOKEN_NAMES
+            else _typography_token_for_role(element.role)
+        )
         cjk_family = typography.font_family
         latin_family = typography.font_family_latin or typography.font_family
         resolved = resolve_text_fonts(
