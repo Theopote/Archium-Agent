@@ -13,7 +13,7 @@ from pathlib import Path
 from archium.application.ingestion_service import IngestionService
 from archium.application.presentation_workflow_service import PresentationWorkflowService
 from archium.application.asset_matching_service import AssetMatchingService
-from archium.application.export_service import ExportService
+from archium.application.export_service import PresentationExportService
 from archium.domain.project import Project
 from archium.domain.presentation import PresentationBrief
 from archium.domain.slide import SlideSpec
@@ -93,7 +93,7 @@ def test_complete_presentation_workflow(
     assert len(matched_slides) == len(workflow_result.slides)
     
     # Step 6: Export presentation
-    export_service = ExportService(db_session, settings=test_settings)
+    export_service = PresentationExportService(db_session, settings=test_settings)
     
     export_result = export_service.export_presentation(
         presentation_id=workflow_result.presentation_id,
@@ -178,7 +178,7 @@ def test_presentation_workflow_with_review(
     assert len(revised_result.slides) > 0
     
     # Export final version
-    export_service = ExportService(db_session, settings=test_settings)
+    export_service = PresentationExportService(db_session, settings=test_settings)
     export_result = export_service.export_presentation(
         presentation_id=revised_result.presentation_id,
         export_formats=["json"],
@@ -212,7 +212,7 @@ def test_multi_format_export_workflow(
     
     assert workflow_result.success
     
-    export_service = ExportService(db_session, settings=test_settings)
+    export_service = PresentationExportService(db_session, settings=test_settings)
     
     # Test multiple export formats
     export_result = export_service.export_presentation(
