@@ -247,6 +247,9 @@ def render() -> None:
                         persist=save_mode == "保存到本机安全凭据库",
                         session_store=cast(dict[str, object], st.session_state),
                     )
+                from archium.application.model_role_router import ModelRoleRegistryService
+
+                ModelRoleRegistryService(uow).sync_from_llm_profile(draft_profile)
             reset_llm_provider_cache()
             st.success("AI 配置已保存")
             st.rerun()

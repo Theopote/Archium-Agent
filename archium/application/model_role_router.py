@@ -100,6 +100,35 @@ class ModelRoleRegistryService:
             timeout_seconds=llm.timeout_seconds,
         )
 
+    def sync_from_llm_profile(self, llm: LLMProfile) -> list[ModelProfile]:
+        """Keep stored role-mapping profiles aligned with the default LLM config.
+
+        Stale profiles (e.g. Gemini model names after switching to DeepSeek) cause
+        400s when role routing still injects the old model into the new endpoint.
+        """
+        existing = self.list_profiles()
+        if not existing:
+            return self.save_profiles([self._default_profile_from_llm(llm)])
+
+        primary_ids = {DEFAULT_PROFILE_ID, "default", "main"}
+        sync_all = len(existing) == 1
+        updated: list[ModelProfile] = []
+        for profile in existing:
+            if sync_all or profile.id in primary_ids:
+                updated.append(
+                    profile.model_copy(
+                        update={
+                            "provider": llm.provider,
+                            "model": llm.model,
+                            "base_url": llm.base_url,
+                            "timeout_seconds": int(llm.timeout_seconds),
+                        }
+                    )
+                )
+            else:
+                updated.append(profile)
+        return self.save_profiles(updated)
+
 
 class ModelRoleRouter:
     """Resolve the best ModelProfile for a given task role."""

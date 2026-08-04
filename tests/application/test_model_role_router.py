@@ -78,3 +78,33 @@ def test_resolve_optional_returns_none_for_unconfigured_ocr(db_session: Session)
     registry.save_role_assignments([])
     router = ModelRoleRouter(registry)
     assert router.resolve_optional(ModelRole.OCR) is None
+
+
+def test_sync_from_llm_profile_updates_stale_main_profile(db_session: Session) -> None:
+    from archium.domain.llm_profile import LLMProfile
+
+    registry = ModelRoleRegistryService(db_session)
+    registry.save_profiles(
+        [
+            ModelProfile(
+                id="main",
+                provider="gemini",
+                model="gemini-2.5-pro",
+                base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                roles={ModelRole.STRUCTURED_OUTPUT, ModelRole.PLANNING},
+            )
+        ]
+    )
+    llm = LLMProfile(
+        provider="deepseek",
+        model="deepseek-v4-flash",
+        base_url="https://api.deepseek.com/v1",
+        temperature=0.7,
+        timeout_seconds=60.0,
+    )
+    synced = registry.sync_from_llm_profile(llm)
+    assert len(synced) == 1
+    assert synced[0].id == "main"
+    assert synced[0].provider == "deepseek"
+    assert synced[0].model == "deepseek-v4-flash"
+    assert synced[0].base_url == "https://api.deepseek.com/v1"
