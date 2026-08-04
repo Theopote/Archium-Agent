@@ -55,8 +55,43 @@ class ProjectLLMTierService:
 
 def model_for_tier(settings: Settings, tier: ProjectLLMTier) -> str:
     if tier == ProjectLLMTier.FAST:
-        return (settings.llm_fast_model or settings.llm_model or "").strip()
-    return (settings.llm_quality_model or settings.llm_model or "").strip()
+        candidate = (settings.llm_fast_model or settings.llm_model or "").strip()
+    else:
+        candidate = (settings.llm_quality_model or settings.llm_model or "").strip()
+    main = (settings.llm_model or "").strip()
+    if candidate and _tier_model_compatible(settings, candidate):
+        return candidate
+    return main
+
+
+def _tier_model_compatible(settings: Settings, model: str) -> bool:
+    """Reject tier overrides that cannot work with the active provider endpoint."""
+    model_l = model.lower()
+    provider = (getattr(settings, "llm_provider", None) or "").strip().lower()
+    base = (settings.llm_base_url or "").strip().lower()
+    main = (settings.llm_model or "").strip().lower()
+
+    looks_gemini = "gemini" in model_l or model_l.startswith("models/gemini")
+    looks_deepseek = "deepseek" in model_l
+    endpoint_deepseek = "deepseek" in provider or "deepseek" in base
+    endpoint_gemini = (
+        "gemini" in provider
+        or "generativelanguage.googleapis.com" in base
+        or "googleapis.com" in base
+    )
+    main_gemini = "gemini" in main
+    main_deepseek = "deepseek" in main
+
+    if endpoint_deepseek and looks_gemini:
+        return False
+    if endpoint_gemini and looks_deepseek:
+        return False
+    # Profile already switched main model family; keep tier models aligned.
+    if main_deepseek and looks_gemini:
+        return False
+    if main_gemini and looks_deepseek:
+        return False
+    return True
 
 
 def tier_label(tier: ProjectLLMTier) -> str:

@@ -47,6 +47,18 @@ def test_model_for_tier_reads_settings_overrides() -> None:
     assert model_for_tier(settings, ProjectLLMTier.QUALITY) == "quality-model"
 
 
+def test_model_for_tier_rejects_gemini_override_on_deepseek_endpoint() -> None:
+    settings = Settings(
+        llm_provider="deepseek",
+        llm_base_url="https://api.deepseek.com/v1",
+        llm_model="deepseek-v4-flash",
+        llm_quality_model="gemini-2.5-pro",
+        llm_fast_model="gemini-2.0-flash",
+    )
+    assert model_for_tier(settings, ProjectLLMTier.QUALITY) == "deepseek-v4-flash"
+    assert model_for_tier(settings, ProjectLLMTier.FAST) == "deepseek-v4-flash"
+
+
 def test_project_tier_persists_and_applies(db_session) -> None:
     project = ProjectRepository(db_session).create(Project(name="档位测试"))
     service = ProjectLLMTierService(db_session)
