@@ -673,10 +673,7 @@ class VisualCriticService:
         if not plan.elements:
             return 0.2
         # Left-led monument / sparse text openers are intentional editorial asymmetry.
-        if plan.layout_variant == "monument" or (
-            plan.layout_variant == "lead_and_points"
-            and len([el for el in plan.elements if el.role != LayoutElementRole.DECORATION]) <= 2
-        ):
+        if self._is_sparse_text_opener(plan):
             return 0.72
         center_x = plan.page_width / 2.0
         left = 0.0
@@ -696,14 +693,40 @@ class VisualCriticService:
         if ratio <= 0.0:
             return 0.45
         # Spacious text covers / sparse section openers keep more empty field.
-        sparse_opener = plan.layout_variant == "monument" or (
-            plan.layout_variant == "lead_and_points"
-            and len([el for el in plan.elements if el.role != LayoutElementRole.DECORATION]) <= 2
-        )
+        sparse_opener = self._is_sparse_text_opener(plan)
         target = 0.68 if sparse_opener else 0.22
         tolerance = 0.32 if sparse_opener else 0.22
         delta = abs(ratio - target)
         return max(0.0, min(1.0, 1.0 - delta / tolerance))
+
+    @staticmethod
+    def _is_sparse_text_opener(plan: LayoutPlan) -> bool:
+        """Title(+lead)(+source) pages with no body/cards — intentional empty field."""
+        if plan.layout_variant == "monument":
+            return True
+        if plan.layout_variant != "lead_and_points":
+            return False
+        primary = [
+            el
+            for el in plan.elements
+            if el.role
+            not in {
+                LayoutElementRole.DECORATION,
+                LayoutElementRole.SOURCE,
+                LayoutElementRole.FOOTER,
+                LayoutElementRole.PAGE_NUMBER,
+            }
+        ]
+        return len(primary) <= 2 and not any(
+            el.role
+            in {
+                LayoutElementRole.BODY_TEXT,
+                LayoutElementRole.METRIC,
+                LayoutElementRole.HERO_VISUAL,
+                LayoutElementRole.SUPPORTING_VISUAL,
+            }
+            for el in primary
+        )
 
     def _score_alignment(self, plan: LayoutPlan) -> float:
         boxes = [el for el in plan.elements if el.role != LayoutElementRole.DECORATION]

@@ -278,13 +278,14 @@ class TextualArgumentLayoutGenerator(LayoutGenerator):
 
         if context.content.source_text:
             page = context.design_system.page
+            inset = 0.28 if sparse_text_opener else 0.0
             elements.append(
                 LayoutElement(
                     id="source",
                     role=LayoutElementRole.SOURCE,
                     content_type=LayoutContentType.TEXT,
                     text_content=context.content.source_text,
-                    x=safe.x + (0.28 if is_monument else 0.0),
+                    x=safe.x + inset,
                     y=page.height - page.margin_bottom - 0.22,
                     width=safe.width * 0.7,
                     height=0.22,

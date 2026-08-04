@@ -555,7 +555,20 @@ class LayoutPlanningService:
                 and plan.layout_family == LayoutFamily.PROCESS_NARRATIVE
             ):
                 composition_penalty += 0.25
-            # Sparse text pages should not win with strategy-card shells.
+            # Keep cover vs body text openers distinct.
+            if (
+                primary_pref == LayoutFamily.HERO
+                and plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                and plan.layout_variant == "lead_and_points"
+            ):
+                composition_penalty += 0.25
+            if (
+                primary_pref != LayoutFamily.HERO
+                and plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                and plan.layout_variant == "monument"
+            ):
+                composition_penalty += 0.3
+            # Sparse text pages should not win with strategy/process shells.
             if (
                 plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
                 and plan.layout_variant == "lead_and_points"
@@ -563,6 +576,8 @@ class LayoutPlanningService:
                 composition_bonus += 0.2
             if plan.layout_family == LayoutFamily.STRATEGY_CARDS:
                 composition_penalty += 0.15
+            if plan.layout_family == LayoutFamily.PROCESS_NARRATIVE:
+                composition_penalty += 0.2
 
         if previous_layout_plan is not None:
             preferred_primary = (
@@ -862,11 +877,13 @@ class LayoutPlanningService:
                 )
             )
         # Sparse text pages: never prefer strategy/process shells that invent cards.
-        if (
-            intent.dominant_content_type == VisualContentType.TEXT_ARGUMENT
-            and asset_count == 0
-            and key_point_count < 2
-        ):
+        sparse_copy = asset_count == 0 and key_point_count < 2
+        if sparse_copy and intent.dominant_content_type in {
+            VisualContentType.TEXT_ARGUMENT,
+            VisualContentType.MIXED,
+            VisualContentType.PHOTO_EVIDENCE,
+            VisualContentType.PROCESS,
+        }:
             decisions.append(
                 LayoutDecisionDraft(
                     layout_family=LayoutFamily.TEXTUAL_ARGUMENT.value,
@@ -1065,7 +1082,7 @@ class LayoutPlanningService:
                     filtered.append(item)
             pool = filtered or list(decisions)
 
-        def sort_key(item: LayoutDecisionDraft) -> tuple[int, int, int, int, str, str]:
+        def sort_key(item: LayoutDecisionDraft) -> tuple[int, int, int, int, int, str, str]:
             # No-asset hero openings must keep the text monument ahead of process/cards.
             monument_rank = (
                 0
@@ -1074,6 +1091,28 @@ class LayoutPlanningService:
                 and item.layout_variant == "monument"
                 else 1
             )
+            # When primary preference needs assets we don't have, prefer sparse text
+            # openers over process/strategy shells that invent placeholder cards.
+            asset_heavy = {
+                LayoutFamily.HERO,
+                LayoutFamily.HYBRID_CANVAS,
+                LayoutFamily.DRAWING_FOCUS,
+                LayoutFamily.EVIDENCE_BOARD,
+                LayoutFamily.ANALYTICAL_DIAGRAM,
+            }
+            primary = preferred_families[0] if preferred_families else None
+            asset_starved_text = (
+                primary in asset_heavy
+                and item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
+                and (
+                    (primary == LayoutFamily.HERO and item.layout_variant == "monument")
+                    or (
+                        primary != LayoutFamily.HERO
+                        and item.layout_variant == "lead_and_points"
+                    )
+                )
+            )
+            sparse_rank = 0 if asset_starved_text else 1
             if preferred_family_values and item.layout_family in preferred_family_values:
                 family_rank = preferred_family_values.index(item.layout_family)
             else:
@@ -1093,6 +1132,7 @@ class LayoutPlanningService:
             )
             return (
                 monument_rank,
+                sparse_rank,
                 family_rank,
                 closing_rank,
                 variant_rank,
