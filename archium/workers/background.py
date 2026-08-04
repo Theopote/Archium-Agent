@@ -13,7 +13,7 @@ import argparse
 import time
 
 from archium.application.background_job_worker import BackgroundJobWorker
-from archium.infrastructure.database.session import get_session
+from archium.infrastructure.database import session as db_session
 from archium.logging import get_logger
 
 logger = get_logger(__name__, operation="background_worker")
@@ -34,7 +34,7 @@ def run_worker_loop(
     while True:
         job = None
         try:
-            with get_session() as session:
+            with db_session.get_session() as session:
                 job = BackgroundJobWorker(session).process_once()
         except Exception:
             logger.exception("Worker tick failed")

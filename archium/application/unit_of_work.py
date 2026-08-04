@@ -34,7 +34,7 @@ from typing import TYPE_CHECKING, Protocol
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
-from archium.infrastructure.database.session import get_session
+from archium.infrastructure.database import session as db_session
 
 if TYPE_CHECKING:
     from archium.application.api.session import ApiContext
@@ -94,7 +94,7 @@ def unit_of_work(
     scoped: bool | None = None,
 ) -> Generator[UnitOfWork, None, None]:
     """Open a transactional UoW (commit/rollback via ``get_session``)."""
-    with get_session(engine, scoped=scoped) as session:
+    with db_session.get_session(engine, scoped=scoped) as session:
         yield UnitOfWork.bind(session)
 
 

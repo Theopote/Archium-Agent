@@ -140,18 +140,11 @@ def test_infer_and_parse_cad_bim(tmp_path: Path) -> None:
     assert parsed.metadata.get("cad_bim") is True
 
 
-def test_worker_cli_once_empty_queue(db_session: Session, monkeypatch) -> None:
-    from contextlib import contextmanager
-
+def test_worker_cli_once_empty_queue(db_session: Session) -> None:
+    # db_session fixture patches session_mod.get_session (worker resolves at call time).
     from archium.workers.background import main, run_worker_loop
 
-    @contextmanager
-    def _sess():
-        yield db_session
-
-    import archium.workers.background as worker_mod
-
-    monkeypatch.setattr(worker_mod, "get_session", _sess)
+    assert db_session is not None
     assert run_worker_loop(once=True) == 0
     assert main(["--once"]) == 0
 

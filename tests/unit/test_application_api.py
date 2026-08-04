@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from archium.application.api.session import api_from_session
@@ -19,7 +18,7 @@ from archium.infrastructure.database.repositories import ProjectRepository
 
 
 @pytest.fixture()
-def db_session(monkeypatch):
+def db_session():
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -28,25 +27,7 @@ def db_session(monkeypatch):
     import archium.infrastructure.database.models  # noqa: F401
 
     Base.metadata.create_all(engine)
-    factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-
-    @contextmanager
-    def _get_session():
-        session = factory()
-        try:
-            yield session
-            session.commit()
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
-
-    import archium.infrastructure.database.session as session_mod
-
-    monkeypatch.setattr(session_mod, "get_session", _get_session)
-
-    session = factory()
+    session = Session(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
     try:
         yield session
     finally:

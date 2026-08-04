@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from contextlib import contextmanager
 
 import pytest
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from archium.application.api.session import ApiContext, api_from_session
@@ -23,7 +25,8 @@ from archium.infrastructure.database.repositories import ProjectRepository
 
 
 @pytest.fixture()
-def db_session(monkeypatch):
+def memory_engine() -> Generator[Engine, None, None]:
+    """Isolated in-memory engine — pass to unit_of_work / application_api / Application."""
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -32,30 +35,24 @@ def db_session(monkeypatch):
     import archium.infrastructure.database.models  # noqa: F401
 
     Base.metadata.create_all(engine)
-    factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    try:
+        yield engine
+    finally:
+        engine.dispose()
 
-    @contextmanager
-    def _get_session(*_args, **_kwargs):
-        session = factory()
-        try:
-            yield session
-            session.commit()
-        except Exception:
-            session.rollback()
-            raise
-        finally:
-            session.close()
 
-    import archium.infrastructure.database.session as session_mod
-
-    monkeypatch.setattr(session_mod, "get_session", _get_session)
-
-    session = factory()
+@pytest.fixture()
+def db_session(memory_engine: Engine) -> Generator[Session, None, None]:
+    session = Session(
+        bind=memory_engine,
+        autoflush=False,
+        autocommit=False,
+        expire_on_commit=False,
+    )
     try:
         yield session
     finally:
         session.close()
-        engine.dispose()
 
 
 def test_unit_of_work_bind_shares_api_cache(db_session: Session) -> None:
@@ -105,8 +102,8 @@ def test_api_from_session_delegates_to_uow(db_session: Session) -> None:
     assert ProjectRepository(db_session).get_by_id(project.id) is not None
 
 
-def test_application_api_hides_session(db_session: Session) -> None:
-    with application_api() as api:
+def test_application_api_hides_session(memory_engine: Engine) -> None:
+    with application_api(memory_engine) as api:
         created = api.project.create("网关项目", "")
         assert created.name == "网关项目"
         assert isinstance(api.uow, UnitOfWork)
@@ -126,12 +123,22 @@ def test_application_gateway_injectable_factory(db_session: Session) -> None:
         assert uow.api.project.list() is not None
 
 
-def test_unit_of_work_context_commits_via_get_session(db_session: Session) -> None:
-    with unit_of_work() as uow:
+def test_unit_of_work_context_commits_via_get_session(memory_engine: Engine) -> None:
+    """``unit_of_work(engine)`` commits through real ``get_session`` — no monkeypatch."""
+    with unit_of_work(memory_engine) as uow:
         project = uow.api.project.create("事务项目", "")
         project_id = project.id
+
+    # Fresh Application gateway on the same engine must see committed rows.
     app = Application()
-    with app.api() as api:
+    with app.api(memory_engine) as api:
         names = [item.name for item in api.project.list()]
         assert "事务项目" in names
         assert any(item.id == project_id for item in api.project.list())
+
+    # Independent Session (not via UoW) also sees the commit.
+    verify = Session(bind=memory_engine, autoflush=False, autocommit=False)
+    try:
+        assert ProjectRepository(verify).get_by_id(project_id) is not None
+    finally:
+        verify.close()
