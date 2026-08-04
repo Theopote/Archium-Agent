@@ -44,6 +44,62 @@ def test_update_project(db_session: Session) -> None:
     assert updated.description == "新描述"
 
 
+def test_create_project_does_not_commit_owner_session(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    commits: list[int] = []
+    original_commit = db_session.commit
+
+    def _track_commit() -> None:
+        commits.append(1)
+        original_commit()
+
+    monkeypatch.setattr(db_session, "commit", _track_commit)
+    service = ProjectManagementService(db_session)
+    created = service.create_project("事务所有权", "outer owns commit")
+
+    assert commits == []
+    assert ProjectRepository(db_session).get_by_id(created.id) is not None
+
+    db_session.rollback()
+    assert ProjectRepository(db_session).get_by_id(created.id) is None
+
+
+def test_update_project_does_not_commit_owner_session(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = ProjectRepository(db_session)
+    project = repo.create(Project(name="原名"))
+    db_session.commit()
+    fresh = repo.get_by_id(project.id)
+    assert fresh is not None
+    before_updated_at = fresh.updated_at
+
+    commits: list[int] = []
+    original_commit = db_session.commit
+
+    def _track_commit() -> None:
+        commits.append(1)
+        original_commit()
+
+    monkeypatch.setattr(db_session, "commit", _track_commit)
+    service = ProjectManagementService(db_session)
+    updated = service.update_project(
+        fresh.id,
+        name="未提交的新名",
+        description="outer rollback should win",
+        expected_updated_at=before_updated_at,
+    )
+
+    assert commits == []
+    assert updated.name == "未提交的新名"
+    db_session.rollback()
+
+    reloaded = repo.get_by_id(project.id)
+    assert reloaded is not None
+    assert reloaded.name == "原名"
+
+
 def test_update_project_rejects_stale_updated_at(db_session: Session) -> None:
     repo = ProjectRepository(db_session)
     project = repo.create(Project(name="原名"))

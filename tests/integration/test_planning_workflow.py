@@ -84,6 +84,26 @@ def test_planning_run_does_not_create_presentation(
     assert first.planning_session.status == PlanningSessionStatus.CLARIFYING
 
 
+def test_planning_workflow_does_not_commit_outer_session(
+    planning_service: PlanningWorkflowService,
+    temple_project: Project,
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    commits: list[int] = []
+    original_commit = db_session.commit
+
+    def _track_commit() -> None:
+        commits.append(1)
+        original_commit()
+
+    monkeypatch.setattr(db_session, "commit", _track_commit)
+    result = planning_service.run(temple_project.id, TEMPLE_TASK)
+
+    assert result.awaiting_review
+    assert commits == []
+
+
 def test_planning_workflow_pauses_for_clarification(
     planning_service: PlanningWorkflowService,
     temple_project: Project,

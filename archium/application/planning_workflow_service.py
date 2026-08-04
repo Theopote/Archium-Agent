@@ -206,8 +206,7 @@ class PlanningWorkflowService:
         planning_session.touch()
         planning_session = self._planning_sessions.update(planning_session)
 
-        if self._settings.workflow_checkpoint_commit_enabled:
-            self._session.commit()
+        self._session.flush()
 
         initial_state = initial_planning_state(
             project_id=str(project_id),

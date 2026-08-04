@@ -6,7 +6,7 @@ from typing import Any
 
 from archium.application.unit_of_work import SessionLike, session_of
 from archium.application.workflow_progress import append_step_log
-from archium.config.settings import Settings, get_settings
+from archium.config.settings import Settings
 from archium.domain.workflow import WorkflowRun
 
 
@@ -17,9 +17,7 @@ def finalize_run_state(run: WorkflowRun, state_snapshot: dict[str, Any]) -> None
 
 
 def commit_workflow_checkpoint(session: SessionLike, settings: Settings | None = None) -> None:
-    """Flush and optionally commit so other sessions (e.g. Streamlit) can poll."""
+    """Flush workflow progress without stealing the outer transaction boundary."""
+    del settings
     session = session_of(session)
-    resolved = settings or get_settings()
     session.flush()
-    if resolved.workflow_checkpoint_commit_enabled:
-        session.commit()

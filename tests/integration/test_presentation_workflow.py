@@ -173,6 +173,31 @@ def test_workflow_run_exports_marp(
     assert any(path.endswith("presentation.md") for path in result.workflow_run.output_files)
 
 
+def test_workflow_run_does_not_commit_outer_session(
+    workflow_service: PresentationWorkflowService,
+    project_with_context: Project,
+    request_payload: PresentationRequest,
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    commits: list[int] = []
+    original_commit = db_session.commit
+
+    def _track_commit() -> None:
+        commits.append(1)
+        original_commit()
+
+    monkeypatch.setattr(db_session, "commit", _track_commit)
+    result = workflow_service.run(
+        project_with_context.id,
+        request_payload,
+        require_outline_review=True,
+    )
+
+    assert result.awaiting_review
+    assert commits == []
+
+
 def test_workflow_resume_completed_run_is_idempotent(
     workflow_service: PresentationWorkflowService,
     project_with_context: Project,

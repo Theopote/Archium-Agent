@@ -275,8 +275,7 @@ class PresentationWorkflowService:
                 },
             )
         )
-        if self._settings.workflow_checkpoint_commit_enabled:
-            self._session.commit()
+        self._session.flush()
         return workflow_run
 
     def execute_prepared(self, workflow_run_id: UUID) -> WorkflowRunResult:
@@ -305,8 +304,7 @@ class PresentationWorkflowService:
             run.state = snapshot_state(initial_state)
             run.touch()
             self._workflow_runs.update(run)
-            if self._settings.workflow_checkpoint_commit_enabled:
-                self._session.commit()
+            self._session.flush()
             raise WorkflowError(str(exc)) from exc
 
         refreshed = self._workflow_runs.get_by_id(run.id)
@@ -334,8 +332,7 @@ class PresentationWorkflowService:
         run.errors = []
         run.touch()
         self._workflow_runs.update(run)
-        if self._settings.workflow_checkpoint_commit_enabled:
-            self._session.commit()
+        self._session.flush()
 
         try:
             final_state = self._invoke_graph(None, thread_id=str(run.id), resume=True)
@@ -374,8 +371,7 @@ class PresentationWorkflowService:
         run.errors = []
         run.touch()
         self._workflow_runs.update(run)
-        if self._settings.workflow_checkpoint_commit_enabled:
-            self._session.commit()
+        self._session.flush()
 
         try:
             final_state = self._invoke_graph(None, thread_id=str(run.id), resume=True)

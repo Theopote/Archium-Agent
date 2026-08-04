@@ -150,6 +150,38 @@ def test_visual_workflow_pauses_for_art_direction_approval(
         service.close()
 
 
+def test_visual_workflow_does_not_commit_outer_session(
+    db_session: Session,
+    test_settings: object,
+    seeded_presentation: tuple[Project, Presentation, list[SlideSpec]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project, presentation, _slides = seeded_presentation
+    commits: list[int] = []
+    original_commit = db_session.commit
+
+    def _track_commit() -> None:
+        commits.append(1)
+        original_commit()
+
+    monkeypatch.setattr(db_session, "commit", _track_commit)
+    service = VisualWorkflowService(db_session, settings=test_settings)  # type: ignore[arg-type]
+    try:
+        result = service.run(
+            project.id,
+            presentation.id,
+            require_art_direction_review=True,
+            use_llm=False,
+            export_layout_instructions=True,
+            export_pptx=False,
+            candidate_count=2,
+        )
+        assert result.awaiting_review
+        assert commits == []
+    finally:
+        service.close()
+
+
 def test_visual_workflow_completes_after_art_direction_approval(
     db_session: Session,
     test_settings: object,

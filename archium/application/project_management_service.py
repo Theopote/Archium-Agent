@@ -79,8 +79,7 @@ class ProjectManagementService:
             organization_id=organization_id,
         )
         created = self._projects.create(project, actor_id=resolved)
-        # APP-003: use-case boundary owns commit (UI must not).
-        self._session.commit()
+        self._session.flush()
         logger.info("Created project %s", created.id)
         return created
 
@@ -111,6 +110,6 @@ class ProjectManagementService:
         project.description = cleaned_description
         project.touch()
         updated = self._projects.update(project)
-        self._session.commit()
+        self._session.flush()
         logger.info("Updated project %s", project_id)
         return updated

@@ -9,7 +9,11 @@ from archium.domain.enums import ProjectType
 from archium.domain.project import Project
 from archium.exceptions import LLMProviderError, WorkflowError
 from archium.infrastructure.database.base import Base
-from archium.infrastructure.database.repositories import PresentationRepository, ProjectRepository
+from archium.infrastructure.database.repositories import (
+    PresentationRepository,
+    ProjectRepository,
+    WorkflowRunRepository,
+)
 from archium.infrastructure.database.session import create_engine_from_settings, get_session
 from archium.infrastructure.llm import LLMRequest, MockLLMProvider
 
@@ -46,15 +50,18 @@ def test_workflow_run_marks_failure_without_leaving_completed_state(
         project = ProjectRepository(session).create(
             Project(name="Rollback Test Project", project_type=ProjectType.HEALTHCARE)
         )
-        service = PresentationWorkflowService(session, failing_llm, settings=test_settings)  # type: ignore[arg-type]
-        try:
-            with pytest.raises(WorkflowError, match="Simulated storyline failure"):
+    with pytest.raises(WorkflowError, match="Simulated storyline failure"):
+        with get_session(engine) as session:
+            service = PresentationWorkflowService(session, failing_llm, settings=test_settings)  # type: ignore[arg-type]
+            try:
                 service.run(project.id, request_payload)
-        finally:
-            service.close()
+            finally:
+                service.close()
 
-        presentations = PresentationRepository(session).list_by_project(project.id)
-        assert len(presentations) == 1
-        assert presentations[0].status.value != "exported"
+    with get_session(engine) as verify:
+        presentations = PresentationRepository(verify).list_by_project(project.id)
+        workflow_runs = WorkflowRunRepository(verify).list_by_project(project.id)
+        assert presentations == []
+        assert workflow_runs == []
 
     engine.dispose()

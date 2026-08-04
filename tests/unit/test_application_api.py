@@ -204,7 +204,7 @@ def test_mission_api_get(db_session: Session) -> None:
 def test_project_api_create_with_type_does_not_extra_commit(
     db_session: Session, monkeypatch
 ) -> None:
-    """Type patch must flush only; create_project's allowlisted commit is unchanged."""
+    """ProjectApi writes stay inside the caller-owned transaction."""
     from archium.domain.enums import ProjectType
 
     commits: list[int] = []
@@ -218,8 +218,7 @@ def test_project_api_create_with_type_does_not_extra_commit(
     api = api_from_session(db_session)
     created = api.project.create("类型项目", "d", project_type=ProjectType.CULTURE)
     assert created.project_type == ProjectType.CULTURE
-    # ProjectManagementService.create_project (allowlisted) commits once; API must not add another.
-    assert commits == [1]
+    assert commits == []
 
 
 def test_jobs_api_list_operations_includes_jobs(db_session: Session) -> None:

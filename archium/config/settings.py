@@ -86,8 +86,9 @@ class Settings(BaseSettings):
     workflow_checkpoint_commit_enabled: bool = Field(
         default=True,
         description=(
-            "Commit the SQLAlchemy session after each workflow checkpoint so "
-            "Streamlit and other clients can poll WorkflowRun progress."
+            "Legacy compatibility flag for workflow checkpoint persistence. "
+            "Workflow checkpoints now flush but do not commit; the outer "
+            "transaction boundary owns final commit/rollback."
         ),
     )
     streamlit_background_workflows_enabled: bool = Field(

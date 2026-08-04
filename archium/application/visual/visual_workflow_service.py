@@ -171,8 +171,7 @@ class VisualWorkflowService:
             )
         )
 
-        if self._settings.workflow_checkpoint_commit_enabled:
-            self._session.commit()
+        self._session.flush()
 
         initial_state = initial_visual_workflow_state(
             project_id=str(project_id),
