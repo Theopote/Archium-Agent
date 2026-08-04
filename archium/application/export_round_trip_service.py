@@ -283,7 +283,9 @@ def _snapshots_by_slide(pptx_path: Path) -> list[RendererSnapshot]:
     for slide in presentation.slides:
         texts: list[str] = []
         image_count = 0
+        shape_count = 0
         for shape in slide.shapes:
+            shape_count += 1
             if getattr(shape, "text", "") and str(shape.text).strip():
                 texts.append(str(shape.text).strip())
             if shape.shape_type == 13:
@@ -292,7 +294,9 @@ def _snapshots_by_slide(pptx_path: Path) -> list[RendererSnapshot]:
             RendererSnapshot(
                 text_values=tuple(texts),
                 image_node_ids=tuple(str(i) for i in range(image_count)),
-                node_count=len(texts) + image_count,
+                # Count every shape so geometry matches RenderScene node_count
+                # (decorative / process panels without text were previously ignored).
+                node_count=shape_count,
                 background_color="",
             )
         )

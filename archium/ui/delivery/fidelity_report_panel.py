@@ -47,6 +47,58 @@ def get_stored_round_trip_report() -> ExportRoundTripReport | None:
         return None
 
 
+def load_persisted_round_trip_report(
+    presentation_id,
+    session=None,
+) -> ExportRoundTripReport | None:
+    """Reload Round-trip QA from the latest PPTX delivery record after restart."""
+    from uuid import UUID
+
+    from archium.application.delivery_record_service import DeliveryRecordService
+    from archium.application.unit_of_work import session_of, unit_of_work
+
+    pid = presentation_id if isinstance(presentation_id, UUID) else UUID(str(presentation_id))
+
+    def _from_session(active_session) -> ExportRoundTripReport | None:
+        records = DeliveryRecordService(active_session).list_for_presentation(pid, limit=12)
+        for record in records:
+            raw = record.round_trip_report_json
+            if not isinstance(raw, dict):
+                continue
+            try:
+                return ExportRoundTripReport.model_validate(raw)
+            except Exception:
+                continue
+        return None
+
+    if session is not None:
+        return _from_session(session_of(session))
+    with unit_of_work() as uow:
+        return _from_session(uow)
+
+
+def resolve_round_trip_report(
+    *,
+    presentation_id=None,
+    report: ExportRoundTripReport | None = None,
+) -> ExportRoundTripReport | None:
+    """Prefer live session, then explicit report, then delivery-record persistence."""
+    if report is not None:
+        return report
+    stored = get_stored_round_trip_report()
+    if stored is not None:
+        return stored
+    if presentation_id is None:
+        return None
+    persisted = load_persisted_round_trip_report(presentation_id)
+    if persisted is not None:
+        try:
+            store_round_trip_report(persisted)
+        except Exception:
+            pass
+    return persisted
+
+
 def render_fidelity_report_panel(
     manifest: DeckExportManifest | None = None,
     *,
@@ -100,16 +152,26 @@ def render_fidelity_report_panel(
     if resolved.file_hash:
         st.caption(f"哈希：{resolved.file_hash}")
 
-    render_round_trip_report_panel(key_prefix=key_prefix)
+    presentation_id = None
+    if resolved.presentation_id is not None:
+        presentation_id = resolved.presentation_id
+    render_round_trip_report_panel(
+        key_prefix=key_prefix,
+        presentation_id=presentation_id,
+    )
 
 
 def render_round_trip_report_panel(
     report: ExportRoundTripReport | None = None,
     *,
     key_prefix: str = "deliver",
+    presentation_id=None,
 ) -> None:
     """Show export round-trip QA metrics after PPTX export."""
-    resolved = report or get_stored_round_trip_report()
+    resolved = resolve_round_trip_report(
+        presentation_id=presentation_id,
+        report=report,
+    )
     if resolved is None:
         return
 

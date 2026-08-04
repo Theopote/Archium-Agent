@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import contextlib
+import json
+import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID
 
@@ -35,10 +38,15 @@ from archium.domain.visual.render_scene import RenderScene
 from archium.domain.visual.validation import LayoutValidationReport
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.exceptions import WorkflowError
+from archium.infrastructure.database.repositories import WorkflowRunRepository
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.llm.factory import create_llm_provider
 from archium.ui.workflow_resources import get_workflow_checkpointer_manager
 from archium.ui.workspace_service import _resolve_runtime_settings
+
+logger = logging.getLogger(__name__)
+
+_VISUAL_WORKFLOW_KINDS = frozenset({"visual_composition", "visual"})
 
 
 @dataclass
@@ -210,6 +218,88 @@ def generate_visual_and_export_pptx(
     )
 
 
+def _is_visual_workflow_state(state: dict[str, Any]) -> bool:
+    kind = str(state.get("workflow_kind") or "").strip().lower()
+    if kind in _VISUAL_WORKFLOW_KINDS:
+        return True
+    # Legacy / partial snapshots may omit kind but still carry visual QA artifacts.
+    return isinstance(state.get("deck_qa_report"), dict) or bool(
+        state.get("visual_critic_reports")
+    )
+
+
+def _read_json_dict(path: Path) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def _read_json_list(path: Path) -> list[dict] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, list):
+        return None
+    return [item for item in payload if isinstance(item, dict)]
+
+
+def load_persisted_visual_qa_artifacts(
+    session: SessionLike,
+    presentation_id: UUID,
+) -> tuple[list[dict] | None, dict | None, list[str] | None, str | None]:
+    """Reload Deck QA / critic / preview paths from the latest visual workflow run.
+
+    Live session state is preferred by callers; this fills the gap after Streamlit
+    restart so deliver/studio checklists still see completed QA.
+    """
+    session = session_of(session)
+    runs = WorkflowRunRepository(session).list_by_presentation(presentation_id)
+    for run in runs:
+        state = dict(run.state or {})
+        if not _is_visual_workflow_state(state):
+            continue
+
+        deck_qa = state.get("deck_qa_report")
+        deck_qa = deck_qa if isinstance(deck_qa, dict) else None
+        critics_raw = state.get("visual_critic_reports")
+        critics = (
+            [item for item in critics_raw if isinstance(item, dict)]
+            if isinstance(critics_raw, list)
+            else None
+        )
+        render_paths_raw = state.get("render_paths")
+        render_paths = (
+            [str(path) for path in render_paths_raw]
+            if isinstance(render_paths_raw, list)
+            else None
+        )
+        output_dir_raw = state.get("output_dir")
+        output_dir = output_dir_raw if isinstance(output_dir_raw, str) else None
+
+        if deck_qa is None and output_dir:
+            deck_qa = _read_json_dict(Path(output_dir) / "deck_qa_report.json")
+        if not critics and output_dir:
+            critics = _read_json_list(Path(output_dir) / "visual_critic_reports.json")
+
+        if deck_qa is None and not critics and not render_paths:
+            continue
+
+        logger.debug(
+            "Loaded persisted visual QA for presentation %s from run %s "
+            "(deck_qa=%s critics=%s)",
+            presentation_id,
+            run.id,
+            deck_qa is not None,
+            len(critics or []),
+        )
+        return critics, deck_qa, render_paths, output_dir
+
+    return None, None, None, None
+
+
 def get_presentation_visual_snapshot(
     session: SessionLike,
     presentation_id: UUID,
@@ -222,6 +312,21 @@ def get_presentation_visual_snapshot(
     loaded = api_bound(session).visual.load_presentation_visual(presentation_id)
     design_system = loaded.design_system
     art_direction = loaded.art_direction
+
+    if (
+        visual_critic_reports is None
+        or deck_qa_report is None
+        or preview_paths is None
+    ):
+        persisted_critics, persisted_deck_qa, persisted_previews, _ = (
+            load_persisted_visual_qa_artifacts(session, presentation_id)
+        )
+        if visual_critic_reports is None:
+            visual_critic_reports = persisted_critics
+        if deck_qa_report is None:
+            deck_qa_report = persisted_deck_qa
+        if preview_paths is None:
+            preview_paths = persisted_previews
 
     critic_by_slide: dict[str, dict] = {}
     for report in visual_critic_reports or []:

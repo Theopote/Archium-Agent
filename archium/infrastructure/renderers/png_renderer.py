@@ -129,7 +129,8 @@ class PngRenderer:
         box = self._box(node)
         fill = self._parse_color(node.fill_color) if node.fill_color else None
         outline = self._parse_color(node.stroke_color) if node.stroke_color else None
-        width = max(0, int(round(node.stroke_width * self._dpi)))
+        # stroke_width is authored in points (same unit as pptxgen line.width).
+        width = max(0, int(round(node.stroke_width * self._dpi / 72)))
         draw.rectangle(box, fill=fill, outline=outline, width=width or 0)  # type: ignore[attr-defined]
 
     def _draw_text(self, draw: object, node: TextNode) -> None:

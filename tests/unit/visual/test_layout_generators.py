@@ -248,6 +248,27 @@ class TestGenerators:
         bodies = plan.elements_by_role(LayoutElementRole.BODY_TEXT)
         assert [item.text_content for item in bodies] == ["1. 确认总平面方案"]
 
+    def test_process_narrative_empty_keypoints_does_not_invent_steps(self) -> None:
+        slide = _slide(
+            title="问题与机遇",
+            message="明确核心问题或改造动因",
+            key_points=[],
+            visual_requirements=[VisualRequirement(type=VisualType.TIMELINE, description="决策")],
+        )
+        plan = LayoutSolver().generate(
+            LayoutFamily.PROCESS_NARRATIVE,
+            _context(
+                LayoutFamily.PROCESS_NARRATIVE,
+                content_type=VisualContentType.PROCESS,
+                variant="steps_horizontal",
+                slide=slide,
+            ),
+        )
+        bodies = plan.elements_by_role(LayoutElementRole.BODY_TEXT)
+        assert len(bodies) == 1
+        assert bodies[0].text_content == "1. 明确核心问题或改造动因"
+        assert not any("步骤二" in (el.text_content or "") for el in plan.elements)
+
     def test_metric_dashboard_cards(self) -> None:
         slide = _slide(
             title="核心指标",

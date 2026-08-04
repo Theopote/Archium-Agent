@@ -7,6 +7,7 @@ This module is the embeddable workbench. Product navigation must use the
 
 from __future__ import annotations
 
+import contextlib
 from uuid import UUID
 
 import streamlit as st
@@ -35,15 +36,22 @@ from archium.ui.studio_service import (
 from archium.ui.workflow_progress_panel import render_workflow_progress_panel
 
 
-def _workflow_artifacts() -> tuple[list[dict] | None, dict | None, list[str] | None, str | None]:
+def _workflow_artifacts(
+    presentation_id: UUID | None = None,
+) -> tuple[list[dict] | None, dict | None, list[str] | None, str | None]:
     result = st.session_state.get("last_visual_workflow_result")
-    if not isinstance(result, VisualWorkflowResult):
+    if isinstance(result, VisualWorkflowResult):
+        deck_qa = result.deck_qa_report if isinstance(result.deck_qa_report, dict) else None
+        critics = list(result.visual_critic_reports or [])
+        previews = list(result.render_paths or [])
+        output_dir = result.workflow_run.state.get("output_dir")
+        return critics, deck_qa, previews, output_dir if isinstance(output_dir, str) else None
+    if presentation_id is None:
         return None, None, None, None
-    deck_qa = result.deck_qa_report if isinstance(result.deck_qa_report, dict) else None
-    critics = list(result.visual_critic_reports or [])
-    previews = list(result.render_paths or [])
-    output_dir = result.workflow_run.state.get("output_dir")
-    return critics, deck_qa, previews, output_dir if isinstance(output_dir, str) else None
+    from archium.ui.visual_service import load_persisted_visual_qa_artifacts
+
+    with unit_of_work() as uow:
+        return load_persisted_visual_qa_artifacts(uow, presentation_id)
 
 
 def _apply_visual_result(result: object) -> None:
@@ -682,7 +690,12 @@ def render(
             "故事线导航 · 页面画布 · AI 建议。不是拖文本框的 PowerPoint 克隆。",
         )
 
-    critics, deck_qa, previews, workflow_output_dir = _workflow_artifacts()
+    presentation_id_raw = st.session_state.get("selected_presentation_id")
+    presentation_id = None
+    if presentation_id_raw:
+        with contextlib.suppress(ValueError, TypeError):
+            presentation_id = UUID(str(presentation_id_raw))
+    critics, deck_qa, previews, workflow_output_dir = _workflow_artifacts(presentation_id)
     context = render_studio_selection(
         visual_critic_reports=critics,
         deck_qa_report=deck_qa,

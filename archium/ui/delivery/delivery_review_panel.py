@@ -106,9 +106,9 @@ def build_delivery_checklist(
         ROUND_TRIP_STATUS_LABELS_ZH,
         RoundTripStatus,
     )
-    from archium.ui.delivery.fidelity_report_panel import get_stored_round_trip_report
+    from archium.ui.delivery.fidelity_report_panel import resolve_round_trip_report
 
-    round_trip = get_stored_round_trip_report()
+    round_trip = resolve_round_trip_report(presentation_id=context.presentation.id)
     round_trip_pass = round_trip is not None and round_trip.status in {
         RoundTripStatus.PASS,
         RoundTripStatus.PASS_WITH_WARNINGS,

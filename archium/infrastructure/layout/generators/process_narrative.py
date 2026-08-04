@@ -29,13 +29,13 @@ class ProcessNarrativeLayoutGenerator(LayoutGenerator):
         spacing = context.design_system.spacing
         elements: list[LayoutElement] = []
 
-        steps = list(context.content.key_points[:6]) or [
-            context.content.message or "步骤一",
-            "步骤二",
-            "步骤三",
-        ]
-        # A valid narrative can contain a single decisive action. Do not invent
-        # a second step or create more grid cells than there is content for.
+        steps = list(context.content.key_points[:6])
+        if not steps:
+            # A valid narrative can contain a single decisive action. Do not invent
+            # placeholder steps ("步骤二/三") when key points are absent.
+            primary = (context.content.message or "").strip() or "步骤一"
+            steps = [primary]
+        # Do not invent a second step or create more grid cells than there is content for.
         step_count = min(len(steps), 5)
         steps = steps[:step_count]
         stage_assets = list(context.content.supporting_asset_refs[:step_count])

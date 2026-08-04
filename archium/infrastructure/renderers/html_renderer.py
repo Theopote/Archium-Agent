@@ -186,7 +186,7 @@ class HtmlRenderer:
     def _render_shape(self, node: ShapeNode) -> str:
         fill = html.escape(node.fill_color or "transparent")
         stroke = html.escape(node.stroke_color or "transparent")
-        sw = max(0, int(round(node.stroke_width * self._dpi)))
+        sw = max(0, int(round(node.stroke_width * self._dpi / 72)))
         radius = max(0, int(round(node.corner_radius * self._dpi)))
         extra = " shape-card" if node.shape_kind == "card" else ""
         return (

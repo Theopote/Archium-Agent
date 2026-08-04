@@ -20,22 +20,29 @@ from archium.ui.studio_service import (
 )
 
 
-def _workflow_artifacts() -> tuple[list[dict] | None, dict | None, list[str] | None, str | None]:
+def _workflow_artifacts(
+    presentation_id: UUID | None = None,
+) -> tuple[list[dict] | None, dict | None, list[str] | None, str | None]:
     result = st.session_state.get("last_visual_workflow_result")
-    if not isinstance(result, VisualWorkflowResult):
+    if isinstance(result, VisualWorkflowResult):
+        deck_qa = result.deck_qa_report if isinstance(result.deck_qa_report, dict) else None
+        critics = list(result.visual_critic_reports or [])
+        previews = list(result.render_paths or [])
+        output_dir = result.workflow_run.state.get("output_dir")
+        return critics, deck_qa, previews, output_dir if isinstance(output_dir, str) else None
+    if presentation_id is None:
         return None, None, None, None
-    deck_qa = result.deck_qa_report if isinstance(result.deck_qa_report, dict) else None
-    critics = list(result.visual_critic_reports or [])
-    previews = list(result.render_paths or [])
-    output_dir = result.workflow_run.state.get("output_dir")
-    return critics, deck_qa, previews, output_dir if isinstance(output_dir, str) else None
+    from archium.ui.visual_service import load_persisted_visual_qa_artifacts
+
+    with unit_of_work() as uow:
+        return load_persisted_visual_qa_artifacts(uow, presentation_id)
 
 
 def _load_context(
     project_id: UUID,
     presentation_id: UUID,
 ) -> StudioPresentationContext | None:
-    critics, deck_qa, previews, workflow_output_dir = _workflow_artifacts()
+    critics, deck_qa, previews, workflow_output_dir = _workflow_artifacts(presentation_id)
     with unit_of_work() as uow:
         return load_studio_context(
             uow,
@@ -147,6 +154,9 @@ def _render_readiness(context: StudioPresentationContext) -> None:
     deck_qa_report = None
     if isinstance(deck_qa, VisualWorkflowResult) and isinstance(deck_qa.deck_qa_report, dict):
         deck_qa_report = deck_qa.deck_qa_report
+    elif isinstance(context.snapshot.deck_qa_report, dict):
+        deck_qa_report = context.snapshot.deck_qa_report
+    if isinstance(deck_qa_report, dict):
         warn_count = int(deck_qa_report.get("warning_count") or 0)
 
     from archium.application.export_gate import resolve_export_verdict_safe

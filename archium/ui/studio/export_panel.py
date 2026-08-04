@@ -196,11 +196,18 @@ def _run_generate_layouts(
     )
 
 
-def _deck_qa_report() -> dict | None:
+def _deck_qa_report(*, presentation_id: UUID | None = None) -> dict | None:
     result = st.session_state.get("last_visual_workflow_result")
     if isinstance(result, VisualWorkflowResult) and isinstance(result.deck_qa_report, dict):
         return result.deck_qa_report
-    return None
+    if presentation_id is None:
+        return None
+    from archium.application.unit_of_work import unit_of_work
+    from archium.ui.visual_service import load_persisted_visual_qa_artifacts
+
+    with unit_of_work() as uow:
+        _, deck_qa, _, _ = load_persisted_visual_qa_artifacts(uow, presentation_id)
+    return deck_qa
 
 
 def _export_verdict(*, project_id: UUID, presentation_id: UUID):
@@ -210,7 +217,7 @@ def _export_verdict(*, project_id: UUID, presentation_id: UUID):
     return resolve_export_verdict_safe(
         project_id=project_id,
         presentation_id=presentation_id,
-        deck_qa_report=_deck_qa_report(),
+        deck_qa_report=_deck_qa_report(presentation_id=presentation_id),
         presentation_critique=critique if isinstance(critique, dict) else None,
     )
 
