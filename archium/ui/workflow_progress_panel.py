@@ -16,7 +16,7 @@ from archium.application.workflow_progress import (
 )
 from archium.domain.enums import WorkflowStatus
 from archium.exceptions import WorkflowError
-from archium.application.unit_of_work import application_api
+from archium.application.unit_of_work import application_api, unit_of_work
 from archium.ui.background_workflow_runner import (
     BackgroundJobStatus,
     BackgroundWorkflowJob,
@@ -221,8 +221,8 @@ def _render_progress_body(workflow_run_id: UUID) -> None:
         from archium.ui.page_status_board_panel import render_page_status_board
 
         project_id = _project_id_from_run(run)
-        with application_api() as api:
-            board = PageStatusBoardService(api.uow).build_board(
+        with unit_of_work() as uow:
+            board = PageStatusBoardService(uow).build_board(
                 presentation_id,
                 workflow_step=snapshot.current_step,
             )

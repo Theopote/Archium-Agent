@@ -22,9 +22,10 @@ Transaction ownership still follows APP-003: the outer ``get_session()``
 Application API methods flush only; :meth:`UnitOfWork.flush` is the explicit
 mid-transaction sync point.
 
-UI must prefer resource APIs (``api.project``, …) or pass ``uow`` / ``api.uow``
-as ``SessionLike``; unwrapping ``api.session`` / ``uow.session`` in ``archium/ui``
-is forbidden by layering tests (Session is not deleted from the public types).
+UI must prefer resource APIs (``api.project``, …) or ``with unit_of_work() as uow``
+and pass ``uow`` as ``SessionLike``; unwrapping ``api.session`` / ``api.uow`` /
+``uow.session`` in ``archium/ui`` is forbidden by layering tests (attributes remain
+on Application types for internals/tests).
 """
 
 from __future__ import annotations

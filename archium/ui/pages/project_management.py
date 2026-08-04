@@ -7,8 +7,8 @@ from uuid import UUID
 
 import streamlit as st
 
-from archium.application.api import application_api
 from archium.application.project_deletion_service import ProjectDeletionService
+from archium.application.unit_of_work import application_api, unit_of_work
 from archium.application.workspace_mode_service import WorkspaceModeService
 from archium.domain.project import Project
 from archium.exceptions import ProjectNotFoundError, ValidationError
@@ -49,8 +49,8 @@ def _render_project_card(project: Project, index: int) -> None:
 
             if st.button("📂 打开", key=f"open_{project.id}", use_container_width=True, type="primary"):
                 st.session_state.selected_project_id = str(project.id)
-                with application_api() as api:
-                    page_key = WorkspaceModeService(api.uow).resolve_primary_page_key(
+                with unit_of_work() as uow:
+                    page_key = WorkspaceModeService(uow).resolve_primary_page_key(
                         project.id
                     )
                 st.switch_page(get_app_page(page_key))
@@ -129,8 +129,8 @@ def _render_delete_confirmation(project_id: UUID) -> None:
     with col1:
         if st.button("🗑️ 确认删除", use_container_width=True, type="primary"):
             try:
-                with application_api() as api:
-                    result = ProjectDeletionService(api.uow).delete_project(project_id)
+                with unit_of_work() as uow:
+                    result = ProjectDeletionService(uow).delete_project(project_id)
                 st.success("✅ 项目已删除")
                 if result.warnings:
                     for _warning in result.warnings:

@@ -154,14 +154,14 @@ def test_ui_does_not_import_get_session() -> None:
 
 
 def test_ui_does_not_unwrap_sqlalchemy_session() -> None:
-    """APP-029: UI must not use api.session / uow.session escape hatch.
+    """APP-029: UI must not use api.session / api.uow / uow.session escape hatches.
 
-    Pass ``uow`` / ``api.uow`` (SessionLike) into application services, or use
-    resource APIs (``api.project``, …). Never commit/execute via the hatch.
+    Prefer resource APIs (``api.project``, …) or ``with unit_of_work() as uow`` and
+    pass ``uow`` as ``SessionLike``. Never commit/execute via unwrapped Session.
     """
     root = Path(__file__).resolve().parents[2] / "archium" / "ui"
     package_root = root.parent.parent
-    unwrap = re.compile(r"\b(?:api|uow)\.session\b")
+    unwrap = re.compile(r"\b(?:api\.session|api\.uow|uow\.session)\b")
     raw_ops = re.compile(
         r"\b(?:api|uow)\.session\.(?:commit|rollback|execute|flush)\b"
     )
@@ -176,8 +176,8 @@ def test_ui_does_not_unwrap_sqlalchemy_session() -> None:
     # de-dupe if both patterns hit the same span
     hits = list(dict.fromkeys(hits))
     assert hits == [], (
-        "ui must not unwrap Session via api.session / uow.session "
-        "(pass uow / api.uow, or use resource APIs):\n" + "\n".join(hits)
+        "ui must not unwrap via api.session / api.uow / uow.session "
+        "(use resource APIs or pass uow as SessionLike):\n" + "\n".join(hits)
     )
 
 

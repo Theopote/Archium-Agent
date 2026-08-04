@@ -506,16 +506,16 @@ def _render_concept_direction_section(mission: ProjectMission, *, key_prefix: st
         project_id=mission.project_id,
     )
 
-    with application_api() as api:
+    with unit_of_work() as uow:
         try:
-            project = api.project.get(mission.project_id)
+            project = uow.api.project.get(mission.project_id)
         except ProjectNotFoundError:
             project = None
         from archium.application.project_context_routing import is_concept_leaning
 
-        concept_origin = project is not None and is_concept_leaning(api.uow, project)
-        directions = list_concept_directions(api.uow, mission.id)
-        progress = get_design_iteration_progress(api.uow, mission.id)
+        concept_origin = project is not None and is_concept_leaning(uow, project)
+        directions = list_concept_directions(uow, mission.id)
+        progress = get_design_iteration_progress(uow, mission.id)
 
     if concept_origin:
         st.markdown("**已提交概念方向**")

@@ -40,13 +40,13 @@ def render_design_critique_card(
         data = raw if isinstance(raw, dict) else None
     if (not isinstance(data, dict) or not data) and project_id is not None:
         try:
-            from archium.application.api import application_api
             from archium.application.design_revise_persistence import (
                 load_latest_design_critique_report,
             )
+            from archium.application.unit_of_work import unit_of_work
 
-            with application_api() as api:
-                data = load_latest_design_critique_report(api.uow, project_id)
+            with unit_of_work() as uow:
+                data = load_latest_design_critique_report(uow, project_id)
             if isinstance(data, dict) and data:
                 st.session_state["last_design_critique_report"] = data
         except Exception:
