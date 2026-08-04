@@ -20,6 +20,7 @@ from archium.application.unit_of_work import (
     get_application,
     unit_of_work,
 )
+from archium.domain.project import Project
 from archium.infrastructure.database.base import Base
 from archium.infrastructure.database.repositories import ProjectRepository
 
@@ -140,5 +141,123 @@ def test_unit_of_work_context_commits_via_get_session(memory_engine: Engine) -> 
     verify = Session(bind=memory_engine, autoflush=False, autocommit=False)
     try:
         assert ProjectRepository(verify).get_by_id(project_id) is not None
+    finally:
+        verify.close()
+
+
+def _insert_project(session: Session, name: str) -> Project:
+    """Flush-only insert — avoid ProjectManagementService (APP-003 mid-txn commit)."""
+    return ProjectRepository(session).create(Project(name=name, description=""))
+
+
+def test_unit_of_work_rolls_back_on_exception(memory_engine: Engine) -> None:
+    project_id = None
+    with pytest.raises(RuntimeError, match="boom"):
+        with unit_of_work(memory_engine) as uow:
+            created = _insert_project(uow.session, "回滚项目")
+            project_id = created.id
+            uow.flush()
+            raise RuntimeError("boom")
+
+    assert project_id is not None
+    verify = Session(bind=memory_engine, autoflush=False, autocommit=False)
+    try:
+        assert ProjectRepository(verify).get_by_id(project_id) is None
+    finally:
+        verify.close()
+
+
+def test_flush_does_not_commit(memory_engine: Engine) -> None:
+    """Flush + exception still rolls back — flush is not a commit boundary."""
+    project_id = None
+    with pytest.raises(ValueError, match="after-flush"):
+        with unit_of_work(memory_engine) as uow:
+            created = _insert_project(uow.session, "仅flush")
+            project_id = created.id
+            uow.flush()
+            assert ProjectRepository(uow.session).get_by_id(project_id) is not None
+            raise ValueError("after-flush")
+
+    verify = Session(bind=memory_engine, autoflush=False, autocommit=False)
+    try:
+        assert ProjectRepository(verify).get_by_id(project_id) is None
+    finally:
+        verify.close()
+
+
+def test_bound_uow_does_not_commit_owner_session(db_session: Session) -> None:
+    uow = UnitOfWork.bind(db_session)
+    created = _insert_project(uow.session, "绑定不提交")
+    uow.flush()
+    assert ProjectRepository(db_session).get_by_id(created.id) is not None
+
+    db_session.rollback()
+    assert ProjectRepository(db_session).get_by_id(created.id) is None
+
+
+def test_nested_bound_uow_does_not_close_session(db_session: Session) -> None:
+    outer = UnitOfWork.bind(db_session)
+    inner = UnitOfWork.bind(db_session)
+    assert outer.session is db_session
+    assert inner.session is db_session
+    created = _insert_project(inner.session, "嵌套绑定")
+    outer.flush()
+    assert ProjectRepository(outer.session).get_by_id(created.id) is not None
+    assert db_session.is_active
+
+
+def test_application_api_uses_fresh_session_per_entry(memory_engine: Engine) -> None:
+    """Each ``application_api`` entry owns an independent Session (closed on exit)."""
+    with application_api(memory_engine) as api:
+        first = api.uow.session
+        _insert_project(first, "跨次入口可见")
+    with application_api(memory_engine) as api:
+        second = api.uow.session
+        assert first is not second
+        names = {p.name for p in ProjectRepository(second).list_all()}
+        assert "跨次入口可见" in names
+
+
+def test_unit_of_work_scoped_false_commits_independent_session(memory_engine: Engine) -> None:
+    """Worker-style ``scoped=False`` still commits on success via get_session."""
+    with unit_of_work(memory_engine, scoped=False) as uow:
+        first = uow.session
+        _insert_project(first, "worker独立会话")
+    with unit_of_work(memory_engine, scoped=False) as uow:
+        assert uow.session is not first
+        names = {p.name for p in ProjectRepository(uow.session).list_all()}
+        assert "worker独立会话" in names
+
+
+def test_commit_failure_rolls_back(memory_engine: Engine, monkeypatch: pytest.MonkeyPatch) -> None:
+    """If outer commit fails, pending work must not remain visible."""
+    from archium.infrastructure.database import session as db_session_mod
+
+    project_id = None
+
+    @contextmanager
+    def _failing_commit(engine=None):
+        factory = db_session_mod.get_session_factory(engine)
+        session = factory()
+        try:
+            yield session
+            raise RuntimeError("commit failed")
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    monkeypatch.setattr(db_session_mod, "_independent_session", _failing_commit)
+
+    with pytest.raises(RuntimeError, match="commit failed"):
+        with unit_of_work(memory_engine) as uow:
+            created = _insert_project(uow.session, "提交失败")
+            project_id = created.id
+            uow.flush()
+
+    verify = Session(bind=memory_engine, autoflush=False, autocommit=False)
+    try:
+        assert ProjectRepository(verify).get_by_id(project_id) is None
     finally:
         verify.close()
