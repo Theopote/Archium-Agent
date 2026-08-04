@@ -270,6 +270,7 @@ def test_jobs_api_list_operations_includes_jobs(db_session: Session) -> None:
     assert row.source_kind == "job"
     assert row.status == OperationStatus.QUEUED
     assert row.cancellable is True
+    assert row.retryable is False
     assert row.started_at is not None
     assert row.last_activity_at is not None
     assert row.completed_at is None

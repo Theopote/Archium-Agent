@@ -22,7 +22,13 @@ class OperationStatus(StrEnum):
 
 
 class OperationView(DomainModel):
-    """Architect-facing execution row (read model; not a second store)."""
+    """Architect-facing execution row (read model; not a second store).
+
+    ``cancellable`` / ``retryable`` mean a product action is **already wired**
+    (e.g. ``JobsApi.cancel`` for BackgroundJob). They are not a wishlist —
+    OperationView unifies **reads**; durable actions stay on ``JobsApi`` until
+    Job/Workflow dual-track converges (APP-029).
+    """
 
     operation_id: UUID
     project_id: UUID

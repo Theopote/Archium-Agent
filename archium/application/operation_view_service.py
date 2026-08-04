@@ -35,6 +35,11 @@ def _activity_stamp(
 
 
 def operation_from_job_progress(view: JobProgressView) -> OperationView:
+    """Map a progress row into OperationView.
+
+    Action flags reflect wired APIs only: BackgroundJob cancel via JobsApi;
+    retry stays False until a real re-enqueue API exists.
+    """
     status = _STATUS_MAP.get(str(view.status).lower(), OperationStatus.RUNNING)
     pct = view.progress_pct
     progress = None if pct is None else max(0.0, min(1.0, pct / 100.0))
@@ -56,7 +61,7 @@ def operation_from_job_progress(view: JobProgressView) -> OperationView:
         progress=progress,
         message=view.message,
         cancellable=not terminal and view.kind == JobKind.BACKGROUND,
-        retryable=status == OperationStatus.FAILED,
+        retryable=False,
         started_at=started_at,
         completed_at=completed_at,
         last_activity_at=view.last_activity_at()
@@ -72,6 +77,7 @@ def operation_from_job_progress(view: JobProgressView) -> OperationView:
 
 
 def operation_from_workflow_run(run: WorkflowRun) -> OperationView:
+    """Map WorkflowRun into OperationView (read-only; no unified cancel/retry)."""
     raw = str(run.status.value if hasattr(run.status, "value") else run.status).lower()
     status = _STATUS_MAP.get(raw, OperationStatus.RUNNING)
     step = ""
@@ -96,7 +102,7 @@ def operation_from_workflow_run(run: WorkflowRun) -> OperationView:
         progress=None,
         message=step,
         cancellable=False,
-        retryable=status == OperationStatus.FAILED,
+        retryable=False,
         started_at=started_at,
         completed_at=completed_at,
         last_activity_at=_activity_stamp(
