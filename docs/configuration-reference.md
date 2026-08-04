@@ -199,7 +199,7 @@ Do not edit them manually.
 | `LAYOUT_MIN_BODY_FONT_PT` | `14.0` | No | Minimum body text size (pt) for LayoutValidator. |
 | `LAYOUT_MIN_CAPTION_FONT_PT` | `9.0` | No | Minimum caption text size (pt) for LayoutValidator. |
 | `LAYOUT_MIN_SOURCE_FONT_PT` | `8.0` | No | Minimum source text size (pt) for LayoutValidator. |
-| `LAYOUT_MIN_HERO_AREA_RATIO` | `0.45` | No | Minimum hero area ratio of safe area for hero/drawing pages. |
+| `LAYOUT_MIN_HERO_AREA_RATIO` | `0.65` | No | Minimum hero area ratio of safe area for hero/drawing pages. |
 | `LAYOUT_MIN_WHITESPACE_RATIO` | `0.08` | No | Minimum whitespace ratio for LayoutValidator. |
 | `LAYOUT_MAX_WHITESPACE_RATIO` | `0.6` | No | Maximum whitespace ratio for LayoutValidator. |
 | `VISUAL_CAPACITY_BLOCK_OVERLOADED` | `true` | No | When true, CAPACITY.OVERLOAD slides do not emit LayoutPlan candidates (force content adaptation / split before layout planning). |
