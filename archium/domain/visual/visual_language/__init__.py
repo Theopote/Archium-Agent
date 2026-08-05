@@ -44,6 +44,13 @@ from archium.domain.visual.visual_language.typography import (
     primary_role_for_recipe,
     role_spec,
 )
+from archium.domain.visual.visual_language.typography_composition import (
+    TypographyArrangement,
+    TypographyComposition,
+    TypographyPageKind,
+    TypographyRunRole,
+    TypographyRunSpec,
+)
 
 __all__ = [
     "AnalysisLineKind",
@@ -70,11 +77,16 @@ __all__ = [
     "TitleDecoration",
     "TitleScale",
     "Tracking",
+    "TypographyArrangement",
+    "TypographyComposition",
+    "TypographyPageKind",
     "TypographyPosition",
     "TypographyRecipe",
     "TypographyRecipeId",
     "TypographyRole",
     "TypographyRoleSpec",
+    "TypographyRunRole",
+    "TypographyRunSpec",
     "VisualLanguageSpec",
     "primary_role_for_recipe",
     "role_spec",

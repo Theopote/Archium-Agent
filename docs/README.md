@@ -39,7 +39,8 @@
 - [视觉编排](visual/README.md)：VisualIntent、LayoutPlan、RenderScene、Studio 编辑与 QA。
 - [建筑表达模式](visual/expression-modes.md)：v0.3 十种 Expression Mode（Hero / Drawing Story / …）。
 - [Architectural Presentation Grammar v1.0](visual/architectural-presentation-grammar-v1.md)：建筑汇报表达语法（页主张 → VisualConcept → Family）。
-- [Presentation Engine v0.3](roadmap/presentation-engine-v0.3.md)：**现行 Showcase 计划** — Style Preset、Deck 节奏、页面导演、Visual Critic、投资人 Demo（暂停扩 Agent）。
+- [**P0 Visual Quality Recovery**](roadmap/architectural-visual-quality-recovery-p0.md)：**唯一产品主线** — Typography / Color / Motif / Grammar / Rhythm / Screenshot Critic / 建筑师盲评（Beta 硬门）。
+- [Presentation Engine v0.3](roadmap/presentation-engine-v0.3.md)：引擎能力地图；执行优先级以 P0 VQR 为准。
 - [配置参考](configuration-reference.md)：由 `Settings` 自动生成，禁止手工修改。
 
 ### 部署、测试与发布

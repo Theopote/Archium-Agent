@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from archium.domain.enums import SlideType
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
 from archium.domain.visual.page_direction import NarrativeEmotion, PageDirection
@@ -303,8 +304,13 @@ class VisualLanguageService:
     ) -> TypographyRecipe:
         title = (slide.title or "").strip()
         english = _TITLE_EN.get(title)
+        slide_type = slide.slide_type
 
-        if title == "封面":
+        if (
+            title == "封面"
+            or slide_type == SlideType.TITLE
+            or title in {"开篇", "项目封面"}
+        ):
             return TypographyRecipe(
                 recipe=TypographyRecipeId.GIANT_BILINGUAL,
                 primary_role=TypographyRole.HERO_TITLE,
@@ -313,11 +319,76 @@ class VisualLanguageService:
                 case=TitleCase.AS_IS,
                 decoration=TitleDecoration.THIN_LINE,
                 bilingual=True,
-                english_label=english or "CAMPUS UPDATE",
-                title_font_size_pt=28,
+                english_label=english or "PROJECT COVER",
+                title_font_size_pt=36,
                 english_font_size_pt=11,
-                letter_spacing_em=0.05,
+                letter_spacing_em=0.06,
                 opacity=0.95,
+            )
+
+        if slide_type == SlideType.CLOSING or title in {"结尾", "结语", "总结", "致谢"}:
+            return TypographyRecipe(
+                recipe=TypographyRecipeId.GIANT_BILINGUAL,
+                primary_role=TypographyRole.HERO_TITLE,
+                scale=TitleScale.GIANT,
+                tracking=Tracking.WIDE,
+                case=TitleCase.AS_IS,
+                decoration=TitleDecoration.THIN_LINE,
+                bilingual=True,
+                english_label=english or "CLOSING",
+                title_font_size_pt=34,
+                english_font_size_pt=11,
+                letter_spacing_em=0.1,
+                opacity=0.92,
+            )
+
+        if slide_type == SlideType.SECTION or title in {"章节", "篇章"}:
+            return TypographyRecipe(
+                recipe=TypographyRecipeId.SECTION_INDEX,
+                primary_role=TypographyRole.SECTION_TITLE,
+                scale=TitleScale.LARGE,
+                tracking=Tracking.WIDE,
+                case=TitleCase.AS_IS,
+                decoration=TitleDecoration.THIN_LINE,
+                bilingual=bool(english),
+                english_label=english,
+                title_font_size_pt=26,
+                english_font_size_pt=10,
+                letter_spacing_em=0.08,
+                opacity=1.0,
+            )
+
+        if title in {"核心理念", "设计理念", "愿景", "主张"} or (
+            direction.narrative_emotion == NarrativeEmotion.CLIMAX
+            and title
+        ):
+            return TypographyRecipe(
+                recipe=TypographyRecipeId.ARCHITECTURAL_TITLE,
+                primary_role=TypographyRole.HERO_TITLE,
+                scale=TitleScale.GIANT,
+                tracking=Tracking.NORMAL,
+                case=TitleCase.AS_IS,
+                decoration=TitleDecoration.THIN_LINE,
+                bilingual=True,
+                english_label=english or "THESIS",
+                title_font_size_pt=32,
+                english_font_size_pt=10,
+                letter_spacing_em=0.04,
+                opacity=1.0,
+            )
+
+        if slide_type == SlideType.DATA or title in {"关键指标", "指标", "数据"}:
+            return TypographyRecipe(
+                recipe=TypographyRecipeId.ARCHITECTURAL_TITLE,
+                primary_role=TypographyRole.SECTION_TITLE,
+                scale=TitleScale.LARGE,
+                tracking=Tracking.NORMAL,
+                case=TitleCase.AS_IS,
+                decoration=TitleDecoration.NONE,
+                bilingual=False,
+                title_font_size_pt=22,
+                letter_spacing_em=0.02,
+                opacity=1.0,
             )
 
         if title == "设计策略" or (
@@ -333,7 +404,7 @@ class VisualLanguageService:
                 decoration=TitleDecoration.THIN_LINE,
                 bilingual=True,
                 english_label=english or "DESIGN STRATEGY",
-                title_font_size_pt=22,
+                title_font_size_pt=24,
                 english_font_size_pt=10,
                 letter_spacing_em=0.03,
                 opacity=1.0,

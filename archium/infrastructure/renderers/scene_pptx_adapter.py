@@ -253,6 +253,10 @@ class RenderScenePptxAdapter:
             "font_weight": node.font_weight,
             "color": node.color.lstrip("#"),
         }
+        if abs(node.letter_spacing) > 1e-6:
+            instruction["letter_spacing"] = node.letter_spacing
+        if node.opacity < 0.999:
+            instruction["opacity"] = node.opacity
         if node.runs:
             runs_payload: list[dict[str, Any]] = []
             for index, run in enumerate(node.runs):

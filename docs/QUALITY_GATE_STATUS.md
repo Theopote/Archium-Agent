@@ -1,12 +1,29 @@
 # Quality Gate Status (honest snapshot)
 
 
-> **文档状态：历史快照。**
-> 本文记录特定阶段的分析、实施、验收或计划，可能包含已过时的路径、状态和结论。
+> **文档状态：现行诚实快照（持续修订）。**
 > 当前行为以代码、测试、`README.md`、`docs/README.md` 及现行专题文档为准。
-Last updated: 2026-07-29
+> Last updated: 2026-08-05
 
 This document states what is **proven by automation** vs what still requires **human rehearsal** or **real project delivery**.
+
+## 产品主线（2026-08-05）
+
+> **唯一产品主线：** [Architectural Presentation Visual Quality Recovery (P0)](roadmap/architectural-visual-quality-recovery-p0.md)
+> 真人反馈已收敛为「排版不够好看」——这不是模板补丁，而是 **建筑师认可的视觉表达** 缺口。
+> **在 VQ-008 建筑师盲评达标前，不发布 Beta。**
+> 暂停：更多 Agent、协作扩面、纯 UI 美化、Beta 冲刺。允许：本 P0 与 Scene SSOT（RS-003）相关工程。
+
+| Epic | 主题 | 状态 |
+|------|------|------|
+| VQ-001 | Semantic Typography Composition | **Partial** — multi-scale title/metric runs + ghost text on cover/section/thesis/metric/closing; outline/vertical deferred |
+| VQ-002 | Project Color Composition | **Not started**（ColorSystem = 静态 token） |
+| VQ-003 | Architectural Graphic Motif | **Not started** |
+| VQ-004 | Shape / Connector / Freeform formal rendering | **Partial**（枚举/领域存在；主链深度不足） |
+| VQ-005 | Architectural Visual Grammar Library（12） | **Partial**（Grammar v1 / VisualConcept 骨架；未达建筑师气质） |
+| VQ-006 | Deck Rhythm Planner | **Partial**（PacingRole 存在；节奏约束未充分驱动画面） |
+| VQ-007 | Screenshot Visual Critic | **Partial**（heuristic / screenshot_v1 / 可选 vision；非有限精修闭环） |
+| VQ-008 | Architect Blind Review Benchmark | **Not started**（**Beta 硬门**） |
 
 ## 三轨状态总览（当前对齐口径）
 
@@ -14,15 +31,15 @@ This document states what is **proven by automation** vs what still requires **h
 
 | 语义线 | 当前标识 | Gate owner 文档 | 当前结论 |
 |--------|----------|-----------------|----------|
-| **Software version** | `v0.2.x-alpha` | `docs/v0.2-beta-release-decision.md` | **未达 Beta**：B10（非开发用户真实闭环）未完成 |
-| **Presentation Engine version** | `v0.3` | `docs/roadmap/presentation-engine-v0.3.md` | **现行能力演进线**：Grammar / Concept / Visual Language / Composition 持续推进 |
-| **Product milestone** | Showcase Candidate 1 | 本文 + `docs/release-capability-matrix.md` | **候选收敛中**：工程门大量通过，人工交付门仍需闭环 |
+| **Software version** | `v0.2.x-alpha` | `docs/v0.2-beta-release-decision.md` | **未达 Beta**：B10 未完成；**另加 VQ-008 视觉盲评硬门** |
+| **Presentation Engine version** | `v0.3` | `docs/roadmap/presentation-engine-v0.3.md` + **P0 VQR** | **收束到 Visual Quality Recovery**：概念层已有，正式画面气质未过关 |
+| **Product milestone** | Showcase Candidate 1 | 本文 + `docs/release-capability-matrix.md` | **阻断于视觉表达**：工程门大量通过 ≠ 建筑师愿拿出去汇报 |
 
 **判读规则：**
 
-- `v0.2-beta` 标签只由 **Software version gate** 决定，不能由 v0.3 功能进展直接替代。
+- `v0.2-beta` 标签只由 **Software version gate** 决定，且 **VQ-008 未通过则禁止打 Beta**。
 - `Presentation Engine v0.3` 的实现进度不自动等于“可发布 Beta”。
-- Showcase 结论必须同时参考自动化证据与人工复核，不以单一测试通过代替。
+- Showcase 结论必须同时参考自动化证据与人工复核，不以单一测试通过代替；**溢出/重叠通过 ≠ 视觉质量通过**。
 
 ## P0 portability / provenance (2026-07-21)
 

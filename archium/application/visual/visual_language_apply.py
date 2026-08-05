@@ -73,16 +73,45 @@ def apply_visual_language_to_scene(
             "font_weight": max(node.font_weight, primary.font_weight),
         }
         # Prefer explicit recipe sizes; otherwise ROLE_CATALOG only for non-default recipes.
-        if typo.title_font_size_pt is not None:
-            updates["font_size"] = typo.title_font_size_pt
-        else:
-            updates["font_size"] = primary.font_size_pt
+        target_size = (
+            typo.title_font_size_pt
+            if typo.title_font_size_pt is not None
+            else primary.font_size_pt
+        )
+        updates["font_size"] = target_size
         text = node.text
         if primary.case == TitleCase.UPPERCASE:
             text = text.upper()
             updates["text"] = text
             updates["paragraphs"] = list(node.paragraphs)
-        nodes[index] = node.model_copy(update=updates)
+        updated = node.model_copy(update=updates)
+        # Keep multi-scale composition runs; rescale relative to previous base.
+        if node.runs and node.font_size > 0:
+            scale = float(target_size) / float(node.font_size)
+            from archium.domain.visual.render_scene import TextRun, set_text_node_runs
+
+            scaled = [
+                TextRun(
+                    text=run.text.upper() if primary.case == TitleCase.UPPERCASE else run.text,
+                    font_family=run.font_family,
+                    font_family_cjk=run.font_family_cjk,
+                    font_family_latin=run.font_family_latin,
+                    font_size=(
+                        round(float(run.font_size) * scale, 1)
+                        if run.font_size is not None
+                        else round(float(target_size) * scale, 1)
+                    ),
+                    font_weight=max(run.font_weight or 0, primary.font_weight)
+                    if run.font_weight is not None
+                    else primary.font_weight,
+                    font_style=run.font_style,
+                    color=run.color,
+                    color_token=run.color_token,
+                )
+                for run in node.runs
+            ]
+            set_text_node_runs(updated, scaled)
+        nodes[index] = updated
 
     # Color story accent on stroke decorations.
     accent = _swatch_hex(language.color_story, prefer=("conflict", "intervention", "accent"))

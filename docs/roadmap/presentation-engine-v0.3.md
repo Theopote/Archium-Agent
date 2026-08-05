@@ -8,7 +8,11 @@
 > **版本语义：** 本文描述 **Presentation Engine v0.3** 能力线，服务于产品里程碑 **Showcase Candidate 1**。  
 > 与 **Software version**（`v0.2.x-alpha` / `v0.2-beta` 标签）分开管理；见 [文档中心](../README.md#版本语义避免混用) 与 [Beta 发布决策](../v0.2-beta-release-decision.md#版本语义本文范围)。
 
-**状态**：现行计划（2026-07-26）  
+> **产品优先级（2026-08-05）：** 执行顺序与 Epic 台账以  
+> [`architectural-visual-quality-recovery-p0.md`](architectural-visual-quality-recovery-p0.md)  
+> 为准。本文保留引擎能力地图；**Beta 前唯一主线是 Visual Quality Recovery（VQ-001…VQ-008）**。
+
+**状态**：现行引擎计划（2026-07-26）；**P0 收束见 VQR 文档（2026-08-05）**  
 **前置**：[`docs/visual/README.md`](../visual/README.md)、[`docs/architecture/pipeline-roles.md`](../architecture/pipeline-roles.md)、[`docs/roadmap/visual-quality-and-editing-sprint.md`](visual-quality-and-editing-sprint.md)（历史冲刺；编辑与图片衍生基础设施可复用）
 
 ---

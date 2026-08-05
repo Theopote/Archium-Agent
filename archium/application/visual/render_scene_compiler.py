@@ -25,6 +25,13 @@ from archium.application.visual.style_overlay import apply_style_overlays
 from archium.application.visual.svg_icon_recolor import is_architectural_icon_ref
 from archium.application.visual.text_emphasis import build_emphasis_text_runs
 from archium.application.visual.text_style_resolve import resolve_text_style
+from archium.application.visual.typography_composition import (
+    compose_metric_typography,
+    compose_title_typography,
+    composition_to_text_runs,
+    infer_typography_page_kind,
+    should_compose_element,
+)
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
@@ -116,6 +123,12 @@ class RenderSceneCompiler:
         drawing_type = self._infer_drawing_type(slide, visual_intent)
 
         bg_color = effective.colors.resolve("background")
+        page_kind = infer_typography_page_kind(
+            slide=slide,
+            layout_plan=layout_plan,
+            visual_intent=visual_intent,
+        )
+        title_composition = None
         for element in sorted(layout_plan.elements, key=lambda el: el.z_index):
             compiled = self._compile_element(
                 element,
@@ -125,8 +138,40 @@ class RenderSceneCompiler:
                 asset_manifest=asset_manifest,
                 warnings=warnings,
                 overflow_policy=layout_plan.overflow_policy,
+                page_kind=page_kind,
             )
             nodes.extend(compiled)
+            if (
+                element.role == LayoutElementRole.TITLE
+                and compiled
+                and title_composition is None
+            ):
+                # Reconstruct for ghost injection from the applied title text.
+                title_text = (element.text_content or "").strip()
+                if title_text:
+                    base = effective.typography.display.font_size
+                    if element.font_size_override:
+                        base = element.font_size_override
+                    title_composition = compose_title_typography(
+                        title_text,
+                        page_kind=page_kind,
+                        base_size_pt=base,
+                    )
+
+        if title_composition is not None and title_composition.ghost_text:
+            ghost = self._ghost_text_node(
+                title_composition,
+                design_system=effective,
+                page_width=layout_plan.page_width,
+                page_height=layout_plan.page_height,
+            )
+            if ghost is not None:
+                nodes.insert(0, ghost)
+                warnings.append(f"typography_composition:{page_kind.value}:ghost")
+        if page_kind.value != "default":
+            tag = f"typography_composition:{page_kind.value}"
+            if tag not in warnings:
+                warnings.append(tag)
 
         theme = ThemeTokens(
             colors={
@@ -234,6 +279,7 @@ class RenderSceneCompiler:
         asset_manifest: list[SceneAssetReference],
         warnings: list[str],
         overflow_policy: OverflowPolicy = OverflowPolicy.WARN,
+        page_kind: object | None = None,
     ) -> list[
         TextNode
         | ImageNode
@@ -243,6 +289,11 @@ class RenderSceneCompiler:
         | TableNode
         | FreeformNode
     ]:
+        from archium.domain.visual.visual_language.typography_composition import (
+            TypographyPageKind,
+        )
+
+        kind = page_kind if isinstance(page_kind, TypographyPageKind) else TypographyPageKind.DEFAULT
         nodes: list[
             TextNode
             | ImageNode
@@ -278,6 +329,7 @@ class RenderSceneCompiler:
                         bundle,
                         warnings,
                         overflow_policy=overflow_policy,
+                        page_kind=kind,
                     )
                 )
         elif element.content_type in {
@@ -291,6 +343,7 @@ class RenderSceneCompiler:
                     bundle,
                     warnings,
                     overflow_policy=overflow_policy,
+                    page_kind=kind,
                 )
             )
         elif element.content_type == LayoutContentType.SHAPE:
@@ -376,7 +429,13 @@ class RenderSceneCompiler:
         warnings: list[str],
         *,
         overflow_policy: OverflowPolicy = OverflowPolicy.WARN,
+        page_kind: object | None = None,
     ) -> list[TextNode | ShapeNode]:
+        from archium.domain.visual.visual_language.typography_composition import (
+            TypographyPageKind,
+        )
+
+        kind = page_kind if isinstance(page_kind, TypographyPageKind) else TypographyPageKind.DEFAULT
         typography = resolve_text_style(element, design_system.typography)
         color = design_system.colors.resolve(typography.color_token)
         text = (element.text_content or "").strip()
@@ -425,6 +484,12 @@ class RenderSceneCompiler:
             latin_family=latin_family,
             bold=typography.font_weight >= 600,
         )
+        composed_size = typography.font_size
+        letter_spacing = (
+            element.letter_spacing
+            if element.letter_spacing is not None
+            else typography.letter_spacing
+        )
         node = TextNode(
             id=element.id,
             semantic_role=semantic,
@@ -441,23 +506,49 @@ class RenderSceneCompiler:
             font_family=resolved.primary,
             font_family_cjk=resolved.cjk,
             font_family_latin=resolved.latin,
-            font_size=typography.font_size,
+            font_size=composed_size,
             font_weight=typography.font_weight,
             color=color,
             color_token=typography.color_token,
             typography_token=typography_token,
             alignment=element.alignment or typography.alignment,
             line_height=typography.line_height,
-            letter_spacing=(
-                element.letter_spacing
-                if element.letter_spacing is not None
-                else typography.letter_spacing
-            ),
+            letter_spacing=letter_spacing,
             opacity=element.opacity if element.opacity is not None else 1.0,
             padding=BoxSpacing(left=4 / 96, right=4 / 96, top=2 / 96, bottom=2 / 96),
             overflow_policy=_scene_overflow_policy(overflow_policy),
         )
-        if element.role in {
+
+        composition_applied = False
+        if should_compose_element(element.role, kind):
+            if element.role == LayoutElementRole.METRIC:
+                composition = compose_metric_typography(text, base_size_pt=typography.font_size)
+            elif element.role == LayoutElementRole.LEAD_STATEMENT and len(text) > 28:
+                composition = None
+            else:
+                composition = compose_title_typography(
+                    text,
+                    page_kind=kind,
+                    base_size_pt=typography.font_size,
+                )
+            if composition is not None and composition.runs:
+                runs = composition_to_text_runs(
+                    composition,
+                    design_system=design_system,
+                    fallback_color=color,
+                    fallback_weight=typography.font_weight,
+                )
+                if runs:
+                    set_text_node_runs(node, runs)
+                    if composition.base_size_pt is not None:
+                        node.font_size = composition.base_size_pt
+                    node.letter_spacing = composition.letter_spacing_em
+                    if composition.arrangement.value == "metric_stack":
+                        node.alignment = "center"
+                        node.vertical_alignment = "middle"
+                    composition_applied = True
+
+        if not composition_applied and element.role in {
             LayoutElementRole.BODY_TEXT,
             LayoutElementRole.LEAD_STATEMENT,
             LayoutElementRole.ANNOTATION,
@@ -488,6 +579,52 @@ class RenderSceneCompiler:
                 set_text_node_runs(node, emphasis_runs)
         nodes.append(node)
         return nodes
+
+    def _ghost_text_node(
+        self,
+        composition: object,
+        *,
+        design_system: DesignSystem,
+        page_width: float,
+        page_height: float,
+    ) -> TextNode | None:
+        from archium.domain.visual.visual_language.typography_composition import (
+            TypographyComposition,
+        )
+
+        if not isinstance(composition, TypographyComposition):
+            return None
+        ghost = (composition.ghost_text or "").strip()
+        if not ghost:
+            return None
+        base = composition.base_size_pt or design_system.typography.display.font_size
+        size = min(120.0, round(base * composition.ghost_size_scale, 1))
+        color = design_system.colors.resolve("primary")
+        return TextNode(
+            id="typo_ghost_title",
+            semantic_role="typography_ghost",
+            x=page_width * 0.04,
+            y=page_height * 0.22,
+            width=page_width * 0.92,
+            height=page_height * 0.55,
+            z_index=0,
+            text=ghost,
+            paragraphs=[TextParagraph(text=ghost, alignment="left")],
+            font_family=design_system.typography.display.font_family,
+            font_family_cjk=design_system.typography.display.font_family,
+            font_family_latin=design_system.typography.display.font_family_latin or "Arial",
+            font_size=size,
+            font_weight=700,
+            color=color,
+            color_token="primary",
+            typography_token="display",
+            alignment="left",
+            vertical_alignment="middle",
+            line_height=size * 1.05,
+            letter_spacing=0.12,
+            opacity=composition.ghost_opacity,
+            overflow_policy=OverflowPolicy.CLIP,
+        )
 
     def _compile_image(
         self,
