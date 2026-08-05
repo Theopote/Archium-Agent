@@ -43,12 +43,17 @@ from archium.domain.enums import (
     VisualWorkflowStep,
     WorkflowStatus,
 )
+from archium.domain.slide import SlideSpec
 from archium.domain.slide_design_brief import SlideDesignBrief
-from archium.domain.visual.deck_composition import DeckCompositionPlan
+from archium.domain.visual.deck_composition import (
+    DeckCompositionPlan,
+    SlideCompositionDirective,
+)
 from archium.domain.visual.design_system import DesignSystem
 from archium.domain.visual.enums import LayoutValidationStatus
 from archium.domain.visual.layout import LayoutPlan
 from archium.domain.visual.preferences import VisualPreferences
+from archium.domain.visual.validation import LayoutValidationReport
 from archium.infrastructure.database.repositories import (
     PresentationRepository,
     ProjectRepository,
@@ -84,12 +89,8 @@ def composition_plan_from_state(state: VisualWorkflowState) -> DeckCompositionPl
     return None
 
 
-def _auto_trim_slide_for_capacity(slide):
+def _auto_trim_slide_for_capacity(slide: SlideSpec) -> SlideSpec:
     """Light pre-layout trim so OVERLOAD does not abort a batch deck."""
-    from archium.domain.slide import SlideSpec
-
-    if not isinstance(slide, SlideSpec):
-        return slide
     updated = slide.model_copy(deep=True)
     message = (updated.message or "").strip()
     if len(message) > 96:
@@ -623,19 +624,29 @@ class VisualWorkflowNodes:
                     recent_candidate_plans[-1] if recent_candidate_plans else None
                 )
 
-                def _generate(*, allow_overloaded: bool = False, prev=previous_plan):
+                def _generate(
+                    *,
+                    allow_overloaded: bool = False,
+                    prev: LayoutPlan | None = previous_plan,
+                    _slide: SlideSpec = slide,
+                    _directive: SlideCompositionDirective | None = directive,
+                    _recent_candidate_plans: list[LayoutPlan] = recent_candidate_plans,
+                ) -> list[tuple[LayoutPlan, LayoutValidationReport]]:
+                    visual_intent_id = _slide.visual_intent_id
+                    if visual_intent_id is None:
+                        raise ValueError(f"Slide {_slide.id} is missing visual_intent_id")
                     return self._runtime.layout_planning_service.generate_candidates(
-                        slide=slide,
-                        visual_intent_id=slide.visual_intent_id,
+                        slide=_slide,
+                        visual_intent_id=visual_intent_id,
                         art_direction_id=UUID(art_id) if art_id else None,
                         design_system_id=design_id,
                         candidate_count=candidate_count,
                         project_id=(
                             UUID(str(state["project_id"])) if state.get("project_id") else None
                         ),
-                        deck_directive=directive,
+                        deck_directive=_directive,
                         previous_layout_plan=prev,
-                        recent_layout_plans=recent_candidate_plans,
+                        recent_layout_plans=_recent_candidate_plans,
                         allow_overloaded_candidates=allow_overloaded,
                     )
 
@@ -670,11 +681,13 @@ class VisualWorkflowNodes:
                 for plan, _report in candidates:
                     saved = self._runtime.layout_plans.save(plan)
                     ids.append(str(saved.id))
-                    if not recent_candidate_plans or recent_candidate_plans[-1].id != saved.id:
+                    if (
+                        (not recent_candidate_plans or recent_candidate_plans[-1].id != saved.id)
+                        and plan is candidates[0][0]
+                    ):
                         # Keep the first candidate as the rhythm seed for the next slide.
-                        if plan is candidates[0][0]:
-                            recent_candidate_plans.append(saved)
-                            recent_candidate_plans = recent_candidate_plans[-3:]
+                        recent_candidate_plans.append(saved)
+                        recent_candidate_plans = recent_candidate_plans[-3:]
                 by_slide[str(slide.id)] = ids
                 updated_slides.append(slide)
 
@@ -747,6 +760,11 @@ class VisualWorkflowNodes:
                     art_direction=art,
                 )
                 if previous_plan is not None:
+                    if slide.visual_intent_id is None:
+                        return {
+                            "errors": [f"Slide {slide.id} is missing visual_intent_id"],
+                            "current_step": step,
+                        }
                     prev_key = (
                         previous_plan.layout_family.value
                         if hasattr(previous_plan.layout_family, "value")

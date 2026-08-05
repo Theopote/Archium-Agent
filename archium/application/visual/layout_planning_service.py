@@ -80,6 +80,7 @@ LAYOUT_DECISION_LLM_FALLBACK = "VISUAL.LAYOUT_DECISION_LLM_FALLBACK"
 
 def _layout_family_key(plan_or_family: LayoutPlan | LayoutFamily | str) -> str:
     """Normalize LayoutFamily / plan / raw string for streak comparisons."""
+    family: LayoutFamily | str
     if isinstance(plan_or_family, LayoutPlan):
         family = plan_or_family.layout_family
     else:
@@ -1460,9 +1461,7 @@ class LayoutPlanningService:
                     and not has_real_hero_candidate
                     and item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
                     and item.layout_variant == "monument"
-                ):
-                    filtered.append(item)
-                elif (
+                ) or (
                     genuine_section_break
                     and item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
                     and item.layout_variant == "section_opener"

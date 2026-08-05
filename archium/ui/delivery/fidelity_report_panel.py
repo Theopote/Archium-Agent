@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+
 import streamlit as st
 
 from archium.domain.export_fidelity import (
@@ -92,10 +94,8 @@ def resolve_round_trip_report(
         return None
     persisted = load_persisted_round_trip_report(presentation_id)
     if persisted is not None:
-        try:
+        with contextlib.suppress(Exception):
             store_round_trip_report(persisted)
-        except Exception:
-            pass
     return persisted
 
 

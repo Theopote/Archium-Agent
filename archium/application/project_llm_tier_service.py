@@ -89,9 +89,7 @@ def _tier_model_compatible(settings: Settings, model: str) -> bool:
     # Profile already switched main model family; keep tier models aligned.
     if main_deepseek and looks_gemini:
         return False
-    if main_gemini and looks_deepseek:
-        return False
-    return True
+    return not (main_gemini and looks_deepseek)
 
 
 def tier_label(tier: ProjectLLMTier) -> str:

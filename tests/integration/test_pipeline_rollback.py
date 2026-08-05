@@ -50,8 +50,9 @@ def test_workflow_run_marks_failure_without_leaving_completed_state(
         project = ProjectRepository(session).create(
             Project(name="Rollback Test Project", project_type=ProjectType.HEALTHCARE)
         )
-    with pytest.raises(WorkflowError, match="Simulated storyline failure"):
-        with get_session(engine) as session:
+    with pytest.raises(WorkflowError, match="Simulated storyline failure"), get_session(
+        engine
+    ) as session:
             service = PresentationWorkflowService(session, failing_llm, settings=test_settings)  # type: ignore[arg-type]
             try:
                 service.run(project.id, request_payload)

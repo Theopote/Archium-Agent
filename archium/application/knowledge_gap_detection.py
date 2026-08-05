@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -49,7 +50,7 @@ def _strip_unknown_prefix(text: str) -> str:
 def filter_unknowns_satisfied_by_known(
     unknowns: list[str] | tuple[str, ...] | None,
     *,
-    known: dict[str, object] | None,
+    known: Mapping[str, object] | None,
 ) -> list[str]:
     """Drop cached unknown labels already answered in KnowledgeState.known."""
     if not unknowns:

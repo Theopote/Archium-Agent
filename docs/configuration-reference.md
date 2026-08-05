@@ -32,7 +32,7 @@ Do not edit them manually.
 | `DATABASE_SQLITE_BUSY_TIMEOUT_MS` | `30000` | No | SQLite busy timeout in milliseconds (WAL + busy_timeout reduce 'database is locked'). |
 | `DATABASE_SQLITE_WAL_ENABLED` | `true` | No | Enable SQLite WAL journal mode for better concurrent read/write behavior. |
 | `WORKFLOW_CHECKPOINT_PATH` | `data/database/workflow_checkpoints.db` | No | LangGraph SqliteSaver checkpoint database path. |
-| `WORKFLOW_CHECKPOINT_COMMIT_ENABLED` | `true` | No | Commit the SQLAlchemy session after each workflow checkpoint so Streamlit and other clients can poll WorkflowRun progress. |
+| `WORKFLOW_CHECKPOINT_COMMIT_ENABLED` | `true` | No | Legacy compatibility flag for workflow checkpoint persistence. Workflow checkpoints now flush but do not commit; the outer transaction boundary owns final commit/rollback. |
 | `PROJECT_STORAGE_PATH` | `data/projects` | No | Uploaded project documents and assets root directory. |
 | `OUTPUT_PATH` | `data/outputs` | No | Generated presentation export output directory. |
 | `CHROMA_PATH` | `data/chroma` | No | Chroma vector index storage directory. |
@@ -47,8 +47,8 @@ Do not edit them manually.
 | `LLM_API_KEY` / `GEMINI_API_KEY` | `*(unset)*` | No | OpenAI-compatible API key (e.g. Gemini). Unset allows startup; LLM calls fail at runtime. |
 | `LLM_BASE_URL` / `GEMINI_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta/openai/` | No | OpenAI-compatible API base URL. |
 | `LLM_MODEL` / `GEMINI_MODEL` | `gemini-2.5-flash` | No | Default chat/completion model name. |
-| `LLM_FAST_MODEL` | `gemini-2.0-flash` | No | Fast model for concept exploration when project tier=fast. |
-| `LLM_QUALITY_MODEL` | `gemini-2.5-pro` | No | High-quality model for competition / formal decks when project tier=quality. |
+| `LLM_FAST_MODEL` | `*(unset)*` | No | Optional fast model for project tier=fast. When unset (or incompatible with the active provider), falls back to llm_model. |
+| `LLM_QUALITY_MODEL` | `*(unset)*` | No | Optional high-quality model for project tier=quality. When unset (or incompatible with the active provider), falls back to llm_model. |
 | `LLM_MAX_RETRIES` | `2` | No | Maximum LLM request retries. |
 | `LLM_REPAIR_ATTEMPTS` | `2` | No | Maximum structured-output repair attempts per LLM call. |
 | `LLM_TIMEOUT_SECONDS` | `60.0` | No | LLM request timeout in seconds. |
