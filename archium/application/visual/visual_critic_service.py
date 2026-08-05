@@ -702,7 +702,7 @@ class VisualCriticService:
     @staticmethod
     def _is_sparse_text_opener(plan: LayoutPlan) -> bool:
         """Title(+lead)(+source) pages with no body/cards — intentional empty field."""
-        if plan.layout_variant == "monument":
+        if plan.layout_variant in {"monument", "section_opener"}:
             return True
         if plan.layout_variant != "lead_and_points":
             return False

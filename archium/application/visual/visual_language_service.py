@@ -211,12 +211,21 @@ class VisualLanguageService:
         metaphor = (
             concept.visual_metaphor.value if concept is not None else None
         )
+        continuity: str | None = None
+        slide_type = getattr(slide, "slide_type", None)
+        if slide_type is not None:
+            value = getattr(slide_type, "value", str(slide_type))
+            if value == "section":
+                continuity = "section_opening"
+            elif value == "title":
+                continuity = "opening"
         return select_page_formula(
             emotion=direction.narrative_emotion.value,
             situation_rule_id=direction.situation_rule_id,
             expression_mode_id=direction.expression_mode_id,
             metaphor=metaphor,
             title=slide.title,
+            continuity_role=continuity,
         )
 
     def _image_mask_for(

@@ -343,6 +343,7 @@ def select_page_formula(
     expression_mode_id: str | None = None,
     metaphor: str | None = None,
     title: str | None = None,
+    continuity_role: str | None = None,
 ) -> PageVisualFormula:
     """Deterministic formula pick — concept/metaphor wins, then situation, then emotion."""
     title = (title or "").strip()
@@ -350,7 +351,17 @@ def select_page_formula(
     rule = situation_rule_id or ""
     mode = expression_mode_id or ""
     emotion_key = (emotion or "calm").strip().lower()
+    continuity = (continuity_role or "").strip().lower()
 
+    if continuity in {"section_opening", "transition"} or title in {
+        "章节",
+        "第一章",
+        "第二节",
+        "篇章扉页",
+        "问题篇",
+        "策略篇",
+    }:
+        return FORMULA_SECTION
     if metaphor == "fragment_to_network" or title in {"流线冲突", "交通冲突", "人车混行"}:
         return FORMULA_PATH
     if metaphor == "core_to_expansion" or title in {"概念生成", "空间生长", "核心拓展"}:
@@ -369,8 +380,6 @@ def select_page_formula(
         return FORMULA_PATH
     if metaphor == "monument_single" or title in {"总体愿景"}:
         return FORMULA_MONUMENT
-    if title in {"章节", "第一章", "第二节", "篇章扉页", "问题篇", "策略篇"}:
-        return FORMULA_SECTION
     if title in {"实施分期", "分期建设", "施工阶段", "实施计划"}:
         return FORMULA_PHASING
     if title in {"入口序列", "入院体验", "门槛空间", "到达体验"}:

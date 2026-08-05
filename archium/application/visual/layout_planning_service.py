@@ -495,6 +495,22 @@ class LayoutPlanningService:
                 and plan.layout_variant == "lead_and_points"
             ):
                 composition_penalty += 0.28
+            if (
+                deck_directive.pacing_role == PacingRole.TRANSITION
+                and plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                and plan.layout_variant == "section_opener"
+            ):
+                composition_bonus += 0.5
+            if (
+                deck_directive.pacing_role == PacingRole.TRANSITION
+                and plan.layout_family
+                in {
+                    LayoutFamily.STRATEGY_CARDS,
+                    LayoutFamily.PROCESS_NARRATIVE,
+                    LayoutFamily.METRIC_DASHBOARD,
+                }
+            ):
+                composition_penalty += 0.35
             # Quote posters are for closing/summary — don't steal body content pages.
             if (
                 plan.layout_variant == "quote_argument"
@@ -580,6 +596,11 @@ class LayoutPlanningService:
                 and plan.layout_variant == "monument"
             ):
                 composition_penalty += 0.3
+            if (
+                plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                and plan.layout_variant == "section_opener"
+            ):
+                composition_bonus += 0.42
             # When the intent wants an asset-led family we don't have assets for,
             # prefer sparse text openers over strategy/process shells that invent cards.
             # Do NOT demote STRATEGY_CARDS when it is the explicit primary preference.
@@ -593,7 +614,7 @@ class LayoutPlanningService:
             if primary_pref in asset_led:
                 if (
                     plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
-                    and plan.layout_variant == "lead_and_points"
+                    and plan.layout_variant in {"lead_and_points", "section_opener"}
                 ):
                     composition_bonus += 0.2
                 if plan.layout_family == LayoutFamily.STRATEGY_CARDS:
@@ -723,6 +744,10 @@ class LayoutPlanningService:
             )
             key_point_count = len(slide.key_points)
             is_title_slide = slide.slide_type == SlideType.TITLE
+            is_section_opener = (
+                slide.slide_type == SlideType.SECTION
+                or intent.continuity_role == ContinuityRole.SECTION_OPENING
+            )
             try:
                 request, skill_audit = apply_skills_to_request(
                     LLMRequest(
@@ -760,6 +785,7 @@ class LayoutPlanningService:
                         style_preference=style_pref,
                         key_point_count=key_point_count,
                         is_title_slide=is_title_slide,
+                        is_section_opener=is_section_opener,
                     )
                     merged = [primary]
                     for extra in extras:
@@ -784,6 +810,7 @@ class LayoutPlanningService:
                     style_preference=style_pref,
                     key_point_count=key_point_count,
                     is_title_slide=is_title_slide,
+                    is_section_opener=is_section_opener,
                 )
                 self._record_llm_fallback(
                     error_type="DisallowedLayoutFamily",
@@ -800,6 +827,7 @@ class LayoutPlanningService:
                     style_preference=style_pref,
                     key_point_count=key_point_count,
                     is_title_slide=is_title_slide,
+                    is_section_opener=is_section_opener,
                 )
                 self._record_llm_fallback(
                     error_type=type(exc).__name__,
@@ -815,6 +843,10 @@ class LayoutPlanningService:
             style_preference=style_pref,
             key_point_count=len(slide.key_points),
             is_title_slide=slide.slide_type == SlideType.TITLE,
+            is_section_opener=(
+                slide.slide_type == SlideType.SECTION
+                or intent.continuity_role == ContinuityRole.SECTION_OPENING
+            ),
         )
 
     def _record_llm_fallback(
@@ -875,6 +907,7 @@ class LayoutPlanningService:
         *,
         key_point_count: int = 0,
         is_title_slide: bool = False,
+        is_section_opener: bool = False,
     ) -> list[LayoutDecisionDraft]:
         style_pref = style_preference or LayoutStylePreference()
         preferred = merge_preferred_families(
@@ -935,14 +968,29 @@ class LayoutPlanningService:
                     density_adjustment=DensityLevel.SPACIOUS.value,
                 )
             )
+        # Chapter 扉页 without a hero: index + short title, never invent strategy cards.
+        if is_section_opener and intent.hero_asset_id is None and asset_count == 0:
+            decisions.append(
+                LayoutDecisionDraft(
+                    layout_family=LayoutFamily.TEXTUAL_ARGUMENT.value,
+                    layout_variant="section_opener",
+                    reading_order=list(intent.reading_order),
+                    density_adjustment=DensityLevel.SPACIOUS.value,
+                )
+            )
         # Sparse text pages: never prefer strategy/process shells that invent cards.
         sparse_copy = asset_count == 0 and key_point_count < 2
-        if sparse_copy and intent.dominant_content_type in {
-            VisualContentType.TEXT_ARGUMENT,
-            VisualContentType.MIXED,
-            VisualContentType.PHOTO_EVIDENCE,
-            VisualContentType.PROCESS,
-        }:
+        if (
+            sparse_copy
+            and not is_section_opener
+            and intent.dominant_content_type
+            in {
+                VisualContentType.TEXT_ARGUMENT,
+                VisualContentType.MIXED,
+                VisualContentType.PHOTO_EVIDENCE,
+                VisualContentType.PROCESS,
+            }
+        ):
             decisions.append(
                 LayoutDecisionDraft(
                     layout_family=LayoutFamily.TEXTUAL_ARGUMENT.value,
@@ -972,7 +1020,21 @@ class LayoutPlanningService:
                 )
             )
         pool_limit = max(candidate_count * 3, candidate_count, 6)
+        _SECTION_OPENER_SKIP = frozenset(
+            {
+                LayoutFamily.STRATEGY_CARDS,
+                LayoutFamily.PROCESS_NARRATIVE,
+                LayoutFamily.METRIC_DASHBOARD,
+            }
+        )
         for definition in definitions:
+            if (
+                is_section_opener
+                and asset_count == 0
+                and intent.hero_asset_id is None
+                and definition.family in _SECTION_OPENER_SKIP
+            ):
+                continue
             if (
                 deck_directive is not None
                 and definition.family in deck_directive.forbidden_layout_families
@@ -989,10 +1051,17 @@ class LayoutPlanningService:
                 and asset_count == 0
                 and definition.family == LayoutFamily.TEXTUAL_ARGUMENT
             )
+            section_opener_override = (
+                is_section_opener
+                and intent.hero_asset_id is None
+                and asset_count == 0
+                and definition.family == LayoutFamily.TEXTUAL_ARGUMENT
+            )
             if (
                 definition.family in grammar_forbidden
                 and not closing_poster_override
                 and not monument_cover_override
+                and not section_opener_override
             ):
                 continue
             variants = self._order_variants(
@@ -1004,6 +1073,16 @@ class LayoutPlanningService:
                 ),
                 style_pref,
             )
+            if (
+                is_section_opener
+                and asset_count == 0
+                and intent.hero_asset_id is None
+                and definition.family == LayoutFamily.TEXTUAL_ARGUMENT
+            ):
+                variants = [
+                    "section_opener",
+                    *[v for v in variants if v != "section_opener"],
+                ]
             # strategy_concept needs a real hero image; without assets prefer cards.
             if (
                 definition.family == LayoutFamily.STRATEGY_CARDS
@@ -1031,7 +1110,11 @@ class LayoutPlanningService:
                             str(asset_id) for asset_id in intent.supporting_asset_ids
                         ],
                         reading_order=list(intent.reading_order),
-                        density_adjustment=intent.density_level.value,
+                        density_adjustment=(
+                            DensityLevel.SPACIOUS.value
+                            if is_section_opener and asset_count == 0
+                            else intent.density_level.value
+                        ),
                         split_recommended=False,
                         split_reason=None,
                     )
@@ -1042,7 +1125,11 @@ class LayoutPlanningService:
             decisions.append(
                 LayoutDecisionDraft(
                     layout_family=LayoutFamily.TEXTUAL_ARGUMENT.value,
-                    layout_variant="lead_and_points",
+                    layout_variant=(
+                        "section_opener"
+                        if is_section_opener
+                        else "lead_and_points"
+                    ),
                     reading_order=list(intent.reading_order),
                     density_adjustment=intent.density_level.value,
                 )
@@ -1140,6 +1227,11 @@ class LayoutPlanningService:
         hero_without_asset_cover = (
             bool(preferred_families) and preferred_families[0] == LayoutFamily.HERO
         )
+        section_opener_text = any(
+            item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
+            and item.layout_variant == "section_opener"
+            for item in pool
+        )
 
         if deck_directive is not None:
             forbidden = {family.value for family in deck_directive.forbidden_layout_families}
@@ -1154,15 +1246,34 @@ class LayoutPlanningService:
                     and item.layout_variant == "monument"
                 ):
                     filtered.append(item)
+                elif (
+                    section_opener_text
+                    and item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
+                    and item.layout_variant == "section_opener"
+                ):
+                    filtered.append(item)
             pool = filtered or list(decisions)
 
-        def sort_key(item: LayoutDecisionDraft) -> tuple[int, int, int, int, int, str, str]:
+        def sort_key(item: LayoutDecisionDraft) -> tuple[int, int, int, int, int, int, str, str]:
             # No-asset hero openings must keep the text monument ahead of process/cards.
             monument_rank = (
                 0
                 if hero_without_asset_cover
                 and item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
                 and item.layout_variant == "monument"
+                else 1
+            )
+            section_rank = (
+                0
+                if item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
+                and item.layout_variant == "section_opener"
+                and (
+                    (
+                        deck_directive is not None
+                        and deck_directive.pacing_role == PacingRole.TRANSITION
+                    )
+                    or section_opener_text
+                )
                 else 1
             )
             # When primary preference needs assets we don't have, prefer sparse text
@@ -1180,6 +1291,7 @@ class LayoutPlanningService:
                 and item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
                 and (
                     (primary == LayoutFamily.HERO and item.layout_variant == "monument")
+                    or item.layout_variant == "section_opener"
                     or (
                         primary != LayoutFamily.HERO
                         and item.layout_variant == "lead_and_points"
@@ -1205,6 +1317,7 @@ class LayoutPlanningService:
                 else 1
             )
             return (
+                section_rank,
                 monument_rank,
                 sparse_rank,
                 family_rank,

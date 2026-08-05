@@ -212,15 +212,35 @@ class DeckCompositionPlanningService:
         transition_mode = None
         should_contrast = False
         should_match = False
+        target_density = intent.density_level
         if slide.slide_type == SlideType.SECTION or intent.continuity_role in {
             ContinuityRole.SECTION_OPENING,
             ContinuityRole.TRANSITION,
         }:
             transition_mode = "section_break"
             should_contrast = True
-            preferred = list(
-                dict.fromkeys([LayoutFamily.HERO, LayoutFamily.HYBRID_CANVAS, *preferred])
+            has_visual = intent.hero_asset_id is not None or bool(
+                intent.supporting_asset_ids
             )
+            if has_visual:
+                preferred = list(
+                    dict.fromkeys(
+                        [LayoutFamily.HERO, LayoutFamily.HYBRID_CANVAS, *preferred]
+                    )
+                )
+            else:
+                # No-asset 扉页: index + short title, not hero/hybrid shells.
+                preferred = list(
+                    dict.fromkeys(
+                        [
+                            LayoutFamily.TEXTUAL_ARGUMENT,
+                            LayoutFamily.HERO,
+                            LayoutFamily.HYBRID_CANVAS,
+                            *preferred,
+                        ]
+                    )
+                )
+                target_density = DensityLevel.SPACIOUS
         elif previous is not None and previous.density_level == DensityLevel.COMPACT:
             should_contrast = True
         elif pacing_role == PacingRole.CLOSING:
@@ -235,7 +255,7 @@ class DeckCompositionPlanningService:
             narrative_role=_narrative_role(slide, intent, pacing_role),
             pacing_role=pacing_role,
             visual_intensity=visual_intensity,
-            target_density=intent.density_level,
+            target_density=target_density,
             preferred_layout_families=preferred,
             hero_priority=hero_priority,
             text_priority=text_priority,

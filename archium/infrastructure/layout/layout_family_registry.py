@@ -219,14 +219,19 @@ _REGISTRY: dict[LayoutFamily, LayoutFamilyDefinition] = {
         content={VisualContentType.TEXT_ARGUMENT, VisualContentType.MIXED},
         min_assets=0,
         max_assets=1,
-        variants=("lead_and_points", "quote_argument", "two_column_text", "monument"),
+        variants=("lead_and_points", "quote_argument", "two_column_text", "monument", "section_opener"),
         default="lead_and_points",
         required=(
             LayoutElementRole.TITLE,
             LayoutElementRole.LEAD_STATEMENT,
-            LayoutElementRole.BODY_TEXT,
         ),
-        optional=(LayoutElementRole.SOURCE, LayoutElementRole.SUPPORTING_VISUAL),
+        optional=(
+            LayoutElementRole.BODY_TEXT,
+            LayoutElementRole.SOURCE,
+            LayoutElementRole.SUPPORTING_VISUAL,
+            LayoutElementRole.CAPTION,
+            LayoutElementRole.DECORATION,
+        ),
         description="Text-led argument with controlled density.",
     ),
     LayoutFamily.HYBRID_CANVAS: _def(

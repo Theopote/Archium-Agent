@@ -188,8 +188,10 @@ class TestDeckCompositionPlanningService:
         assert len(plan.section_strategies) == 2
         assert sum(plan.layout_family_distribution.values()) == 3
         assert plan.directive_for_slide(slides[2].id) is not None
+        # No bound assets → 扉页 prefers text section_opener family first.
         assert (
-            plan.directive_for_slide(slides[1].id).preferred_layout_families[0] == LayoutFamily.HERO
+            plan.directive_for_slide(slides[1].id).preferred_layout_families[0]
+            == LayoutFamily.TEXTUAL_ARGUMENT
         )
 
     def test_first_page_of_each_chapter_becomes_visual_transition(self) -> None:

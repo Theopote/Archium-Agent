@@ -240,3 +240,44 @@ class TestLayoutPlanningDeckDirective:
         ]
         selected = service.select_best_for_deck(candidates, deck_directive=directive)
         assert selected.layout_variant == "quote_argument"
+
+    def test_section_opener_without_assets_prefers_section_variant(self) -> None:
+        from archium.domain.visual.enums import ContinuityRole
+        from archium.infrastructure.layout.layout_family_registry import (
+            get_layout_family_registry,
+        )
+
+        service = LayoutPlanningService.__new__(LayoutPlanningService)
+        service._registry = get_layout_family_registry()
+        intent = VisualIntent(
+            slide_id=uuid4(),
+            communication_goal="开章节",
+            audience_takeaway="项目与背景",
+            visual_priority="title > lead",
+            dominant_content_type=VisualContentType.TEXT_ARGUMENT,
+            preferred_layout_families=[
+                LayoutFamily.HYBRID_CANVAS,
+                LayoutFamily.DRAWING_FOCUS,
+            ],
+            continuity_role=ContinuityRole.SECTION_OPENING,
+            density_level=DensityLevel.BALANCED,
+            reading_order=["title", "lead", "points"],
+        )
+        directive = _directive(
+            preferred=[LayoutFamily.HERO, LayoutFamily.HYBRID_CANVAS]
+        )
+        directive.pacing_role = PacingRole.TRANSITION
+        directive.transition_mode = "section_break"
+        decisions = service._rule_decisions(
+            intent,
+            asset_count=0,
+            candidate_count=5,
+            deck_directive=directive,
+            is_section_opener=True,
+            key_point_count=3,
+        )
+        assert decisions[0].layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
+        assert decisions[0].layout_variant == "section_opener"
+        assert all(
+            d.layout_family != LayoutFamily.STRATEGY_CARDS.value for d in decisions
+        )

@@ -361,3 +361,29 @@ class TestGenerators:
             if issue.rule_code == "LAYOUT.TEXT_OVERFLOW" and "title" in issue.element_ids
         ]
         assert not title_issues
+
+    def test_section_opener_is_index_and_title_not_cards(self) -> None:
+        from archium.domain.enums import SlideType
+
+        slide = _slide(
+            title="项目与背景",
+            message="滨水公共用地需要面向更新与城市公共生活。",
+            key_points=["要点一", "要点二", "要点三"],
+            slide_type=SlideType.SECTION,
+            order=1,
+        )
+        plan = LayoutSolver().generate(
+            LayoutFamily.TEXTUAL_ARGUMENT,
+            _context(
+                LayoutFamily.TEXTUAL_ARGUMENT,
+                content_type=VisualContentType.TEXT_ARGUMENT,
+                variant="section_opener",
+                slide=slide,
+            ),
+        )
+        assert plan.layout_variant == "section_opener"
+        assert plan.element_by_id("section_index") is not None
+        assert plan.element_by_id("title") is not None
+        assert plan.element_by_id("lead") is not None
+        assert not any(el.id.startswith("card_") for el in plan.elements)
+        assert plan.whitespace_ratio > 0.45

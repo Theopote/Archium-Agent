@@ -59,6 +59,11 @@ def test_phasing_and_threshold_title_selection() -> None:
     assert select_page_formula(emotion="calm", title="策略篇").id == (
         PageGrammarId.SECTION_OPENER
     )
+    assert select_page_formula(
+        emotion="strategy",
+        title="项目与背景",
+        continuity_role="section_opening",
+    ).id == PageGrammarId.SECTION_OPENER
 
 def test_conflict_page_selects_path_experience_formula() -> None:
     slide = _slide("流线冲突", "医患流线交叉与洁污混行是当前最大安全风险。")
