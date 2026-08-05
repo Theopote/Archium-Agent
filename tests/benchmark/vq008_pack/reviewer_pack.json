@@ -1,0 +1,72 @@
+{
+  "protocol_version": "vq8.1",
+  "session_id": "78445d26-a38b-400b-b6c3-d265166845e0",
+  "title": "VQ-008 Architect Blind Review",
+  "instructions": "对各 trial 的 A/B/C 盲评：排序（最好→最差）、就绪度、视觉分（1–10）、估计改稿分钟。勿猜测来源。",
+  "dimensions": [
+    "hierarchy",
+    "focal_clarity",
+    "typography_expressiveness",
+    "color_harmony",
+    "graphic_coherence",
+    "composition_tension",
+    "image_treatment",
+    "architectural_relevance",
+    "deck_rhythm",
+    "template_repetition"
+  ],
+  "readiness_values": [
+    "ready",
+    "light_edit",
+    "heavy_edit",
+    "reject"
+  ],
+  "trials": [
+    {
+      "trial_id": "trial:demo_cover",
+      "case_id": "demo_cover",
+      "title": "封面（示例）",
+      "page_kind": "cover",
+      "stimuli": [
+        {
+          "label": "A",
+          "asset_path": "assets/current/cover.png",
+          "notes": ""
+        },
+        {
+          "label": "B",
+          "asset_path": "assets/legacy/cover.png",
+          "notes": ""
+        },
+        {
+          "label": "C",
+          "asset_path": "assets/reference/cover.png",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "trial_id": "trial:demo_analysis",
+      "case_id": "demo_analysis",
+      "title": "现状分析（示例）",
+      "page_kind": "analysis",
+      "stimuli": [
+        {
+          "label": "A",
+          "asset_path": "assets/reference/analysis.png",
+          "notes": ""
+        },
+        {
+          "label": "B",
+          "asset_path": "assets/current/analysis.png",
+          "notes": ""
+        },
+        {
+          "label": "C",
+          "asset_path": "assets/legacy/analysis.png",
+          "notes": ""
+        }
+      ]
+    }
+  ]
+}

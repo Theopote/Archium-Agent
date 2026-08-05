@@ -1,0 +1,16 @@
+{
+  "protocol_version": "vq8.1",
+  "session_id": "78445d26-a38b-400b-b6c3-d265166845e0",
+  "trials": {
+    "trial:demo_cover": {
+      "A": "archium_current",
+      "B": "archium_legacy",
+      "C": "human_reference"
+    },
+    "trial:demo_analysis": {
+      "A": "human_reference",
+      "B": "archium_current",
+      "C": "archium_legacy"
+    }
+  }
+}

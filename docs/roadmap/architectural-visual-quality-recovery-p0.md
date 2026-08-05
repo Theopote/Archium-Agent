@@ -84,7 +84,7 @@ SlideSpec
 | **VQ-005** | Architectural Visual Grammar Library | 先 12 种高质量语法（含变体 + Golden 截图 + 建筑师评分） | Phase 3 **Partial**（12 profiles 可执行；6 P0 进主链；Golden/盲评未做） |
 | **VQ-006** | Deck Rhythm Planner | 统一字体/网格/色板/母题；变化构图/明暗/密度；Pacing 约束防「页页一样漂亮」 | Phase 2–3 **Partial**（pacing→PageDirection→scene title/motif/ghost） |
 | **VQ-007** | Screenshot Visual Critic | PPTX→截图→多模态 Critic→**有限**修改提案→再渲染 | Phase 4 **Partial**（allowlist 精修闭环；截图/vision 仍 soft） |
-| **VQ-008** | Architect Blind Review Benchmark | 5 名建筑师盲测；达门槛前不发 Beta | 持续 / 门禁 |
+| **VQ-008** | Architect Blind Review Benchmark | 5 名建筑师盲测；达门槛前不发 Beta | **Scaffolded**（见 [`vq008-architect-blind-review-protocol.md`](vq008-architect-blind-review-protocol.md)；真人未跑） |
 
 ### 12 种语法（VQ-005 首批）
 
@@ -148,6 +148,8 @@ Critic **只读 + 有限提案**，禁止 LLM 随意重写页面。
 | 平均视觉评分 | ≥ 7/10 |
 | 人工修改时间下降 | ≥ 50% |
 
+执行协议与 CLI：[`vq008-architect-blind-review-protocol.md`](vq008-architect-blind-review-protocol.md)。
+
 启发式 QA（溢出/重叠）继续保留，但**不能**再充当「好看」的定义。审美维度至少覆盖：Hierarchy、Focal Clarity、Typography Expressiveness、Color Harmony、Graphic Coherence、Composition Tension、Image Treatment、Architectural Relevance、Deck Rhythm、Template Repetition。
 
 ---
@@ -197,4 +199,5 @@ More Agents, collaboration sprawl, cosmetic UI, Beta tag.
 |----|-----|
 | 采纳日期 | 2026-08-05 |
 | 状态 | **Active — sole product mainline** |
+| VQ-008 | 基建 Scaffolded；真人盲评未跑 → **Beta 禁止** |
 | GitHub Issue | pending（需 `gh auth login` 后创建） |

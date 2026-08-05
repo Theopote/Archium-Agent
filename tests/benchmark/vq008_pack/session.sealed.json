@@ -1,0 +1,69 @@
+{
+  "session_id": "78445d26-a38b-400b-b6c3-d265166845e0",
+  "protocol_version": "vq8.1",
+  "title": "VQ-008 Architect Blind Review",
+  "min_reviewers": 5,
+  "trials": [
+    {
+      "trial_id": "trial:demo_cover",
+      "case_id": "demo_cover",
+      "title": "封面（示例）",
+      "stimuli": [
+        {
+          "label": "A",
+          "true_source": "archium_current",
+          "case_id": "demo_cover",
+          "asset_path": "assets/current/cover.png",
+          "notes": ""
+        },
+        {
+          "label": "B",
+          "true_source": "archium_legacy",
+          "case_id": "demo_cover",
+          "asset_path": "assets/legacy/cover.png",
+          "notes": ""
+        },
+        {
+          "label": "C",
+          "true_source": "human_reference",
+          "case_id": "demo_cover",
+          "asset_path": "assets/reference/cover.png",
+          "notes": ""
+        }
+      ],
+      "page_kind": "cover"
+    },
+    {
+      "trial_id": "trial:demo_analysis",
+      "case_id": "demo_analysis",
+      "title": "现状分析（示例）",
+      "stimuli": [
+        {
+          "label": "A",
+          "true_source": "human_reference",
+          "case_id": "demo_analysis",
+          "asset_path": "assets/reference/analysis.png",
+          "notes": ""
+        },
+        {
+          "label": "B",
+          "true_source": "archium_current",
+          "case_id": "demo_analysis",
+          "asset_path": "assets/current/analysis.png",
+          "notes": ""
+        },
+        {
+          "label": "C",
+          "true_source": "archium_legacy",
+          "case_id": "demo_analysis",
+          "asset_path": "assets/legacy/analysis.png",
+          "notes": ""
+        }
+      ],
+      "page_kind": "analysis"
+    }
+  ],
+  "ballots": [],
+  "created_at": null,
+  "notes": []
+}
