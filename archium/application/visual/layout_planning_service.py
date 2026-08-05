@@ -590,8 +590,12 @@ class LayoutPlanningService:
                 if style_preference.preferred_families
                 else None
             )
+            opening_cover = (
+                deck_directive is not None
+                and deck_directive.pacing_role == PacingRole.OPENING
+            )
             if (
-                primary_pref == LayoutFamily.HERO
+                (primary_pref == LayoutFamily.HERO or opening_cover)
                 and plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
                 and plan.layout_variant == "monument"
             ):
@@ -603,19 +607,22 @@ class LayoutPlanningService:
                 composition_penalty += 0.25
             # Keep cover vs body text openers distinct.
             if (
-                primary_pref == LayoutFamily.HERO
+                (primary_pref == LayoutFamily.HERO or opening_cover)
                 and plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
                 and plan.layout_variant == "lead_and_points"
             ):
                 composition_penalty += 0.25
             if (
-                primary_pref != LayoutFamily.HERO
+                not opening_cover
+                and primary_pref != LayoutFamily.HERO
                 and plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
                 and plan.layout_variant == "monument"
             ):
                 composition_penalty += 0.3
             if (
-                plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                deck_directive is not None
+                and deck_directive.transition_mode == "section_break"
+                and plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
                 and plan.layout_variant == "section_opener"
             ):
                 composition_bonus += 0.42
@@ -632,7 +639,16 @@ class LayoutPlanningService:
             if primary_pref in asset_led:
                 if (
                     plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
-                    and plan.layout_variant in {"lead_and_points", "section_opener"}
+                    and plan.layout_variant
+                    in (
+                        {"monument", "section_opener"}
+                        if opening_cover
+                        or (
+                            deck_directive is not None
+                            and deck_directive.transition_mode == "section_break"
+                        )
+                        else {"lead_and_points", "section_opener"}
+                    )
                 ):
                     composition_bonus += 0.2
                 if plan.layout_family == LayoutFamily.STRATEGY_CARDS:
@@ -689,6 +705,14 @@ class LayoutPlanningService:
         # receives the stronger penalty above; the second-most-recent page gets
         # a lighter penalty so a good family can still recur after a real beat.
         history = list(recent_layout_plans or [])
+        # Hard stop: three consecutive same LayoutFamily fails Deck QA.
+        if len(history) >= 2:
+            last_two = history[-2:]
+            if (
+                last_two[0].layout_family == last_two[1].layout_family
+                == plan.layout_family
+            ):
+                composition_penalty += 0.55
         for distance, recent in enumerate(reversed(history[-3:]), start=1):
             if previous_layout_plan is not None and recent.id == previous_layout_plan.id:
                 continue
