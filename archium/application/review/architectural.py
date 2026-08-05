@@ -45,6 +45,48 @@ _CONCEPT_PRESENTATION_TYPES = {
     PresentationType.INTERNAL,
 }
 
+_SECTION_ALIASES: dict[str, tuple[str, ...]] = {
+    "问题诊断": ("核心问题", "问题篇", "问题分析", "现状问题", "痛点", "挑战"),
+    "分期实施": (
+        "实施分期",
+        "分期计划",
+        "实施计划",
+        "建设分期",
+        "分阶段实施",
+        "分期策略",
+        "分期",
+    ),
+    "总结决策": ("结论", "总结", "建议", "决策建议", "下一步"),
+}
+
+
+def _normalize_heading(text: str) -> str:
+    return re.sub(r"[\s\-—_:：,，.。;；/\\|()（）\[\]{}]+", "", text).strip().lower()
+
+
+def _required_section_covered(section: str, slides: list[SlideSpec]) -> bool:
+    normalized_texts: list[str] = []
+    for slide in slides:
+        blob = " ".join(
+            part
+            for part in [slide.title, slide.message, *slide.key_points]
+            if str(part or "").strip()
+        )
+        norm = _normalize_heading(blob)
+        if norm:
+            normalized_texts.append(norm)
+    if not normalized_texts:
+        return False
+
+    section_norm = _normalize_heading(section)
+    aliases = _SECTION_ALIASES.get(section.strip(), ())
+    candidates = [section_norm, *(_normalize_heading(alias) for alias in aliases)]
+    return any(
+        candidate and candidate in title
+        for candidate in candidates
+        for title in normalized_texts
+    )
+
 
 def _detect_area_unit_styles(slides: list[SlideSpec]) -> set[str]:
     styles: set[str] = set()
@@ -90,9 +132,8 @@ class ArchitecturalReviewer(ReviewRunnerBase):
                 )
 
             if brief.required_sections:
-                titles = " ".join(slide.title for slide in slides)
                 for section in brief.required_sections:
-                    if section.strip() and section.strip() not in titles:
+                    if section.strip() and not _required_section_covered(section, slides):
                         issues.append(
                             ReviewIssue(
                                 presentation_id=presentation_id,
