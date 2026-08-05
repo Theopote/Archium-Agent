@@ -15,11 +15,14 @@ from archium.domain.visual.font_names import (
     LATIN_FALLBACK_CHAIN,
 )
 from archium.domain.visual.render_scene import (
+    ConnectorNode,
     DrawingNode,
+    FreeformNode,
     ImageNode,
     RenderScene,
     ShapeNode,
     TextNode,
+    connector_path_points,
 )
 from archium.domain.visual.scene_fonts import (
     text_has_cjk,
@@ -52,6 +55,10 @@ class PngRenderer:
                 continue
             if isinstance(node, ShapeNode):
                 self._draw_shape(draw, node)
+            elif isinstance(node, ConnectorNode):
+                self._draw_connector(draw, scene, node)
+            elif isinstance(node, FreeformNode):
+                self._draw_freeform(draw, node)
             elif isinstance(node, DrawingNode):
                 self._paste_image(image, node, fit="contain")
             elif isinstance(node, ImageNode):
@@ -159,7 +166,95 @@ class PngRenderer:
         outline = self._parse_color(node.stroke_color) if node.stroke_color else None
         # stroke_width is authored in points (same unit as pptxgen line.width).
         width = max(0, int(round(node.stroke_width * self._dpi / 72)))
+        kind = node.shape_kind
+        if kind == "line":
+            color = outline or fill or (80, 80, 80)
+            draw.line(  # type: ignore[attr-defined]
+                [(box[0], box[1]), (box[2], box[3])],
+                fill=color,
+                width=max(1, width or 1),
+            )
+            return
+        if kind == "ellipse":
+            draw.ellipse(box, fill=fill, outline=outline, width=width or 0)  # type: ignore[attr-defined]
+            return
+        # rectangle / card
         draw.rectangle(box, fill=fill, outline=outline, width=width or 0)  # type: ignore[attr-defined]
+
+    def _draw_connector(
+        self,
+        draw: object,
+        scene: RenderScene,
+        node: ConnectorNode,
+    ) -> None:
+        points = connector_path_points(scene, node)
+        if len(points) < 2:
+            points = [
+                (node.x, node.y),
+                (node.x + node.width, node.y + node.height),
+            ]
+        color = self._parse_color(node.stroke_color)
+        width = max(1, int(round(node.stroke_width * self._dpi / 72)))
+        px_points = [(self._px(x), self._px(y)) for x, y in points]
+        for index in range(len(px_points) - 1):
+            draw.line(  # type: ignore[attr-defined]
+                [px_points[index], px_points[index + 1]],
+                fill=color,
+                width=width,
+            )
+        if node.arrow_end and len(px_points) >= 2:
+            self._draw_arrow_head(draw, px_points[-2], px_points[-1], color, width)
+        if node.arrow_start and len(px_points) >= 2:
+            self._draw_arrow_head(draw, px_points[1], px_points[0], color, width)
+        if node.label.strip():
+            mid = px_points[len(px_points) // 2]
+            draw.text(  # type: ignore[attr-defined]
+                (mid[0], mid[1] - 14),
+                node.label.strip(),
+                fill=color,
+            )
+
+    def _draw_freeform(self, draw: object, node: FreeformNode) -> None:
+        if len(node.points) < 2:
+            return
+        color = self._parse_color(node.stroke_color or "#333333")
+        width = max(1, int(round(node.stroke_width * self._dpi / 72)))
+        coords = [(self._px(p.x), self._px(p.y)) for p in node.points]
+        if node.closed and len(coords) >= 3:
+            fill = self._parse_color(node.fill_color) if node.fill_color else None
+            draw.polygon(coords, outline=color, fill=fill)  # type: ignore[attr-defined]
+            return
+        for index in range(len(coords) - 1):
+            draw.line(  # type: ignore[attr-defined]
+                [coords[index], coords[index + 1]],
+                fill=color,
+                width=width,
+            )
+
+    def _draw_arrow_head(
+        self,
+        draw: object,
+        start: tuple[int, int],
+        end: tuple[int, int],
+        color: tuple[int, int, int],
+        line_width: int,
+    ) -> None:
+        import math
+
+        dx = end[0] - start[0]
+        dy = end[1] - start[1]
+        length = math.hypot(dx, dy) or 1.0
+        ux, uy = dx / length, dy / length
+        size = max(6, line_width * 3)
+        left = (
+            int(end[0] - ux * size + uy * size * 0.45),
+            int(end[1] - uy * size - ux * size * 0.45),
+        )
+        right = (
+            int(end[0] - ux * size - uy * size * 0.45),
+            int(end[1] - uy * size + ux * size * 0.45),
+        )
+        draw.polygon([end, left, right], fill=color)  # type: ignore[attr-defined]
 
     def _draw_text(self, draw: object, node: TextNode) -> None:
         box = self._box(node)

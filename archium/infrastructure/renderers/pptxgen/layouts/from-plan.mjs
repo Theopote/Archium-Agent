@@ -715,13 +715,18 @@ function renderFreeformElement(pres, page, element) {
   for (let index = 0; index < segments; index += 1) {
     const start = points[index];
     const end = points[(index + 1) % points.length];
-    page.addShape(pres.shapes.LINE, {
+    /** @type {Record<string, unknown>} */
+    const lineOpts = {
       x: start.x,
       y: start.y,
       w: end.x - start.x,
       h: end.y - start.y,
       line: { color, width },
-    });
+    };
+    if (element.opacity != null && Number(element.opacity) < 1) {
+      lineOpts.transparency = Math.round((1 - Number(element.opacity)) * 100);
+    }
+    page.addShape(pres.shapes.LINE, lineOpts);
   }
 }
 

@@ -382,7 +382,7 @@ class RenderScenePptxAdapter:
                 (node.x, node.y),
                 (node.x + node.width, node.y + node.height),
             ]
-        return {
+        instruction: dict[str, Any] = {
             "id": node.id,
             "role": node.semantic_role or "connector",
             "content_type": "connector",

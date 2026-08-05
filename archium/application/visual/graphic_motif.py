@@ -171,10 +171,23 @@ def apply_graphic_motif_to_scene(
 
     if motif is None or motif.max_marks <= 0 or not isinstance(scene, RenderScene):
         return scene
-    if any(str(getattr(n, "id", "")).startswith("vl_motif_") for n in scene.nodes):
+    tag = f"graphic_motif:{motif.motif_type.value}"
+    if tag in scene.warnings:
         return scene
-    if any(str(w).startswith("graphic_motif:") for w in scene.warnings):
-        return scene
+    # Replace weaker/prior motif geometry when upgrading motif type on re-apply.
+    prior_motif_nodes = any(
+        str(getattr(n, "id", "")).startswith("vl_motif_") for n in scene.nodes
+    )
+    if prior_motif_nodes:
+        cleaned = [
+            n
+            for n in scene.nodes
+            if not str(getattr(n, "id", "")).startswith("vl_motif_")
+        ]
+        cleaned_warnings = [
+            w for w in scene.warnings if not str(w).startswith("graphic_motif:")
+        ]
+        scene = scene.model_copy(update={"nodes": cleaned, "warnings": cleaned_warnings})
 
     stroke_hex = accent_hex or NAMED_SWATCHES.get("axis_line", "#2C2C2C")
     if isinstance(color_story, ColorStory):
@@ -275,6 +288,34 @@ def apply_graphic_motif_to_scene(
                     fill_color=stroke_hex if motif.marker.fill_token else None,
                     stroke_color=stroke_hex,
                     stroke_width=1.0,
+                )
+            )
+            # Architectural index label beside each node (01 / 02 / …).
+            from archium.domain.visual.render_scene import TextNode, TextParagraph
+
+            label = f"{index + 1:02d}"
+            nodes.append(
+                TextNode(
+                    id=f"vl_motif_index_{index}",
+                    semantic_role="graphic_motif_index",
+                    x=cx + size * 0.7,
+                    y=cy - size * 0.9,
+                    width=0.45,
+                    height=0.28,
+                    z_index=5,
+                    text=label,
+                    paragraphs=[TextParagraph(text=label, alignment="left")],
+                    font_family="Arial",
+                    font_family_cjk="Microsoft YaHei",
+                    font_family_latin="Arial",
+                    font_size=11,
+                    font_weight=500,
+                    color=stroke_hex,
+                    typography_token="caption",
+                    alignment="left",
+                    line_height=14,
+                    letter_spacing=0.08,
+                    opacity=0.85,
                 )
             )
             marks += 1

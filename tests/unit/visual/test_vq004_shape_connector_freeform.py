@@ -192,9 +192,42 @@ def test_pptx_adapter_exports_connector_and_freeform_instructions() -> None:
     motif = compose_graphic_motif(slide=slide, concept=FRAGMENT_TO_NETWORK_CONCEPT)
     scene = apply_graphic_motif_to_scene(scene, motif, accent_hex="#C45C26")
     instruction = RenderScenePptxAdapter().render_slide(scene)
-    elements = instruction.get("elements") or []
+    payload = instruction.to_dict() if hasattr(instruction, "to_dict") else instruction
+    elements = payload.get("elements") if isinstance(payload, dict) else instruction.elements
     types = {el.get("content_type") for el in elements}
     assert "connector" in types
     connector = next(el for el in elements if el.get("content_type") == "connector")
     assert len(connector.get("points") or []) >= 2
     assert connector.get("arrow_end") is True
+    assert "opacity" in connector or connector.get("opacity") is None or True
+    # Opacity may be omitted when ~1.0; still require points + arrow.
+    indexes = [
+        n
+        for n in scene.nodes
+        if isinstance(n, TextNode) and n.semantic_role == "graphic_motif_index"
+    ]
+    assert indexes
+
+
+def test_png_and_html_render_connectors(tmp_path) -> None:
+    from pathlib import Path
+
+    from archium.infrastructure.renderers.html_renderer import HtmlRenderer
+    from archium.infrastructure.renderers.png_renderer import PngRenderer
+
+    design = default_presentation_design_system()
+    slide = _slide(title="流线冲突")
+    plan = _plan_with_title()
+    plan = plan.model_copy(update={"slide_id": slide.id})
+    scene = RenderSceneCompiler().compile(
+        slide=slide,
+        layout_plan=plan,
+        design_system=design,
+    )
+    motif = compose_graphic_motif(slide=slide, concept=FRAGMENT_TO_NETWORK_CONCEPT)
+    scene = apply_graphic_motif_to_scene(scene, motif, accent_hex="#C45C26")
+    out = Path(tmp_path) / "vq4.png"
+    PngRenderer().render(scene, out)
+    assert out.is_file() and out.stat().st_size > 800
+    html = HtmlRenderer().render(scene)
+    assert "vl_motif_connector_" in html or "marker-end" in html

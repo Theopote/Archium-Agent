@@ -19,7 +19,7 @@ This document states what is **proven by automation** vs what still requires **h
 | VQ-001 | Semantic Typography Composition | **Partial** — multi-scale title/metric runs + ghost text on cover/section/thesis/metric/closing; outline/vertical deferred |
 | VQ-002 | Project Color Composition | **Partial** — page ColorComposition + deck dark-streak soften; applied in RenderSceneCompiler |
 | VQ-003 | Architectural Graphic Motif | **Partial** — motif from VisualMetaphor; plan inject + scene materialize |
-| VQ-004 | Shape / Connector / Freeform formal rendering | **Partial**（枚举/领域存在；主链深度不足） |
+| VQ-004 | Shape / Connector / Freeform formal rendering | **Partial** — motif emits Connector/Freeform; PNG/HTML/PPTX draw path; true `p:cxnSp` / `a:custGeom` still deferred |
 | VQ-005 | Architectural Visual Grammar Library（12） | **Partial**（Grammar v1 / VisualConcept 骨架；未达建筑师气质） |
 | VQ-006 | Deck Rhythm Planner | **Partial**（PacingRole 存在；节奏约束未充分驱动画面） |
 | VQ-007 | Screenshot Visual Critic | **Partial**（heuristic / screenshot_v1 / 可选 vision；非有限精修闭环） |

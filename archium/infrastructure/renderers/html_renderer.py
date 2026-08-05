@@ -10,11 +10,14 @@ from archium.domain.visual.font_names import (
     DEFAULT_CJK_FONT,
 )
 from archium.domain.visual.render_scene import (
+    ConnectorNode,
     DrawingNode,
+    FreeformNode,
     ImageNode,
     RenderScene,
     ShapeNode,
     TextNode,
+    connector_path_points,
 )
 from archium.domain.visual.scene_fonts import (
     css_font_stack,
@@ -88,6 +91,10 @@ class HtmlRenderer:
             return self._render_drawing(node)
         if isinstance(node, ShapeNode):
             return self._render_shape(node)
+        if isinstance(node, ConnectorNode):
+            return self._render_connector(node, scene)
+        if isinstance(node, FreeformNode):
+            return self._render_freeform(node)
         return ""
 
     def _px(self, inches: float) -> int:
@@ -188,11 +195,78 @@ class HtmlRenderer:
         stroke = html.escape(node.stroke_color or "transparent")
         sw = max(0, int(round(node.stroke_width * self._dpi / 72)))
         radius = max(0, int(round(node.corner_radius * self._dpi)))
+        if node.shape_kind == "ellipse":
+            radius = max(self._px(node.width), self._px(node.height)) // 2
+        if node.shape_kind == "line":
+            # Approximate as a thin absolute-positioned border box rotated via SVG later;
+            # keep a 2px stroke bar for preview fidelity.
+            return (
+                f'<div class="node" id="{html.escape(node.id)}" '
+                f'style="{self._box_style(node)}background:{stroke};'
+                f'height:{max(1, sw)}px;"></div>'
+            )
         extra = " shape-card" if node.shape_kind == "card" else ""
         return (
             f'<div class="node{extra}" id="{html.escape(node.id)}" '
             f'style="{self._box_style(node)}background:{fill};'
             f"border:{sw}px solid {stroke};border-radius:{radius}px;\"></div>"
+        )
+
+    def _render_connector(self, node: ConnectorNode, scene: RenderScene) -> str:
+        points = connector_path_points(scene, node)
+        if len(points) < 2:
+            points = [
+                (node.x, node.y),
+                (node.x + node.width, node.y + node.height),
+            ]
+        color = html.escape(node.stroke_color)
+        width = max(1.0, node.stroke_width)
+        path_d = " ".join(
+            f"{'M' if i == 0 else 'L'}{self._px(x)},{self._px(y)}"
+            for i, (x, y) in enumerate(points)
+        )
+        marker = (
+            f'<marker id="arrow-{html.escape(node.id)}" markerWidth="8" markerHeight="8" '
+            f'refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="{color}"/></marker>'
+            if node.arrow_end
+            else ""
+        )
+        end_attr = (
+            f' marker-end="url(#arrow-{html.escape(node.id)})"' if node.arrow_end else ""
+        )
+        label_html = ""
+        if node.label.strip():
+            mid = points[len(points) // 2]
+            label_html = (
+                f'<div style="position:absolute;left:{self._px(mid[0])}px;'
+                f'top:{self._px(mid[1]) - 14}px;font-size:10px;color:{color};">'
+                f"{html.escape(node.label.strip())}</div>"
+            )
+        return (
+            f'<div class="node" id="{html.escape(node.id)}" '
+            f'style="left:0;top:0;width:100%;height:100%;z-index:{node.z_index};'
+            f'opacity:{node.opacity};pointer-events:none;">'
+            f'<svg width="100%" height="100%" style="position:absolute;inset:0;overflow:visible;">'
+            f"<defs>{marker}</defs>"
+            f'<path d="{path_d}" fill="none" stroke="{color}" stroke-width="{width}"{end_attr}/>'
+            f"</svg>{label_html}</div>"
+        )
+
+    def _render_freeform(self, node: FreeformNode) -> str:
+        if len(node.points) < 2:
+            return ""
+        color = html.escape(node.stroke_color or "#333333")
+        fill = html.escape(node.fill_color) if node.fill_color else "none"
+        width = max(1.0, node.stroke_width)
+        coords = " ".join(f"{self._px(p.x)},{self._px(p.y)}" for p in node.points)
+        tag = "polygon" if node.closed and len(node.points) >= 3 else "polyline"
+        return (
+            f'<div class="node" id="{html.escape(node.id)}" '
+            f'style="left:0;top:0;width:100%;height:100%;z-index:{node.z_index};'
+            f'opacity:{node.opacity};pointer-events:none;">'
+            f'<svg width="100%" height="100%" style="position:absolute;inset:0;overflow:visible;">'
+            f'<{tag} points="{coords}" fill="{fill}" stroke="{color}" '
+            f'stroke-width="{width}"/></svg></div>'
         )
 
     @staticmethod
