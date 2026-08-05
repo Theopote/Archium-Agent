@@ -634,6 +634,7 @@ class VisualWorkflowNodes:
                         ),
                         deck_directive=directive,
                         previous_layout_plan=prev,
+                        recent_layout_plans=recent_candidate_plans,
                         allow_overloaded_candidates=allow_overloaded,
                     )
 
@@ -752,7 +753,7 @@ class VisualWorkflowNodes:
                 saved = self._runtime.layout_plans.save(best)
                 previous_plan = saved
                 recent_plans.append(saved)
-                recent_plans = recent_plans[-2:]
+                recent_plans = recent_plans[-3:]
                 slide.layout_plan_id = saved.id
                 self._runtime.presentations.save_slide(slide)
                 selected_ids.append(str(saved.id))

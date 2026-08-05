@@ -30,6 +30,11 @@ def _redirect_legacy_studio_to_edit() -> None:
     st.switch_page(get_app_page(PRODUCT_STUDIO_PAGE_KEY))
 
 
+def _redirect_legacy_delivery_to_deliver() -> None:
+    """Bookmark / docs URL ``/delivery`` → product stage ``/deliver``."""
+    st.switch_page(get_app_page("deliver"))
+
+
 def build_app_pages() -> dict[str, list[Any]]:
     """Create navigation sections (项目 / 制作 / 资源 / 系统) and cache pages for links."""
     from archium.ui.pages import (
@@ -151,6 +156,13 @@ def build_app_pages() -> dict[str, list[Any]]:
             url_path=LEGACY_STUDIO_PAGE_KEY,
             visibility="hidden",
         ),
+        "delivery": st.Page(
+            _redirect_legacy_delivery_to_deliver,
+            title="交付",
+            icon=stages[4].icon,
+            url_path="delivery",
+            visibility="hidden",
+        ),
         "template-studio": st.Page(
             template_studio.render,
             title="模板工作室",
@@ -205,6 +217,7 @@ def build_app_pages() -> dict[str, list[Any]]:
             stage_pages[PRODUCT_STUDIO_PAGE_KEY],
             stage_pages["deliver"],
             hidden_pages[LEGACY_STUDIO_PAGE_KEY],
+            hidden_pages["delivery"],
         ],
         RESOURCE_SECTION: [
             tool_hub_page,

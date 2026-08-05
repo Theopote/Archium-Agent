@@ -164,6 +164,7 @@ class LayoutPlanningService:
         project_id: UUID | None = None,
         deck_directive: SlideCompositionDirective | None = None,
         previous_layout_plan: LayoutPlan | None = None,
+        recent_layout_plans: Sequence[LayoutPlan] | None = None,
         reference_style: ReferenceStyleProfile | None = None,
         style_preference: LayoutStylePreference | None = None,
         allow_overloaded_candidates: bool = False,
@@ -325,14 +326,27 @@ class LayoutPlanningService:
             deck_directive=deck_directive,
             style_preference=style_pref,
         )
+        history = list(recent_layout_plans or [])
         if previous_layout_plan is not None and decisions:
             prev_family = previous_layout_plan.layout_family.value
+            streak = 0
+            for recent in reversed(history):
+                if recent.layout_family.value == prev_family:
+                    streak += 1
+                else:
+                    break
+            if not history and previous_layout_plan is not None:
+                streak = 1
             # candidate_count=1 decks only emit the first decision — put a contrasting
             # family first when the previous page already used this family.
             contrasting = [d for d in decisions if d.layout_family != prev_family]
             same = [d for d in decisions if d.layout_family == prev_family]
             if contrasting:
                 decisions = [*contrasting, *same]
+            # Deck QA errors at 3 consecutive — once streak is already 2, drop same-family
+            # drafts so the truncated pool cannot wallpaper.
+            if streak >= 2 and contrasting:
+                decisions = list(contrasting)
         decisions = decisions[:candidate_count]
         content = content_from_slide(slide, intent)
         drawing = intent.dominant_content_type in {
@@ -435,6 +449,32 @@ class LayoutPlanningService:
             raise ValueError("no layout candidates to select")
         non_critical = [(plan, report) for plan, report in candidates if not report.has_critical()]
         pool = non_critical or candidates
+        # Hard stop before Deck QA ERROR: never pick a third consecutive same family
+        # when any alternate family exists (even if lower-scoring / soft-invalid).
+        if previous_layout_plan is not None:
+            history = list(recent_layout_plans or [])
+            streak = 0
+            for recent in reversed(history):
+                if recent.layout_family == previous_layout_plan.layout_family:
+                    streak += 1
+                else:
+                    break
+            if not history:
+                streak = 1
+            if streak >= 2:
+                alternate = [
+                    item
+                    for item in pool
+                    if item[0].layout_family != previous_layout_plan.layout_family
+                ]
+                if not alternate:
+                    alternate = [
+                        item
+                        for item in candidates
+                        if item[0].layout_family != previous_layout_plan.layout_family
+                    ]
+                if alternate:
+                    pool = alternate
         if style_preference is not None:
             resolved_style = style_preference
         else:
@@ -1109,6 +1149,9 @@ class LayoutPlanningService:
                 )
             )
         pool_limit = max(candidate_count * 3, candidate_count, 6)
+        # Cap variants per family so preferred shells cannot fill the whole pool
+        # and starve contrasting families on long text-heavy decks.
+        _MAX_VARIANTS_PER_FAMILY = 2
         _SECTION_OPENER_SKIP = frozenset(
             {
                 LayoutFamily.STRATEGY_CARDS,
@@ -1212,6 +1255,13 @@ class LayoutPlanningService:
                         split_reason=None,
                     )
                 )
+                family_variants = sum(
+                    1
+                    for item in decisions
+                    if item.layout_family == definition.family.value
+                )
+                if family_variants >= _MAX_VARIANTS_PER_FAMILY:
+                    break
             if len(decisions) >= pool_limit:
                 break
         if not decisions:

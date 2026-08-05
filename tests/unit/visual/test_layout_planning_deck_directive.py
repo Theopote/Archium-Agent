@@ -315,6 +315,26 @@ class TestLayoutPlanningDeckDirective:
         assert decisions[0].layout_variant == "monument"
         assert all(d.layout_variant != "section_opener" for d in decisions)
 
+    def test_select_best_hard_stops_third_consecutive_family(self) -> None:
+        service = LayoutPlanningService.__new__(LayoutPlanningService)
+        previous = _plan(LayoutFamily.STRATEGY_CARDS, variant="three_cards")
+        recent = [
+            _plan(LayoutFamily.STRATEGY_CARDS, variant="cards_with_lead"),
+            previous,
+        ]
+        directive = _directive(preferred=[LayoutFamily.STRATEGY_CARDS])
+        candidates = [
+            (_plan(LayoutFamily.STRATEGY_CARDS, variant="four_cards"), _report(score=0.99)),
+            (_plan(LayoutFamily.TEXTUAL_ARGUMENT, variant="lead_and_points"), _report(score=0.7)),
+        ]
+        selected = service.select_best_for_deck(
+            candidates,
+            deck_directive=directive,
+            previous_layout_plan=previous,
+            recent_layout_plans=recent,
+        )
+        assert selected.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+
     def test_body_page_does_not_pick_section_opener(self) -> None:
         from archium.infrastructure.layout.layout_family_registry import (
             get_layout_family_registry,

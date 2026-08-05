@@ -18,14 +18,20 @@ EXPORT_POLICY_PRESETS: dict[str, str] = {
     "allow_raster": "允许图片式降级",
 }
 
+# Architectural decks routinely mix editable text with bitmap drawings/photos —
+# default to hybrid so deliver export is not blocked on first click.
+_DEFAULT_EXPORT_POLICY_PRESET = "allow_hybrid"
+
 EXPORT_POLICY_SESSION_KEY = "export_policy_preset"
 CHART_EXPORT_MODE_SESSION_KEY = "chart_export_mode"
 
 
 def get_session_export_policy() -> ExportPolicy:
-    preset = str(st.session_state.get(EXPORT_POLICY_SESSION_KEY) or "strict_native")
+    preset = str(
+        st.session_state.get(EXPORT_POLICY_SESSION_KEY) or _DEFAULT_EXPORT_POLICY_PRESET
+    )
     if preset not in EXPORT_POLICY_PRESETS:
-        preset = "strict_native"
+        preset = _DEFAULT_EXPORT_POLICY_PRESET
     policy = export_policy_from_preset(preset)
     mode_raw = str(
         st.session_state.get(CHART_EXPORT_MODE_SESSION_KEY)
@@ -42,9 +48,11 @@ def render_export_policy_panel(*, key_prefix: str = "deliver") -> ExportPolicy:
     """Render export strategy controls; return active policy."""
     st.markdown("#### 导出策略")
     preset_options = list(EXPORT_POLICY_PRESETS.keys())
-    current = str(st.session_state.get(EXPORT_POLICY_SESSION_KEY) or "strict_native")
+    current = str(
+        st.session_state.get(EXPORT_POLICY_SESSION_KEY) or _DEFAULT_EXPORT_POLICY_PRESET
+    )
     if current not in preset_options:
-        current = "strict_native"
+        current = _DEFAULT_EXPORT_POLICY_PRESET
 
     selected = st.radio(
         "忠实度要求",

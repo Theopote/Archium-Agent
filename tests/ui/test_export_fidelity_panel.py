@@ -8,7 +8,10 @@ from pathlib import Path
 def test_export_policy_panel_source() -> None:
     source = Path("archium/ui/delivery/export_policy_panel.py").read_text(encoding="utf-8")
     assert "strict_native" in source
+    assert "allow_hybrid" in source
     assert "allow_raster" in source
+    assert "_DEFAULT_EXPORT_POLICY_PRESET" in source
+    assert 'allow_hybrid"' in source or "allow_hybrid" in source
     assert "get_session_export_policy" in source
     assert "ChartExportMode" in source
     assert "图表 / 表格导出" in source
