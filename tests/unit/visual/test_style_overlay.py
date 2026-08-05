@@ -109,3 +109,58 @@ def test_reference_style_wins_over_art_direction_on_same_token() -> None:
     )
     result = apply_style_overlays(design, art_direction=art, reference_style=profile)
     assert result.design_system.colors.accent.upper() == "#00FF99"
+
+
+def test_style_preset_overlay_scales_margins() -> None:
+    from archium.application.visual.style_overlay import effective_design_system_for_layout
+
+    design = default_presentation_design_system()
+    art = ArtDirection(
+        project_id=uuid4(),
+        concept_name="tech",
+        rationale="technical board",
+        palette_strategy="cool",
+        typography_strategy="balanced",
+        grid_strategy="standard",
+        image_strategy="contain",
+        drawing_strategy="clean",
+        diagram_strategy="simple",
+        annotation_strategy="minimal",
+        cover_strategy="hero",
+        section_strategy="divider",
+        content_strategy="balanced",
+        closing_strategy="summary",
+        pacing_strategy="steady",
+        style_preset_id="architecture_technical",
+    )
+    effective = effective_design_system_for_layout(design, art_direction=art)
+    # architecture_technical margin_scale=0.82
+    assert effective.page.margin_left == round(design.page.margin_left * 0.82, 4)
+    assert effective.page.margin_top == round(design.page.margin_top * 0.82, 4)
+
+
+def test_style_preset_overlay_is_idempotent() -> None:
+    design = default_presentation_design_system()
+    art = ArtDirection(
+        project_id=uuid4(),
+        concept_name="tech",
+        rationale="technical board",
+        palette_strategy="cool",
+        typography_strategy="balanced",
+        grid_strategy="standard",
+        image_strategy="contain",
+        drawing_strategy="clean",
+        diagram_strategy="simple",
+        annotation_strategy="minimal",
+        cover_strategy="hero",
+        section_strategy="divider",
+        content_strategy="balanced",
+        closing_strategy="summary",
+        pacing_strategy="steady",
+        style_preset_id="architecture_technical",
+    )
+    once = apply_style_overlays(design, art_direction=art).design_system
+    twice = apply_style_overlays(once, art_direction=art).design_system
+    assert twice.page.margin_left == once.page.margin_left
+    assert twice.page.margin_top == once.page.margin_top
+    assert any("already_applied" in w for w in apply_style_overlays(once, art_direction=art).warnings)

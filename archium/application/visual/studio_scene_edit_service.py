@@ -795,49 +795,78 @@ def _layout_element_from_scene_node(node: object, element_id: str) -> LayoutElem
     text_content: str | None = None
     content_ref: str | None = None
     semantic = str(getattr(node, "semantic_role", "") or "").strip()
-    if semantic:
-        with contextlib.suppress(ValueError):
-            role = LayoutElementRole(semantic)
+    semantic_key = semantic.lower().replace("-", "_")
+    # Scene VL nodes use semantic_role labels that are not LayoutElementRole values
+    # (e.g. vl_decoration). Map those before falling back to enum parse / defaults.
+    _SEMANTIC_ROLE_MAP = {
+        "vl_decoration": LayoutElementRole.DECORATION,
+        "vl_symbol": LayoutElementRole.DECORATION,
+        "decoration": LayoutElementRole.DECORATION,
+        "title": LayoutElementRole.TITLE,
+        "hero": LayoutElementRole.HERO_VISUAL,
+        "hero_visual": LayoutElementRole.HERO_VISUAL,
+        "source": LayoutElementRole.SOURCE,
+        "caption": LayoutElementRole.CAPTION,
+        "annotation": LayoutElementRole.ANNOTATION,
+        "lead": LayoutElementRole.LEAD_STATEMENT,
+        "lead_statement": LayoutElementRole.LEAD_STATEMENT,
+        "body": LayoutElementRole.BODY_TEXT,
+        "body_text": LayoutElementRole.BODY_TEXT,
+    }
+    role_from_semantic = False
+    if semantic_key:
+        mapped = _SEMANTIC_ROLE_MAP.get(semantic_key)
+        if mapped is not None:
+            role = mapped
+            role_from_semantic = True
+        else:
+            with contextlib.suppress(ValueError):
+                role = LayoutElementRole(semantic)
+                role_from_semantic = True
 
     if isinstance(node, TextNode):
         content_type = LayoutContentType.TEXT
         text_content = node.text
-        if not semantic:
+        if not role_from_semantic:
             role = LayoutElementRole.BODY_TEXT
     elif isinstance(node, ImageNode):
         content_type = LayoutContentType.IMAGE
         content_ref = str(node.asset_id) if node.asset_id is not None else None
-        if not semantic:
+        if not role_from_semantic:
             role = LayoutElementRole.SUPPORTING_VISUAL
     elif isinstance(node, DrawingNode):
         content_type = LayoutContentType.DRAWING
         content_ref = str(node.asset_id) if getattr(node, "asset_id", None) is not None else None
-        if not semantic:
+        if not role_from_semantic:
             role = LayoutElementRole.HERO_VISUAL
     elif isinstance(node, ShapeNode):
         content_type = LayoutContentType.SHAPE
-        if not semantic:
+        if not role_from_semantic:
             role = LayoutElementRole.DECORATION
     elif isinstance(node, ChartNode):
         content_type = LayoutContentType.CHART
-        if not semantic:
+        if not role_from_semantic:
             role = LayoutElementRole.SUPPORTING_VISUAL
     elif isinstance(node, TableNode):
         content_type = LayoutContentType.TABLE
-        if not semantic:
+        if not role_from_semantic:
             role = LayoutElementRole.BODY_TEXT
     elif isinstance(node, GroupNode):
         content_type = LayoutContentType.GROUP
-        if not semantic:
+        if not role_from_semantic:
             role = LayoutElementRole.DECORATION
     elif isinstance(node, ConnectorNode):
         content_type = LayoutContentType.CONNECTOR
-        if not semantic:
+        if not role_from_semantic:
             role = LayoutElementRole.ANNOTATION
     elif isinstance(node, FreeformNode):
         content_type = LayoutContentType.FREEFORM
-        if not semantic:
+        if not role_from_semantic:
             role = LayoutElementRole.ANNOTATION
+
+    # Scene-only VL decorations often keep ids like vl_thin_line after sync.
+    if element_id.startswith("vl_") and role == LayoutElementRole.BODY_TEXT:
+        role = LayoutElementRole.DECORATION
 
     return LayoutElement(
         id=element_id[:100],

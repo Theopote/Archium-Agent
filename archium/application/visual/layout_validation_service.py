@@ -375,6 +375,7 @@ class LayoutValidationService:
                     LayoutElementRole.FOOTER,
                     LayoutElementRole.PAGE_NUMBER,
                 }
+                and not self._is_non_content_decoration(element)
             ):
                 # Footer/source may sit in bottom margin strip.
                 issues.append(
@@ -393,11 +394,11 @@ class LayoutValidationService:
         issues: list[LayoutValidationIssue] = []
         elements = plan.elements
         for i, left in enumerate(elements):
-            if left.role == LayoutElementRole.DECORATION:
+            if self._is_non_content_decoration(left):
                 continue
             left_rect = Rect(left.x, left.y, left.width, left.height)
             for right in elements[i + 1 :]:
-                if right.role == LayoutElementRole.DECORATION:
+                if self._is_non_content_decoration(right):
                     continue
                 # Overlay hero + lead is intentional for hero-overlay variant.
                 if {left.role, right.role} == {
@@ -418,6 +419,14 @@ class LayoutValidationService:
                         )
                     )
         return issues
+
+    @staticmethod
+    def _is_non_content_decoration(element: LayoutElement) -> bool:
+        """True for decorative shapes that may overlap content intentionally."""
+        if element.role == LayoutElementRole.DECORATION:
+            return True
+        # Legacy scene-sync bug mapped vl_* shapes to BODY_TEXT; treat as deco.
+        return element.id.startswith("vl_") and element.content_type == LayoutContentType.SHAPE
 
     def _check_required_roles(
         self, plan: LayoutPlan, *, require_source: bool

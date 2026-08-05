@@ -1022,7 +1022,9 @@ class VisualEditService:
             from archium.domain.visual.defaults import default_presentation_design_system
 
             design = self._design_repo.save(default_presentation_design_system())
-        return art, design
+        from archium.application.visual.style_overlay import effective_design_system_for_layout
+
+        return art, effective_design_system_for_layout(design, art_direction=art)
 
     def _resolve_design_system(
         self,

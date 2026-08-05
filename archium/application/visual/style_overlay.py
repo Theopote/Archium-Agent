@@ -154,13 +154,25 @@ def apply_style_overlays(
     name_suffix: list[str] = []
 
     if resolved_preset_id:
-        try:
-            preset = get_style_preset(resolved_preset_id)
-            working = apply_style_preset(working, preset)
-            name_suffix.append(f"preset:{preset.id.value}")
-            warnings.append(f"style_overlay:style_preset={preset.id.value}")
-        except KeyError:
-            warnings.append(f"style_overlay:unknown_style_preset:{resolved_preset_id}")
+        # Idempotent when callers pass an already-overlaid DesignSystem (e.g. Studio
+        # validation snapshot fed back into RenderSceneCompiler).
+        src = design_system.source_reference or ""
+        preset_marker = f"|style_preset:{resolved_preset_id}"
+        overlay_marker = f"|style_overlay:preset:{resolved_preset_id}"
+        if preset_marker in src or overlay_marker in src:
+            warnings.append(
+                f"style_overlay:style_preset={resolved_preset_id}:already_applied"
+            )
+        else:
+            try:
+                preset = get_style_preset(resolved_preset_id)
+                working = apply_style_preset(working, preset)
+                name_suffix.append(f"preset:{preset.id.value}")
+                warnings.append(f"style_overlay:style_preset={preset.id.value}")
+            except KeyError:
+                warnings.append(
+                    f"style_overlay:unknown_style_preset:{resolved_preset_id}"
+                )
 
     color_updates: dict[str, str] = {}
     typography_updates: dict[str, TextStyleToken] = {}
@@ -251,6 +263,24 @@ def apply_style_overlays(
         applied_color_tokens=applied_tokens,
         applied_typography_roles=applied_roles,
     )
+
+
+def effective_design_system_for_layout(
+    design_system: DesignSystem,
+    *,
+    art_direction: ArtDirection | None = None,
+    reference_style: ReferenceStyleProfile | None = None,
+) -> DesignSystem:
+    """DesignSystem tokens used by layout generation / validation.
+
+    Must stay in sync with ``LayoutPlanningService.generate_candidates`` so
+    Studio QA does not flag elements that were authored against overlay margins.
+    """
+    return apply_style_overlays(
+        design_system,
+        art_direction=art_direction,
+        reference_style=reference_style,
+    ).design_system
 
 
 def extract_hex_colors(text: str) -> list[str]:

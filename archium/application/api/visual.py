@@ -117,6 +117,18 @@ class VisualApi:
             )
         if art_direction is not None and art_direction.design_system_id is not None:
             design_system = self._design.get(art_direction.design_system_id)
+            # Layout generation / scene compile apply StylePreset overlays (margins,
+            # type scale). Studio validation must use the same effective tokens,
+            # otherwise every page falsely fails LAYOUT.ELEMENT_OUTSIDE_SAFE_AREA.
+            if design_system is not None:
+                from archium.application.visual.style_overlay import (
+                    effective_design_system_for_layout,
+                )
+
+                design_system = effective_design_system_for_layout(
+                    design_system,
+                    art_direction=art_direction,
+                )
 
         loaded: list[LoadedSlideVisual] = []
         for slide in slides:

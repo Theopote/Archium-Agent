@@ -614,3 +614,25 @@ def test_update_node_style_shape_fill() -> None:
     node = result.candidate_scene.node_by_id("block")
     assert isinstance(node, ShapeNode)
     assert node.fill_color == "#112233"
+
+
+def test_sync_recreates_vl_decoration_as_decoration_role() -> None:
+    """VL scene shapes use semantic_role=vl_decoration (not a LayoutElementRole)."""
+    from archium.application.visual.studio_scene_edit_service import (
+        _layout_element_from_scene_node,
+    )
+    from archium.domain.visual.render_scene import ShapeNode
+
+    node = ShapeNode(
+        id="vl_thin_line",
+        x=0.8,
+        y=1.5,
+        width=2.4,
+        height=0.05,
+        shape_kind="rectangle",
+        semantic_role="vl_decoration",
+        fill_color="#2C2C2C",
+    )
+    element = _layout_element_from_scene_node(node, "vl_thin_line")
+    assert element.role == LayoutElementRole.DECORATION
+    assert element.content_type == LayoutContentType.SHAPE

@@ -568,6 +568,10 @@ def replan_slide(
         from archium.domain.visual.defaults import default_presentation_design_system
 
         design = visual.save_design_system(default_presentation_design_system())
+    from archium.application.visual.style_overlay import effective_design_system_for_layout
+
+    # Keep validation aligned with layout generation (StylePreset margin scale).
+    design_for_validation = effective_design_system_for_layout(design, art_direction=art)
 
     llm = create_llm_provider(resolved) if use_llm and resolved.llm_configured else None
     planner = LayoutPlanningService(session, llm=llm, settings=resolved)
@@ -631,7 +635,7 @@ def replan_slide(
 
     validation = LayoutValidationService().validate(
         best,
-        design,
+        design_for_validation,
         require_source=True,
         drawing_hero=best.layout_family == LayoutFamily.DRAWING_FOCUS,
     )
