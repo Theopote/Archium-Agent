@@ -62,6 +62,7 @@ data/outputs/
 data/projects/
 data/chroma/
 data/tmp/
+data/tmp-materials/
 data/trash/
 data/database/*.db
 data/database/*.db-wal
