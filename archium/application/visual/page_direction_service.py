@@ -554,6 +554,8 @@ class PageDirectionService:
             evidence.append(
                 f"merge:deck_directive:{deck_directive.pacing_role.value}"
             )
+            if deck_directive.background_mode:
+                evidence.append(f"merge:color_rhythm:{deck_directive.background_mode}")
 
         if style_preset is not None:
             # Soft bias only — never outrank situation / deck rhythm families.
@@ -584,15 +586,16 @@ class PageDirectionService:
         if not preferred:
             preferred = [LayoutFamily.HYBRID_CANVAS]
 
-        return direction.model_copy(
-            update={
-                "preferred_layout_families": preferred[:3],
-                "forbidden_layout_families": forbidden,
-                "density_override": density,
-                "copy_budget": budget,
-                "evidence": evidence,
-            }
-        )
+        updates: dict[str, object] = {
+            "preferred_layout_families": preferred[:3],
+            "forbidden_layout_families": forbidden,
+            "density_override": density,
+            "copy_budget": budget,
+            "evidence": evidence,
+        }
+        if deck_directive is not None and deck_directive.background_mode:
+            updates["background_mode"] = deck_directive.background_mode
+        return direction.model_copy(update=updates)
 
 
 def apply_page_direction_to_intent(

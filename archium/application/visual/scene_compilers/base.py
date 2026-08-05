@@ -39,6 +39,8 @@ class SceneCompileContext:
     art_direction: ArtDirection | None = None
     reference_style: ReferenceStyleProfile | None = None
     presentation_id: UUID | None = None
+    # VQ-006: optional BackgroundMode value from DeckComposition directive.
+    deck_background_mode: str | None = None
 
     @property
     def semantic_block_type(self) -> SemanticBlockType:

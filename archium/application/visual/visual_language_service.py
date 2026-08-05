@@ -121,6 +121,7 @@ class VisualLanguageService:
             slide=slide,
             page_direction=direction,
             color_story=color_story,
+            background_mode_override=direction.background_mode,
         )
         graphic_motif = compose_graphic_motif(
             slide=slide,

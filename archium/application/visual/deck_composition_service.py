@@ -335,7 +335,29 @@ class DeckCompositionPlanningService:
                 visual_intent=intent,
                 page_direction=intent.page_direction if intent is not None else None,
             )
-            modes.append(composition.background_mode)
+            mode = composition.background_mode
+            # VQ-006: pacing beats override local defaults.
+            if directive.pacing_role == PacingRole.PAUSE:
+                mode = BackgroundMode.LIGHT
+            elif directive.pacing_role == PacingRole.TRANSITION:
+                mode = BackgroundMode.TINTED
+            elif directive.pacing_role == PacingRole.EVIDENCE:
+                mode = BackgroundMode.LIGHT
+            elif directive.pacing_role == PacingRole.CLIMAX:
+                mode = BackgroundMode.ACCENT_WASH
+            elif directive.pacing_role in {PacingRole.OPENING, PacingRole.CLOSING}:
+                mode = BackgroundMode.DARK
+            modes.append(mode)
+        # Breath after climax: force next page away from wash/dark when possible.
+        for index, directive in enumerate(directives):
+            if (
+                directive.pacing_role == PacingRole.CLIMAX
+                and index + 1 < len(modes)
+                and directives[index + 1].pacing_role
+                not in {PacingRole.CLOSING, PacingRole.CLIMAX}
+            ):
+                if modes[index + 1] in {BackgroundMode.DARK, BackgroundMode.ACCENT_WASH}:
+                    modes[index + 1] = BackgroundMode.LIGHT
         adjusted = plan_deck_color_modes(modes)
         softened = 0
         for directive, mode, original in zip(directives, adjusted, modes, strict=True):

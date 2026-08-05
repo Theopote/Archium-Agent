@@ -17,8 +17,8 @@ This document states what is **proven by automation** vs what still requires **h
 | Epic | 主题 | 状态 |
 |------|------|------|
 | VQ-001 | Semantic Typography Composition | **Partial** — multi-scale title/metric runs + ghost text on cover/section/thesis/metric/closing; outline/vertical deferred |
-| VQ-002 | Project Color Composition | **Not started**（ColorSystem = 静态 token） |
-| VQ-003 | Architectural Graphic Motif | **Not started** |
+| VQ-002 | Project Color Composition | **Partial** — page ColorComposition + deck dark-streak soften; applied in RenderSceneCompiler |
+| VQ-003 | Architectural Graphic Motif | **Partial** — motif from VisualMetaphor; plan inject + scene materialize |
 | VQ-004 | Shape / Connector / Freeform formal rendering | **Partial**（枚举/领域存在；主链深度不足） |
 | VQ-005 | Architectural Visual Grammar Library（12） | **Partial**（Grammar v1 / VisualConcept 骨架；未达建筑师气质） |
 | VQ-006 | Deck Rhythm Planner | **Partial**（PacingRole 存在；节奏约束未充分驱动画面） |

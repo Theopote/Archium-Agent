@@ -561,6 +561,26 @@ class VisualWorkflowNodes:
                 auto_approve=True,
             )
 
+            # VQ-006: stamp background_mode onto PageDirection so scene compile sees rhythm.
+            from archium.application.visual.color_composition import (
+                stamp_deck_color_rhythm_onto_intents,
+            )
+
+            design = None
+            design_id = state.get("design_system_id")
+            if design_id:
+                from archium.infrastructure.database.repositories import DesignSystemRepository
+
+                design = DesignSystemRepository(self._runtime.session).get(UUID(str(design_id)))
+            stamped = stamp_deck_color_rhythm_onto_intents(
+                deck_plan=plan,
+                intents=intents,
+                design_system=design,
+            )
+            intent_repo = VisualIntentRepository(self._runtime.session)
+            for intent in stamped:
+                intent_repo.save(intent)
+
             output_dir = Path(state.get("output_dir") or ".")
             output_dir.mkdir(parents=True, exist_ok=True)
             plan_path = output_dir / "deck_composition_plan.json"

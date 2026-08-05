@@ -31,6 +31,7 @@ class GenericContentCompiler:
             art_direction=context.art_direction,
             reference_style=context.reference_style,
             presentation_id=context.presentation_id,
+            deck_background_mode=context.deck_background_mode,
         )
         warnings = list(scene.warnings)
         tag = f"scene_compiler:{self.compiler_id}"

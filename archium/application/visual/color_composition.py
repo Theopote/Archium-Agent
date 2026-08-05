@@ -374,6 +374,67 @@ def apply_deck_color_rhythm(
     return out
 
 
+def stamp_deck_color_rhythm_onto_intents(
+    *,
+    deck_plan: object,
+    intents: list[object],
+    design_system: DesignSystem | None = None,
+) -> list[object]:
+    """Copy directive.background_mode onto PageDirection + refresh ColorComposition.
+
+    Returns updated VisualIntent list (same length/order as input). Call after
+    DeckCompositionPlanningService.plan so scene compile sees the rhythm stamp.
+    """
+    from archium.domain.visual.deck_composition import DeckCompositionPlan
+    from archium.domain.visual.visual_intent import VisualIntent
+
+    if not isinstance(deck_plan, DeckCompositionPlan):
+        return list(intents)
+    by_slide = {d.slide_id: d for d in deck_plan.slide_directives}
+    updated: list[object] = []
+    for intent in intents:
+        if not isinstance(intent, VisualIntent):
+            updated.append(intent)
+            continue
+        directive = by_slide.get(intent.slide_id)
+        mode = directive.background_mode if directive is not None else None
+        if not mode:
+            updated.append(intent)
+            continue
+        direction = intent.page_direction
+        if direction is None:
+            updated.append(intent)
+            continue
+        language = direction.visual_language
+        if language is not None and language.color_composition is not None:
+            recomposed = compose_color_composition(
+                design_system=design_system,
+                visual_intent=intent,
+                page_direction=direction,
+                color_story=language.color_story,
+                background_mode_override=mode,
+            )
+            if design_system is not None:
+                recomposed = resolve_color_composition(
+                    recomposed,
+                    design_system,
+                    color_story=language.color_story,
+                )
+            language = language.model_copy(update={"color_composition": recomposed})
+        direction = direction.model_copy(
+            update={
+                "background_mode": mode,
+                "visual_language": language,
+                "evidence": [
+                    *list(direction.evidence),
+                    f"deck_color_rhythm:{mode}",
+                ],
+            }
+        )
+        updated.append(intent.model_copy(update={"page_direction": direction}))
+    return updated
+
+
 def _background_mode_for(
     *,
     kind: TypographyPageKind,

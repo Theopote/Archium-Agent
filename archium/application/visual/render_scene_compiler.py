@@ -109,6 +109,7 @@ class RenderSceneCompiler:
         art_direction: ArtDirection | None = None,
         reference_style: ReferenceStyleProfile | None = None,
         presentation_id: UUID | None = None,
+        deck_background_mode: str | None = None,
     ) -> RenderScene:
         overlay = apply_style_overlays(
             design_system,
@@ -240,12 +241,10 @@ class RenderSceneCompiler:
         if visual_intent is not None and visual_intent.page_direction is not None:
             language = visual_intent.page_direction.visual_language
         color_comp = language.color_composition if language is not None else None
-        bg_override = None
+        bg_override = deck_background_mode
         # Prefer deck rhythm stamp when PageDirection carries a directive hint.
-        if visual_intent is not None and visual_intent.page_direction is not None:
-            raw = getattr(visual_intent.page_direction, "background_mode", None)
-            if raw:
-                bg_override = raw
+        if not bg_override and visual_intent is not None and visual_intent.page_direction is not None:
+            bg_override = visual_intent.page_direction.background_mode
         if color_comp is None:
             color_comp = compose_color_composition(
                 design_system=effective,
@@ -262,11 +261,25 @@ class RenderSceneCompiler:
         else:
             from archium.application.visual.color_composition import resolve_color_composition
 
-            color_comp = resolve_color_composition(
-                color_comp,
-                effective,
-                color_story=language.color_story if language is not None else None,
-            )
+            if bg_override:
+                color_comp = compose_color_composition(
+                    design_system=effective,
+                    slide=slide,
+                    layout_plan=layout_plan,
+                    visual_intent=visual_intent,
+                    page_direction=(
+                        visual_intent.page_direction if visual_intent is not None else None
+                    ),
+                    color_story=language.color_story if language is not None else None,
+                    page_kind=page_kind,
+                    background_mode_override=bg_override,
+                )
+            else:
+                color_comp = resolve_color_composition(
+                    color_comp,
+                    effective,
+                    color_story=language.color_story if language is not None else None,
+                )
         scene = apply_color_composition_to_scene(scene, color_comp)
 
         # VQ-003: project graphic motif geometry when not already on the plan.

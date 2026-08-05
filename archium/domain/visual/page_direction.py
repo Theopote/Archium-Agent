@@ -92,6 +92,11 @@ class PageDirection(DomainModel):
     visual_concept: VisualConcept | None = None
     visual_language: VisualLanguageSpec | None = None
     page_grammar: PageVisualFormula | None = None
+    # VQ-006: deck color rhythm stamp (BackgroundMode value).
+    background_mode: str | None = Field(
+        default=None,
+        description="Optional BackgroundMode from DeckComposition color rhythm.",
+    )
     evidence: list[str] = Field(default_factory=list)
     source: str = Field(default="rules", min_length=1, max_length=40)
 
@@ -136,5 +141,6 @@ class PageDirection(DomainModel):
             ],
             "situation_rule_id": self.situation_rule_id,
             "expression_mode_id": self.expression_mode_id,
+            "background_mode": self.background_mode,
             "source": self.source,
         }
