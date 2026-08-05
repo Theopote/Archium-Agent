@@ -32,6 +32,7 @@ from archium.application.visual.layout_validation_service import LayoutValidatio
 from archium.application.visual.scene_repair_service import SceneRepairService
 from archium.application.visual.vision import VisionImageGenerationService
 from archium.application.visual.visual_critic_service import VisualCriticService
+from archium.application.visual.critic_refinement_service import CriticRefinementService
 from archium.application.visual.visual_intent_service import VisualIntentService
 from archium.application.visual.visual_scene_repair_workflow_service import (
     VisualSceneRepairWorkflowService,
@@ -63,6 +64,7 @@ from archium.infrastructure.database.visual_repositories import (
     ArtDirectionRepository,
     DesignSystemRepository,
     LayoutPlanRepository,
+    RenderSceneRepository,
     VisualIntentRepository,
 )
 from archium.infrastructure.llm.base import LLMProvider
@@ -148,6 +150,10 @@ class VisualWorkflowRuntime:
             llm_enabled=bool(getattr(settings, "visual_critic_llm_enabled", False)),
             llm_model=getattr(settings, "visual_critic_llm_model", None),
         )
+        self.critic_refinement_service = CriticRefinementService(
+            critic=self.visual_critic_service,
+        )
+        self.render_scenes = RenderSceneRepository(session)
         self.deck_qa_service = DeckQAService()
         self.deck_composition_service = EnhancedDeckCompositionService()
         self.scene_repair_workflow_service = VisualSceneRepairWorkflowService(
@@ -1358,7 +1364,11 @@ class VisualWorkflowNodes:
             return {"errors": [str(exc)], "current_step": step}
 
     def critique_visuals(self, state: VisualWorkflowState) -> VisualWorkflowState:
-        """Read-only Visual Critic + Deck QA after render — never repairs/blocks PPTX."""
+        """Visual Critic + optional VQ-007 bounded refinement + Deck QA.
+
+        Critic diagnosis stays read-only. Refinement applies only allowlisted
+        scene patches (capped rounds/actions) and never blocks PPTX export.
+        """
         logger = self._logger(state)
         step = VisualWorkflowStep.VISUAL_CRITIQUE.value
         if state.get("errors"):
@@ -1366,11 +1376,15 @@ class VisualWorkflowNodes:
 
         critic_on = bool(getattr(self._runtime.settings, "visual_critic_enabled", True))
         deck_on = bool(getattr(self._runtime.settings, "visual_deck_qa_enabled", True))
+        refine_on = bool(
+            getattr(self._runtime.settings, "visual_critic_refinement_enabled", True)
+        )
         if not critic_on and not deck_on:
             return {
                 "current_step": step,
                 "visual_critic_reports": [],
                 "deck_qa_report": None,
+                "visual_critic_refinement_report": None,
             }
 
         try:
@@ -1384,6 +1398,7 @@ class VisualWorkflowNodes:
             render_paths = list(state.get("render_paths") or [])
             payloads: list[dict] = []
             deck_payload: dict | None = None
+            refinement_payload: dict | None = None
             output_dir = Path(state.get("output_dir") or ".")
             output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1409,6 +1424,20 @@ class VisualWorkflowNodes:
                     sum(len(r.findings) for r in reports),
                     sum(1 for r in reports if r.source_image),
                 )
+
+                if refine_on and plans:
+                    refinement_payload = self._run_critic_refinement(
+                        plans=plans,
+                        image_paths=image_paths,
+                        output_dir=output_dir,
+                        warnings=warnings,
+                        render_paths=render_paths,
+                        presentation_id=(
+                            UUID(str(state["presentation_id"]))
+                            if state.get("presentation_id")
+                            else None
+                        ),
+                    )
 
             if deck_on:
                 art = state.get("art_direction")
@@ -1438,6 +1467,7 @@ class VisualWorkflowNodes:
             next_state: VisualWorkflowState = {
                 "visual_critic_reports": payloads,
                 "deck_qa_report": deck_payload,
+                "visual_critic_refinement_report": refinement_payload,
                 "render_paths": render_paths,
                 "warnings": warnings,
                 "current_step": step,
@@ -1452,6 +1482,81 @@ class VisualWorkflowNodes:
                 "current_step": step,
                 "warnings": [f"Visual Critic / Deck QA skipped: {exc}"],
             }
+
+    def _run_critic_refinement(
+        self,
+        *,
+        plans: list[LayoutPlan],
+        image_paths: dict[str, str | Path],
+        output_dir: Path,
+        warnings: list[str],
+        render_paths: list[str],
+        presentation_id: UUID | None,
+    ) -> dict:
+        """VQ-007: allowlisted critic→scene patch loop (soft-fail internally)."""
+        from archium.application.artifact_policy_service import (
+            ArtifactMutationOperation,
+            save_render_scene,
+        )
+
+        settings = self._runtime.settings
+        max_rounds = int(getattr(settings, "visual_critic_refinement_max_rounds", 1))
+        max_actions = int(
+            getattr(settings, "visual_critic_refinement_max_actions_per_page", 3)
+        )
+        scenes = []
+        for plan in plans:
+            scene = self._runtime.render_scenes.get_by_layout_plan(plan.id)
+            if scene is None:
+                listed = self._runtime.render_scenes.list_by_slide(plan.slide_id)
+                scene = listed[0] if listed else None
+            if scene is not None:
+                scenes.append(scene)
+        if not scenes:
+            warnings.append("VQ-007 refinement skipped: no RenderScenes persisted yet.")
+            return {"total_applied": 0, "pages_touched": 0, "notes": ["no_scenes"]}
+
+        result = self._runtime.critic_refinement_service.refine_deck(
+            scenes=scenes,
+            plans=plans,
+            image_paths=image_paths,
+            max_rounds=max_rounds,
+            max_actions_per_page=max_actions,
+            presentation_id=presentation_id,
+        )
+        for page in result.page_results:
+            if page.applied_count <= 0:
+                continue
+            save_render_scene(
+                self._runtime.render_scenes,
+                page.scene,
+                operation=ArtifactMutationOperation.OVERWRITE_CANONICAL,
+                entrypoint="visual_critic.refinement",
+            )
+        payload = result.model_dump(mode="json", exclude={"page_results"})
+        payload["page_summaries"] = [
+            {
+                "slide_id": str(page.scene.slide_id),
+                "applied_count": page.applied_count,
+                "stopped_reason": page.stopped_reason,
+                "actions": [
+                    action.model_dump(mode="json")
+                    for round_ in page.rounds
+                    for action in round_.applied
+                ],
+            }
+            for page in result.page_results
+            if page.applied_count
+        ]
+        path = output_dir / "visual_critic_refinement_report.json"
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        render_paths.append(str(path))
+        if result.total_applied:
+            warnings.append(
+                f"VQ-007 refinement applied {result.total_applied} patch(es) "
+                f"across {result.pages_touched} page(s)"
+            )
+        return payload
 
     def repair_render_scenes(self, state: VisualWorkflowState) -> VisualWorkflowState:
         """Compile RenderScenes from layout plans and run semantic repair loop."""

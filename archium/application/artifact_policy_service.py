@@ -196,6 +196,7 @@ ARTIFACT_WRITE_ENTRYPOINTS: frozenset[str] = frozenset(
         "save_render_scene",
         "delivery.record_pptx_export",
         "scene_proposal.snapshot",
+        "visual_critic.refinement",
     }
 )
 

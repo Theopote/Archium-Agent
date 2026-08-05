@@ -83,7 +83,7 @@ SlideSpec
 | **VQ-004** | Shape / Connector / Freeform formal rendering | 枚举能力进入正式主链；建筑标注可稳定导出 | Phase 2 **Partial**（path freeform ≥3 点；PNG/HTML/PPTX；原生 OOXML deferred） |
 | **VQ-005** | Architectural Visual Grammar Library | 先 12 种高质量语法（含变体 + Golden 截图 + 建筑师评分） | Phase 3 **Partial**（12 profiles 可执行；6 P0 进主链；Golden/盲评未做） |
 | **VQ-006** | Deck Rhythm Planner | 统一字体/网格/色板/母题；变化构图/明暗/密度；Pacing 约束防「页页一样漂亮」 | Phase 2–3 **Partial**（pacing→PageDirection→scene title/motif/ghost） |
-| **VQ-007** | Screenshot Visual Critic | PPTX→截图→多模态 Critic→**有限**修改提案→再渲染 | Phase 4 |
+| **VQ-007** | Screenshot Visual Critic | PPTX→截图→多模态 Critic→**有限**修改提案→再渲染 | Phase 4 **Partial**（allowlist 精修闭环；截图/vision 仍 soft） |
 | **VQ-008** | Architect Blind Review Benchmark | 5 名建筑师盲测；达门槛前不发 Beta | 持续 / 门禁 |
 
 ### 12 种语法（VQ-005 首批）

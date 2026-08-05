@@ -59,6 +59,7 @@ class VisualWorkflowState(TypedDict, total=False):
     visual_critic_reports: list[dict]
     deck_qa_report: dict | None
     scene_repair_report: dict | None
+    visual_critic_refinement_report: dict | None
     output_dir: str | None
     formal_pptx_path: str | None
     scene_pptx_path: str | None
@@ -113,6 +114,7 @@ def initial_visual_workflow_state(
         "visual_critic_reports": [],
         "deck_qa_report": None,
         "scene_repair_report": None,
+        "visual_critic_refinement_report": None,
         "deck_composition_plan": None,
         "output_dir": None,
     }

@@ -569,6 +569,25 @@ class Settings(BaseSettings):
         default=None,
         description="Optional vision-capable model override for Visual Critic LLM path.",
     )
+    visual_critic_refinement_enabled: bool = Field(
+        default=True,
+        description=(
+            "VQ-007: after Visual Critic, apply allowlisted bounded scene refinements "
+            "(title/hero/motif/copy density). Never free-rewrites; never blocks PPTX."
+        ),
+    )
+    visual_critic_refinement_max_rounds: int = Field(
+        default=1,
+        ge=0,
+        le=2,
+        description="VQ-007 max evaluate→propose→apply rounds per page (hard cap 2).",
+    )
+    visual_critic_refinement_max_actions_per_page: int = Field(
+        default=3,
+        ge=0,
+        le=3,
+        description="VQ-007 max allowlisted patches per page per round.",
+    )
     visual_pptx_screenshots_enabled: bool = Field(
         default=True,
         description=(

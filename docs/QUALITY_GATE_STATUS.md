@@ -22,7 +22,7 @@ This document states what is **proven by automation** vs what still requires **h
 | VQ-004 | Shape / Connector / Freeform formal rendering | **Partial** — motif emits Connector/Freeform (≥3 path centers); PNG/HTML/PPTX draw path; true `p:cxnSp` / `a:custGeom` still deferred |
 | VQ-005 | Architectural Visual Grammar Library（12） | **Partial** — 12 executable profiles; 6 P0 showcase drive title/color/motif on compile |
 | VQ-006 | Deck Rhythm Planner | **Partial** — pacing/intensity stamped onto PageDirection; compile varies title scale / motif quieting / ghost opacity; climax budget + color streak already in DeckComposition |
-| VQ-007 | Screenshot Visual Critic | **Partial**（heuristic / screenshot_v1 / 可选 vision；非有限精修闭环） |
+| VQ-007 | Screenshot Visual Critic | **Partial** — screenshot_v1 + optional vision；VQ-007 有限精修闭环（allowlist ≤3 actions/page、≤2 rounds；主链 critique 后可写回 Scene） |
 | VQ-008 | Architect Blind Review Benchmark | **Not started**（**Beta 硬门**） |
 
 ## 三轨状态总览（当前对齐口径）
