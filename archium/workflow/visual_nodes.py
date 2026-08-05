@@ -709,6 +709,8 @@ class VisualWorkflowNodes:
             updated_slides = []
             previous_plan: LayoutPlan | None = None
             recent_plans: list[LayoutPlan] = []
+            art_id = state.get("art_direction_id")
+            candidate_count = int(state.get("candidate_count", 3))
             for slide in sorted(list(state.get("slides") or []), key=lambda item: item.order):
                 candidate_ids = by_slide.get(str(slide.id), [])
                 pairs = []
@@ -743,6 +745,57 @@ class VisualWorkflowNodes:
                     project_id=project_id,
                     art_direction=art,
                 )
+                if previous_plan is not None:
+                    prev_key = (
+                        previous_plan.layout_family.value
+                        if hasattr(previous_plan.layout_family, "value")
+                        else str(previous_plan.layout_family)
+                    )
+                    streak = 0
+                    for recent in reversed(recent_plans):
+                        recent_key = (
+                            recent.layout_family.value
+                            if hasattr(recent.layout_family, "value")
+                            else str(recent.layout_family)
+                        )
+                        if recent_key == prev_key:
+                            streak += 1
+                        else:
+                            break
+                    family_keys = {
+                        (
+                            plan.layout_family.value
+                            if hasattr(plan.layout_family, "value")
+                            else str(plan.layout_family)
+                        )
+                        for plan, _report in pairs
+                    }
+                    # Selection-time safety net: generate phase sometimes emits a
+                    # mono-family pool; without an alternate, Deck QA hits ERROR at 3+.
+                    if streak >= 2 and family_keys == {prev_key}:
+                        emergency = self._runtime.layout_planning_service.generate_candidates(
+                            slide=slide,
+                            visual_intent_id=slide.visual_intent_id,
+                            art_direction_id=UUID(art_id) if art_id else None,
+                            design_system_id=design.id,
+                            candidate_count=max(2, candidate_count),
+                            project_id=project_id,
+                            deck_directive=directive,
+                            previous_layout_plan=previous_plan,
+                            recent_layout_plans=recent_plans,
+                            style_preference=style_preference,
+                        )
+                        for plan, report in emergency:
+                            key = (
+                                plan.layout_family.value
+                                if hasattr(plan.layout_family, "value")
+                                else str(plan.layout_family)
+                            )
+                            if key == prev_key:
+                                continue
+                            saved_alt = self._runtime.layout_plans.save(plan)
+                            pairs.append((saved_alt, report))
+                            by_slide.setdefault(str(slide.id), []).append(str(saved_alt.id))
                 best = self._runtime.layout_planning_service.select_best_for_deck(
                     pairs,
                     deck_directive=directive,

@@ -43,11 +43,12 @@ from archium.domain.visual.enums import LayoutElementRole, LayoutFamily, LayoutI
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
 
 _METHOD = "deck_heuristic_v0"
+# Structural deck chrome — must be all-on or all-off across body pages.
+# SOURCE is citation-driven and may appear only on evidence pages.
 _CHROME_ROLES = frozenset(
     {
         LayoutElementRole.FOOTER,
         LayoutElementRole.PAGE_NUMBER,
-        LayoutElementRole.SOURCE,
     }
 )
 _SECTION_TYPES = frozenset(
@@ -451,8 +452,8 @@ class DeckQAService:
                 DeckQAFinding(
                     rule_code=DECK_CHROME_INCONSISTENT,
                     severity=LayoutIssueSeverity.WARNING,
-                    message="Page chrome (source / footer / page number) is inconsistent across slides.",
-                    suggestion="Keep source, footer, and page-number presence and placement stable.",
+                    message="Page chrome (footer / page number) is inconsistent across slides.",
+                    suggestion="Keep footer and page-number presence and placement stable.",
                     evidence={
                         "intermittent_roles": missing_roles,
                         "page_number_position_drift": position_drift,
@@ -543,19 +544,22 @@ class DeckQAService:
             plan = plan_by_slide.get(directive.slide_id)
             if plan is None:
                 continue
-            expected = (
-                directive.preferred_layout_families[0]
-                if directive.preferred_layout_families
-                else None
-            )
-            if expected is not None and plan.layout_family != expected:
+            preferred = list(directive.preferred_layout_families or [])
+            # Anti-repetition may leave the primary preferred family; only flag when
+            # outside the whole preferred set and the directive did not ask to contrast.
+            if (
+                preferred
+                and plan.layout_family not in preferred
+                and not directive.should_contrast_previous
+            ):
                 family_deviations.append(str(directive.slide_id))
             if directive.slide_index < len(composition_plan.visual_intensity_curve):
                 planned = composition_plan.visual_intensity_curve[directive.slide_index]
                 actual = _intensity_score_for_plan(plan)
                 intensity_deltas.append(abs(planned - actual))
 
-        if len(family_deviations) >= max(2, len(plans) // 3):
+        # Large decks with forced rhythm variety tolerate more primary-family drift.
+        if len(family_deviations) >= max(3, len(plans) // 2):
             findings.append(
                 DeckQAFinding(
                     rule_code=DECK_COMPOSITION_FAMILY_DEVIATION,

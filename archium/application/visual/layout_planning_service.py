@@ -76,6 +76,17 @@ from archium.prompts.layout_plan import (
 logger = get_logger(__name__, operation="layout_planning")
 
 LAYOUT_DECISION_LLM_FALLBACK = "VISUAL.LAYOUT_DECISION_LLM_FALLBACK"
+
+
+def _layout_family_key(plan_or_family: LayoutPlan | LayoutFamily | str) -> str:
+    """Normalize LayoutFamily / plan / raw string for streak comparisons."""
+    if isinstance(plan_or_family, LayoutPlan):
+        family = plan_or_family.layout_family
+    else:
+        family = plan_or_family
+    return family.value if isinstance(family, LayoutFamily) else str(family)
+
+
 _SEMANTIC_SPECIALIST_FAMILIES = frozenset(
     {
         LayoutFamily.PROCESS_NARRATIVE,
@@ -328,10 +339,10 @@ class LayoutPlanningService:
         )
         history = list(recent_layout_plans or [])
         if previous_layout_plan is not None:
-            prev_family = previous_layout_plan.layout_family.value
+            prev_family = _layout_family_key(previous_layout_plan)
             streak = 0
             for recent in reversed(history):
-                if recent.layout_family.value == prev_family:
+                if _layout_family_key(recent) == prev_family:
                     streak += 1
                 else:
                     break
@@ -356,6 +367,24 @@ class LayoutPlanningService:
             if streak >= 2 and contrasting:
                 decisions = list(contrasting)
         decisions = decisions[:candidate_count]
+        # After truncate, still guarantee a contrast seat when we already have a streak.
+        if previous_layout_plan is not None and decisions:
+            prev_family = _layout_family_key(previous_layout_plan)
+            streak = 0
+            for recent in reversed(list(recent_layout_plans or [])):
+                if _layout_family_key(recent) == prev_family:
+                    streak += 1
+                else:
+                    break
+            if not recent_layout_plans:
+                streak = 1
+            if streak >= 1 and all(d.layout_family == prev_family for d in decisions):
+                contrast = self._contrast_family_decision(
+                    previous_family=previous_layout_plan.layout_family,
+                    intent=intent,
+                    deck_directive=deck_directive,
+                )
+                decisions = [contrast, *decisions[:-1]] if len(decisions) > 1 else [contrast]
         content = content_from_slide(slide, intent)
         drawing = intent.dominant_content_type in {
             VisualContentType.SITE_PLAN,
@@ -460,10 +489,11 @@ class LayoutPlanningService:
         # Hard stop before Deck QA ERROR: never pick a third consecutive same family
         # when any alternate family exists (even if lower-scoring / soft-invalid).
         if previous_layout_plan is not None:
+            prev_key = _layout_family_key(previous_layout_plan)
             history = list(recent_layout_plans or [])
             streak = 0
             for recent in reversed(history):
-                if recent.layout_family == previous_layout_plan.layout_family:
+                if _layout_family_key(recent) == prev_key:
                     streak += 1
                 else:
                     break
@@ -473,13 +503,13 @@ class LayoutPlanningService:
                 alternate = [
                     item
                     for item in pool
-                    if item[0].layout_family != previous_layout_plan.layout_family
+                    if _layout_family_key(item[0]) != prev_key
                 ]
                 if not alternate:
                     alternate = [
                         item
                         for item in candidates
-                        if item[0].layout_family != previous_layout_plan.layout_family
+                        if _layout_family_key(item[0]) != prev_key
                     ]
                 if alternate:
                     pool = alternate
@@ -515,7 +545,7 @@ class LayoutPlanningService:
             variant = "cards_with_lead"
             if family in forbidden:
                 family = LayoutFamily.PROCESS_NARRATIVE
-                variant = "horizontal_steps"
+                variant = "timeline"
         else:
             family = LayoutFamily.TEXTUAL_ARGUMENT
             variant = "lead_and_points"
@@ -833,20 +863,21 @@ class LayoutPlanningService:
         if len(history) >= 2:
             last_two = history[-2:]
             if (
-                last_two[0].layout_family == last_two[1].layout_family
-                == plan.layout_family
+                _layout_family_key(last_two[0])
+                == _layout_family_key(last_two[1])
+                == _layout_family_key(plan)
             ):
                 composition_penalty += 0.85
         # Also break two-in-a-row when a third would be preferred by style.
-        if len(history) >= 1 and history[-1].layout_family == plan.layout_family:
+        if len(history) >= 1 and _layout_family_key(history[-1]) == _layout_family_key(plan):
             composition_penalty += 0.18
         for distance, recent in enumerate(reversed(history[-3:]), start=1):
             if previous_layout_plan is not None and recent.id == previous_layout_plan.id:
                 continue
-            if plan.layout_family == recent.layout_family:
+            if _layout_family_key(plan) == _layout_family_key(recent):
                 composition_penalty += 0.06 / distance
             if (
-                plan.layout_family == recent.layout_family
+                _layout_family_key(plan) == _layout_family_key(recent)
                 and plan.layout_variant == recent.layout_variant
             ):
                 composition_penalty += 0.16 / distance

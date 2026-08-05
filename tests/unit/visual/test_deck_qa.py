@@ -220,6 +220,39 @@ class TestDeckQAService:
         report = DeckQAService().evaluate(plans)
         assert any(item.rule_code == DECK_CHROME_INCONSISTENT for item in report.findings)
 
+    def test_intermittent_source_alone_is_not_chrome_error(self) -> None:
+        """Citation SOURCE may appear only on evidence pages."""
+        shared_page = LayoutElement(
+            id="page",
+            role=LayoutElementRole.PAGE_NUMBER,
+            content_type=LayoutContentType.TEXT,
+            text_content="1",
+            x=9.0,
+            y=5.1,
+            width=0.5,
+            height=0.25,
+            style_token="source",
+        )
+        plans = [
+            _plan(
+                LayoutElement(
+                    id="source",
+                    role=LayoutElementRole.SOURCE,
+                    content_type=LayoutContentType.TEXT,
+                    text_content="来源",
+                    x=0.7,
+                    y=5.1,
+                    width=6.0,
+                    height=0.25,
+                    style_token="source",
+                ),
+                shared_page,
+            ),
+            _plan(shared_page.model_copy(update={"id": "page-2", "text_content": "2"})),
+        ]
+        report = DeckQAService().evaluate(plans)
+        assert not any(item.rule_code == DECK_CHROME_INCONSISTENT for item in report.findings)
+
     def test_weak_section_transition(self) -> None:
         slide_id = uuid4()
         plan = _plan(
