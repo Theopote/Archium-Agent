@@ -111,9 +111,28 @@ class VisualLanguageService:
             emotion=direction.narrative_emotion.value,
         )
         asset_ids = self._assets_for(slide, formula)
+        from archium.application.visual.color_composition import compose_color_composition
+        from archium.application.visual.graphic_motif import (
+            compose_graphic_motif,
+            merge_motif_into_primitives,
+        )
+
+        color_composition = compose_color_composition(
+            slide=slide,
+            page_direction=direction,
+            color_story=color_story,
+        )
+        graphic_motif = compose_graphic_motif(
+            slide=slide,
+            page_direction=direction,
+            concept=concept,
+        )
+        primitives = merge_motif_into_primitives(primitives, graphic_motif)
         spec = VisualLanguageSpec(
             typography=typography,
             color_story=color_story,
+            color_composition=color_composition,
+            graphic_motif=graphic_motif,
             decoration=decoration,
             symbols=symbols,
             primitive_ids=primitives,

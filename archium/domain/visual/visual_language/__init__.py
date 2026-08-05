@@ -6,6 +6,10 @@ from archium.domain.visual.visual_language.atmosphere import (
     AtmosphereKind,
     AtmosphereSpec,
 )
+from archium.domain.visual.visual_language.color_composition import (
+    BackgroundMode,
+    ColorComposition,
+)
 from archium.domain.visual.visual_language.color_story import (
     NAMED_SWATCHES,
     ColorRole,
@@ -16,6 +20,12 @@ from archium.domain.visual.visual_language.decoration import (
     DecorationId,
     DecorationRecipe,
     DividerKind,
+)
+from archium.domain.visual.visual_language.graphic_motif import (
+    GraphicMotif,
+    MarkerStyle,
+    MotifType,
+    StrokeStyle,
 )
 from archium.domain.visual.visual_language.image_composition import (
     AnalysisLineKind,
@@ -57,22 +67,28 @@ __all__ = [
     "ArchitecturalSymbolId",
     "AtmosphereKind",
     "AtmosphereSpec",
+    "BackgroundMode",
     "CardStyle",
+    "ColorComposition",
     "ColorRole",
     "ColorStory",
     "DecorationId",
     "DecorationRecipe",
     "DividerKind",
+    "GraphicMotif",
     "ImageBehavior",
     "ImageCompositionMode",
     "ImageCompositionPlan",
     "ImageMaskKind",
     "ImageMaskSpec",
     "ImageSlotRole",
+    "MarkerStyle",
+    "MotifType",
     "NAMED_SWATCHES",
     "ROLE_CATALOG",
     "SYMBOL_GLYPHS",
     "SceneLayerRole",
+    "StrokeStyle",
     "TitleCase",
     "TitleDecoration",
     "TitleScale",

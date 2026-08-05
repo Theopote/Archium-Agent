@@ -209,7 +209,7 @@ class RenderSceneCompiler:
             [n for n in nodes if isinstance(n, TextNode)],
         )
 
-        return RenderScene(
+        scene = RenderScene(
             slide_id=layout_plan.slide_id,
             presentation_id=presentation_id or slide.presentation_id,
             layout_plan_id=layout_plan.id,
@@ -225,6 +225,38 @@ class RenderSceneCompiler:
             source_layout_variant=layout_plan.layout_variant,
             warnings=warnings,
         )
+
+        # VQ-002: always apply page color composition (even without VisualLanguageSpec).
+        from archium.application.visual.color_composition import (
+            apply_color_composition_to_scene,
+            compose_color_composition,
+        )
+
+        language = None
+        if visual_intent is not None and visual_intent.page_direction is not None:
+            language = visual_intent.page_direction.visual_language
+        color_comp = language.color_composition if language is not None else None
+        if color_comp is None:
+            color_comp = compose_color_composition(
+                design_system=effective,
+                slide=slide,
+                layout_plan=layout_plan,
+                visual_intent=visual_intent,
+                page_direction=(
+                    visual_intent.page_direction if visual_intent is not None else None
+                ),
+                color_story=language.color_story if language is not None else None,
+                page_kind=page_kind,
+            )
+        else:
+            from archium.application.visual.color_composition import resolve_color_composition
+
+            color_comp = resolve_color_composition(
+                color_comp,
+                effective,
+                color_story=language.color_story if language is not None else None,
+            )
+        return apply_color_composition_to_scene(scene, color_comp)
 
     def _infer_drawing_type(
         self,

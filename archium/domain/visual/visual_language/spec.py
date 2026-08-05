@@ -8,8 +8,10 @@ from pydantic import Field
 
 from archium.domain._base import DomainModel
 from archium.domain.visual.visual_language.atmosphere import AtmosphereSpec
+from archium.domain.visual.visual_language.color_composition import ColorComposition
 from archium.domain.visual.visual_language.color_story import ColorStory
 from archium.domain.visual.visual_language.decoration import DecorationRecipe
+from archium.domain.visual.visual_language.graphic_motif import GraphicMotif
 from archium.domain.visual.visual_language.image_composition import ImageCompositionPlan
 from archium.domain.visual.visual_language.image_mask import ImageMaskSpec
 from archium.domain.visual.visual_language.symbols import ArchitecturalSymbolId
@@ -27,6 +29,8 @@ class VisualLanguageSpec(DomainModel):
 
     typography: TypographyRecipe = Field(default_factory=TypographyRecipe)
     color_story: ColorStory = Field(default_factory=ColorStory)
+    color_composition: ColorComposition | None = None
+    graphic_motif: GraphicMotif | None = None
     decoration: DecorationRecipe = Field(default_factory=DecorationRecipe)
     symbols: list[ArchitecturalSymbolId] = Field(default_factory=list, max_length=6)
     primitive_ids: list[str] = Field(default_factory=list, max_length=12)
@@ -45,6 +49,10 @@ class VisualLanguageSpec(DomainModel):
         return {
             "typography": self.typography.as_dict(),
             "color_story": self.color_story.as_dict(),
+            "color_composition": (
+                self.color_composition.as_dict() if self.color_composition else None
+            ),
+            "graphic_motif": self.graphic_motif.as_dict() if self.graphic_motif else None,
             "decoration": self.decoration.as_dict(),
             "symbols": [item.value for item in self.symbols],
             "primitive_ids": list(self.primitive_ids),
@@ -62,6 +70,10 @@ class VisualLanguageSpec(DomainModel):
         roles = self.color_story.roles
         if roles:
             bits.append("色 " + "/".join(f"{k}={v}" for k, v in list(roles.items())[:3]))
+        if self.color_composition is not None:
+            bits.append(f"配 `{self.color_composition.background_mode.value}`")
+        if self.graphic_motif is not None:
+            bits.append(f"母题 `{self.graphic_motif.motif_type.value}`")
         decos = self.decoration.decorations
         if decos:
             bits.append("饰 " + ",".join(d.value for d in decos[:3]))

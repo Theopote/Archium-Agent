@@ -33,6 +33,7 @@ def apply_visual_language_to_plan(
     elements = list(plan.elements)
     elements = _apply_typography(elements, language, plan=plan)
     elements = _inject_atmosphere(elements, language, plan=plan, budget=budget)
+    elements = _inject_graphic_motif(elements, language, plan=plan, budget=budget)
     elements = _inject_decorations(
         elements, language, plan=plan, page_order=page_order, budget=budget
     )
@@ -50,6 +51,8 @@ def apply_visual_language_to_plan(
 def apply_visual_language_to_scene(
     scene: RenderScene,
     language: VisualLanguageSpec | None,
+    *,
+    design_system: object | None = None,
 ) -> RenderScene:
     """Post-compile: boost title nodes + append decoration shapes if missing."""
     if language is None:
@@ -57,61 +60,60 @@ def apply_visual_language_to_scene(
     nodes = list(scene.nodes)
     typo = language.typography
     # DEFAULT recipe must not stomp DesignSystem title sizes with ROLE_CATALOG.
-    if typo.recipe == TypographyRecipeId.DEFAULT:
-        return scene
-    primary = typo.resolve_role(typo.primary_role)
-    for index, node in enumerate(nodes):
-        if not isinstance(node, TextNode):
-            continue
-        # Only the page title receives the architectural title scale.
-        # Lead / body copy must keep their layout style_token sizes.
-        if node.semantic_role != "title":
-            continue
-        updates: dict[str, object] = {
-            "letter_spacing": primary.resolved_letter_spacing(),
-            "opacity": primary.opacity,
-            "font_weight": max(node.font_weight, primary.font_weight),
-        }
-        # Prefer explicit recipe sizes; otherwise ROLE_CATALOG only for non-default recipes.
-        target_size = (
-            typo.title_font_size_pt
-            if typo.title_font_size_pt is not None
-            else primary.font_size_pt
-        )
-        updates["font_size"] = target_size
-        text = node.text
-        if primary.case == TitleCase.UPPERCASE:
-            text = text.upper()
-            updates["text"] = text
-            updates["paragraphs"] = list(node.paragraphs)
-        updated = node.model_copy(update=updates)
-        # Keep multi-scale composition runs; rescale relative to previous base.
-        if node.runs and node.font_size > 0:
-            scale = float(target_size) / float(node.font_size)
-            from archium.domain.visual.render_scene import TextRun, set_text_node_runs
+    if typo.recipe != TypographyRecipeId.DEFAULT:
+        primary = typo.resolve_role(typo.primary_role)
+        for index, node in enumerate(nodes):
+            if not isinstance(node, TextNode):
+                continue
+            # Only the page title receives the architectural title scale.
+            # Lead / body copy must keep their layout style_token sizes.
+            if node.semantic_role != "title":
+                continue
+            updates: dict[str, object] = {
+                "letter_spacing": primary.resolved_letter_spacing(),
+                "opacity": primary.opacity,
+                "font_weight": max(node.font_weight, primary.font_weight),
+            }
+            # Prefer explicit recipe sizes; otherwise ROLE_CATALOG only for non-default recipes.
+            target_size = (
+                typo.title_font_size_pt
+                if typo.title_font_size_pt is not None
+                else primary.font_size_pt
+            )
+            updates["font_size"] = target_size
+            text = node.text
+            if primary.case == TitleCase.UPPERCASE:
+                text = text.upper()
+                updates["text"] = text
+                updates["paragraphs"] = list(node.paragraphs)
+            updated = node.model_copy(update=updates)
+            # Keep multi-scale composition runs; rescale relative to previous base.
+            if node.runs and node.font_size > 0:
+                scale = float(target_size) / float(node.font_size)
+                from archium.domain.visual.render_scene import TextRun, set_text_node_runs
 
-            scaled = [
-                TextRun(
-                    text=run.text.upper() if primary.case == TitleCase.UPPERCASE else run.text,
-                    font_family=run.font_family,
-                    font_family_cjk=run.font_family_cjk,
-                    font_family_latin=run.font_family_latin,
-                    font_size=(
-                        round(float(run.font_size) * scale, 1)
-                        if run.font_size is not None
-                        else round(float(target_size) * scale, 1)
-                    ),
-                    font_weight=max(run.font_weight or 0, primary.font_weight)
-                    if run.font_weight is not None
-                    else primary.font_weight,
-                    font_style=run.font_style,
-                    color=run.color,
-                    color_token=run.color_token,
-                )
-                for run in node.runs
-            ]
-            set_text_node_runs(updated, scaled)
-        nodes[index] = updated
+                scaled = [
+                    TextRun(
+                        text=run.text.upper() if primary.case == TitleCase.UPPERCASE else run.text,
+                        font_family=run.font_family,
+                        font_family_cjk=run.font_family_cjk,
+                        font_family_latin=run.font_family_latin,
+                        font_size=(
+                            round(float(run.font_size) * scale, 1)
+                            if run.font_size is not None
+                            else round(float(target_size) * scale, 1)
+                        ),
+                        font_weight=max(run.font_weight or 0, primary.font_weight)
+                        if run.font_weight is not None
+                        else primary.font_weight,
+                        font_style=run.font_style,
+                        color=run.color,
+                        color_token=run.color_token,
+                    )
+                    for run in node.runs
+                ]
+                set_text_node_runs(updated, scaled)
+            nodes[index] = updated
 
     # Color story accent on stroke decorations.
     accent = _swatch_hex(language.color_story, prefer=("conflict", "intervention", "accent"))
@@ -122,7 +124,51 @@ def apply_visual_language_to_scene(
     tag = "visual_language_v1"
     if tag not in warnings:
         warnings.append(tag)
-    return scene.model_copy(update={"nodes": nodes, "warnings": warnings})
+    scene = scene.model_copy(update={"nodes": nodes, "warnings": warnings})
+
+    # VQ-002: page color composition (background mode + accent ratio).
+    # Skip when RenderSceneCompiler already applied (idempotent warning tag).
+    if any(str(w).startswith("color_composition:") for w in scene.warnings):
+        return scene
+    composition = language.color_composition
+    if composition is not None:
+        from archium.application.visual.color_composition import (
+            apply_color_composition_to_scene,
+            resolve_color_composition,
+        )
+        from archium.domain.visual.design_system import DesignSystem
+
+        if design_system is not None and isinstance(design_system, DesignSystem):
+            composition = resolve_color_composition(
+                composition, design_system, color_story=language.color_story
+            )
+        elif composition.background_hex is None:
+            # Fall back to scene theme tokens when DesignSystem not passed.
+            theme_colors = scene.theme_tokens.colors if scene.theme_tokens else {}
+            bg = theme_colors.get("background")
+            primary = theme_colors.get("primary")
+            surface = theme_colors.get("surface")
+            accent_hex = composition.accent_hex or accent or theme_colors.get("accent")
+            from archium.domain.visual.visual_language.color_composition import BackgroundMode
+
+            if composition.background_mode == BackgroundMode.DARK and primary and surface:
+                composition = composition.model_copy(
+                    update={
+                        "background_hex": primary,
+                        "primary_text_hex": surface,
+                        "accent_hex": accent_hex,
+                    }
+                )
+            elif bg:
+                composition = composition.model_copy(
+                    update={
+                        "background_hex": bg,
+                        "primary_text_hex": theme_colors.get("primary_text"),
+                        "accent_hex": accent_hex,
+                    }
+                )
+        scene = apply_color_composition_to_scene(scene, composition)
+    return scene
 
 
 def _apply_typography(
@@ -268,6 +314,126 @@ def _apply_secondary_roles(
             )
             continue
         out.append(element)
+    return out
+
+
+def _inject_graphic_motif(
+    elements: list[LayoutElement],
+    language: VisualLanguageSpec,
+    *,
+    plan: LayoutPlan,
+    budget: VisualBudget,
+) -> list[LayoutElement]:
+    """Materialize motif strokes/markers as sparse decoration geometry."""
+    from archium.domain.visual.visual_language.graphic_motif import MotifType
+    from archium.domain.visual.visual_language.color_story import NAMED_SWATCHES
+
+    motif = language.graphic_motif
+    if motif is None or motif.max_marks <= 0:
+        return elements
+    out = list(elements)
+    if any(el.id.startswith("vl_motif_") for el in out):
+        return out
+
+    stroke_hex = NAMED_SWATCHES.get(
+        language.color_story.roles.get(motif.color_role_bias, ""),
+        None,
+    )
+    if stroke_hex is None:
+        stroke_hex = NAMED_SWATCHES.get("axis_line", "#2C2C2C")
+    if motif.stroke.color_token == "accent":
+        stroke_hex = _swatch_hex(
+            language.color_story,
+            prefer=("conflict", "intervention", "accent"),
+        ) or stroke_hex
+
+    title = next((el for el in out if el.role == LayoutElementRole.TITLE), None)
+    marks = 0
+    max_marks = min(motif.max_marks, max(1, budget.decorative_lines + 1))
+
+    if motif.motif_type in {MotifType.QUIET_RULE, MotifType.SECTION_CUT} and title is not None:
+        if not any(el.id == "vl_motif_title_rule" for el in out):
+            out.append(
+                LayoutElement(
+                    id="vl_motif_title_rule",
+                    role=LayoutElementRole.DECORATION,
+                    content_type=LayoutContentType.SHAPE,
+                    x=title.x,
+                    y=title.y + title.height + 0.05,
+                    width=min(2.6, title.width * 0.4),
+                    height=max(0.012, motif.stroke.width_pt / 72.0),
+                    z_index=max(0, title.z_index - 1),
+                    fill_color=stroke_hex,
+                    stroke_color=stroke_hex,
+                    stroke_width=0,
+                    opacity=motif.stroke.opacity,
+                    layer_role=SceneLayerRole.DECORATION.value,
+                )
+            )
+            marks += 1
+
+    if motif.motif_type == MotifType.AXIS_GRID and marks < max_marks:
+        out.append(
+            LayoutElement(
+                id="vl_motif_axis",
+                role=LayoutElementRole.DECORATION,
+                content_type=LayoutContentType.SHAPE,
+                x=plan.page_width * 0.08,
+                y=plan.page_height * 0.16,
+                width=max(0.01, motif.stroke.width_pt / 72.0),
+                height=plan.page_height * 0.58,
+                z_index=0,
+                fill_color=stroke_hex,
+                stroke_color=stroke_hex,
+                stroke_width=0,
+                opacity=motif.stroke.opacity,
+                layer_role=SceneLayerRole.DECORATION.value,
+            )
+        )
+        marks += 1
+
+    if motif.motif_type in {MotifType.FLOW_NODES, MotifType.PATH_SEQUENCE, MotifType.MODULE_INDEX}:
+        count = min(max_marks - marks, 3 if motif.repetition_rule == "sparse" else 4)
+        for index in range(max(0, count)):
+            t = (index + 1) / (count + 1)
+            size = motif.marker.size_pt / 72.0
+            out.append(
+                LayoutElement(
+                    id=f"vl_motif_node_{index}",
+                    role=LayoutElementRole.DECORATION,
+                    content_type=LayoutContentType.SHAPE,
+                    x=plan.page_width * (0.18 + 0.55 * t) - size / 2,
+                    y=plan.page_height * (0.62 if motif.motif_type != MotifType.MODULE_INDEX else 0.78),
+                    width=size,
+                    height=size,
+                    z_index=4,
+                    fill_color=stroke_hex if motif.marker.fill_token else None,
+                    stroke_color=stroke_hex,
+                    stroke_width=1.0,
+                    opacity=min(1.0, motif.stroke.opacity + 0.1),
+                    layer_role=SceneLayerRole.ANNOTATION.value,
+                )
+            )
+            marks += 1
+        if motif.motif_type == MotifType.FLOW_NODES and marks < max_marks + 2:
+            # Path approximation as thin horizontal connector.
+            out.append(
+                LayoutElement(
+                    id="vl_motif_flow",
+                    role=LayoutElementRole.DECORATION,
+                    content_type=LayoutContentType.SHAPE,
+                    x=plan.page_width * 0.2,
+                    y=plan.page_height * 0.62 + (motif.marker.size_pt / 144.0),
+                    width=plan.page_width * 0.52,
+                    height=max(0.012, motif.stroke.width_pt / 72.0),
+                    z_index=3,
+                    fill_color=stroke_hex,
+                    stroke_color=stroke_hex,
+                    stroke_width=0,
+                    opacity=motif.stroke.opacity,
+                    layer_role=SceneLayerRole.ANNOTATION.value,
+                )
+            )
     return out
 
 

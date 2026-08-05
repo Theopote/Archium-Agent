@@ -59,7 +59,8 @@ def _apply_language_if_present(
         apply_visual_language_to_scene,
     )
 
-    return apply_visual_language_to_scene(scene, language)
+    design = context.design_system
+    return apply_visual_language_to_scene(scene, language, design_system=design)
 
 
 def default_scene_compilers(
