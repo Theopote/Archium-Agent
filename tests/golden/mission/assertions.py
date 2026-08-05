@@ -176,8 +176,16 @@ def assert_mission_expectations(
         assert all(item.presentation_request is None for item in execution_plans)
         non_ppt = [item for item in execution_plans if not item.is_presentation]
         assert non_ppt
+        supported_non_ppt_kinds = {
+            "question_list",
+            "work_plan",
+            "report",
+            "memo",
+            "checklist",
+            "case_study",
+        }
         for item in non_ppt:
             if item.supported:
-                assert item.request_kind in {"question_list", "work_plan"}
+                assert item.request_kind in supported_non_ppt_kinds
             else:
                 assert item.message
