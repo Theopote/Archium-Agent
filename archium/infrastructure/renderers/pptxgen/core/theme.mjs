@@ -55,12 +55,12 @@ const BASE = {
     color: "666666",
   },
   component_styles: {
-    title: { fontSize: 34, bold: true },
-    section: { fontSize: 30, bold: true },
-    header: { fontSize: 24, bold: true },
-    body: { fontSize: 16 },
-    caption: { fontSize: 12 },
-    metric: { fontSize: 22, bold: true },
+    title: { fontSize: 20, bold: true },
+    section: { fontSize: 22, bold: true },
+    header: { fontSize: 16, bold: true },
+    body: { fontSize: 13 },
+    caption: { fontSize: 11 },
+    metric: { fontSize: 20, bold: true },
   },
 };
 

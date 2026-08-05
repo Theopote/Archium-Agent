@@ -27,8 +27,10 @@ class TestDesignSystem:
         assert system.page.width == 10.0
         assert system.page.height == 5.625
         assert system.grid.columns == 12
-        assert system.typography.body.font_size == 16
+        assert system.typography.body.font_size == 14
+        assert system.typography.title.font_size == 20
         assert system.colors.primary.startswith("#")
+        assert system.page.margin_left == 0.55
         assert system.thresholds.min_body_font_pt == 14.0
 
     def test_spacing_must_be_non_decreasing(self) -> None:
@@ -60,7 +62,8 @@ class TestDesignSystem:
         system = default_presentation_design_system()
         restored = DesignSystem.model_validate(system.model_dump(mode="json"))
         assert restored.name == system.name
-        assert restored.typography.title.font_size == 34
+        assert restored.typography.title.font_size == 20
+        assert restored.colors.background.upper() not in {"#FFFFFF", "#F7F6F3"}
 
 
 class TestArtDirection:

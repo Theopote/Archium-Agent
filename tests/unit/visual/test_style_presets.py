@@ -79,8 +79,8 @@ def test_minimal_vs_technical_measurable_token_diff() -> None:
     assert minimal.thresholds.min_whitespace_ratio >= 0.35
     assert design_system_fingerprint(minimal) != design_system_fingerprint(technical)
     # Base unchanged
-    assert base.page.margin_left == 0.7
-    assert base.typography.body.font_size == 16
+    assert base.page.margin_left == 0.55
+    assert base.typography.body.font_size == 14
 
 
 def test_style_overlay_applies_preset_from_art_direction() -> None:

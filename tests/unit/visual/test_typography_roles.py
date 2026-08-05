@@ -95,7 +95,8 @@ def test_cover_direction_uses_hero_title_role() -> None:
     typo = direction.visual_language.typography
     assert typo.primary_role == TypographyRole.HERO_TITLE
     hero = typo.resolve_role(TypographyRole.HERO_TITLE)
-    assert hero.font_size_pt >= 48
+    assert hero.font_size_pt >= 26
+    assert hero.font_size_pt <= 36
     assert hero.style_token == "display"
 
 
@@ -172,4 +173,5 @@ def test_case_001_cover_plan_has_hero_typography() -> None:
         (el for el in plan.elements if el.role == LayoutElementRole.TITLE), None
     )
     assert title is not None
-    assert title.font_size_override is not None and title.font_size_override >= 48
+    assert title.font_size_override is not None and title.font_size_override >= 26
+    assert title.font_size_override <= 36

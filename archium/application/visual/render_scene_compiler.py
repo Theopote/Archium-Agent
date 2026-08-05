@@ -23,6 +23,7 @@ from archium.application.visual.scene_fonts import (
 )
 from archium.application.visual.style_overlay import apply_style_overlays
 from archium.application.visual.svg_icon_recolor import is_architectural_icon_ref
+from archium.application.visual.text_emphasis import build_emphasis_text_runs
 from archium.application.visual.text_style_resolve import resolve_text_style
 from archium.domain.visual.text_style_resolve import TYPOGRAPHY_TOKEN_NAMES
 from archium.domain.reference_style import ReferenceStyleProfile
@@ -56,6 +57,7 @@ from archium.domain.visual.render_scene import (
     ThemeTokens,
     bottom_fade_gradient,
     refresh_freeform_geometry,
+    set_text_node_runs,
     silhouette_overlay_frame,
 )
 from archium.domain.visual.visual_intent import VisualIntent
@@ -423,40 +425,68 @@ class RenderSceneCompiler:
             latin_family=latin_family,
             bold=typography.font_weight >= 600,
         )
-        nodes.append(
-            TextNode(
-                id=element.id,
-                semantic_role=semantic,
-                source_layout_element_id=element.id,
-                x=element.x,
-                y=element.y,
-                width=element.width,
-                height=element.height,
-                z_index=element.z_index,
-                locked=element.locked,
-                lock_scopes=[scope.value for scope in element.lock_scopes],
-                text=text,
-                paragraphs=[TextParagraph(text=text, alignment=element.alignment)],
-                font_family=resolved.primary,
-                font_family_cjk=resolved.cjk,
-                font_family_latin=resolved.latin,
-                font_size=typography.font_size,
-                font_weight=typography.font_weight,
-                color=color,
-                color_token=typography.color_token,
-                typography_token=typography_token,
-                alignment=element.alignment or typography.alignment,
-                line_height=typography.line_height,
-                letter_spacing=(
-                    element.letter_spacing
-                    if element.letter_spacing is not None
-                    else typography.letter_spacing
-                ),
-                opacity=element.opacity if element.opacity is not None else 1.0,
-                padding=BoxSpacing(left=4 / 96, right=4 / 96, top=2 / 96, bottom=2 / 96),
-                overflow_policy=_scene_overflow_policy(overflow_policy),
-            )
+        node = TextNode(
+            id=element.id,
+            semantic_role=semantic,
+            source_layout_element_id=element.id,
+            x=element.x,
+            y=element.y,
+            width=element.width,
+            height=element.height,
+            z_index=element.z_index,
+            locked=element.locked,
+            lock_scopes=[scope.value for scope in element.lock_scopes],
+            text=text,
+            paragraphs=[TextParagraph(text=text, alignment=element.alignment)],
+            font_family=resolved.primary,
+            font_family_cjk=resolved.cjk,
+            font_family_latin=resolved.latin,
+            font_size=typography.font_size,
+            font_weight=typography.font_weight,
+            color=color,
+            color_token=typography.color_token,
+            typography_token=typography_token,
+            alignment=element.alignment or typography.alignment,
+            line_height=typography.line_height,
+            letter_spacing=(
+                element.letter_spacing
+                if element.letter_spacing is not None
+                else typography.letter_spacing
+            ),
+            opacity=element.opacity if element.opacity is not None else 1.0,
+            padding=BoxSpacing(left=4 / 96, right=4 / 96, top=2 / 96, bottom=2 / 96),
+            overflow_policy=_scene_overflow_policy(overflow_policy),
         )
+        if element.role in {
+            LayoutElementRole.BODY_TEXT,
+            LayoutElementRole.LEAD_STATEMENT,
+            LayoutElementRole.ANNOTATION,
+            LayoutElementRole.CAPTION,
+            LayoutElementRole.TITLE,
+        }:
+            accent = design_system.colors.resolve("accent")
+            emphasize_lead = element.role == LayoutElementRole.LEAD_STATEMENT
+            # Titles: only metrics get accent (avoid painting whole title orange).
+            use_keywords = element.role != LayoutElementRole.TITLE
+            emphasis_runs = build_emphasis_text_runs(
+                text,
+                base_color=color,
+                accent_color=accent,
+                base_weight=typography.font_weight,
+                emphasize_weight=max(700, typography.font_weight),
+                base_size=typography.font_size,
+                emphasize_lead_clause=emphasize_lead,
+                keywords=use_keywords,
+            )
+            if len(emphasis_runs) > 1 or (
+                emphasis_runs
+                and (
+                    emphasis_runs[0].font_weight != typography.font_weight
+                    or emphasis_runs[0].color != color
+                )
+            ):
+                set_text_node_runs(node, emphasis_runs)
+        nodes.append(node)
         return nodes
 
     def _compile_image(
@@ -644,7 +674,7 @@ def _typography_token_for_role(role: LayoutElementRole) -> str:
     mapping = {
         LayoutElementRole.TITLE: "title",
         LayoutElementRole.SUBTITLE: "subtitle",
-        LayoutElementRole.LEAD_STATEMENT: "heading",
+        LayoutElementRole.LEAD_STATEMENT: "subtitle",
         LayoutElementRole.BODY_TEXT: "body",
         LayoutElementRole.CAPTION: "caption",
         LayoutElementRole.METRIC: "metric",

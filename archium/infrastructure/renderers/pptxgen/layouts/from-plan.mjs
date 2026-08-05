@@ -123,7 +123,11 @@ export function applyPlanLayout(pres, tokens, structure = null) {
   const width = Number(page.width) || 10;
   const height = Number(page.height) || 5.625;
   const colors = tokens?.colors ?? {};
-  const background = _stripHash(colors.background || colors.white || "FFFFFF");
+  // Prefer DesignSystem board tint; never fall back to pure white (reads as
+  // "no color system" even when theme tokens were meant to be cool grey).
+  const background = _stripHash(
+    colors.background || colors.surface || "D9E2EA",
+  );
 
   if (structure && structure.mode === "structured") {
     defineStructuredMasters(pres, structure, { width, height, background });

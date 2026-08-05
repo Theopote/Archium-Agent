@@ -32,7 +32,8 @@ def test_cover_gets_giant_bilingual_language() -> None:
     assert typo.recipe == TypographyRecipeId.GIANT_BILINGUAL
     assert typo.bilingual is True
     assert typo.english_label
-    assert typo.title_font_size_pt and typo.title_font_size_pt >= 48
+    assert typo.title_font_size_pt and typo.title_font_size_pt >= 26
+    assert typo.title_font_size_pt <= 36
     assert "thin_line" in [
         d.value for d in direction.visual_language.decoration.decorations
     ]
@@ -119,7 +120,8 @@ def test_apply_injects_decoration_elements_on_plan() -> None:
     assert "vl_thin_line" in ids
     assert "vl_title_en" in ids
     title = next(el for el in updated.elements if el.id == "title")
-    assert title.font_size_override and title.font_size_override >= 48
+    assert title.font_size_override and title.font_size_override >= 26
+    assert title.font_size_override <= 36
 
 
 def test_case_001_cover_plan_carries_visual_language_elements() -> None:

@@ -32,8 +32,8 @@ class TextualArgumentLayoutGenerator(LayoutGenerator):
 
         title_h = self._title_band_height(context)
         if sparse_text_opener:
-            # Cover / sparse section: the title is the primary visual mass.
-            title_h = max(title_h * 1.85, 1.15)
+            # Cover / sparse section: slightly taller title, not a giant empty band.
+            title_h = max(title_h * 1.2, 0.72)
         elements.append(
             LayoutElement(
                 id="title",
@@ -72,7 +72,7 @@ class TextualArgumentLayoutGenerator(LayoutGenerator):
                     y=body.y + body.height * 0.08,
                     width=lead_w,
                     height=lead_h,
-                    style_token="title",
+                    style_token="subtitle",
                 )
             )
             points = "\n".join(
@@ -201,39 +201,37 @@ class TextualArgumentLayoutGenerator(LayoutGenerator):
             # lead_and_points (default): message dominates; points only when real.
             has_points = bool(context.content.key_points)
             colors = context.design_system.colors
-            if not has_points:
-                # Sparse section opener — same editorial cues as monument, without
-                # pretending this is a project cover.
-                elements.append(
-                    LayoutElement(
-                        id="accent_bar",
-                        role=LayoutElementRole.DECORATION,
-                        content_type=LayoutContentType.SHAPE,
-                        x=safe.x,
-                        y=safe.y,
-                        width=0.1,
-                        height=safe.height * 0.55,
-                        fill_color=colors.accent,
-                        stroke_color=colors.accent,
-                        stroke_width=0,
-                        z_index=0,
-                    )
+            # Editorial chrome on every body textual page — stops flat white slabs.
+            elements.append(
+                LayoutElement(
+                    id="accent_bar",
+                    role=LayoutElementRole.DECORATION,
+                    content_type=LayoutContentType.SHAPE,
+                    x=safe.x,
+                    y=safe.y,
+                    width=0.1,
+                    height=safe.height * (0.55 if not has_points else 0.72),
+                    fill_color=colors.accent,
+                    stroke_color=colors.accent,
+                    stroke_width=0,
+                    z_index=0,
                 )
-                elements.append(
-                    LayoutElement(
-                        id="title_rule",
-                        role=LayoutElementRole.DECORATION,
-                        content_type=LayoutContentType.SHAPE,
-                        x=safe.x + 0.28,
-                        y=safe.y + title_h + spacing.xs,
-                        width=min(2.0, safe.width * 0.24),
-                        height=0.035,
-                        fill_color=colors.accent,
-                        stroke_color=colors.accent,
-                        stroke_width=0,
-                        z_index=1,
-                    )
+            )
+            elements.append(
+                LayoutElement(
+                    id="title_rule",
+                    role=LayoutElementRole.DECORATION,
+                    content_type=LayoutContentType.SHAPE,
+                    x=safe.x + 0.22,
+                    y=safe.y + title_h + spacing.xs,
+                    width=min(2.4, safe.width * 0.28),
+                    height=0.035,
+                    fill_color=colors.primary,
+                    stroke_color=colors.primary,
+                    stroke_width=0,
+                    z_index=1,
                 )
+            )
             # Without a hero image, put lead | points side-by-side so the page
             # does not collapse into a left-stacked text column.
             if has_points and not context.content.hero_asset_ref:
@@ -280,7 +278,8 @@ class TextualArgumentLayoutGenerator(LayoutGenerator):
                     )
                 )
             else:
-                lead_h = body.height * (0.42 if not has_points else 0.35)
+                # Stacked: grow lead + points to occupy the body band (less empty board).
+                lead_h = body.height * (0.48 if not has_points else 0.38)
                 lead_h = min(
                     lead_h,
                     self._text_band_height(
@@ -288,8 +287,25 @@ class TextualArgumentLayoutGenerator(LayoutGenerator):
                         context.content.message,
                         "subtitle",
                         box_width_in=body.width * (0.82 if not has_points else 1.0),
-                        min_height=0.5 if not has_points else body.height * 0.28,
+                        min_height=0.65 if not has_points else body.height * 0.32,
                     ),
+                )
+                # Soft surface panel behind copy — gives the page a color field.
+                panel_h = min(body.height * 0.92, lead_h + (1.4 if has_points else 0.35))
+                elements.append(
+                    LayoutElement(
+                        id="copy_panel",
+                        role=LayoutElementRole.DECORATION,
+                        content_type=LayoutContentType.SHAPE,
+                        x=body.x,
+                        y=body.y,
+                        width=body.width * (0.88 if not has_points else 0.96),
+                        height=panel_h,
+                        fill_color=colors.surface,
+                        stroke_color=colors.border,
+                        stroke_width=0.5,
+                        z_index=0,
+                    )
                 )
                 elements.append(
                     LayoutElement(
@@ -301,9 +317,9 @@ class TextualArgumentLayoutGenerator(LayoutGenerator):
                         ),
                         content_type=LayoutContentType.TEXT,
                         text_content=context.content.message,
-                        x=body.x + (0.28 if not has_points else 0.0),
-                        y=body.y + (spacing.sm if not has_points else 0.0),
-                        width=body.width * (0.82 if not has_points else 1.0),
+                        x=body.x + (0.28 if not has_points else 0.12),
+                        y=body.y + (spacing.sm if not has_points else spacing.xs),
+                        width=body.width * (0.82 if not has_points else 0.92),
                         height=lead_h,
                         style_token="caption" if not has_points else "subtitle",
                         z_index=2,
@@ -312,7 +328,7 @@ class TextualArgumentLayoutGenerator(LayoutGenerator):
                 if has_points:
                     points = "\n".join(f"· {point}" for point in context.content.key_points)
                     point_h = min(
-                        max(0.55, 0.28 * len(context.content.key_points) + 0.2),
+                        max(0.85, 0.34 * len(context.content.key_points) + 0.3),
                         body.height - lead_h - spacing.md,
                     )
                     elements.append(
@@ -321,11 +337,12 @@ class TextualArgumentLayoutGenerator(LayoutGenerator):
                             role=LayoutElementRole.BODY_TEXT,
                             content_type=LayoutContentType.TEXT,
                             text_content=points,
-                            x=body.x,
+                            x=body.x + 0.12,
                             y=body.y + lead_h + spacing.md,
-                            width=body.width * (0.7 if context.content.hero_asset_ref else 0.82),
+                            width=body.width * (0.7 if context.content.hero_asset_ref else 0.88),
                             height=point_h,
                             style_token="body",
+                            z_index=2,
                         )
                     )
 

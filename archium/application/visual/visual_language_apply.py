@@ -56,6 +56,9 @@ def apply_visual_language_to_scene(
         return scene
     nodes = list(scene.nodes)
     typo = language.typography
+    # DEFAULT recipe must not stomp DesignSystem title sizes with ROLE_CATALOG.
+    if typo.recipe == TypographyRecipeId.DEFAULT:
+        return scene
     primary = typo.resolve_role(typo.primary_role)
     for index, node in enumerate(nodes):
         if not isinstance(node, TextNode):
@@ -67,9 +70,13 @@ def apply_visual_language_to_scene(
         updates: dict[str, object] = {
             "letter_spacing": primary.resolved_letter_spacing(),
             "opacity": primary.opacity,
-            "font_size": primary.font_size_pt,
             "font_weight": max(node.font_weight, primary.font_weight),
         }
+        # Prefer explicit recipe sizes; otherwise ROLE_CATALOG only for non-default recipes.
+        if typo.title_font_size_pt is not None:
+            updates["font_size"] = typo.title_font_size_pt
+        else:
+            updates["font_size"] = primary.font_size_pt
         text = node.text
         if primary.case == TitleCase.UPPERCASE:
             text = text.upper()

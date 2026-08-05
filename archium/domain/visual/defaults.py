@@ -31,10 +31,10 @@ _PAGE_16X9 = PageSystem(
     width=10.0,
     height=5.625,
     unit="in",
-    margin_top=0.45,
-    margin_right=0.7,
-    margin_bottom=0.45,
-    margin_left=0.7,
+    margin_top=0.38,
+    margin_right=0.55,
+    margin_bottom=0.38,
+    margin_left=0.55,
     safe_area_enabled=True,
 )
 
@@ -61,31 +61,33 @@ def _text(
 
 
 def _architecture_board_colors() -> ColorSystem:
+    # Cool ink board — visibly tinted (not office-white) with a warm accent for hierarchy.
     return ColorSystem(
-        background="#F7F6F3",
-        surface="#FFFFFF",
-        primary_text="#1A1A1A",
-        secondary_text="#4A4A4A",
-        muted_text="#777777",
-        primary="#2C3E50",
-        secondary="#5B6770",
-        accent="#8B4513",
+        background="#D9E2EA",
+        surface="#F3F7FA",
+        primary_text="#132533",
+        secondary_text="#3A4F5F",
+        muted_text="#6A7D8C",
+        primary="#1B3A4B",
+        secondary="#4A6578",
+        accent="#C45C26",
         warning="#C47B2B",
         success="#3D6B4F",
-        border="#D9D5CF",
-        overlay="#00000033",
+        border="#B7C5D1",
+        overlay="#13253333",
     )
 
 
 def _typography() -> TypographySystem:
+    # Body-page titles stay restrained; covers use display / VL recipes.
     return TypographySystem(
-        display=_text(size=38, weight=700, color="primary_text", max_lines=2),
-        title=_text(size=34, weight=700, color="primary_text", max_lines=2),
-        subtitle=_text(size=18, weight=400, color="secondary_text", max_lines=2),
-        heading=_text(size=24, weight=700, color="primary_text", max_lines=2),
-        body=_text(size=16, weight=400, color="primary_text"),
-        caption=_text(size=12, weight=400, color="muted_text", max_lines=3),
-        metric=_text(size=22, weight=700, color="primary", alignment="center"),
+        display=_text(size=28, weight=700, color="primary", max_lines=2),
+        title=_text(size=20, weight=700, color="primary", max_lines=2),
+        subtitle=_text(size=14, weight=600, color="primary", max_lines=3),
+        heading=_text(size=16, weight=700, color="primary", max_lines=2),
+        body=_text(size=14, weight=400, color="primary_text"),
+        caption=_text(size=11, weight=400, color="secondary_text", max_lines=3),
+        metric=_text(size=20, weight=700, color="accent", alignment="center"),
         footnote=_text(size=9, weight=400, color="muted_text", max_lines=1),
         source=_text(size=8, weight=400, color="muted_text", max_lines=1),
     )

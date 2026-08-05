@@ -314,9 +314,9 @@ class VisualLanguageService:
                 decoration=TitleDecoration.THIN_LINE,
                 bilingual=True,
                 english_label=english or "CAMPUS UPDATE",
-                title_font_size_pt=54,
-                english_font_size_pt=14,
-                letter_spacing_em=0.08,
+                title_font_size_pt=28,
+                english_font_size_pt=11,
+                letter_spacing_em=0.05,
                 opacity=0.95,
             )
 
@@ -333,9 +333,9 @@ class VisualLanguageService:
                 decoration=TitleDecoration.THIN_LINE,
                 bilingual=True,
                 english_label=english or "DESIGN STRATEGY",
-                title_font_size_pt=36,
-                english_font_size_pt=12,
-                letter_spacing_em=0.06,
+                title_font_size_pt=22,
+                english_font_size_pt=10,
+                letter_spacing_em=0.03,
                 opacity=1.0,
             )
 
@@ -349,9 +349,9 @@ class VisualLanguageService:
                 decoration=TitleDecoration.THIN_LINE,
                 bilingual=True,
                 english_label=english or "CIRCULATION CONFLICT",
-                title_font_size_pt=32,
-                english_font_size_pt=11,
-                letter_spacing_em=0.04,
+                title_font_size_pt=24,
+                english_font_size_pt=10,
+                letter_spacing_em=0.03,
                 opacity=1.0,
             )
 
