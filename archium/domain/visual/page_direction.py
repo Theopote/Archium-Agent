@@ -97,6 +97,19 @@ class PageDirection(DomainModel):
         default=None,
         description="Optional BackgroundMode from DeckComposition color rhythm.",
     )
+    # VQ-006: pacing stamps so RenderSceneCompiler can vary title/motif/ghost.
+    pacing_role: str | None = Field(
+        default=None,
+        description="Optional PacingRole value from DeckComposition.",
+    )
+    visual_intensity: str | None = Field(
+        default=None,
+        description="Optional VisualIntensity value from DeckComposition.",
+    )
+    should_contrast_previous: bool = Field(
+        default=False,
+        description="Deck rhythm contrast flag from SlideCompositionDirective.",
+    )
     evidence: list[str] = Field(default_factory=list)
     source: str = Field(default="rules", min_length=1, max_length=40)
 
@@ -142,5 +155,8 @@ class PageDirection(DomainModel):
             "situation_rule_id": self.situation_rule_id,
             "expression_mode_id": self.expression_mode_id,
             "background_mode": self.background_mode,
+            "pacing_role": self.pacing_role,
+            "visual_intensity": self.visual_intensity,
+            "should_contrast_previous": self.should_contrast_previous,
             "source": self.source,
         }

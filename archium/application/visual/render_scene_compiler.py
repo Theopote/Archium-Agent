@@ -333,7 +333,23 @@ class RenderSceneCompiler:
                 else None
             ),
         )
-        return apply_grammar_to_scene(scene, grammar, visual_intent=visual_intent)
+        scene = apply_grammar_to_scene(scene, grammar, visual_intent=visual_intent)
+
+        # VQ-006: pacing stamps change title scale / motif quieting / ghost opacity.
+        from archium.application.visual.deck_rhythm import (
+            apply_deck_rhythm_to_scene,
+            resolve_page_rhythm,
+        )
+
+        direction = (
+            visual_intent.page_direction if visual_intent is not None else None
+        )
+        if direction is not None and (
+            direction.pacing_role or direction.visual_intensity or direction.background_mode
+        ):
+            stamp = resolve_page_rhythm(page_direction=direction)
+            scene = apply_deck_rhythm_to_scene(scene, stamp)
+        return scene
 
     def _infer_drawing_type(
         self,

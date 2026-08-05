@@ -80,9 +80,9 @@ SlideSpec
 | **VQ-001** | Semantic Typography Composition | Rich runs：多字号/字重/字距/透明度/描边/空心/旋转/纵排/巨型背景字；标题可拆分 | Phase 1 **Partial**（多字号 runs + ghost；描边/纵排 deferred） |
 | **VQ-002** | Project Color Composition | 页面级色比 + Deck 色彩节奏；非「所有标题同一主色」 | Phase 2 **Partial**（BackgroundMode + accent wash/edge） |
 | **VQ-003** | Architectural Graphic Motif | 项目级母题（轴网/流线/节点/剖切/引线…）从概念生长，非随机装饰 | Phase 2 **Partial**（motif → scene geometry） |
-| **VQ-004** | Shape / Connector / Freeform formal rendering | 枚举能力进入正式主链；建筑标注可稳定导出 | Phase 2 **Partial**（motif→Connector/Freeform；PNG/HTML/PPTX；原生 OOXML deferred） |
+| **VQ-004** | Shape / Connector / Freeform formal rendering | 枚举能力进入正式主链；建筑标注可稳定导出 | Phase 2 **Partial**（path freeform ≥3 点；PNG/HTML/PPTX；原生 OOXML deferred） |
 | **VQ-005** | Architectural Visual Grammar Library | 先 12 种高质量语法（含变体 + Golden 截图 + 建筑师评分） | Phase 3 **Partial**（12 profiles 可执行；6 P0 进主链；Golden/盲评未做） |
-| **VQ-006** | Deck Rhythm Planner | 统一字体/网格/色板/母题；变化构图/明暗/密度；Pacing 约束防「页页一样漂亮」 | Phase 2–3 |
+| **VQ-006** | Deck Rhythm Planner | 统一字体/网格/色板/母题；变化构图/明暗/密度；Pacing 约束防「页页一样漂亮」 | Phase 2–3 **Partial**（pacing→PageDirection→scene title/motif/ghost） |
 | **VQ-007** | Screenshot Visual Critic | PPTX→截图→多模态 Critic→**有限**修改提案→再渲染 | Phase 4 |
 | **VQ-008** | Architect Blind Review Benchmark | 5 名建筑师盲测；达门槛前不发 Beta | 持续 / 门禁 |
 

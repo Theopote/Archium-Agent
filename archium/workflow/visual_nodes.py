@@ -561,10 +561,8 @@ class VisualWorkflowNodes:
                 auto_approve=True,
             )
 
-            # VQ-006: stamp background_mode onto PageDirection so scene compile sees rhythm.
-            from archium.application.visual.color_composition import (
-                stamp_deck_color_rhythm_onto_intents,
-            )
+            # VQ-006: stamp pacing + color rhythm onto PageDirection for scene compile.
+            from archium.application.visual.deck_rhythm import stamp_deck_rhythm_onto_intents
 
             design = None
             design_id = state.get("design_system_id")
@@ -572,7 +570,7 @@ class VisualWorkflowNodes:
                 from archium.infrastructure.database.repositories import DesignSystemRepository
 
                 design = DesignSystemRepository(self._runtime.session).get(UUID(str(design_id)))
-            stamped = stamp_deck_color_rhythm_onto_intents(
+            stamped = stamp_deck_rhythm_onto_intents(
                 deck_plan=plan,
                 intents=intents,
                 design_system=design,
