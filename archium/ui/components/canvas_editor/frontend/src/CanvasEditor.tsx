@@ -201,7 +201,7 @@ const CanvasEditor: React.FC<ComponentProps> = (props) => {
     return selectedId ? [selectedId] : [];
   }, [args?.selectedIds, selectedId]);
   const showLabels: boolean = args?.showLabels ?? true;
-  const showAllBorders: boolean = args?.showAllBorders ?? true;
+  const showAllBorders: boolean = args?.showAllBorders ?? false;
   const assets: AssetOption[] = Array.isArray(args?.assets) ? args.assets : [];
   const commentAnchors: CommentAnchor[] = Array.isArray(args?.commentAnchors)
     ? args.commentAnchors
@@ -699,21 +699,28 @@ const CanvasEditor: React.FC<ComponentProps> = (props) => {
     const displayY = isResizing ? resizePreview.y : isDragging ? preview.y : element.y;
     const displayWidth = isResizing ? resizePreview.width : element.width;
     const displayHeight = isResizing ? resizePreview.height : element.height;
+    const emphasize = isSelected || isDragging || isResizing || isHovered;
 
-    let border = roleColor.border;
-    let background = roleColor.background;
-    let borderWidth = "2px";
+    // Default: invisible hit target so the PNG slide stays visible.
+    // Borders only appear for selection/hover, or when showAllBorders is on.
+    let border = "2px solid transparent";
+    let background = "transparent";
     let zIndex = 1;
+    let labelBackground = roleColor.border;
 
     if (isSelected || isDragging || isResizing) {
-      border = "#175cd3";
+      border = "3px solid #175cd3";
       background = "rgba(23, 92, 211, 0.15)";
-      borderWidth = "3px";
       zIndex = 3;
+      labelBackground = "#175cd3";
     } else if (isHovered) {
-      borderWidth = "2px";
+      border = `2px solid ${roleColor.border}`;
       background = roleColor.background.replace("0.1", "0.2");
       zIndex = 2;
+      labelBackground = roleColor.border;
+    } else if (showAllBorders) {
+      border = `2px solid ${roleColor.border}`;
+      background = roleColor.background;
     }
 
     const style: React.CSSProperties = {
@@ -722,9 +729,10 @@ const CanvasEditor: React.FC<ComponentProps> = (props) => {
       top: `${displayY}%`,
       width: `${displayWidth}%`,
       height: `${displayHeight}%`,
-      border: `${borderWidth} solid ${border}`,
-      background: background,
+      border,
+      background,
       borderRadius: "4px",
+      boxSizing: "border-box",
       cursor: element.locked ? "not-allowed" : isDragging || isResizing ? "grabbing" : "grab",
       transition: isDragging || isResizing ? "none" : "all 0.15s ease",
       zIndex: zIndex,
@@ -745,13 +753,13 @@ const CanvasEditor: React.FC<ComponentProps> = (props) => {
         onDoubleClick={(event) => handleElementDoubleClick(element, event)}
         title={`${roleColor.label}: ${element.id}${lockHint}`}
       >
-        {showLabels && (isSelected || isHovered || isDragging || isResizing) && (
+        {showLabels && emphasize && (
           <div
             style={{
               position: "absolute",
               top: "-24px",
               left: "0",
-              background: border,
+              background: labelBackground,
               color: "white",
               padding: "2px 8px",
               borderRadius: "4px",
@@ -929,12 +937,7 @@ const CanvasEditor: React.FC<ComponentProps> = (props) => {
           {elements.map((element) => {
             const isSelected = selectedIds.includes(element.id);
             const isHovered = element.id === hoverElementId;
-            const shouldShow =
-              showAllBorders ||
-              isSelected ||
-              isHovered ||
-              dragPreviewById[element.id] !== undefined;
-            if (!shouldShow) return null;
+            // Always render hit targets so elements stay selectable when borders are hidden.
             return renderElementBox(element, isHovered, isSelected);
           })}
         </div>

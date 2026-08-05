@@ -60,7 +60,7 @@ col1, col2, col3 = st.columns(3)
 with col1:
     show_labels = st.checkbox("显示元素标签", value=True)
 with col2:
-    show_all_borders = st.checkbox("显示所有边界", value=True)
+    show_all_borders = st.checkbox("显示所有边界", value=False)
 with col3:
     use_mock_image = st.checkbox("使用占位图", value=True)
 

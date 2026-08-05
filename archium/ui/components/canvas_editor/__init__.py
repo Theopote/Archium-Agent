@@ -274,7 +274,7 @@ def canvas_editor(
     assets: list[dict[str, str]] | None = None,
     comment_anchors: list[dict[str, Any]] | None = None,
     show_labels: bool = True,
-    show_all_borders: bool = True,
+    show_all_borders: bool = False,
     key: str | None = None,
 ) -> CanvasEditorEvent:
     """

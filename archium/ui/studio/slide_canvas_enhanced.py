@@ -414,6 +414,17 @@ def _render_interactive_canvas(
 
     comment_anchors = _load_comment_anchors(slide_snapshot, plan)
 
+    border_key = f"studio_show_element_borders_{slide_snapshot.slide.id}"
+    show_borders = bool(st.session_state.get(border_key, False))
+    toggle_cols = st.columns([1, 1, 2])
+    with toggle_cols[0]:
+        show_borders = st.toggle(
+            "显示元素边界",
+            value=show_borders,
+            key=border_key,
+            help="关闭后预览更接近真实幻灯片；悬停/选中时仍会显示边界以便编辑。",
+        )
+
     try:
         canvas_event = canvas_editor(
             image_url=preview_path,
@@ -424,7 +435,7 @@ def _render_interactive_canvas(
             assets=assets,
             comment_anchors=comment_anchors,
             show_labels=True,
-            show_all_borders=True,
+            show_all_borders=show_borders,
             key=canvas_component_key(slide_snapshot.slide.id),
         )
     except CanvasEditorUnavailableError as exc:

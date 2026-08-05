@@ -72,7 +72,7 @@ selected_element_id = canvas_editor(
     layout_plan=layout_plan,
     selected_element_id=st.session_state.get("selected_element"),
     show_labels=True,
-    show_all_borders=True,
+    show_all_borders=False,
 )
 
 # 处理选择变化
@@ -104,7 +104,7 @@ render_slide_canvas(
 | `layout_plan` | `LayoutPlan` | 必需 | 包含元素位置的布局计划 |
 | `selected_element_id` | `str \| None` | `None` | 当前选中的元素 ID |
 | `show_labels` | `bool` | `True` | 悬停/选中时显示元素标签 |
-| `show_all_borders` | `bool` | `True` | 显示所有元素边界（否则仅显示选中/悬停） |
+| `show_all_borders` | `bool` | `False` | 显示所有元素边界（否则仅显示选中/悬停；默认关闭以免挡住真实预览） |
 | `key` | `str \| None` | `None` | Streamlit 组件唯一键 |
 
 **返回值**: 被点击的元素 ID（`str`），或 `None` 如果点击了空白区域。
