@@ -85,3 +85,51 @@ def test_preserve_locked_elements_without_previous_returns_new_plan() -> None:
     )
     plan = _sample_plan(elements=[element])
     assert preserve_locked_elements(plan, None) == plan
+
+
+def test_preserve_locked_elements_skips_locked_hero_when_family_changes() -> None:
+    locked_hero = LayoutElement(
+        id="hero",
+        role=LayoutElementRole.HERO_VISUAL,
+        content_type=LayoutContentType.IMAGE,
+        x=1.0,
+        y=1.0,
+        width=5.4,
+        height=3.8,
+        locked=True,
+    )
+    previous = LayoutPlan(
+        slide_id=uuid4(),
+        layout_family=LayoutFamily.HYBRID_CANVAS,
+        layout_variant="historic_photo",
+        page_width=10.0,
+        page_height=7.5,
+        hero_element_id="hero",
+        reading_order=["hero"],
+        design_system_id=uuid4(),
+        visual_intent_id=uuid4(),
+        validation_status=LayoutValidationStatus.PENDING,
+        elements=[locked_hero],
+    )
+    fresh_hero = locked_hero.model_copy(
+        update={"x": 0.55, "y": 1.0, "width": 8.9, "height": 4.0, "locked": False}
+    )
+    generated = LayoutPlan(
+        slide_id=previous.slide_id,
+        layout_family=LayoutFamily.HERO,
+        layout_variant="full_bleed",
+        page_width=10.0,
+        page_height=7.5,
+        hero_element_id="hero",
+        reading_order=["hero"],
+        design_system_id=previous.design_system_id,
+        visual_intent_id=previous.visual_intent_id,
+        validation_status=LayoutValidationStatus.PENDING,
+        elements=[fresh_hero],
+    )
+
+    merged = preserve_locked_elements(generated, previous)
+    hero = merged.element_by_id("hero")
+    assert hero is not None
+    assert hero.width == 8.9
+    assert hero.locked is False

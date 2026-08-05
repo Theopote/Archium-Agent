@@ -616,11 +616,12 @@ class VisualWorkflowNodes:
                     if composition_plan is not None
                     else None
                 )
-                previous_plan = None
-                if slide.layout_plan_id is not None:
-                    previous_plan = self._runtime.layout_plans.get(slide.layout_plan_id)
-                elif recent_candidate_plans:
-                    previous_plan = recent_candidate_plans[-1]
+                # Use in-run deck rhythm only. Stale slide.layout_plan_id from a prior
+                # workflow run can carry generator-locked hero geometry (e.g. hybrid_canvas)
+                # into freshly generated HERO candidates and fail dominance validation.
+                previous_plan = (
+                    recent_candidate_plans[-1] if recent_candidate_plans else None
+                )
 
                 def _generate(*, allow_overloaded: bool = False, prev=previous_plan):
                     return self._runtime.layout_planning_service.generate_candidates(
@@ -1530,6 +1531,7 @@ class VisualWorkflowNodes:
         }
         if formal_pptx_path is not None:
             next_state["formal_pptx_path"] = formal_pptx_path
+            next_state["scene_pptx_path"] = formal_pptx_path
         merged = cast(VisualWorkflowState, {**state, **next_state})
         self._persist(merged)
         logger.info(
@@ -1538,7 +1540,7 @@ class VisualWorkflowNodes:
             result.repair_actions,
             result.repair_rounds,
         )
-        return next_state
+        return merged
 
     @staticmethod
     def _map_slide_preview_pngs(

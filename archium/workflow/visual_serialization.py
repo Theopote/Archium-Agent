@@ -71,6 +71,8 @@ def snapshot_visual_state(state: VisualWorkflowState) -> dict[str, Any]:
         "visual_critic_reports": list(state.get("visual_critic_reports") or []),
         "deck_qa_report": state.get("deck_qa_report"),
         "scene_repair_report": state.get("scene_repair_report"),
+        "formal_pptx_path": state.get("formal_pptx_path"),
+        "scene_pptx_path": state.get("scene_pptx_path"),
         "deck_composition_plan": _serialize_deck_composition_plan(deck_composition_plan),
         "output_dir": state.get("output_dir"),
         "presentation": presentation.model_dump(mode="json") if presentation else None,
@@ -122,6 +124,8 @@ def restore_visual_artifacts(state_data: dict[str, Any]) -> dict[str, Any]:
         "visual_critic_reports": list(state_data.get("visual_critic_reports") or []),
         "deck_qa_report": state_data.get("deck_qa_report"),
         "scene_repair_report": state_data.get("scene_repair_report"),
+        "formal_pptx_path": state_data.get("formal_pptx_path"),
+        "scene_pptx_path": state_data.get("scene_pptx_path"),
         "output_dir": state_data.get("output_dir"),
     }
     if state_data.get("deck_composition_plan"):

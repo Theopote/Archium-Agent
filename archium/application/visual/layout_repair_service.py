@@ -43,6 +43,7 @@ from archium.domain.visual.validation import (
     LayoutValidationReport,
 )
 from archium.infrastructure.layout.geometry import Rect, occupied_area, safe_area, whitespace_ratio
+from archium.infrastructure.layout.variant_layout_tokens import effective_min_hero_area_ratio
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.layout.text_measurement import TextMeasurementService
 
@@ -760,7 +761,11 @@ class LayoutRepairService:
         page_w: float,
         page_h: float,
     ) -> None:
-        min_ratio = design_system.thresholds.min_hero_area_ratio
+        min_ratio = effective_min_hero_area_ratio(
+            plan.layout_family,
+            plan.layout_variant,
+            design_fallback=design_system.thresholds.min_hero_area_ratio,
+        )
         target_area = min_ratio * safe.area * 1.02
         if hero.area + 1e-6 >= target_area:
             return
