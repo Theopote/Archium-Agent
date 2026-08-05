@@ -166,6 +166,7 @@ class LayoutPlanningService:
         previous_layout_plan: LayoutPlan | None = None,
         reference_style: ReferenceStyleProfile | None = None,
         style_preference: LayoutStylePreference | None = None,
+        allow_overloaded_candidates: bool = False,
     ) -> list[tuple[LayoutPlan, LayoutValidationReport]]:
         self._warnings.clear()
         intent = self._intents.get(visual_intent_id)
@@ -268,7 +269,26 @@ class LayoutPlanningService:
         if capacity.blocks_layout_candidates(
             block_overloaded=self._settings.visual_capacity_block_overloaded,
         ):
-            return []
+            if (
+                allow_overloaded_candidates
+                and capacity.status == CapacityStatus.OVERLOADED
+            ):
+                self._warnings.append(
+                    {
+                        "code": "CAPACITY.OVERLOAD_PROCEEDED",
+                        "severity": "major",
+                        "detail": (
+                            f"capacity_ratio={capacity.capacity_ratio:.2f}; "
+                            "auto-adapted content still tight — emitting sparse "
+                            "candidates for QA rather than aborting the deck"
+                        ),
+                        "capacity_ratio": capacity.capacity_ratio,
+                        "capacity_status": capacity.status.value,
+                        "recommended_action": capacity.recommended_action,
+                    }
+                )
+            else:
+                return []
 
         resolved_style = reference_style
         if resolved_style is None and project_id is not None:
@@ -295,15 +315,25 @@ class LayoutPlanningService:
         for note in style_pref.notes:
             self._warnings.append({"code": "LAYOUT.STYLE_PREFERENCE", "detail": note})
 
+        pool_count = max(candidate_count, 4)
         decisions = self._decide_candidates(
             slide,
             intent,
             art,
             design,
-            candidate_count,
+            pool_count,
             deck_directive=deck_directive,
             style_preference=style_pref,
         )
+        if previous_layout_plan is not None and decisions:
+            prev_family = previous_layout_plan.layout_family.value
+            # candidate_count=1 decks only emit the first decision — put a contrasting
+            # family first when the previous page already used this family.
+            contrasting = [d for d in decisions if d.layout_family != prev_family]
+            same = [d for d in decisions if d.layout_family == prev_family]
+            if contrasting:
+                decisions = [*contrasting, *same]
+        decisions = decisions[:candidate_count]
         content = content_from_slide(slide, intent)
         drawing = intent.dominant_content_type in {
             VisualContentType.SITE_PLAN,

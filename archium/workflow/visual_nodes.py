@@ -84,6 +84,27 @@ def composition_plan_from_state(state: VisualWorkflowState) -> DeckCompositionPl
     return None
 
 
+def _auto_trim_slide_for_capacity(slide):
+    """Light pre-layout trim so OVERLOAD does not abort a batch deck."""
+    from archium.domain.slide import SlideSpec
+
+    if not isinstance(slide, SlideSpec):
+        return slide
+    updated = slide.model_copy(deep=True)
+    message = (updated.message or "").strip()
+    if len(message) > 96:
+        updated.message = message[:96].rstrip()
+    points: list[str] = []
+    for point in list(updated.key_points or [])[:2]:
+        text = str(point).strip()
+        if not text:
+            continue
+        points.append(text[:48])
+    updated.key_points = points
+    updated.version = int(updated.version or 1) + 1
+    return updated
+
+
 def effective_design_from_state(state: VisualWorkflowState) -> DesignSystem | None:
     """Use the same style-overlaid DesignSystem as candidate generation."""
     design = state.get("design_system")
@@ -579,6 +600,10 @@ class VisualWorkflowNodes:
             composition_plan = composition_plan_from_state(state)
             by_slide: dict[str, list[str]] = {}
             decision_warnings: list[str] = []
+            updated_slides: list = []
+            # First-pass generation has no layout_plan_id yet — track families here so
+            # candidate_count=1 decks cannot wallpaper the same family for dozens of pages.
+            recent_candidate_plans: list = []
 
             for slide in slides:
                 if slide.visual_intent_id is None:
@@ -594,33 +619,66 @@ class VisualWorkflowNodes:
                 previous_plan = None
                 if slide.layout_plan_id is not None:
                     previous_plan = self._runtime.layout_plans.get(slide.layout_plan_id)
-                candidates = self._runtime.layout_planning_service.generate_candidates(
-                    slide=slide,
-                    visual_intent_id=slide.visual_intent_id,
-                    art_direction_id=UUID(art_id) if art_id else None,
-                    design_system_id=design_id,
-                    candidate_count=candidate_count,
-                    project_id=UUID(str(state["project_id"])) if state.get("project_id") else None,
-                    deck_directive=directive,
-                    previous_layout_plan=previous_plan,
-                )
+                elif recent_candidate_plans:
+                    previous_plan = recent_candidate_plans[-1]
+
+                def _generate(*, allow_overloaded: bool = False, prev=previous_plan):
+                    return self._runtime.layout_planning_service.generate_candidates(
+                        slide=slide,
+                        visual_intent_id=slide.visual_intent_id,
+                        art_direction_id=UUID(art_id) if art_id else None,
+                        design_system_id=design_id,
+                        candidate_count=candidate_count,
+                        project_id=(
+                            UUID(str(state["project_id"])) if state.get("project_id") else None
+                        ),
+                        deck_directive=directive,
+                        previous_layout_plan=prev,
+                        allow_overloaded_candidates=allow_overloaded,
+                    )
+
+                candidates = _generate()
                 drained = self._runtime.layout_planning_service.drain_warnings()
                 decision_warnings.extend(format_layout_decision_warnings(drained))
                 blockers = capacity_blocker_messages(drained)
                 if blockers:
-                    return {
-                        "errors": blockers,
-                        "warnings": list(dict.fromkeys(decision_warnings)),
-                        "current_step": step,
-                    }
+                    # Batch decks: auto-trim once, then allow sparse candidates so one
+                    # overloaded page cannot abort the remaining hundred.
+                    slide = _auto_trim_slide_for_capacity(slide)
+                    slide = self._runtime.presentations.save_slide(slide)
+                    decision_warnings.append(
+                        f"CAPACITY.AUTO_ADAPTED slide={slide.id} "
+                        f"key_points={len(slide.key_points)} message_len={len(slide.message)}"
+                    )
+                    candidates = _generate(allow_overloaded=True)
+                    drained = self._runtime.layout_planning_service.drain_warnings()
+                    decision_warnings.extend(format_layout_decision_warnings(drained))
+                    blockers = capacity_blocker_messages(drained)
+                    # Candidates emitted under OVERLOAD_PROCEEDED — only IMPOSSIBLE
+                    # remains a hard stop for this slide.
+                    if candidates:
+                        blockers = [msg for msg in blockers if "IMPOSSIBLE" in msg]
+                    if blockers:
+                        return {
+                            "errors": blockers,
+                            "warnings": list(dict.fromkeys(decision_warnings)),
+                            "current_step": step,
+                        }
                 ids: list[str] = []
                 for plan, _report in candidates:
                     saved = self._runtime.layout_plans.save(plan)
                     ids.append(str(saved.id))
+                    if not recent_candidate_plans or recent_candidate_plans[-1].id != saved.id:
+                        # Keep the first candidate as the rhythm seed for the next slide.
+                        if plan is candidates[0][0]:
+                            recent_candidate_plans.append(saved)
+                            recent_candidate_plans = recent_candidate_plans[-3:]
                 by_slide[str(slide.id)] = ids
+                updated_slides.append(slide)
 
             next_state: VisualWorkflowState = {
                 "candidate_plan_ids_by_slide": by_slide,
+                "slides": updated_slides,
                 "current_step": step,
             }
             if decision_warnings:
