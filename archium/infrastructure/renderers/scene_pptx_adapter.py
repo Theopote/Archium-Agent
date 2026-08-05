@@ -371,6 +371,8 @@ class RenderScenePptxAdapter:
             instruction["stroke_width"] = node.stroke_width
         if node.corner_radius:
             instruction["corner_radius"] = node.corner_radius
+        if node.opacity < 0.999:
+            instruction["opacity"] = node.opacity
         return instruction
 
     def _connector_instruction(self, node: ConnectorNode, scene: RenderScene) -> dict[str, Any]:
@@ -399,6 +401,9 @@ class RenderScenePptxAdapter:
             "end_node_id": node.end.node_id,
             "points": [{"x": x, "y": y} for x, y in points],
         }
+        if node.opacity < 0.999:
+            instruction["opacity"] = node.opacity
+        return instruction
 
     def _freeform_instruction(self, node: FreeformNode) -> dict[str, Any]:
         instruction: dict[str, Any] = {
@@ -418,6 +423,8 @@ class RenderScenePptxAdapter:
             instruction["fill_color"] = node.fill_color.lstrip("#")
         if node.stroke_color:
             instruction["stroke_color"] = node.stroke_color.lstrip("#")
+        if node.opacity < 0.999:
+            instruction["opacity"] = node.opacity
         return instruction
 
     def _group_instruction(self, node: GroupNode) -> dict[str, Any]:

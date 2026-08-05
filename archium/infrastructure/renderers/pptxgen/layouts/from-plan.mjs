@@ -765,6 +765,9 @@ function renderConnectorElement(pres, page, element) {
         endArrowType: isLast ? endArrow : "none",
       },
     };
+    if (element.opacity != null && Number(element.opacity) < 1) {
+      lineOpts.transparency = Math.round((1 - Number(element.opacity)) * 100);
+    }
     page.addShape(pres.shapes.LINE, lineOpts);
   }
   const label = String(element.label || "").trim();
@@ -808,27 +811,33 @@ function renderShapeElement(pres, page, element, slideInstruction) {
       element.shape_kind === "oval" ||
       element.shape_kind === "ellipse") &&
     pres.shapes?.OVAL;
+  const useLine = element.shape_kind === "line" && pres.shapes?.LINE;
   /** @type {Record<string, unknown>} */
   const shapeOpts = {
     x: Number(element.x) || 0,
     y: Number(element.y) || 0,
     w: Number(element.w) || 1,
     h: Number(element.h) || 0.3,
-    fill: strokeOnly ? { type: "none" } : { color: solidFallback || "F4F6F8" },
+    fill: strokeOnly || useLine ? { type: "none" } : { color: solidFallback || "F4F6F8" },
     line: {
       color: lineColor,
-      width: lineWidth > 0 ? lineWidth : 0,
+      width: lineWidth > 0 ? lineWidth : useLine ? 1 : 0,
     },
   };
   if (element.opacity != null && Number(element.opacity) < 1) {
     shapeOpts.transparency = Math.round((1 - Number(element.opacity)) * 100);
   }
   let fillMode = "solid";
-  if (!strokeOnly && element.fill) {
+  if (!strokeOnly && !useLine && element.fill) {
     fillMode = _assignShapeFill(pres, page, shapeOpts, element.fill, solidFallback);
   }
-  page.addShape(useOval ? pres.shapes.OVAL : pres.shapes.RECTANGLE, shapeOpts);
-  if (fillMode === "approx" && element.fill) {
+  const shapeType = useLine
+    ? pres.shapes.LINE
+    : useOval
+      ? pres.shapes.OVAL
+      : pres.shapes.RECTANGLE;
+  page.addShape(shapeType, shapeOpts);
+  if (fillMode === "approx" && element.fill && !useLine) {
     _applyGradientApprox(pres, page, {
       x: Number(element.x) || 0,
       y: Number(element.y) || 0,

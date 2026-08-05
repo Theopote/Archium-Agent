@@ -61,6 +61,10 @@ class LayoutElement(DomainModel):
     )
     stroke_color: str | None = Field(default=None)
     stroke_width: float | None = Field(default=None, ge=0)
+    shape_kind: str | None = Field(
+        default=None,
+        description="rectangle | ellipse | line | card — compiled into ShapeNode (VQ-004).",
+    )
     layer_role: str | None = Field(
         default=None,
         description="SceneLayerRole hint (background/image/decoration/text).",

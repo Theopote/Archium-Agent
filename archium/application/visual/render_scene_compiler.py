@@ -838,14 +838,37 @@ class RenderSceneCompiler:
         element: LayoutElement,
         design_system: DesignSystem,
     ) -> list[ShapeNode]:
-        fill = element.fill_color or design_system.colors.resolve("surface")
+        kind_raw = (element.shape_kind or "").strip().lower()
+        if kind_raw in {"ellipse", "oval", "circle"}:
+            shape_kind: str = "ellipse"
+        elif kind_raw == "line":
+            shape_kind = "line"
+        elif kind_raw == "card":
+            shape_kind = "card"
+        else:
+            shape_kind = "rectangle"
+
         stroke = element.stroke_color or design_system.colors.resolve("border")
         stroke_width = (
             element.stroke_width if element.stroke_width is not None else 1.0
         )
-        # Thin decoration rules: no stroke, solid fill only.
-        if element.role.value == "decoration" and element.height <= 0.05:
-            stroke_width = element.stroke_width if element.stroke_width is not None else 0.0
+
+        # Stroke-only when author left fill unset and asked for a stroked contour.
+        stroke_only = element.fill_color is None and (
+            kind_raw in {"ellipse", "oval", "circle"}
+            or (element.stroke_width is not None and element.stroke_width > 0)
+        )
+        if stroke_only:
+            fill = None
+        elif element.role.value == "decoration" and element.height <= 0.05:
+            # Thin rules: solid fill, no outline.
+            fill = element.fill_color or element.stroke_color or stroke
+            stroke_width = (
+                element.stroke_width if element.stroke_width is not None else 0.0
+            )
+        else:
+            fill = element.fill_color or design_system.colors.resolve("surface")
+
         return [
             ShapeNode(
                 id=element.id,
@@ -857,10 +880,11 @@ class RenderSceneCompiler:
                 height=element.height,
                 z_index=element.z_index,
                 opacity=element.opacity if element.opacity is not None else 1.0,
-                shape_kind="rectangle",
+                shape_kind=shape_kind,  # type: ignore[arg-type]
                 fill_color=fill,
                 stroke_color=stroke,
                 stroke_width=stroke_width,
+                corner_radius=element.corner_radius or 0.0,
             )
         ]
 

@@ -154,8 +154,18 @@ def apply_graphic_motif_to_scene(
     """Materialize motif geometry on RenderScene when LayoutPlan lacked vl_motif_*.
 
     Idempotent: skips if motif nodes already present (from plan inject or prior apply).
+    VQ-004: flow/path motifs emit ConnectorNode + FreeformNode (not only rectangles).
     """
-    from archium.domain.visual.render_scene import RenderScene, ShapeNode
+    from archium.domain.visual.render_scene import (
+        ConnectorEndpoint,
+        ConnectorNode,
+        FreeformNode,
+        Point,
+        RenderScene,
+        ShapeNode,
+        refresh_connector_geometry,
+        refresh_freeform_geometry,
+    )
     from archium.domain.visual.visual_language.color_story import NAMED_SWATCHES, ColorStory
     from archium.domain.visual.visual_language.graphic_motif import MotifType
 
@@ -241,15 +251,22 @@ def apply_graphic_motif_to_scene(
     }:
         count = min(max_marks - marks, 3 if motif.repetition_rule == "sparse" else 4)
         size = motif.marker.size_pt / 72.0
+        marker_ids: list[str] = []
+        centers: list[tuple[float, float]] = []
         for index in range(max(0, count)):
             t = (index + 1) / (count + 1)
             y_ratio = 0.62 if motif.motif_type != MotifType.MODULE_INDEX else 0.78
+            cx = scene.page_width * (0.18 + 0.55 * t)
+            cy = scene.page_height * y_ratio
+            node_id = f"vl_motif_node_{index}"
+            marker_ids.append(node_id)
+            centers.append((cx, cy))
             nodes.append(
                 ShapeNode(
-                    id=f"vl_motif_node_{index}",
+                    id=node_id,
                     semantic_role="graphic_motif",
-                    x=scene.page_width * (0.18 + 0.55 * t) - size / 2,
-                    y=scene.page_height * y_ratio,
+                    x=cx - size / 2,
+                    y=cy - size / 2,
                     width=size,
                     height=size,
                     z_index=4,
@@ -261,37 +278,99 @@ def apply_graphic_motif_to_scene(
                 )
             )
             marks += 1
-        if motif.motif_type == MotifType.FLOW_NODES and marks <= max_marks:
-            nodes.append(
-                ShapeNode(
-                    id="vl_motif_flow",
-                    semantic_role="graphic_motif",
-                    x=scene.page_width * 0.2,
-                    y=scene.page_height * 0.62 + (motif.marker.size_pt / 144.0),
-                    width=scene.page_width * 0.52,
-                    height=max(0.012, motif.stroke.width_pt / 72.0),
+
+        # VQ-004: connect markers with real ConnectorNodes (arrowed flow).
+        if (
+            motif.motif_type in {MotifType.FLOW_NODES, MotifType.PATH_SEQUENCE}
+            and len(marker_ids) >= 2
+        ):
+            for index in range(len(marker_ids) - 1):
+                connector = ConnectorNode(
+                    id=f"vl_motif_connector_{index}",
+                    semantic_role="graphic_motif_connector",
+                    x=centers[index][0],
+                    y=centers[index][1],
+                    width=max(0.2, abs(centers[index + 1][0] - centers[index][0])),
+                    height=max(0.2, abs(centers[index + 1][1] - centers[index][1])),
                     z_index=3,
                     opacity=motif.stroke.opacity,
-                    shape_kind="rectangle",
-                    fill_color=stroke_hex,
+                    start=ConnectorEndpoint(node_id=marker_ids[index], anchor="right"),
+                    end=ConnectorEndpoint(node_id=marker_ids[index + 1], anchor="left"),
+                    routing="elbow" if motif.motif_type == MotifType.FLOW_NODES else "straight",
                     stroke_color=stroke_hex,
-                    stroke_width=0,
+                    stroke_width=max(0.75, motif.stroke.width_pt),
+                    arrow_start=False,
+                    arrow_end=True,
+                    label="" if motif.motif_type != MotifType.PATH_SEQUENCE else f"{index + 1:02d}",
                 )
-            )
+                nodes.append(connector)
+                marks += 1
+
+            # Path sequence also gets an open freeform polyline through centers.
+            if motif.motif_type == MotifType.PATH_SEQUENCE and len(centers) >= 3:
+                path_points = [Point(x=cx, y=cy) for cx, cy in centers]
+                freeform = FreeformNode(
+                    id="vl_motif_path_poly",
+                    semantic_role="graphic_motif_freeform",
+                    x=min(p.x for p in path_points),
+                    y=min(p.y for p in path_points),
+                    width=max(0.3, max(p.x for p in path_points) - min(p.x for p in path_points)),
+                    height=max(0.3, max(p.y for p in path_points) - min(p.y for p in path_points)),
+                    z_index=2,
+                    opacity=max(0.35, motif.stroke.opacity - 0.2),
+                    points=path_points,
+                    closed=False,
+                    fill_color=None,
+                    stroke_color=stroke_hex,
+                    stroke_width=max(0.5, motif.stroke.width_pt * 0.75),
+                )
+                refresh_freeform_geometry(freeform)
+                nodes.append(freeform)
 
     if motif.motif_type == MotifType.CONTOUR and marks < max_marks:
         for index in range(min(2, max_marks)):
             t = (index + 1) / 3
+            # Freeform ellipse approximation (8-point ring) — true ellipse ShapeNode also kept.
+            cx = scene.page_width * 0.5
+            cy = scene.page_height * 0.5
+            rx = max(0.2, scene.page_width * t / 2)
+            ry = max(0.15, scene.page_height * t / 2)
+            import math
+
+            ring = [
+                Point(
+                    x=cx + rx * math.cos(math.tau * i / 8),
+                    y=cy + ry * math.sin(math.tau * i / 8),
+                )
+                for i in range(8)
+            ]
+            freeform = FreeformNode(
+                id=f"vl_motif_contour_ff_{index}",
+                semantic_role="graphic_motif_freeform",
+                x=cx - rx,
+                y=cy - ry,
+                width=rx * 2,
+                height=ry * 2,
+                z_index=0,
+                opacity=motif.stroke.opacity,
+                points=ring,
+                closed=True,
+                fill_color=None,
+                stroke_color=stroke_hex,
+                stroke_width=motif.stroke.width_pt,
+            )
+            refresh_freeform_geometry(freeform)
+            nodes.append(freeform)
             nodes.append(
                 ShapeNode(
                     id=f"vl_motif_contour_{index}",
                     semantic_role="graphic_motif",
-                    x=scene.page_width * (0.5 - t / 2),
-                    y=scene.page_height * (0.5 - t / 2),
-                    width=max(0.4, scene.page_width * t),
-                    height=max(0.3, scene.page_height * t),
+                    x=cx - rx,
+                    y=cy - ry,
+                    width=rx * 2,
+                    height=ry * 2,
                     z_index=0,
-                    opacity=motif.stroke.opacity,
+                    opacity=motif.stroke.opacity * 0.85,
                     shape_kind="ellipse",
                     fill_color=None,
                     stroke_color=stroke_hex,
@@ -320,11 +399,21 @@ def apply_graphic_motif_to_scene(
     if not nodes:
         return scene
 
+    # Refresh connector hit-boxes now that marker nodes exist in the working set.
+    draft = scene.model_copy(update={"nodes": [*nodes, *list(scene.nodes)]})
+    for node in draft.nodes:
+        if isinstance(node, ConnectorNode) and str(node.id).startswith("vl_motif_connector_"):
+            refresh_connector_geometry(draft, node)
+
     warnings = list(scene.warnings)
     tag = f"graphic_motif:{motif.motif_type.value}"
     if tag not in warnings:
         warnings.append(tag)
-    return scene.model_copy(update={"nodes": [*nodes, *list(scene.nodes)], "warnings": warnings})
+    if any(isinstance(n, ConnectorNode) for n in nodes):
+        warnings.append("vq4_connector_motif")
+    if any(isinstance(n, FreeformNode) for n in nodes):
+        warnings.append("vq4_freeform_motif")
+    return draft.model_copy(update={"warnings": warnings})
 
 
 def _default_motif_for_page_kind(kind: TypographyPageKind) -> MotifType:
