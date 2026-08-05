@@ -25,7 +25,6 @@ from archium.application.visual.style_overlay import apply_style_overlays
 from archium.application.visual.svg_icon_recolor import is_architectural_icon_ref
 from archium.application.visual.text_emphasis import build_emphasis_text_runs
 from archium.application.visual.text_style_resolve import resolve_text_style
-from archium.domain.visual.text_style_resolve import TYPOGRAPHY_TOKEN_NAMES
 from archium.domain.reference_style import ReferenceStyleProfile
 from archium.domain.slide import SlideSpec
 from archium.domain.visual.art_direction import ArtDirection
@@ -60,6 +59,7 @@ from archium.domain.visual.render_scene import (
     set_text_node_runs,
     silhouette_overlay_frame,
 )
+from archium.domain.visual.text_style_resolve import TYPOGRAPHY_TOKEN_NAMES
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.infrastructure.renderers.pptxgen.layout_plan_adapter import SlideContentBundle
 

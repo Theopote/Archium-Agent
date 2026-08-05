@@ -43,9 +43,9 @@ from archium.domain.visual.validation import (
     LayoutValidationReport,
 )
 from archium.infrastructure.layout.geometry import Rect, occupied_area, safe_area, whitespace_ratio
-from archium.infrastructure.layout.variant_layout_tokens import effective_min_hero_area_ratio
 from archium.infrastructure.layout.layout_family_registry import get_layout_family_registry
 from archium.infrastructure.layout.text_measurement import TextMeasurementService
+from archium.infrastructure.layout.variant_layout_tokens import effective_min_hero_area_ratio
 
 _GAP = 0.08
 _MIN_TEXT_W = 0.35

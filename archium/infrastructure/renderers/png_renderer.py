@@ -240,8 +240,8 @@ class PngRenderer:
             try:
                 from archium.config.settings import get_settings
                 from archium.infrastructure.storage.asset_path_resolver import (
-                    AssetPathResolver,
                     AssetPathResolveContext,
+                    AssetPathResolver,
                 )
 
                 settings = get_settings()
