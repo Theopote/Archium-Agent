@@ -99,6 +99,7 @@ class DeckCompositionPlanningService:
         self._apply_climax_budget(directives, variety_notes)
         if art_direction is not None:
             self._apply_style_preset_bias(directives, art_direction, variety_notes)
+        self._apply_color_rhythm(ordered, directives, intent_by_slide, variety_notes)
 
         section_strategies = self._build_section_strategies(ordered, directives)
         hero_ids, transition_ids, climax_ids = self._identify_anchor_slides(ordered, directives)
@@ -311,6 +312,40 @@ class DeckCompositionPlanningService:
                 "(opening/transition spacious → evidence compact → "
                 "analysis balanced → climax/closing spacious)"
             )
+
+    @staticmethod
+    def _apply_color_rhythm(
+        slides: list[SlideSpec],
+        directives: list[SlideCompositionDirective],
+        intent_by_slide: dict,
+        notes: list[str],
+    ) -> None:
+        """Stamp BackgroundMode onto directives and soften consecutive dark pages."""
+        from archium.application.visual.color_composition import (
+            compose_color_composition,
+            plan_deck_color_modes,
+        )
+        from archium.domain.visual.visual_language.color_composition import BackgroundMode
+
+        modes: list[BackgroundMode] = []
+        for slide, directive in zip(slides, directives, strict=True):
+            intent = intent_by_slide.get(slide.id)
+            composition = compose_color_composition(
+                slide=slide,
+                visual_intent=intent,
+                page_direction=intent.page_direction if intent is not None else None,
+            )
+            modes.append(composition.background_mode)
+        adjusted = plan_deck_color_modes(modes)
+        softened = 0
+        for directive, mode, original in zip(directives, adjusted, modes, strict=True):
+            directive.background_mode = mode.value
+            if mode != original:
+                softened += 1
+        notes.append(
+            f"color_rhythm:modes={[m.value for m in adjusted]}"
+            + (f"; softened={softened}" if softened else "")
+        )
 
     @staticmethod
     def _apply_climax_budget(

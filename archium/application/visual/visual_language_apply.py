@@ -128,46 +128,66 @@ def apply_visual_language_to_scene(
 
     # VQ-002: page color composition (background mode + accent ratio).
     # Skip when RenderSceneCompiler already applied (idempotent warning tag).
-    if any(str(w).startswith("color_composition:") for w in scene.warnings):
-        return scene
-    composition = language.color_composition
-    if composition is not None:
-        from archium.application.visual.color_composition import (
-            apply_color_composition_to_scene,
-            resolve_color_composition,
-        )
-        from archium.domain.visual.design_system import DesignSystem
-
-        if design_system is not None and isinstance(design_system, DesignSystem):
-            composition = resolve_color_composition(
-                composition, design_system, color_story=language.color_story
+    if not any(str(w).startswith("color_composition:") for w in scene.warnings):
+        composition = language.color_composition
+        if composition is not None:
+            from archium.application.visual.color_composition import (
+                apply_color_composition_to_scene,
+                resolve_color_composition,
             )
-        elif composition.background_hex is None:
-            # Fall back to scene theme tokens when DesignSystem not passed.
-            theme_colors = scene.theme_tokens.colors if scene.theme_tokens else {}
-            bg = theme_colors.get("background")
-            primary = theme_colors.get("primary")
-            surface = theme_colors.get("surface")
-            accent_hex = composition.accent_hex or accent or theme_colors.get("accent")
-            from archium.domain.visual.visual_language.color_composition import BackgroundMode
+            from archium.domain.visual.design_system import DesignSystem
 
-            if composition.background_mode == BackgroundMode.DARK and primary and surface:
-                composition = composition.model_copy(
-                    update={
-                        "background_hex": primary,
-                        "primary_text_hex": surface,
-                        "accent_hex": accent_hex,
-                    }
+            if design_system is not None and isinstance(design_system, DesignSystem):
+                composition = resolve_color_composition(
+                    composition, design_system, color_story=language.color_story
                 )
-            elif bg:
-                composition = composition.model_copy(
-                    update={
-                        "background_hex": bg,
-                        "primary_text_hex": theme_colors.get("primary_text"),
-                        "accent_hex": accent_hex,
-                    }
+            elif composition.background_hex is None:
+                # Fall back to scene theme tokens when DesignSystem not passed.
+                theme_colors = scene.theme_tokens.colors if scene.theme_tokens else {}
+                bg = theme_colors.get("background")
+                primary = theme_colors.get("primary")
+                surface = theme_colors.get("surface")
+                accent_hex = composition.accent_hex or accent or theme_colors.get("accent")
+                from archium.domain.visual.visual_language.color_composition import (
+                    BackgroundMode,
                 )
-        scene = apply_color_composition_to_scene(scene, composition)
+
+                if composition.background_mode == BackgroundMode.DARK and primary and surface:
+                    composition = composition.model_copy(
+                        update={
+                            "background_hex": primary,
+                            "primary_text_hex": surface,
+                            "accent_hex": accent_hex,
+                        }
+                    )
+                elif bg:
+                    composition = composition.model_copy(
+                        update={
+                            "background_hex": bg,
+                            "primary_text_hex": theme_colors.get("primary_text"),
+                            "accent_hex": accent_hex,
+                        }
+                    )
+            scene = apply_color_composition_to_scene(scene, composition)
+
+    # VQ-003: motif geometry when compiler path lacked VisualLanguage / plan inject.
+    if any(str(w).startswith("graphic_motif:") for w in scene.warnings):
+        return scene
+    if any(str(getattr(n, "id", "")).startswith("vl_motif_") for n in scene.nodes):
+        return scene
+    motif = language.graphic_motif
+    if motif is not None:
+        from archium.application.visual.graphic_motif import apply_graphic_motif_to_scene
+
+        accent_hex = None
+        if language.color_composition is not None:
+            accent_hex = language.color_composition.accent_hex
+        scene = apply_graphic_motif_to_scene(
+            scene,
+            motif,
+            color_story=language.color_story,
+            accent_hex=accent_hex or accent,
+        )
     return scene
 
 

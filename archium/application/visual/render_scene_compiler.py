@@ -231,11 +231,21 @@ class RenderSceneCompiler:
             apply_color_composition_to_scene,
             compose_color_composition,
         )
+        from archium.application.visual.graphic_motif import (
+            apply_graphic_motif_to_scene,
+            compose_graphic_motif,
+        )
 
         language = None
         if visual_intent is not None and visual_intent.page_direction is not None:
             language = visual_intent.page_direction.visual_language
         color_comp = language.color_composition if language is not None else None
+        bg_override = None
+        # Prefer deck rhythm stamp when PageDirection carries a directive hint.
+        if visual_intent is not None and visual_intent.page_direction is not None:
+            raw = getattr(visual_intent.page_direction, "background_mode", None)
+            if raw:
+                bg_override = raw
         if color_comp is None:
             color_comp = compose_color_composition(
                 design_system=effective,
@@ -247,6 +257,7 @@ class RenderSceneCompiler:
                 ),
                 color_story=language.color_story if language is not None else None,
                 page_kind=page_kind,
+                background_mode_override=bg_override,
             )
         else:
             from archium.application.visual.color_composition import resolve_color_composition
@@ -256,7 +267,32 @@ class RenderSceneCompiler:
                 effective,
                 color_story=language.color_story if language is not None else None,
             )
-        return apply_color_composition_to_scene(scene, color_comp)
+        scene = apply_color_composition_to_scene(scene, color_comp)
+
+        # VQ-003: project graphic motif geometry when not already on the plan.
+        motif = language.graphic_motif if language is not None else None
+        if motif is None:
+            motif = compose_graphic_motif(
+                slide=slide,
+                layout_plan=layout_plan,
+                visual_intent=visual_intent,
+                page_direction=(
+                    visual_intent.page_direction if visual_intent is not None else None
+                ),
+                concept=(
+                    visual_intent.page_direction.visual_concept
+                    if visual_intent is not None
+                    and visual_intent.page_direction is not None
+                    else None
+                ),
+                page_kind=page_kind,
+            )
+        return apply_graphic_motif_to_scene(
+            scene,
+            motif,
+            color_story=language.color_story if language is not None else None,
+            accent_hex=color_comp.accent_hex if color_comp is not None else None,
+        )
 
     def _infer_drawing_type(
         self,

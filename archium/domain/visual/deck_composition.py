@@ -68,6 +68,11 @@ class SlideCompositionDirective(DomainModel):
 
     should_contrast_previous: bool = False
     should_match_previous: bool = False
+    # VQ-002 / VQ-006: soft deck color rhythm hint (BackgroundMode value).
+    background_mode: str | None = Field(
+        default=None,
+        description="Optional BackgroundMode value from deck color rhythm.",
+    )
 
 
 class SectionCompositionPlan(DomainModel):

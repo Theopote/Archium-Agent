@@ -144,6 +144,189 @@ def merge_motif_into_primitives(
     return merged
 
 
+def apply_graphic_motif_to_scene(
+    scene: object,
+    motif: GraphicMotif | None,
+    *,
+    color_story: object | None = None,
+    accent_hex: str | None = None,
+) -> object:
+    """Materialize motif geometry on RenderScene when LayoutPlan lacked vl_motif_*.
+
+    Idempotent: skips if motif nodes already present (from plan inject or prior apply).
+    """
+    from archium.domain.visual.render_scene import RenderScene, ShapeNode
+    from archium.domain.visual.visual_language.color_story import NAMED_SWATCHES, ColorStory
+    from archium.domain.visual.visual_language.graphic_motif import MotifType
+
+    if motif is None or motif.max_marks <= 0 or not isinstance(scene, RenderScene):
+        return scene
+    if any(str(getattr(n, "id", "")).startswith("vl_motif_") for n in scene.nodes):
+        return scene
+    if any(str(w).startswith("graphic_motif:") for w in scene.warnings):
+        return scene
+
+    stroke_hex = accent_hex or NAMED_SWATCHES.get("axis_line", "#2C2C2C")
+    if isinstance(color_story, ColorStory):
+        bias_name = color_story.roles.get(motif.color_role_bias)
+        if bias_name:
+            stroke_hex = (
+                bias_name
+                if bias_name.startswith("#")
+                else NAMED_SWATCHES.get(bias_name, stroke_hex)
+            )
+        if motif.stroke.color_token == "accent":
+            for role in ("conflict", "intervention", "accent"):
+                name = color_story.roles.get(role)
+                if not name:
+                    continue
+                stroke_hex = name if name.startswith("#") else NAMED_SWATCHES.get(name, stroke_hex)
+                break
+
+    nodes: list[object] = []
+    marks = 0
+    max_marks = motif.max_marks
+    title = next(
+        (
+            n
+            for n in scene.nodes
+            if getattr(n, "semantic_role", "") == "title"
+            and getattr(n, "node_type", "") == "text"
+        ),
+        None,
+    )
+
+    if motif.motif_type in {MotifType.QUIET_RULE, MotifType.SECTION_CUT} and title is not None:
+        nodes.append(
+            ShapeNode(
+                id="vl_motif_title_rule",
+                semantic_role="graphic_motif",
+                x=title.x,
+                y=title.y + title.height + 0.05,
+                width=min(2.6, title.width * 0.4),
+                height=max(0.012, motif.stroke.width_pt / 72.0),
+                z_index=max(0, title.z_index - 1),
+                opacity=motif.stroke.opacity,
+                shape_kind="rectangle",
+                fill_color=stroke_hex,
+                stroke_color=stroke_hex,
+                stroke_width=0,
+            )
+        )
+        marks += 1
+
+    if motif.motif_type == MotifType.AXIS_GRID and marks < max_marks:
+        nodes.append(
+            ShapeNode(
+                id="vl_motif_axis",
+                semantic_role="graphic_motif",
+                x=scene.page_width * 0.08,
+                y=scene.page_height * 0.16,
+                width=max(0.01, motif.stroke.width_pt / 72.0),
+                height=scene.page_height * 0.58,
+                z_index=0,
+                opacity=motif.stroke.opacity,
+                shape_kind="rectangle",
+                fill_color=stroke_hex,
+                stroke_color=stroke_hex,
+                stroke_width=0,
+            )
+        )
+        marks += 1
+
+    if motif.motif_type in {
+        MotifType.FLOW_NODES,
+        MotifType.PATH_SEQUENCE,
+        MotifType.MODULE_INDEX,
+    }:
+        count = min(max_marks - marks, 3 if motif.repetition_rule == "sparse" else 4)
+        size = motif.marker.size_pt / 72.0
+        for index in range(max(0, count)):
+            t = (index + 1) / (count + 1)
+            y_ratio = 0.62 if motif.motif_type != MotifType.MODULE_INDEX else 0.78
+            nodes.append(
+                ShapeNode(
+                    id=f"vl_motif_node_{index}",
+                    semantic_role="graphic_motif",
+                    x=scene.page_width * (0.18 + 0.55 * t) - size / 2,
+                    y=scene.page_height * y_ratio,
+                    width=size,
+                    height=size,
+                    z_index=4,
+                    opacity=min(1.0, motif.stroke.opacity + 0.1),
+                    shape_kind="ellipse" if motif.marker.shape == "circle" else "rectangle",
+                    fill_color=stroke_hex if motif.marker.fill_token else None,
+                    stroke_color=stroke_hex,
+                    stroke_width=1.0,
+                )
+            )
+            marks += 1
+        if motif.motif_type == MotifType.FLOW_NODES and marks <= max_marks:
+            nodes.append(
+                ShapeNode(
+                    id="vl_motif_flow",
+                    semantic_role="graphic_motif",
+                    x=scene.page_width * 0.2,
+                    y=scene.page_height * 0.62 + (motif.marker.size_pt / 144.0),
+                    width=scene.page_width * 0.52,
+                    height=max(0.012, motif.stroke.width_pt / 72.0),
+                    z_index=3,
+                    opacity=motif.stroke.opacity,
+                    shape_kind="rectangle",
+                    fill_color=stroke_hex,
+                    stroke_color=stroke_hex,
+                    stroke_width=0,
+                )
+            )
+
+    if motif.motif_type == MotifType.CONTOUR and marks < max_marks:
+        for index in range(min(2, max_marks)):
+            t = (index + 1) / 3
+            nodes.append(
+                ShapeNode(
+                    id=f"vl_motif_contour_{index}",
+                    semantic_role="graphic_motif",
+                    x=scene.page_width * (0.5 - t / 2),
+                    y=scene.page_height * (0.5 - t / 2),
+                    width=max(0.4, scene.page_width * t),
+                    height=max(0.3, scene.page_height * t),
+                    z_index=0,
+                    opacity=motif.stroke.opacity,
+                    shape_kind="ellipse",
+                    fill_color=None,
+                    stroke_color=stroke_hex,
+                    stroke_width=motif.stroke.width_pt,
+                )
+            )
+
+    if motif.motif_type == MotifType.BEFORE_AFTER_SLICE and marks < max_marks:
+        nodes.append(
+            ShapeNode(
+                id="vl_motif_slice",
+                semantic_role="graphic_motif",
+                x=scene.page_width * 0.48,
+                y=scene.page_height * 0.2,
+                width=max(0.015, motif.stroke.width_pt / 48.0),
+                height=scene.page_height * 0.55,
+                z_index=5,
+                opacity=motif.stroke.opacity,
+                shape_kind="rectangle",
+                fill_color=stroke_hex,
+                stroke_color=stroke_hex,
+                stroke_width=0,
+            )
+        )
+
+    if not nodes:
+        return scene
+
+    warnings = list(scene.warnings)
+    tag = f"graphic_motif:{motif.motif_type.value}"
+    if tag not in warnings:
+        warnings.append(tag)
+    return scene.model_copy(update={"nodes": [*nodes, *list(scene.nodes)], "warnings": warnings})
+
+
 def _default_motif_for_page_kind(kind: TypographyPageKind) -> MotifType:
     return {
         TypographyPageKind.COVER: MotifType.QUIET_RULE,

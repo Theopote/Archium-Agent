@@ -51,6 +51,7 @@ def compose_color_composition(
     page_direction: PageDirection | None = None,
     color_story: ColorStory | None = None,
     page_kind: TypographyPageKind | None = None,
+    background_mode_override: BackgroundMode | str | None = None,
 ) -> ColorComposition:
     """Build page color mix from page kind + emotion + ColorStory accents."""
     kind = page_kind or infer_typography_page_kind(
@@ -71,6 +72,14 @@ def compose_color_composition(
         layout_plan=layout_plan,
         visual_intent=visual_intent,
     )
+    if background_mode_override is not None:
+        if isinstance(background_mode_override, BackgroundMode):
+            mode = background_mode_override
+        else:
+            try:
+                mode = BackgroundMode(str(background_mode_override))
+            except ValueError:
+                pass
     accent_token = "accent"
     accent_hex = None
     background_hex = None
