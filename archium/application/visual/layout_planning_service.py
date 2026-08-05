@@ -327,7 +327,7 @@ class LayoutPlanningService:
             style_preference=style_pref,
         )
         history = list(recent_layout_plans or [])
-        if previous_layout_plan is not None and decisions:
+        if previous_layout_plan is not None:
             prev_family = previous_layout_plan.layout_family.value
             streak = 0
             for recent in reversed(history):
@@ -335,10 +335,18 @@ class LayoutPlanningService:
                     streak += 1
                 else:
                     break
-            if not history and previous_layout_plan is not None:
+            if not history:
                 streak = 1
-            # candidate_count=1 decks only emit the first decision — put a contrasting
-            # family first when the previous page already used this family.
+            # Mono-family pools cannot break Deck QA streaks — inject a safe alternate.
+            if not any(d.layout_family != prev_family for d in decisions):
+                decisions = [
+                    *decisions,
+                    self._contrast_family_decision(
+                        previous_family=previous_layout_plan.layout_family,
+                        intent=intent,
+                        deck_directive=deck_directive,
+                    ),
+                ]
             contrasting = [d for d in decisions if d.layout_family != prev_family]
             same = [d for d in decisions if d.layout_family == prev_family]
             if contrasting:
@@ -492,6 +500,38 @@ class LayoutPlanningService:
             ),
         )
         return pool_sorted[0][0]
+
+    @staticmethod
+    def _contrast_family_decision(
+        *,
+        previous_family: LayoutFamily,
+        intent: VisualIntent,
+        deck_directive: SlideCompositionDirective | None = None,
+    ) -> LayoutDecisionDraft:
+        """Minimal alternate-family draft so mono pools can break Deck QA streaks."""
+        forbidden = set(deck_directive.forbidden_layout_families if deck_directive else [])
+        if previous_family == LayoutFamily.TEXTUAL_ARGUMENT:
+            family = LayoutFamily.STRATEGY_CARDS
+            variant = "cards_with_lead"
+            if family in forbidden:
+                family = LayoutFamily.PROCESS_NARRATIVE
+                variant = "horizontal_steps"
+        else:
+            family = LayoutFamily.TEXTUAL_ARGUMENT
+            variant = "lead_and_points"
+            if family in forbidden:
+                family = LayoutFamily.STRATEGY_CARDS
+                variant = "three_cards"
+        return LayoutDecisionDraft(
+            layout_family=family.value,
+            layout_variant=variant,
+            hero_content_ref=(str(intent.hero_asset_id) if intent.hero_asset_id else None),
+            supporting_content_refs=[
+                str(asset_id) for asset_id in intent.supporting_asset_ids
+            ],
+            reading_order=list(intent.reading_order),
+            density_adjustment=intent.density_level.value,
+        )
 
     def resolve_reference_style(self, project_id: UUID) -> ReferenceStyleProfile | None:
         profiles = self._projects.list_reference_style_profiles(project_id)

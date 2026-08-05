@@ -335,6 +335,25 @@ class TestLayoutPlanningDeckDirective:
         )
         assert selected.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
 
+    def test_contrast_family_decision_swaps_textual_and_strategy(self) -> None:
+        intent = VisualIntent(
+            slide_id=uuid4(),
+            communication_goal="test",
+            audience_takeaway="test",
+            visual_priority="title",
+            dominant_content_type=VisualContentType.TEXT_ARGUMENT,
+        )
+        draft = LayoutPlanningService._contrast_family_decision(
+            previous_family=LayoutFamily.TEXTUAL_ARGUMENT,
+            intent=intent,
+        )
+        assert draft.layout_family == LayoutFamily.STRATEGY_CARDS.value
+        draft2 = LayoutPlanningService._contrast_family_decision(
+            previous_family=LayoutFamily.STRATEGY_CARDS,
+            intent=intent,
+        )
+        assert draft2.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
+
     def test_body_page_does_not_pick_section_opener(self) -> None:
         from archium.infrastructure.layout.layout_family_registry import (
             get_layout_family_registry,
