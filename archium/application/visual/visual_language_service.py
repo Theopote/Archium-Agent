@@ -144,6 +144,19 @@ class VisualLanguageService:
             image_composition=image_composition,
             source="visual_rhetoric_v1",
         )
+        # VQ-005: stamp Architectural Visual Grammar onto language.
+        from archium.application.visual.architectural_grammar import (
+            apply_grammar_to_language,
+            select_architectural_grammar,
+        )
+
+        grammar = select_architectural_grammar(
+            slide=slide,
+            page_direction=direction,
+            concept=concept,
+            formula_id=formula.id if formula else None,
+        )
+        spec = apply_grammar_to_language(spec, grammar)
         if style_preset is not None:
             from archium.domain.visual.art_direction_profile import (
                 apply_profile_to_language,
@@ -197,6 +210,8 @@ class VisualLanguageService:
         evidence.append(f"visual_language:{language.typography.recipe.value}")
         if formula is not None:
             evidence.append(f"page_grammar:{formula.id.value}")
+        if language is not None and language.source.startswith("vq5:"):
+            evidence.append(f"arch_grammar:{language.source.removeprefix('vq5:')}")
         if language.primitive_ids:
             evidence.append("primitives:" + ",".join(language.primitive_ids[:6]))
         evidence.append(
@@ -221,7 +236,19 @@ class VisualLanguageService:
             updates["visual_concept"] = direction.visual_concept.model_copy(
                 update={"color_story": language.color_story.as_legacy_list()}
             )
-        return direction.model_copy(update=updates)
+        stamped = direction.model_copy(update=updates)
+        from archium.application.visual.architectural_grammar import (
+            apply_grammar_to_direction,
+            select_architectural_grammar,
+        )
+
+        grammar = select_architectural_grammar(
+            slide=slide,
+            page_direction=stamped,
+            concept=concept,
+            formula_id=formula.id if formula else None,
+        )
+        return apply_grammar_to_direction(stamped, grammar)
 
     def _formula_for(
         self,

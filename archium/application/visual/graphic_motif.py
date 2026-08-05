@@ -172,20 +172,30 @@ def apply_graphic_motif_to_scene(
     if motif is None or motif.max_marks <= 0 or not isinstance(scene, RenderScene):
         return scene
     tag = f"graphic_motif:{motif.motif_type.value}"
-    if tag in scene.warnings:
-        return scene
-    # Replace weaker/prior motif geometry when upgrading motif type on re-apply.
     prior_motif_nodes = any(
         str(getattr(n, "id", "")).startswith("vl_motif_") for n in scene.nodes
     )
-    if prior_motif_nodes:
+    has_path_freeform = any(
+        str(getattr(n, "id", "")) == "vl_motif_path_poly" for n in scene.nodes
+    )
+    # Idempotent only when the same motif is already fully materialized. Allow
+    # re-apply for PATH_SEQUENCE when freeform was skipped (budget < 3 centers).
+    if tag in scene.warnings and not (
+        motif.motif_type == MotifType.PATH_SEQUENCE and not has_path_freeform
+    ):
+        return scene
+    # Replace weaker/prior motif geometry when upgrading motif type on re-apply.
+    if prior_motif_nodes or (tag in scene.warnings and not has_path_freeform):
         cleaned = [
             n
             for n in scene.nodes
             if not str(getattr(n, "id", "")).startswith("vl_motif_")
         ]
         cleaned_warnings = [
-            w for w in scene.warnings if not str(w).startswith("graphic_motif:")
+            w
+            for w in scene.warnings
+            if not str(w).startswith("graphic_motif:")
+            and str(w) not in {"vq4_connector_motif", "vq4_freeform_motif"}
         ]
         scene = scene.model_copy(update={"nodes": cleaned, "warnings": cleaned_warnings})
 
@@ -209,6 +219,10 @@ def apply_graphic_motif_to_scene(
     nodes: list[object] = []
     marks = 0
     max_marks = motif.max_marks
+    # Freeform polyline needs ≥3 centers; never let a sparse budget collapse a path
+    # into a 2-node segment (common when non-P0 grammar floors max_marks at 2).
+    if motif.motif_type == MotifType.PATH_SEQUENCE:
+        max_marks = max(max_marks, 3)
     title = next(
         (
             n
@@ -263,6 +277,8 @@ def apply_graphic_motif_to_scene(
         MotifType.MODULE_INDEX,
     }:
         count = min(max_marks - marks, 3 if motif.repetition_rule == "sparse" else 4)
+        if motif.motif_type == MotifType.PATH_SEQUENCE:
+            count = max(3, count)
         size = motif.marker.size_pt / 72.0
         marker_ids: list[str] = []
         centers: list[tuple[float, float]] = []

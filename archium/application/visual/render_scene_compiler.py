@@ -300,12 +300,40 @@ class RenderSceneCompiler:
                 ),
                 page_kind=page_kind,
             )
-        return apply_graphic_motif_to_scene(
+        scene = apply_graphic_motif_to_scene(
             scene,
             motif,
             color_story=language.color_story if language is not None else None,
             accent_hex=color_comp.accent_hex if color_comp is not None else None,
         )
+
+        # VQ-005: Architectural Visual Grammar post-pass (title boost + motif/color).
+        from archium.application.visual.architectural_grammar import (
+            apply_grammar_to_scene,
+            select_architectural_grammar,
+        )
+
+        grammar = select_architectural_grammar(
+            slide=slide,
+            page_direction=(
+                visual_intent.page_direction if visual_intent is not None else None
+            ),
+            concept=(
+                visual_intent.page_direction.visual_concept
+                if visual_intent is not None
+                and visual_intent.page_direction is not None
+                else None
+            ),
+            page_kind=page_kind,
+            formula_id=(
+                visual_intent.page_direction.page_grammar.id
+                if visual_intent is not None
+                and visual_intent.page_direction is not None
+                and visual_intent.page_direction.page_grammar is not None
+                else None
+            ),
+        )
+        return apply_grammar_to_scene(scene, grammar, visual_intent=visual_intent)
 
     def _infer_drawing_type(
         self,
