@@ -697,8 +697,22 @@ class LayoutPlanningService:
                 if style_preference is not None and style_preference.preferred_families
                 else None
             )
+            history_preview = list(recent_layout_plans or [])
+            streak = 0
+            for recent in reversed(history_preview):
+                if recent.layout_family == previous_layout_plan.layout_family:
+                    streak += 1
+                else:
+                    break
+            # Prefer family may win one repeat; never wallpaper past Deck QA's
+            # three-in-a-row rule on large decks.
             honor_explicit_preference = (
-                preferred_primary is not None and plan.layout_family == preferred_primary
+                preferred_primary is not None
+                and plan.layout_family == preferred_primary
+                and not (
+                    plan.layout_family == previous_layout_plan.layout_family
+                    and streak >= 1
+                )
             )
             if plan.layout_family == previous_layout_plan.layout_family:
                 if honor_explicit_preference:
@@ -742,7 +756,10 @@ class LayoutPlanningService:
                 last_two[0].layout_family == last_two[1].layout_family
                 == plan.layout_family
             ):
-                composition_penalty += 0.55
+                composition_penalty += 0.85
+        # Also break two-in-a-row when a third would be preferred by style.
+        if len(history) >= 1 and history[-1].layout_family == plan.layout_family:
+            composition_penalty += 0.18
         for distance, recent in enumerate(reversed(history[-3:]), start=1):
             if previous_layout_plan is not None and recent.id == previous_layout_plan.id:
                 continue
