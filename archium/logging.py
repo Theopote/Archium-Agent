@@ -9,12 +9,24 @@ from typing import Any
 
 from archium.config.settings import Settings
 
+_CONTEXT_FIELDS = ("project_id", "presentation_id", "workflow_run_id", "operation")
+
 DEFAULT_FORMAT = (
     "%(asctime)s | %(levelname)-8s | %(name)s | "
     "project=%(project_id)s | presentation=%(presentation_id)s | "
     "workflow=%(workflow_run_id)s | %(operation)s | "
     "%(message)s"
 )
+
+
+class _ArchiumContextFilter(logging.Filter):
+    """Ensure Archium context fields exist on every record (third-party loggers too)."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        for key in _CONTEXT_FIELDS:
+            if not hasattr(record, key):
+                setattr(record, key, "-")
+        return True
 
 
 class ArchiumLogAdapter(logging.LoggerAdapter):
@@ -26,7 +38,7 @@ class ArchiumLogAdapter(logging.LoggerAdapter):
         kwargs: MutableMapping[str, Any],
     ) -> tuple[str, MutableMapping[str, Any]]:
         extra = kwargs.setdefault("extra", {})
-        for key in ("project_id", "presentation_id", "workflow_run_id", "operation"):
+        for key in _CONTEXT_FIELDS:
             extra.setdefault(key, "-")
         return msg, kwargs
 
@@ -48,6 +60,7 @@ def setup_logging(settings: Settings | None = None, *, debug: bool | None = None
     root.setLevel(level)
 
     handler = logging.StreamHandler(sys.stderr)
+    handler.addFilter(_ArchiumContextFilter())
     handler.setFormatter(logging.Formatter(DEFAULT_FORMAT))
     root.addHandler(handler)
 

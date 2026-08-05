@@ -14,6 +14,7 @@ _DOCX_SUFFIXES = {".docx"}
 _PPTX_SUFFIXES = {".pptx"}
 _XLSX_SUFFIXES = {".xlsx", ".xlsm"}
 _PDF_SUFFIXES = {".pdf"}
+_TEXT_SUFFIXES = {".txt", ".md", ".markdown", ".text"}
 _CAD_BIM_SUFFIXES = {
     ".dwg": DocumentType.DWG,
     ".dxf": DocumentType.DXF,

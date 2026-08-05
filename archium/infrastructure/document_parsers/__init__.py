@@ -36,6 +36,7 @@ def default_parsers() -> list[DocumentParser]:
     from archium.infrastructure.document_parsers.image_parser import ImageParser
     from archium.infrastructure.document_parsers.pdf_parser import PdfParser
     from archium.infrastructure.document_parsers.pptx_parser import PptxParser
+    from archium.infrastructure.document_parsers.text_parser import TextParser
     from archium.infrastructure.document_parsers.xlsx_parser import XlsxParser
 
     return [
@@ -44,5 +45,6 @@ def default_parsers() -> list[DocumentParser]:
         PptxParser(),
         XlsxParser(),
         ImageParser(),
+        TextParser(),
         CadBimParser(),
     ]

@@ -9,6 +9,7 @@ from archium.infrastructure.document_parsers.docx_parser import DocxParser
 from archium.infrastructure.document_parsers.image_parser import ImageParser
 from archium.infrastructure.document_parsers.pdf_parser import PdfParser
 from archium.infrastructure.document_parsers.pptx_parser import PptxParser
+from archium.infrastructure.document_parsers.text_parser import TextParser
 from archium.infrastructure.document_parsers.xlsx_parser import XlsxParser
 
 from tests.fixtures.sample_files import (
@@ -68,3 +69,12 @@ def test_pptx_parser_supports_pptx_suffix(tmp_path: Path) -> None:
     parser = PptxParser()
     assert parser.supports(tmp_path / "report.pptx")
     assert not parser.supports(tmp_path / "report.pdf")
+
+
+def test_text_parser_reads_utf8_brief(tmp_path: Path) -> None:
+    path = tmp_path / "project-brief.txt"
+    path.write_text("# 西山书院\n\n改扩建策略要点。\n", encoding="utf-8")
+    parsed = TextParser().parse(path)
+    assert "改扩建策略要点" in parsed.text
+    assert parsed.pages[0].section_title == "西山书院"
+    assert TextParser().supports(tmp_path / "notes.md")
