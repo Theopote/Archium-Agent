@@ -31,6 +31,7 @@ class VisualRefinementActionType(StrEnum):
     QUIET_MOTIF = "quiet_motif"
     TRIM_BODY_BOX = "trim_body_box"
     SOFTEN_ACCENT_SHAPES = "soften_accent_shapes"
+    FIX_TEXT_CONTRAST = "fix_text_contrast"
 
 
 # Which critic codes may propose which actions (closed map).
@@ -53,6 +54,7 @@ CRITIC_CODE_TO_ACTIONS: dict[str, tuple[VisualRefinementActionType, ...]] = {
     "CRITIC.WHITESPACE_WEAK": (VisualRefinementActionType.TRIM_BODY_BOX,),
     "CRITIC.COLOR_CHAOS": (VisualRefinementActionType.SOFTEN_ACCENT_SHAPES,),
     "CRITIC.MECHANICAL": (VisualRefinementActionType.QUIET_MOTIF,),
+    "CRITIC.TEXT_CONTRAST_LOW": (VisualRefinementActionType.FIX_TEXT_CONTRAST,),
 }
 
 

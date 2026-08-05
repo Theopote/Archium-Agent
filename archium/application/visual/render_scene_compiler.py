@@ -349,7 +349,13 @@ class RenderSceneCompiler:
         ):
             stamp = resolve_page_rhythm(page_direction=direction)
             scene = apply_deck_rhythm_to_scene(scene, stamp)
-        return scene
+
+        # Final readability pass: text must contrast with page background.
+        from archium.application.visual.text_contrast_guard import (
+            apply_text_background_contrast_to_scene,
+        )
+
+        return apply_text_background_contrast_to_scene(scene)
 
     def _infer_drawing_type(
         self,

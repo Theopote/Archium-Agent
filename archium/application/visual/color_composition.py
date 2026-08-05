@@ -306,13 +306,18 @@ def apply_color_composition_to_scene(
     if tag not in warnings:
         warnings.append(tag)
 
-    return scene.model_copy(
+    scene = scene.model_copy(
         update={
             "background": BackgroundStyle(color=bg),
             "nodes": [*wash_nodes, *nodes],
             "warnings": warnings,
         }
     )
+    from archium.application.visual.text_contrast_guard import (
+        apply_text_background_contrast_to_scene,
+    )
+
+    return apply_text_background_contrast_to_scene(scene)
 
 
 def plan_deck_color_modes(
@@ -517,21 +522,21 @@ def _resolve_background_pair(
     mode: BackgroundMode,
     accent_hex: str,
 ) -> tuple[str, str]:
+    from archium.application.visual.color_contrast import ensure_readable_pair
+
     colors = design_system.colors
     if mode == BackgroundMode.DARK:
-        return colors.resolve("primary"), colors.resolve("surface")
-    if mode == BackgroundMode.LIGHT:
-        # Near-white board for evidence / drawing pages.
-        return "#F4F7FA", colors.resolve("primary_text")
-    if mode == BackgroundMode.ACCENT_WASH:
-        # Soft tint derived toward accent without full saturation.
-        return _blend_hex(colors.resolve("background"), accent_hex, 0.18), colors.resolve(
-            "primary_text"
-        )
-    if mode == BackgroundMode.MONOCHROME:
-        return "#E8E8E6", "#1A1A1A"
-    # TINTED — keep design system board tint.
-    return colors.resolve("background"), colors.resolve("primary_text")
+        bg, text = colors.resolve("primary"), colors.resolve("surface")
+    elif mode == BackgroundMode.LIGHT:
+        bg, text = "#F4F7FA", colors.resolve("primary_text")
+    elif mode == BackgroundMode.ACCENT_WASH:
+        bg = _blend_hex(colors.resolve("background"), accent_hex, 0.18)
+        text = colors.resolve("primary_text")
+    elif mode == BackgroundMode.MONOCHROME:
+        bg, text = "#E8E8E6", "#1A1A1A"
+    else:
+        bg, text = colors.resolve("background"), colors.resolve("primary_text")
+    return ensure_readable_pair(bg, text)
 
 
 def _blend_hex(base: str, accent: str, amount: float) -> str:

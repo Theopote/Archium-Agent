@@ -293,6 +293,7 @@ def test_unknown_action_type_cannot_be_smuggled() -> None:
         VisualRefinementActionType.QUIET_MOTIF,
         VisualRefinementActionType.TRIM_BODY_BOX,
         VisualRefinementActionType.SOFTEN_ACCENT_SHAPES,
+        VisualRefinementActionType.FIX_TEXT_CONTRAST,
     }
     patched, applied = CriticRefinementService().apply(scene, [])
     assert applied == []

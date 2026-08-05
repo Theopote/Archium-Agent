@@ -76,6 +76,7 @@ class CriticRefinementService:
                 if target is None and action_type not in {
                     VisualRefinementActionType.QUIET_MOTIF,
                     VisualRefinementActionType.SOFTEN_ACCENT_SHAPES,
+                    VisualRefinementActionType.FIX_TEXT_CONTRAST,
                 }:
                     continue
                 magnitude = _default_magnitude(action_type)
@@ -309,6 +310,8 @@ class CriticRefinementService:
                 None,
             )
             return node.id if node else None
+        if action_type == VisualRefinementActionType.FIX_TEXT_CONTRAST:
+            return None
         return None
 
     def _apply_one(self, scene: RenderScene, action: VisualRefinementAction) -> bool:
@@ -325,6 +328,8 @@ class CriticRefinementService:
             return self._quiet_motif(scene, action)
         if kind == VisualRefinementActionType.SOFTEN_ACCENT_SHAPES:
             return self._soften_accent_shapes(scene, action)
+        if kind == VisualRefinementActionType.FIX_TEXT_CONTRAST:
+            return self._fix_text_contrast(scene)
         return False
 
     def _boost_title(self, scene: RenderScene, action: VisualRefinementAction) -> bool:
@@ -385,11 +390,27 @@ class CriticRefinementService:
         node = self._text_node(scene, action.target_node_id, _BODY_ROLES)
         if node is None:
             return False
-        opacity = max(0.45, float(node.opacity) * (1.0 - min(0.35, action.magnitude)))
+        # Keep opacity high enough that ink stays readable on the page board.
+        opacity = max(0.72, float(node.opacity) * (1.0 - min(0.2, action.magnitude)))
         size = max(11.0, round(float(node.font_size) * (1.0 - min(0.12, action.magnitude * 0.5)), 1))
         updated = node.model_copy(update={"opacity": round(opacity, 3), "font_size": size})
         self._replace_node(scene, updated)
+        # Re-assert contrast after any fade.
+        self._fix_text_contrast(scene)
         return True
+
+    def _fix_text_contrast(self, scene: RenderScene) -> bool:
+        from archium.application.visual.text_contrast_guard import (
+            apply_text_background_contrast_to_scene,
+            scene_text_contrast_failures,
+        )
+
+        before = len(scene_text_contrast_failures(scene))
+        patched = apply_text_background_contrast_to_scene(scene)
+        object.__setattr__(scene, "nodes", list(patched.nodes))
+        object.__setattr__(scene, "warnings", list(patched.warnings))
+        after = len(scene_text_contrast_failures(scene))
+        return before > after or "text_contrast:enforced" in scene.warnings
 
     def _trim_body_box(self, scene: RenderScene, action: VisualRefinementAction) -> bool:
         node = self._text_node(scene, action.target_node_id, _BODY_ROLES)
@@ -476,6 +497,7 @@ def _default_magnitude(action_type: VisualRefinementActionType) -> float:
         VisualRefinementActionType.TRIM_BODY_BOX: 0.12,
         VisualRefinementActionType.QUIET_MOTIF: 0.3,
         VisualRefinementActionType.SOFTEN_ACCENT_SHAPES: 0.25,
+        VisualRefinementActionType.FIX_TEXT_CONTRAST: 0.0,
     }.get(action_type, 0.12)
 
 
