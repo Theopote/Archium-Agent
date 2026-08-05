@@ -484,6 +484,18 @@ class LayoutPlanningService:
                 # Treat monument as the realized preferred opener when HERO is unavailable.
                 composition_bonus += 0.3
             if (
+                deck_directive.pacing_role == PacingRole.OPENING
+                and plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                and plan.layout_variant == "monument"
+            ):
+                composition_bonus += 0.45
+            if (
+                deck_directive.pacing_role == PacingRole.OPENING
+                and plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
+                and plan.layout_variant == "lead_and_points"
+            ):
+                composition_penalty += 0.2
+            if (
                 deck_directive.pacing_role == PacingRole.CLOSING
                 and plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
                 and plan.layout_variant == "quote_argument"
@@ -496,13 +508,13 @@ class LayoutPlanningService:
             ):
                 composition_penalty += 0.28
             if (
-                deck_directive.pacing_role == PacingRole.TRANSITION
+                deck_directive.transition_mode == "section_break"
                 and plan.layout_family == LayoutFamily.TEXTUAL_ARGUMENT
                 and plan.layout_variant == "section_opener"
             ):
                 composition_bonus += 0.5
             if (
-                deck_directive.pacing_role == PacingRole.TRANSITION
+                deck_directive.transition_mode == "section_break"
                 and plan.layout_family
                 in {
                     LayoutFamily.STRATEGY_CARDS,
@@ -511,6 +523,12 @@ class LayoutPlanningService:
                 }
             ):
                 composition_penalty += 0.35
+            # Cover / body pages must not steal the 扉页 shell.
+            if (
+                plan.layout_variant == "section_opener"
+                and deck_directive.transition_mode != "section_break"
+            ):
+                composition_penalty += 0.55
             # Quote posters are for closing/summary — don't steal body content pages.
             if (
                 plan.layout_variant == "quote_argument"
@@ -1099,6 +1117,10 @@ class LayoutPlanningService:
             ):
                 variants = [v for v in variants if v != "four_cards"] or variants
             for variant in variants:
+                # section_opener is a dedicated 扉页 shell — never offer it as a
+                # generic TEXTUAL_ARGUMENT candidate (it pollutes ranking).
+                if variant == "section_opener" and not is_section_opener:
+                    continue
                 decisions.append(
                     LayoutDecisionDraft(
                         layout_family=definition.family.value,
@@ -1227,10 +1249,11 @@ class LayoutPlanningService:
         hero_without_asset_cover = (
             bool(preferred_families) and preferred_families[0] == LayoutFamily.HERO
         )
-        section_opener_text = any(
-            item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
-            and item.layout_variant == "section_opener"
-            for item in pool
+        has_real_hero_candidate = any(
+            item.layout_family == LayoutFamily.HERO.value for item in pool
+        )
+        genuine_section_break = (
+            deck_directive is not None and deck_directive.transition_mode == "section_break"
         )
 
         if deck_directive is not None:
@@ -1242,12 +1265,13 @@ class LayoutPlanningService:
                     continue
                 if (
                     hero_without_asset_cover
+                    and not has_real_hero_candidate
                     and item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
                     and item.layout_variant == "monument"
                 ):
                     filtered.append(item)
                 elif (
-                    section_opener_text
+                    genuine_section_break
                     and item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
                     and item.layout_variant == "section_opener"
                 ):
@@ -1259,21 +1283,16 @@ class LayoutPlanningService:
             monument_rank = (
                 0
                 if hero_without_asset_cover
+                and not has_real_hero_candidate
                 and item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
                 and item.layout_variant == "monument"
                 else 1
             )
             section_rank = (
                 0
-                if item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
+                if genuine_section_break
+                and item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
                 and item.layout_variant == "section_opener"
-                and (
-                    (
-                        deck_directive is not None
-                        and deck_directive.pacing_role == PacingRole.TRANSITION
-                    )
-                    or section_opener_text
-                )
                 else 1
             )
             # When primary preference needs assets we don't have, prefer sparse text
@@ -1288,10 +1307,14 @@ class LayoutPlanningService:
             primary = preferred_families[0] if preferred_families else None
             asset_starved_text = (
                 primary in asset_heavy
+                and not has_real_hero_candidate
                 and item.layout_family == LayoutFamily.TEXTUAL_ARGUMENT.value
                 and (
                     (primary == LayoutFamily.HERO and item.layout_variant == "monument")
-                    or item.layout_variant == "section_opener"
+                    or (
+                        genuine_section_break
+                        and item.layout_variant == "section_opener"
+                    )
                     or (
                         primary != LayoutFamily.HERO
                         and item.layout_variant == "lead_and_points"

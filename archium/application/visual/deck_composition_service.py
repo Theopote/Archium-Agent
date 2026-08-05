@@ -564,6 +564,7 @@ class DeckCompositionPlanningService:
         hero_ids: list[UUID] = []
         transition_ids: list[UUID] = []
         climax_ids: list[UUID] = []
+        chapter_sizes = Counter(slide.chapter_id for slide in slides)
 
         section_seen: set[str] = set()
         for slide in slides:
@@ -573,13 +574,18 @@ class DeckCompositionPlanningService:
                 or directive.preferred_layout_families[0] in _VISUAL_STRONG_FAMILIES
             ):
                 hero_ids.append(slide.id)
-            if slide.slide_type == SlideType.SECTION or directive.transition_mode:
+            # True 扉页 / section break only — not every chapter_opening beat.
+            if slide.slide_type == SlideType.SECTION or directive.transition_mode == "section_break":
                 transition_ids.append(slide.id)
             if is_climax_peak(directive):
                 climax_ids.append(slide.id)
+            # Multi-page chapters: first page is a transition anchor.
             if slide.chapter_id not in section_seen:
                 section_seen.add(slide.chapter_id)
-                if slide.id not in transition_ids:
+                if (
+                    chapter_sizes[slide.chapter_id] > 1
+                    and slide.id not in transition_ids
+                ):
                     transition_ids.append(slide.id)
 
         if slides and slides[-1].id not in climax_ids:

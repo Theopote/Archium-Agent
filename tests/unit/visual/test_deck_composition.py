@@ -213,6 +213,30 @@ class TestDeckCompositionPlanningService:
         assert directive.should_contrast_previous is True
         assert directive.preferred_layout_families[0] == LayoutFamily.HERO
 
+    def test_one_page_chapters_do_not_mark_every_slide_as_section_transition(self) -> None:
+        slides = [
+            _slide(order=0, chapter_id="cover", slide_type=SlideType.TITLE),
+            _slide(order=1, chapter_id="context", slide_type=SlideType.SECTION),
+            _slide(order=2, chapter_id="problem"),
+            _slide(order=3, chapter_id="strategy"),
+        ]
+        intents = [
+            _intent(slides[0], continuity=ContinuityRole.OPENING),
+            _intent(slides[1], continuity=ContinuityRole.SECTION_OPENING),
+            _intent(slides[2]),
+            _intent(slides[3]),
+        ]
+        plan = DeckCompositionPlanningService().plan(
+            presentation_id=PRESENTATION_ID,
+            art_direction_id=ART_DIRECTION_ID,
+            slides=slides,
+            visual_intents=intents,
+        )
+        assert slides[1].id in plan.section_transition_slide_ids
+        assert slides[0].id not in plan.section_transition_slide_ids
+        assert slides[2].id not in plan.section_transition_slide_ids
+        assert slides[3].id not in plan.section_transition_slide_ids
+
     def test_intensity_curve_reflects_content(self) -> None:
         slides = [_slide(order=0), _slide(order=1), _slide(order=2)]
         intents = [

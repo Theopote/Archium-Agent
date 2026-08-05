@@ -281,3 +281,64 @@ class TestLayoutPlanningDeckDirective:
         assert all(
             d.layout_family != LayoutFamily.STRATEGY_CARDS.value for d in decisions
         )
+
+    def test_title_slide_does_not_pick_section_opener(self) -> None:
+        from archium.domain.visual.enums import ContinuityRole
+        from archium.infrastructure.layout.layout_family_registry import (
+            get_layout_family_registry,
+        )
+
+        service = LayoutPlanningService.__new__(LayoutPlanningService)
+        service._registry = get_layout_family_registry()
+        intent = VisualIntent(
+            slide_id=uuid4(),
+            communication_goal="封面",
+            audience_takeaway="项目名称",
+            visual_priority="title > lead",
+            dominant_content_type=VisualContentType.HERO_IMAGE,
+            preferred_layout_families=[LayoutFamily.HERO],
+            continuity_role=ContinuityRole.OPENING,
+            density_level=DensityLevel.SPACIOUS,
+            reading_order=["title", "lead"],
+        )
+        directive = _directive(preferred=[LayoutFamily.HERO])
+        directive.pacing_role = PacingRole.OPENING
+        decisions = service._rule_decisions(
+            intent,
+            asset_count=0,
+            candidate_count=5,
+            deck_directive=directive,
+            is_title_slide=True,
+            is_section_opener=False,
+            key_point_count=0,
+        )
+        assert decisions[0].layout_variant == "monument"
+        assert all(d.layout_variant != "section_opener" for d in decisions)
+
+    def test_body_page_does_not_pick_section_opener(self) -> None:
+        from archium.infrastructure.layout.layout_family_registry import (
+            get_layout_family_registry,
+        )
+
+        service = LayoutPlanningService.__new__(LayoutPlanningService)
+        service._registry = get_layout_family_registry()
+        intent = VisualIntent(
+            slide_id=uuid4(),
+            communication_goal="问题分析",
+            audience_takeaway="现状矛盾",
+            visual_priority="title > points",
+            dominant_content_type=VisualContentType.TEXT_ARGUMENT,
+            preferred_layout_families=[LayoutFamily.TEXTUAL_ARGUMENT],
+            density_level=DensityLevel.BALANCED,
+            reading_order=["title", "lead", "points"],
+        )
+        directive = _directive(preferred=[LayoutFamily.TEXTUAL_ARGUMENT])
+        decisions = service._rule_decisions(
+            intent,
+            asset_count=0,
+            candidate_count=5,
+            deck_directive=directive,
+            is_section_opener=False,
+            key_point_count=1,
+        )
+        assert all(d.layout_variant != "section_opener" for d in decisions)
