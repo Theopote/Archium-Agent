@@ -27,6 +27,7 @@ from archium.domain.visual.critic import (
     CRITIC_READING_ORDER_AWKWARD,
     CRITIC_TEMPLATE_BRIEF_VIOLATION,
     CRITIC_TENSION_FLAT,
+    CRITIC_TEXT_CONTRAST_LOW,
     CRITIC_TITLE_WEAK,
     CRITIC_VISUAL_NOISE_HIGH,
     CRITIC_WHITESPACE_WEAK,
@@ -42,6 +43,7 @@ from archium.domain.visual.enums import (
     LayoutIssueSeverity,
 )
 from archium.domain.visual.layout import LayoutElement, LayoutPlan
+from archium.domain.visual.render_scene import ImageNode, RenderScene, TextNode
 from archium.domain.visual.style.presets import StyleContentPolicy
 from archium.domain.visual.template_usage_brief import TemplateUsageBrief
 from archium.infrastructure.layout.geometry import Rect
@@ -56,6 +58,7 @@ except ImportError:  # pragma: no cover
 
 _METHOD = "heuristic_v0"
 _METHOD_SCREENSHOT = "screenshot_v1"
+_METHOD_SCENE = "scene_v1"
 _METHOD_VISION = "vision_v1"
 logger = get_logger(__name__, operation="visual_critic")
 
@@ -351,6 +354,66 @@ class VisualCriticService:
             notes=notes,
         )
 
+    def evaluate_scene(
+        self,
+        scene: RenderScene,
+        plan: LayoutPlan | None = None,
+        *,
+        image_path: str | Path | None = None,
+        peer_plans: list[LayoutPlan] | None = None,
+        usage_brief: TemplateUsageBrief | None = None,
+        usage_constraints: TemplateUsageConstraints | None = None,
+        content_policy: StyleContentPolicy | None = None,
+    ) -> VisualCriticReport:
+        """Evaluate Visual Quality using RenderScene overlay + optional LayoutPlan."""
+        if plan is not None:
+            base = self.evaluate_plan(
+                plan,
+                image_path=image_path,
+                peer_plans=peer_plans,
+                usage_brief=usage_brief,
+                usage_constraints=usage_constraints,
+                content_policy=content_policy,
+            )
+        else:
+            base = VisualCriticReport(
+                method=_METHOD,
+                layout_plan_id=str(scene.layout_plan_id) if scene.layout_plan_id else None,
+                slide_id=str(scene.slide_id),
+            )
+
+        scene_findings = self._scene_findings(scene)
+        findings = self._dedupe_findings([*base.findings, *scene_findings])
+        notes = list(base.notes)
+        method = base.method
+        if scene_findings:
+            notes.append("scene_v1 overlay (RenderScene metrics).")
+            if method == _METHOD:
+                method = _METHOD_SCENE
+            elif method == _METHOD_SCREENSHOT:
+                method = f"{_METHOD_SCREENSHOT}+{_METHOD_SCENE}"
+
+        dimensions = base.dimensions.model_copy()
+        if scene_findings:
+            noise = self._scene_visual_noise_score(scene)
+            dimensions = dimensions.model_copy(
+                update={"visual_noise": round(noise, 3)},
+            )
+
+        return base.model_copy(
+            update={
+                "method": method,
+                "layout_plan_id": base.layout_plan_id or (
+                    str(scene.layout_plan_id) if scene.layout_plan_id else None
+                ),
+                "slide_id": base.slide_id or str(scene.slide_id),
+                "findings": findings,
+                "dimensions": dimensions,
+                "total_score": self._aggregate(dimensions),
+                "notes": notes,
+            }
+        )
+
     def evaluate_deck(
         self,
         plans: list[LayoutPlan],
@@ -575,6 +638,131 @@ class VisualCriticService:
                     )
                 )
         return findings
+
+    def _scene_findings(self, scene: RenderScene) -> list[VisualCriticFinding]:
+        """Scene-level findings from composed nodes (VQ-007 v1.1)."""
+        findings: list[VisualCriticFinding] = []
+        page_area = max(scene.page_width * scene.page_height, 1e-6)
+        title_roles = frozenset({"title", "section_title", "cover_title"})
+        hero_roles = frozenset({"hero", "hero_visual", "project_photo", "cover_image"})
+
+        titles = [
+            n
+            for n in scene.nodes
+            if isinstance(n, TextNode) and n.semantic_role in title_roles
+        ]
+        if titles:
+            title = max(titles, key=lambda n: float(n.font_size or 0))
+            # font_size is pt; page_height is inches → normalize to ~0–1 band.
+            size_ratio = float(title.font_size or 0) / max(scene.page_height * 72.0, 1.0)
+            if size_ratio < 0.045 or float(title.font_size or 0) < 22.0:
+                findings.append(
+                    VisualCriticFinding(
+                        rule_code=CRITIC_TITLE_WEAK,
+                        severity=LayoutIssueSeverity.WARNING,
+                        message="Composed title scale is too small for a clear visual anchor.",
+                        suggestion=(
+                            "Boost title scale ~15% or increase letter-spacing "
+                            "so the headline reads at presentation distance."
+                        ),
+                        evidence={
+                            "title_font_size": float(title.font_size or 0),
+                            "title_size_ratio": round(size_ratio, 4),
+                            "source": "scene_v1",
+                        },
+                    )
+                )
+
+        heroes = [
+            n
+            for n in scene.nodes
+            if isinstance(n, ImageNode)
+            and (n.semantic_role in hero_roles or "hero" in n.semantic_role or n.id == "hero")
+        ]
+        if heroes:
+            hero = max(heroes, key=lambda n: n.width * n.height)
+            hero_ratio = (hero.width * hero.height) / page_area
+            if hero_ratio < 0.14:
+                findings.append(
+                    VisualCriticFinding(
+                        rule_code=CRITIC_HERO_WEAK,
+                        severity=LayoutIssueSeverity.WARNING,
+                        message="Composed hero image occupies too little of the page.",
+                        suggestion="Enlarge primary visual by ~15–20% in the composed scene.",
+                        evidence={
+                            "hero_area_ratio": round(hero_ratio, 4),
+                            "source": "scene_v1",
+                        },
+                    )
+                )
+
+        noise_score = self._scene_visual_noise_score(scene)
+        if noise_score < 0.48:
+            findings.append(
+                VisualCriticFinding(
+                    rule_code=CRITIC_VISUAL_NOISE_HIGH,
+                    severity=LayoutIssueSeverity.INFO,
+                    message="Composed scene carries excess motif / color geometry noise.",
+                    suggestion=(
+                        "Quiet decorative marks and soften accent color shapes (~25%)."
+                    ),
+                    evidence={"visual_noise": round(noise_score, 3), "source": "scene_v1"},
+                )
+            )
+
+        from archium.application.visual.text_contrast_guard import scene_text_contrast_failures
+
+        contrast_failures = scene_text_contrast_failures(scene)
+        if contrast_failures:
+            findings.append(
+                VisualCriticFinding(
+                    rule_code=CRITIC_TEXT_CONTRAST_LOW,
+                    severity=LayoutIssueSeverity.WARNING,
+                    message=(
+                        f"{len(contrast_failures)} text node(s) fail contrast against "
+                        "the page background."
+                    ),
+                    suggestion="Fix text/background contrast to meet readability thresholds.",
+                    evidence={
+                        "failures": contrast_failures[:4],
+                        "count": len(contrast_failures),
+                        "source": "scene_v1",
+                    },
+                )
+            )
+
+        color_nodes = [
+            n
+            for n in scene.nodes
+            if str(getattr(n, "id", "")).startswith("color_")
+        ]
+        if len(color_nodes) >= 3:
+            findings.append(
+                VisualCriticFinding(
+                    rule_code=CRITIC_COLOR_CHAOS,
+                    severity=LayoutIssueSeverity.INFO,
+                    message="Multiple color-geometry layers compete on the composed page.",
+                    suggestion="Soften or remove redundant accent washes and edge bands.",
+                    evidence={
+                        "color_geometry_count": len(color_nodes),
+                        "source": "scene_v1",
+                    },
+                )
+            )
+
+        return findings
+
+    @staticmethod
+    def _scene_visual_noise_score(scene: RenderScene) -> float:
+        """1.0 = calm composed scene; 0.0 = noisy."""
+        decorative = 0
+        for node in scene.nodes:
+            node_id = str(getattr(node, "id", ""))
+            role = str(getattr(node, "semantic_role", ""))
+            if node_id.startswith(("vl_", "color_")) or "motif" in role:
+                decorative += 1
+        # Soft cap: 0 decorations → 1.0; 12+ → ~0.2
+        return max(0.15, min(1.0, 1.0 - decorative * 0.07))
 
     @staticmethod
     def _dedupe_findings(findings: list[VisualCriticFinding]) -> list[VisualCriticFinding]:

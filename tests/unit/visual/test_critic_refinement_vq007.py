@@ -283,6 +283,109 @@ def test_refine_page_respects_round_and_action_caps() -> None:
         assert any("vq7_action:" in w for w in result.scene.warnings)
 
 
+def test_evaluate_scene_flags_weak_title_and_contrast() -> None:
+    from archium.application.visual.visual_critic_service import VisualCriticService
+    from archium.domain.visual.critic import CRITIC_TEXT_CONTRAST_LOW, CRITIC_TITLE_WEAK
+
+    scene = _scene(
+        _title_node(size=16),
+        TextNode(
+            id="caption",
+            semantic_role="body_text",
+            x=0.5,
+            y=2.0,
+            width=4.0,
+            height=0.4,
+            z_index=2,
+            text="低对比说明",
+            paragraphs=[TextParagraph(text="低对比说明")],
+            font_family="Arial",
+            font_family_cjk="Microsoft YaHei",
+            font_family_latin="Arial",
+            font_size=12,
+            font_weight=400,
+            color="#DDDDDD",
+            line_height=14,
+        ),
+    )
+    report = VisualCriticService().evaluate_scene(scene)
+    codes = {f.rule_code for f in report.findings}
+    assert CRITIC_TITLE_WEAK in codes
+    assert CRITIC_TEXT_CONTRAST_LOW in codes
+    assert "scene_v1" in " ".join(report.notes)
+
+
+def test_soften_color_geometry_drops_wash_layers() -> None:
+    from archium.domain.visual.render_scene import ShapeNode
+
+    scene = _scene(
+        _title_node(),
+        ShapeNode(
+            id="color_accent_edge",
+            semantic_role="color_geometry",
+            x=0,
+            y=0,
+            width=0.1,
+            height=5.625,
+            opacity=0.9,
+            shape_kind="rectangle",
+            fill_color="#C45C26",
+            stroke_color="#C45C26",
+            stroke_width=0,
+        ),
+        ShapeNode(
+            id="color_accent_wash",
+            semantic_role="color_geometry",
+            x=0,
+            y=4.0,
+            width=10,
+            height=1.6,
+            opacity=0.35,
+            shape_kind="rectangle",
+            fill_color="#C45C26",
+            stroke_color="#C45C26",
+            stroke_width=0,
+        ),
+    )
+    from archium.domain.visual.critic import CRITIC_COLOR_CHAOS
+
+    report = VisualCriticReport(
+        findings=[
+            VisualCriticFinding(
+                rule_code=CRITIC_COLOR_CHAOS,
+                severity=LayoutIssueSeverity.INFO,
+                message="noisy palette",
+                evidence={"color_geometry_count": 2, "source": "scene_v1"},
+            )
+        ],
+        total_score=0.45,
+    )
+    service = CriticRefinementService()
+    proposal = service.propose(report, scene)
+    types = {a.action_type for a in proposal.actions}
+    assert VisualRefinementActionType.SOFTEN_COLOR_GEOMETRY in types
+    patched, applied = service.apply(scene, proposal.actions)
+    ids = {n.id for n in patched.nodes}
+    assert "color_accent_wash" not in ids
+    assert "color_accent_edge" in ids
+
+
+def test_magnitude_from_evidence_boosts_weak_title() -> None:
+    from archium.application.visual.critic_refinement_service import _magnitude_from_finding
+    from archium.domain.visual.critic import CRITIC_TITLE_WEAK
+
+    finding = VisualCriticFinding(
+        rule_code=CRITIC_TITLE_WEAK,
+        severity=LayoutIssueSeverity.WARNING,
+        message="weak",
+        evidence={"title_size_ratio": 0.03, "source": "scene_v1"},
+    )
+    mag = _magnitude_from_finding(
+        finding, VisualRefinementActionType.BOOST_TITLE_SCALE
+    )
+    assert mag > 0.15
+
+
 def test_unknown_action_type_cannot_be_smuggled() -> None:
     scene = _scene(_title_node())
     # Construct via model with a valid enum only — closed set.
@@ -293,6 +396,7 @@ def test_unknown_action_type_cannot_be_smuggled() -> None:
         VisualRefinementActionType.QUIET_MOTIF,
         VisualRefinementActionType.TRIM_BODY_BOX,
         VisualRefinementActionType.SOFTEN_ACCENT_SHAPES,
+        VisualRefinementActionType.SOFTEN_COLOR_GEOMETRY,
         VisualRefinementActionType.FIX_TEXT_CONTRAST,
     }
     patched, applied = CriticRefinementService().apply(scene, [])

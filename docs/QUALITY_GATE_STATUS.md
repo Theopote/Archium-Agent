@@ -22,7 +22,7 @@ This document states what is **proven by automation** vs what still requires **h
 | VQ-004 | Shape / Connector / Freeform formal rendering | **Partial** — v1.1 stroke_dash + cross/diamond markers + diagonal before/after cut; PPTX/HTML/PNG path export; true `p:cxnSp` / `a:custGeom` still deferred |
 | VQ-005 | Architectural Visual Grammar Library（12） | **Partial** — v1.1: 12 profiles each with `color_arrangement`; **8 P0** (spatial + before/after promoted); title keywords; composition/color stamps; outline titles preserved |
 | VQ-006 | Deck Rhythm Planner | **Partial** — v1.1 inferred pacing from slide/continuity; motif_mark_bias caps marks; letter-spacing/lead scale; pause softens color geometry |
-| VQ-007 | Screenshot Visual Critic | **Partial** — screenshot_v1 + optional vision；VQ-007 有限精修闭环（allowlist ≤3 actions/page、≤2 rounds；主链 critique 后可写回 Scene） |
+| VQ-007 | Screenshot Visual Critic | **Partial** — v1.1 `scene_v1` overlay (title/hero/contrast/color-geometry); 8 allowlisted actions; evidence-based magnitudes; bounded refine loop on main chain |
 | VQ-008 | Architect Blind Review Benchmark | **Scaffolded**（协议/计分/Beta 门禁 + CLI；**真人 ≥5 建筑师盲评未跑 → Beta 仍禁止**） |
 
 ## 三轨状态总览（当前对齐口径）

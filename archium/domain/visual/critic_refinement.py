@@ -31,6 +31,7 @@ class VisualRefinementActionType(StrEnum):
     QUIET_MOTIF = "quiet_motif"
     TRIM_BODY_BOX = "trim_body_box"
     SOFTEN_ACCENT_SHAPES = "soften_accent_shapes"
+    SOFTEN_COLOR_GEOMETRY = "soften_color_geometry"
     FIX_TEXT_CONTRAST = "fix_text_contrast"
 
 
@@ -52,9 +53,16 @@ CRITIC_CODE_TO_ACTIONS: dict[str, tuple[VisualRefinementActionType, ...]] = {
         VisualRefinementActionType.ENLARGE_HERO,
     ),
     "CRITIC.WHITESPACE_WEAK": (VisualRefinementActionType.TRIM_BODY_BOX,),
-    "CRITIC.COLOR_CHAOS": (VisualRefinementActionType.SOFTEN_ACCENT_SHAPES,),
+    "CRITIC.COLOR_CHAOS": (
+        VisualRefinementActionType.SOFTEN_COLOR_GEOMETRY,
+        VisualRefinementActionType.SOFTEN_ACCENT_SHAPES,
+    ),
     "CRITIC.MECHANICAL": (VisualRefinementActionType.QUIET_MOTIF,),
     "CRITIC.TEXT_CONTRAST_LOW": (VisualRefinementActionType.FIX_TEXT_CONTRAST,),
+    "CRITIC.BALANCE_OFF": (
+        VisualRefinementActionType.ENLARGE_HERO,
+        VisualRefinementActionType.TRIM_BODY_BOX,
+    ),
 }
 
 

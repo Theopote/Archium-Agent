@@ -76,10 +76,11 @@ class CriticRefinementService:
                 if target is None and action_type not in {
                     VisualRefinementActionType.QUIET_MOTIF,
                     VisualRefinementActionType.SOFTEN_ACCENT_SHAPES,
+                    VisualRefinementActionType.SOFTEN_COLOR_GEOMETRY,
                     VisualRefinementActionType.FIX_TEXT_CONTRAST,
                 }:
                     continue
-                magnitude = _default_magnitude(action_type)
+                magnitude = _magnitude_from_finding(finding, action_type)
                 actions.append(
                     VisualRefinementAction(
                         action_type=action_type,
@@ -138,7 +139,7 @@ class CriticRefinementService:
         rounds_cap = max(0, min(int(max_rounds), MAX_REFINEMENT_ROUNDS))
         actions_cap = max(0, min(int(max_actions), MAX_ACTIONS_PER_PAGE))
         current = scene.model_copy(deep=True)
-        before = self._critic.evaluate_plan(plan, image_path=image_path)
+        before = self._critic.evaluate_scene(current, plan, image_path=image_path)
         if rounds_cap == 0 or actions_cap == 0:
             return VisualRefinementLoopResult(
                 scene=current,
@@ -171,7 +172,7 @@ class CriticRefinementService:
 
             current, applied = self.apply(current, proposal.actions)
             total_applied += len(applied)
-            re_eval = self._critic.evaluate_plan(plan, image_path=image_path)
+            re_eval = self._critic.evaluate_scene(current, plan, image_path=image_path)
             # Score uses plan geometry; stamp note that scene was patched.
             if applied:
                 re_eval = re_eval.model_copy(
@@ -328,6 +329,8 @@ class CriticRefinementService:
             return self._quiet_motif(scene, action)
         if kind == VisualRefinementActionType.SOFTEN_ACCENT_SHAPES:
             return self._soften_accent_shapes(scene, action)
+        if kind == VisualRefinementActionType.SOFTEN_COLOR_GEOMETRY:
+            return self._soften_color_geometry(scene, action)
         if kind == VisualRefinementActionType.FIX_TEXT_CONTRAST:
             return self._fix_text_contrast(scene)
         return False
@@ -338,9 +341,9 @@ class CriticRefinementService:
             return False
         scale = 1.0 + min(0.25, max(0.05, action.magnitude))
         new_size = min(84.0, round(float(node.font_size) * scale, 1))
-        updated = node.model_copy(
-            update={"font_size": new_size, "font_weight": max(node.font_weight, 700)}
-        )
+        has_outline = any(getattr(run, "outline", False) for run in (node.runs or []))
+        weight = node.font_weight if has_outline else max(node.font_weight, 700)
+        updated = node.model_copy(update={"font_size": new_size, "font_weight": weight})
         if node.runs:
             runs = [
                 TextRun(
@@ -353,10 +356,20 @@ class CriticRefinementService:
                         if run.font_size is not None
                         else new_size
                     ),
-                    font_weight=max(run.font_weight or 400, 700),
+                    font_weight=(
+                        run.font_weight
+                        if (has_outline or run.outline)
+                        else max(run.font_weight or 400, 700)
+                    ),
                     font_style=run.font_style,
                     color=run.color,
                     color_token=run.color_token,
+                    letter_spacing=run.letter_spacing,
+                    opacity=run.opacity,
+                    outline=run.outline,
+                    outline_width_pt=run.outline_width_pt,
+                    outline_color=run.outline_color,
+                    fill_enabled=run.fill_enabled,
                 )
                 for run in node.runs
             ]
@@ -463,6 +476,28 @@ class CriticRefinementService:
             object.__setattr__(scene, "nodes", nodes)
         return changed
 
+    def _soften_color_geometry(
+        self, scene: RenderScene, action: VisualRefinementAction
+    ) -> bool:
+        scale = max(0.25, 1.0 - min(0.55, action.magnitude + 0.2))
+        changed = False
+        nodes: list[object] = []
+        for node in scene.nodes:
+            node_id = str(getattr(node, "id", ""))
+            if not node_id.startswith("color_"):
+                nodes.append(node)
+                continue
+            # Drop the weakest wash layers first; soften survivors.
+            if "wash" in node_id and scale < 0.55:
+                changed = True
+                continue
+            opacity = round(float(getattr(node, "opacity", 1.0)) * scale, 3)
+            nodes.append(node.model_copy(update={"opacity": opacity}))
+            changed = True
+        if changed:
+            object.__setattr__(scene, "nodes", nodes)
+        return changed
+
     @staticmethod
     def _text_node(
         scene: RenderScene,
@@ -497,8 +532,46 @@ def _default_magnitude(action_type: VisualRefinementActionType) -> float:
         VisualRefinementActionType.TRIM_BODY_BOX: 0.12,
         VisualRefinementActionType.QUIET_MOTIF: 0.3,
         VisualRefinementActionType.SOFTEN_ACCENT_SHAPES: 0.25,
+        VisualRefinementActionType.SOFTEN_COLOR_GEOMETRY: 0.28,
         VisualRefinementActionType.FIX_TEXT_CONTRAST: 0.0,
     }.get(action_type, 0.12)
+
+
+def _magnitude_from_finding(
+    finding: object,
+    action_type: VisualRefinementActionType,
+) -> float:
+    """Derive patch strength from critic evidence when available."""
+    base = _default_magnitude(action_type)
+    evidence = getattr(finding, "evidence", None) or {}
+    if not isinstance(evidence, dict):
+        return base
+
+    code = str(getattr(finding, "rule_code", ""))
+    if action_type == VisualRefinementActionType.BOOST_TITLE_SCALE:
+        ratio = evidence.get("title_size_ratio")
+        if isinstance(ratio, (int, float)) and ratio < 0.045:
+            return min(0.25, base + (0.045 - float(ratio)) * 2.5)
+    if action_type == VisualRefinementActionType.ENLARGE_HERO:
+        ratio = evidence.get("hero_area_ratio") or evidence.get("hero_prominence")
+        if isinstance(ratio, (int, float)) and float(ratio) < 0.2:
+            return min(0.22, base + (0.2 - float(ratio)) * 0.6)
+    if action_type in {
+        VisualRefinementActionType.QUIET_MOTIF,
+        VisualRefinementActionType.SOFTEN_ACCENT_SHAPES,
+        VisualRefinementActionType.SOFTEN_COLOR_GEOMETRY,
+    }:
+        noise = evidence.get("visual_noise")
+        if isinstance(noise, (int, float)) and float(noise) < 0.5:
+            return min(0.4, base + (0.5 - float(noise)) * 0.5)
+        count = evidence.get("color_geometry_count")
+        if isinstance(count, int) and count >= 3:
+            return min(0.38, base + count * 0.04)
+    if code == "CRITIC.COPY_DENSITY_HIGH":
+        ratio = evidence.get("copy_area_ratio")
+        if isinstance(ratio, (int, float)) and float(ratio) > 0.4:
+            return min(0.22, base + (float(ratio) - 0.4) * 0.4)
+    return base
 
 
 __all__ = ["CriticRefinementService"]
