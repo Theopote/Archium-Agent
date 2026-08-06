@@ -95,6 +95,7 @@ def _go_tool_hub() -> None:
 def _render_task_entries(*, empty: bool = False) -> None:
     """Homepage only exposes tasks — not the five-stage system flow."""
     import html as _html
+    from archium.ui.components.enhanced_ui import render_action_card
 
     caption = (
         "选择要做的事。不必先了解系统流程，也不必创建 Mission。"
@@ -109,27 +110,65 @@ def _render_task_entries(*, empty: bool = False) -> None:
         unsafe_allow_html=True,
     )
 
+    # 显示"不知道从哪开始？"帮助
+    if st.session_state.get("home_show_guidance", True):
+        with st.expander("💡 不知道从哪开始？", expanded=False):
+            st.markdown("""
+            **选择建议**：
+            - **首次使用**：选择「快速出稿」体验完整流程
+            - **有明确项目**：选择「开始新项目」进行深度规划
+            - **继续工作**：选择「打开项目」继续之前的任务
+            - **单一需求**：选择「工具台」使用独立功能（如页面复活）
+            """)
+            if st.button("知道了，不再显示", key="home_hide_guidance"):
+                st.session_state.home_show_guidance = False
+                st.rerun()
+
     primary, secondary = st.columns([1.35, 1])
+
     with primary:
-        st.markdown("**新项目**")
-        st.caption("描述想法或项目情况，让 Archium 评估知识状态。")
-        if st.button("开始新项目", key="home_entry_new", type="primary", width="stretch"):
-            _go_new_project()
+        render_action_card(
+            title="开始新项目",
+            description="适合：有完整项目背景，需要深度理解和规划。系统会评估知识状态并推荐工作路径。",
+            icon="🏗️",
+            button_label="开始新项目",
+            on_click=_go_new_project,
+            badge="深度模式",
+            key="home_entry_new",
+        )
+
         st.markdown("")
-        st.markdown("**快速生成一份汇报**")
-        st.caption("少追问、尽快出初稿，完成后可进工作室预览。")
-        if st.button("快速出稿", key="home_entry_fast", width="stretch"):
-            _go_fast_deck()
+
+        render_action_card(
+            title="快速出稿",
+            description="适合：首次尝试或时间紧迫。少追问、快速生成初稿，完成后可进工作室调整。",
+            icon="⚡",
+            button_label="快速出稿",
+            on_click=_go_fast_deck,
+            badge="推荐",
+            key="home_entry_fast",
+        )
+
     with secondary:
-        st.markdown("**打开已有项目**")
-        st.caption("继续最近项目，或到项目列表中选择。")
-        if st.button("打开项目", key="home_entry_open", width="stretch"):
-            _go_open_projects()
+        render_action_card(
+            title="打开项目",
+            description="继续最近的项目工作，或从项目列表中选择其他项目。",
+            icon="📂",
+            button_label="打开项目",
+            on_click=_go_open_projects,
+            key="home_entry_open",
+        )
+
         st.markdown("")
-        st.markdown("**使用单项工具**")
-        st.caption("只做一件事：复活页面、套模板、查事实等。")
-        if st.button("打开工具台", key="home_entry_tools", width="stretch"):
-            _go_tool_hub()
+
+        render_action_card(
+            title="单项工具",
+            description="使用独立功能：页面复活、模板套用、事实检查等，无需完整流程。",
+            icon="🧰",
+            button_label="打开工具台",
+            on_click=_go_tool_hub,
+            key="home_entry_tools",
+        )
 
 
 def _render_load_failed(exc: Exception) -> None:

@@ -921,6 +921,18 @@ def _render_outline_draft_banner(outline: OutlinePlan | None, *, slide_count: in
 
 
 def render() -> None:
+    from archium.ui.components.navigation import (
+        render_workflow_progress_indicator,
+        render_stage_navigation_hint,
+        set_current_stage,
+    )
+
+    # 设置当前阶段
+    set_current_stage("outline")
+
+    # 显示五阶段进度
+    render_workflow_progress_indicator("outline")
+
     render_stage_header("outline")
     st.caption("确认章节、页面意图与汇报任务。高级六步规划可按需打开。")
 
@@ -937,17 +949,73 @@ def render() -> None:
     render_design_critique_card(project_id=project_id, title="最近设计批判")
 
     snapshot = project_mission.load_planning_snapshot(project_id)
-    _render_default_outline(project_id, snapshot)
 
-    st.divider()
-    show_advanced = st.toggle(
-        "高级任务规划",
-        value=False,
-        key="outline_advanced_planning",
-        help="打开后显示完整六步规划器。",
-    )
-    if show_advanced:
+    # 使用标签页组织内容
+    tab1, tab2, tab3 = st.tabs(["📋 大纲编辑", "🔍 页面预览", "⚙️ 高级规划"])
+
+    with tab1:
+        st.caption("编辑章节结构和页面意图。完成后点击底部「确认并前往生成」。")
+        _render_default_outline(project_id, snapshot)
+
+    with tab2:
+        st.caption("查看当前大纲的页面列表和基本信息。")
+        _render_outline_preview(project_id, outline, snapshot, slides)
+
+    with tab3:
+        st.caption("完整六步规划器，适合复杂项目。")
         project_mission.render(embedded=True)
+
+    # 显示下一步提示
+    render_stage_navigation_hint("outline")
 
     # Outline owns the confirm CTA — do not render a second「前往生成」.
     render_stage_nav("outline", include_next=False)
+
+
+def _render_outline_preview(
+    project_id: UUID,
+    outline: OutlinePlan | None,
+    snapshot: PlanningSnapshot,
+    slides: list,
+) -> None:
+    """渲染大纲预览面板 - 只读快照。"""
+    from archium.ui.components.enhanced_ui import render_empty_state
+
+    if not outline or not outline.sections:
+        render_empty_state(
+            "暂无大纲",
+            "在「大纲编辑」标签页中创建章节和页面意图",
+            icon="📝",
+        )
+        return
+
+    # 显示统计
+    total_pages = sum(s.estimated_slide_count for s in outline.sections)
+    st.markdown(f"**总计**: {len(outline.sections)} 个章节，预计 {total_pages} 页")
+
+    st.divider()
+
+    # 章节列表
+    for section in sorted(outline.sections, key=lambda s: s.order):
+        with st.container(border=True):
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.markdown(f"### {section.order + 1}. {section.title}")
+                if section.purpose:
+                    st.caption(f"**目的**: {section.purpose}")
+                if section.key_message:
+                    st.caption(f"**关键信息**: {section.key_message}")
+            with col2:
+                st.metric("页数", section.estimated_slide_count)
+                st.caption(f"类型: {page_type_label(section.category or 'general')}")
+
+            if section.evidence_requirements or section.required_assets:
+                with st.expander("证据与素材要求", expanded=False):
+                    if section.evidence_requirements:
+                        st.markdown("**证据要求**:")
+                        for ev in section.evidence_requirements:
+                            st.markdown(f"- {ev}")
+                    if section.required_assets:
+                        st.markdown("**所需素材**:")
+                        for asset in section.required_assets:
+                            st.markdown(f"- {asset}")

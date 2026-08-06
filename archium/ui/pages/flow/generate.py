@@ -115,16 +115,24 @@ def _render_project_context_readiness(project_id: UUID) -> None:
 
 
 def _render_queue_summary(metrics: GenerateQueueMetrics) -> None:
-    st.markdown(
-        f"**总体 {metrics.complete}/{metrics.total}**　"
-        f"完成 {metrics.complete}　"
-        f"待处理 {metrics.pending}　"
-        f"失败 {metrics.failed}"
+    from archium.ui.components.enhanced_ui import render_quick_stats, render_progress_card
+
+    # 显示进度条
+    render_progress_card(
+        title="页面生成进度",
+        current=metrics.complete,
+        total=metrics.total,
+        details=f"待处理 {metrics.pending} · 失败 {metrics.failed}",
+        show_percentage=True,
     )
+
+    st.markdown("")
 
 
 def _render_page_queue(project_id: UUID, presentation_id: UUID) -> bool:
     """Return True when any attention rows exist."""
+    from archium.ui.components.enhanced_ui import render_status_indicator
+
     board = load_page_status_board(presentation_id)
     metrics = metrics_from_board(board)
     _render_queue_summary(metrics)
@@ -133,31 +141,96 @@ def _render_page_queue(project_id: UUID, presentation_id: UUID) -> bool:
         st.info(f"尚未生成页面。展开下方「{CONTENT_PIPELINE_ACTION}」开始生成。")
         return False
 
+    # 批量操作栏
+    if metrics.failed > 0:
+        st.markdown("#### 批量操作")
+        col1, col2, col3 = st.columns([1, 1, 2])
+        with col1:
+            if st.button("🔄 重试全部失败页", key="retry_all_failed", use_container_width=True):
+                st.info("批量重试功能即将实现")
+        with col2:
+            if st.button("⏭️ 跳过失败继续", key="skip_failed", use_container_width=True):
+                st.info("跳过功能即将实现")
+
     st.markdown("#### 逐页队列")
-    has_attention = False
+
+    # 按状态分组显示
+    completed_rows = []
+    pending_rows = []
+    failed_rows = []
+
     for row in board.rows:
-        attention = row.severity in {"warn", "error"}
-        if attention:
-            has_attention = True
-        status = queue_row_status(row)
-        title = (row.title or f"第 {row.order + 1} 页").strip()
-        # Spec shape: 01 封面              完成
-        line = f"`{row.order + 1:02d}`  **{title}**"
-        cols = st.columns([4.2, 1.4])
-        with cols[0]:
-            st.markdown(line)
-            if attention and row.detail:
-                st.caption(row.detail)
-        with cols[1]:
-            st.markdown(status)
-        if attention:
+        if row.severity in {"warn", "error"}:
+            failed_rows.append(row)
+        elif "完成" in queue_row_status(row):
+            completed_rows.append(row)
+        else:
+            pending_rows.append(row)
+
+    has_attention = len(failed_rows) > 0
+
+    # 显示失败页面（优先）
+    if failed_rows:
+        st.markdown("**❌ 需要处理（{}）**".format(len(failed_rows)))
+        for row in failed_rows:
+            _render_queue_row(row, project_id, presentation_id, show_actions=True)
+        st.markdown("")
+
+    # 显示待处理页面
+    if pending_rows:
+        with st.expander(f"⏳ 待生成（{len(pending_rows)}）", expanded=len(failed_rows) == 0):
+            for row in pending_rows:
+                _render_queue_row(row, project_id, presentation_id, show_actions=False)
+
+    # 显示已完成页面
+    if completed_rows:
+        with st.expander(f"✅ 已完成（{len(completed_rows)}）", expanded=False):
+            for row in completed_rows:
+                _render_queue_row(row, project_id, presentation_id, show_actions=False)
+
+    return has_attention
+
+
+def _render_queue_row(row, project_id: UUID, presentation_id: UUID, show_actions: bool) -> None:
+    """渲染单个队列行"""
+    from archium.ui.components.enhanced_ui import render_status_indicator
+
+    status_text = queue_row_status(row)
+    title = (row.title or f"第 {row.order + 1} 页").strip()
+
+    # 确定状态类型
+    if row.severity == "error":
+        status_type = "error"
+    elif row.severity == "warn":
+        status_type = "warning"
+    elif "完成" in status_text:
+        status_type = "success"
+    elif "进行" in status_text:
+        status_type = "pending"
+    else:
+        status_type = "info"
+
+    cols = st.columns([0.5, 3, 1.5, 1])
+
+    with cols[0]:
+        st.markdown(f"`{row.order + 1:02d}`")
+
+    with cols[1]:
+        st.markdown(f"**{title}**")
+        if row.detail and row.severity in {"warn", "error"}:
+            st.caption(f"⚠️ {row.detail}")
+
+    with cols[2]:
+        render_status_indicator(status_type, status_text, size="small")
+
+    with cols[3]:
+        if show_actions:
             render_compact_page_actions(
                 presentation_id=presentation_id,
                 project_id=project_id,
                 row=row,
                 key_prefix="generate_queue",
             )
-    return has_attention
 
 
 def _render_bottom_actions(*, has_attention: bool, ready_for_export: bool) -> None:
@@ -228,8 +301,21 @@ def _render_starter_content_banner(project_id: UUID) -> None:
 
 
 def render() -> None:
+    from archium.ui.components.navigation import (
+        render_workflow_progress_indicator,
+        render_stage_navigation_hint,
+        set_current_stage,
+    )
+
+    # 设置当前阶段
+    set_current_stage("generate")
+
+    # 显示五阶段进度
+    render_workflow_progress_indicator("generate")
+
     render_stage_header("generate")
     st.caption("主体是逐页队列。版式微调请到「工作室」；导出在「交付」。")
+
     project_id = _resolve_flow_project_id()
     if project_id is None:
         st.info("请先在「资料」阶段创建或选择项目。")
@@ -244,6 +330,9 @@ def render() -> None:
     if presentation_id is not None:
         try:
             has_attention = _render_page_queue(project_id, presentation_id)
+            # 显示下一步提示
+            if not has_attention:
+                render_stage_navigation_hint("generate")
         except Exception:
             st.warning(f"逐页状态暂不可用。可先{CONTENT_PIPELINE_ACTION}。")
     else:

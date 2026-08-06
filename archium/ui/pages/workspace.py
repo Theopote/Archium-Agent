@@ -952,18 +952,17 @@ def _render_history(project_id: UUID) -> None:
 
 def render() -> None:
     from archium.ui.components.chrome import render_page_header
+    from archium.ui.components.enhanced_ui import render_info_tooltip
 
     _init_session_state()
     render_page_header(
         "项目工作台",
-        "开发者深层工具页（不在侧栏）。日常请走制作五阶段；也可从「设置 → 开发者与验收」打开本页。",
+        "完整工作台，包含高级诊断和深度管理功能。日常使用请走制作五阶段。",
     )
-    from archium.ui.product_flow import product_flow_chain
 
-    st.info(
-        f"推荐主流程：{product_flow_chain()}。"
-        f"本页仍可作为快捷路径直接填写{entity_label('PresentationBrief')}并生成，"
-        "并包含完整审核 / 历史工具。"
+    st.markdown(
+        "💡 **使用建议**: 日常工作使用简化的五阶段流程；"
+        "需要深度诊断或批量管理时使用本页。"
     )
 
     _render_create_project()
@@ -973,20 +972,62 @@ def render() -> None:
 
     _render_overview(project_id)
 
-    tab_materials, tab_generate, tab_review, tab_history = st.tabs(
-        ["资料管理", "生成", "审核", "历史"]
+    # 重新组织为更清晰的三个主标签页
+    tab_materials, tab_diagnostics, tab_advanced = st.tabs(
+        ["📁 资料与事实", "🔍 诊断工具", "⚙️ 高级功能"]
     )
 
     with tab_materials:
+        st.markdown("### 资料管理")
+        st.caption("上传文档、管理事实台账、组织素材。")
         render_materials_stage(project_id)
 
-    with tab_generate:
+    with tab_diagnostics:
+        st.markdown("### 诊断工具")
+        st.caption("检索预览、分块检查、事实冲突检测等高级诊断功能。")
+        _render_diagnostics_tab(project_id)
+
+    with tab_advanced:
+        st.markdown("### 高级功能")
+        st.caption("生成管线、审核工具、历史记录等完整功能。")
+        _render_advanced_tab(project_id)
+
+
+def _render_diagnostics_tab(project_id: UUID) -> None:
+    """诊断工具标签页 - 整合 RAG、分块、文化叙事等功能。"""
+    diag_tabs = st.tabs(["🔎 检索预览", "📦 分块检查", "📊 事实冲突", "🏛️ 文化叙事"])
+
+    with diag_tabs[0]:
+        st.caption("测试 RAG 检索效果，查看返回的文档片段。")
+        render_rag_preview_panel(project_id)
+
+    with diag_tabs[1]:
+        st.caption("查看文档如何被切分为片段，检查分块质量。")
+        render_chunk_panel(project_id)
+
+    with diag_tabs[2]:
+        st.caption("查看待确认和冲突的事实，进行人工核实。")
+        render_fact_ledger_panel(project_id, highlight_pending=True)
+
+    with diag_tabs[3]:
+        st.caption("文化建筑项目的叙事线索和主题提取。")
+        render_cultural_narrative_panel(project_id)
+
+
+def _render_advanced_tab(project_id: UUID) -> None:
+    """高级功能标签页 - 生成、审核、历史。"""
+    adv_tabs = st.tabs(["⚡ 生成管线", "✅ 审核工具", "📜 历史记录"])
+
+    with adv_tabs[0]:
+        st.caption("直接填写 Brief 并运行生成管线（高级用户）。")
         render_generate_stage(project_id, include_export=True)
 
-    with tab_review:
+    with adv_tabs[1]:
+        st.caption("查看审核质量、批评报告和改进建议。")
         render_review_stage(project_id)
 
-    with tab_history:
+    with adv_tabs[2]:
+        st.caption("查看项目历史、版本记录和导出日志。")
         _render_history(project_id)
 
 
