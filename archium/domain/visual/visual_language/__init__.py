@@ -25,6 +25,7 @@ from archium.domain.visual.visual_language.decoration import (
 from archium.domain.visual.visual_language.graphic_motif import (
     GraphicMotif,
     MarkerStyle,
+    MotifArrangement,
     MotifType,
     StrokeStyle,
 )
@@ -85,6 +86,7 @@ __all__ = [
     "ImageMaskSpec",
     "ImageSlotRole",
     "MarkerStyle",
+    "MotifArrangement",
     "MotifType",
     "NAMED_SWATCHES",
     "ROLE_CATALOG",

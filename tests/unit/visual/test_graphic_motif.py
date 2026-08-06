@@ -70,9 +70,27 @@ def test_fragment_metaphor_selects_flow_nodes_motif() -> None:
 def test_cover_defaults_to_quiet_rule() -> None:
     motif = compose_graphic_motif(slide=_slide(title="封面", slide_type=SlideType.TITLE))
     assert motif.motif_type == MotifType.QUIET_RULE
+    assert motif.arrangement.value == "monumental_rule"
     merged = merge_motif_into_primitives(["hero_statement"], motif)
     assert "thin_rule" in merged
     assert "hero_statement" in merged
+
+
+def test_section_uses_margin_axis_arrangement() -> None:
+    motif = compose_graphic_motif(
+        slide=_slide(title="现状问题", slide_type=SlideType.SECTION),
+    )
+    assert motif.motif_type == MotifType.AXIS_GRID
+    assert motif.arrangement.value == "margin_axis"
+
+
+def test_closing_uses_closing_silence() -> None:
+    motif = compose_graphic_motif(
+        slide=_slide(title="结语", slide_type=SlideType.CLOSING),
+    )
+    assert motif.motif_type == MotifType.QUIET_RULE
+    assert motif.arrangement.value == "closing_silence"
+    assert motif.max_marks == 1
 
 
 def test_visual_language_includes_motif() -> None:
@@ -128,6 +146,10 @@ def test_compiler_emits_motif_geometry_on_cover() -> None:
     ]
     assert motifs
     assert any(w.startswith("graphic_motif:") for w in scene.warnings)
+    assert any(w.startswith("motif_arrangement:monumental_rule") for w in scene.warnings)
+    title_rule = next((n for n in motifs if n.id == "vl_motif_title_rule"), None)
+    assert title_rule is not None
+    assert title_rule.width >= 4.0  # monumental: ~72% of title band
     assert any(isinstance(n, TextNode) and n.id == "title" for n in scene.nodes)
 
 

@@ -18,7 +18,7 @@ This document states what is **proven by automation** vs what still requires **h
 |------|------|------|
 | VQ-001 | Semantic Typography Composition | **Partial** — v1.1 six recipes (split_keyword / giant_background / index_title / metric_monument / outline_statement / vertical_edge); composition owns title when TextRuns exist; PPTX outline approx |
 | VQ-002 | Project Color Composition | **Partial** — v1.1 arrangements (accent_edge / bottom_wash / top_masthead / metric_panel / closing_field / mono_rule); **palette_locked** respects ArtDirection/ReferenceStyle; WCAG contrast guard |
-| VQ-003 | Architectural Graphic Motif | **Partial** — motif from VisualMetaphor; plan inject + scene materialize |
+| VQ-003 | Architectural Graphic Motif | **Partial** — v1.1 arrangements (monumental_rule / margin_axis / baseline_nodes / corner_index / hero_path / closing_silence…); avoids color accent-edge collision |
 | VQ-004 | Shape / Connector / Freeform formal rendering | **Partial** — motif emits Connector/Freeform (≥3 path centers); PNG/HTML/PPTX draw path; true `p:cxnSp` / `a:custGeom` still deferred |
 | VQ-005 | Architectural Visual Grammar Library（12） | **Partial** — 12 executable profiles; 6 P0 showcase drive title/color/motif on compile |
 | VQ-006 | Deck Rhythm Planner | **Partial** — pacing/intensity stamped onto PageDirection; compile varies title scale / motif quieting / ghost opacity; climax budget + color streak already in DeckComposition |

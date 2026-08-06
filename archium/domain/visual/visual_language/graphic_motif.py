@@ -1,4 +1,4 @@
-"""GraphicMotif — project-level visual vocabulary (VQ-003).
+"""GraphicMotif — project-level visual vocabulary (VQ-003 / v1.1).
 
 Decorations grow from a motif (axis, flow nodes, contour…) rather than
 random lines. Motif seeds primitive_ids / atmosphere / stroke cues consumed
@@ -25,6 +25,20 @@ class MotifType(StrEnum):
     QUIET_RULE = "quiet_rule"
 
 
+class MotifArrangement(StrEnum):
+    """How motif geometry is spatially placed on the page (v1.1)."""
+
+    TITLE_RULE = "title_rule"
+    MONUMENTAL_RULE = "monumental_rule"
+    MARGIN_AXIS = "margin_axis"
+    BASELINE_NODES = "baseline_nodes"
+    DIAGONAL_CUT = "diagonal_cut"
+    CORNER_INDEX = "corner_index"
+    FRAME_CONTOUR = "frame_contour"
+    HERO_PATH = "hero_path"
+    CLOSING_SILENCE = "closing_silence"
+
+
 class StrokeStyle(DomainModel):
     color_token: str = Field(default="primary", min_length=1)
     width_pt: float = Field(default=0.75, ge=0.25, le=4.0)
@@ -44,6 +58,7 @@ class GraphicMotif(DomainModel):
 
     motif_id: str = Field(min_length=1, max_length=64)
     motif_type: MotifType = MotifType.QUIET_RULE
+    arrangement: MotifArrangement = MotifArrangement.TITLE_RULE
     usage_rules: list[str] = Field(default_factory=list, max_length=8)
     stroke: StrokeStyle = Field(default_factory=StrokeStyle)
     marker: MarkerStyle = Field(default_factory=MarkerStyle)
@@ -62,12 +77,15 @@ class GraphicMotif(DomainModel):
         description="ColorStory role preferred for motif strokes.",
     )
     max_marks: int = Field(default=4, ge=0, le=12)
-    source: str = Field(default="rules", max_length=40)
+    # Prefer right margin when color composition already owns the left edge.
+    prefer_right_margin: bool = False
+    source: str = Field(default="rules", max_length=80)
 
     def as_dict(self) -> dict[str, object]:
         return {
             "motif_id": self.motif_id,
             "motif_type": self.motif_type.value,
+            "arrangement": self.arrangement.value,
             "usage_rules": list(self.usage_rules),
             "stroke": self.stroke.model_dump(),
             "marker": self.marker.model_dump(),
@@ -76,5 +94,6 @@ class GraphicMotif(DomainModel):
             "repetition_rule": self.repetition_rule,
             "color_role_bias": self.color_role_bias,
             "max_marks": self.max_marks,
+            "prefer_right_margin": self.prefer_right_margin,
             "source": self.source,
         }

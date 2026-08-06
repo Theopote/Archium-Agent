@@ -97,16 +97,24 @@ def apply_grammar_to_language(
     grammar: ArchitecturalVisualGrammar,
 ) -> VisualLanguageSpec:
     """Stamp grammar cues onto VisualLanguageSpec (color / motif / primitives)."""
-    from archium.application.visual.graphic_motif import merge_motif_into_primitives
+    from archium.application.visual.graphic_motif import (
+        merge_motif_into_primitives,
+        select_motif_arrangement,
+    )
     from archium.domain.visual.visual_language.graphic_motif import (
         GraphicMotif,
         MarkerStyle,
         StrokeStyle,
     )
 
+    arrangement = select_motif_arrangement(
+        motif_type=grammar.motif_type,
+        page_kind=grammar.typography_page_kind,
+    )
     motif = GraphicMotif(
         motif_id=f"grammar:{grammar.grammar_id.value}",
         motif_type=grammar.motif_type,
+        arrangement=arrangement,
         usage_rules=[f"grammar:{grammar.grammar_id.value}"],
         stroke=StrokeStyle(
             color_token="accent" if grammar.accent_ratio >= 0.1 else "primary",
@@ -117,7 +125,7 @@ def apply_grammar_to_language(
         shape_vocabulary=list(language.primitive_ids[:6]),
         max_marks=4 if grammar.p0_showcase else 3,
         color_role_bias="conflict" if grammar.accent_ratio >= 0.1 else "intervention",
-        source=f"vq5:{grammar.grammar_id.value}",
+        source=f"vq5:{grammar.grammar_id.value}:{arrangement.value}",
     )
     primitives = merge_motif_into_primitives(list(language.primitive_ids), motif)
 
@@ -289,11 +297,18 @@ def apply_grammar_to_scene(
         page_kind=grammar.typography_page_kind,
         visual_intent=visual_intent,
     )
+    from archium.application.visual.graphic_motif import select_motif_arrangement
+
+    arrangement = select_motif_arrangement(
+        motif_type=grammar.motif_type,
+        page_kind=grammar.typography_page_kind,
+    )
     motif = motif.model_copy(
         update={
             "motif_type": grammar.motif_type,
+            "arrangement": arrangement,
             "motif_id": f"grammar:{grammar.grammar_id.value}",
-            "source": f"vq5:{grammar.grammar_id.value}",
+            "source": f"vq5:{grammar.grammar_id.value}:{arrangement.value}",
             # PATH_SEQUENCE freeform needs ≥3 centers; never floor below that.
             "max_marks": max(
                 motif.max_marks,

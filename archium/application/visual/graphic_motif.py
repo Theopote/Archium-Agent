@@ -9,6 +9,7 @@ from archium.domain.visual.visual_concept import VisualMetaphor
 from archium.domain.visual.visual_language.graphic_motif import (
     GraphicMotif,
     MarkerStyle,
+    MotifArrangement,
     MotifType,
     StrokeStyle,
 )
@@ -111,11 +112,15 @@ def compose_graphic_motif(
     if motif_type is None:
         motif_type = _default_motif_for_page_kind(kind)
 
+    arrangement = select_motif_arrangement(motif_type=motif_type, page_kind=kind)
     vocab = list(_MOTIF_VOCAB[motif_type])
-    stroke, marker, bias, repetition, max_marks = _style_for(motif_type, kind)
+    stroke, marker, bias, repetition, max_marks = _style_for(
+        motif_type, kind, arrangement
+    )
     return GraphicMotif(
-        motif_id=f"{motif_type.value}:{kind.value}",
+        motif_id=f"{motif_type.value}:{kind.value}:{arrangement.value}",
         motif_type=motif_type,
+        arrangement=arrangement,
         usage_rules=list(_MOTIF_RULES.get(motif_type, [])),
         stroke=stroke,
         marker=marker,
@@ -124,8 +129,35 @@ def compose_graphic_motif(
         repetition_rule=repetition,
         color_role_bias=bias,
         max_marks=max_marks,
-        source=f"graphic_motif:{motif_type.value}",
+        source=f"graphic_motif:{motif_type.value}:{arrangement.value}",
     )
+
+
+def select_motif_arrangement(
+    *,
+    motif_type: MotifType,
+    page_kind: TypographyPageKind,
+) -> MotifArrangement:
+    """Pick v1.1 spatial placement from motif type + page kind."""
+    if page_kind == TypographyPageKind.CLOSING:
+        return MotifArrangement.CLOSING_SILENCE
+    if page_kind == TypographyPageKind.COVER and motif_type == MotifType.QUIET_RULE:
+        return MotifArrangement.MONUMENTAL_RULE
+    if motif_type == MotifType.AXIS_GRID:
+        return MotifArrangement.MARGIN_AXIS
+    if motif_type == MotifType.SECTION_CUT:
+        return MotifArrangement.MARGIN_AXIS
+    if motif_type == MotifType.BEFORE_AFTER_SLICE:
+        return MotifArrangement.DIAGONAL_CUT
+    if motif_type == MotifType.MODULE_INDEX:
+        return MotifArrangement.CORNER_INDEX
+    if motif_type == MotifType.CONTOUR:
+        return MotifArrangement.FRAME_CONTOUR
+    if motif_type == MotifType.PATH_SEQUENCE:
+        return MotifArrangement.HERO_PATH
+    if motif_type == MotifType.FLOW_NODES:
+        return MotifArrangement.BASELINE_NODES
+    return MotifArrangement.TITLE_RULE
 
 
 def merge_motif_into_primitives(
@@ -167,7 +199,7 @@ def apply_graphic_motif_to_scene(
         refresh_freeform_geometry,
     )
     from archium.domain.visual.visual_language.color_story import NAMED_SWATCHES, ColorStory
-    from archium.domain.visual.visual_language.graphic_motif import MotifType
+    from archium.domain.visual.visual_language.graphic_motif import MotifArrangement, MotifType
 
     if motif is None or motif.max_marks <= 0 or not isinstance(scene, RenderScene):
         return scene
@@ -195,9 +227,16 @@ def apply_graphic_motif_to_scene(
             w
             for w in scene.warnings
             if not str(w).startswith("graphic_motif:")
+            and not str(w).startswith("motif_arrangement:")
             and str(w) not in {"vq4_connector_motif", "vq4_freeform_motif"}
         ]
         scene = scene.model_copy(update={"nodes": cleaned, "warnings": cleaned_warnings})
+
+    # Color composition may already own the left accent edge — shift axis right.
+    has_left_color_edge = any(
+        str(getattr(n, "id", "")) == "color_accent_edge" for n in scene.nodes
+    )
+    prefer_right = bool(motif.prefer_right_margin or has_left_color_edge)
 
     stroke_hex = accent_hex or NAMED_SWATCHES.get("axis_line", "#2C2C2C")
     if isinstance(color_story, ColorStory):
@@ -219,6 +258,7 @@ def apply_graphic_motif_to_scene(
     nodes: list[object] = []
     marks = 0
     max_marks = motif.max_marks
+    arrangement = getattr(motif, "arrangement", MotifArrangement.TITLE_RULE)
     # Freeform polyline needs ≥3 centers; never let a sparse budget collapse a path
     # into a 2-node segment (common when non-P0 grammar floors max_marks at 2).
     if motif.motif_type == MotifType.PATH_SEQUENCE:
@@ -233,15 +273,29 @@ def apply_graphic_motif_to_scene(
         None,
     )
 
-    if motif.motif_type in {MotifType.QUIET_RULE, MotifType.SECTION_CUT} and title is not None:
+    wants_title_rule = arrangement in {
+        MotifArrangement.TITLE_RULE,
+        MotifArrangement.MONUMENTAL_RULE,
+        MotifArrangement.CLOSING_SILENCE,
+    } or motif.motif_type in {MotifType.QUIET_RULE, MotifType.SECTION_CUT}
+    if wants_title_rule and title is not None and marks < max_marks:
+        if arrangement == MotifArrangement.MONUMENTAL_RULE:
+            rule_w = min(title.width * 0.72, title.width - 0.1)
+        elif arrangement == MotifArrangement.CLOSING_SILENCE:
+            rule_w = min(1.4, title.width * 0.22)
+        else:
+            rule_w = min(2.6, title.width * 0.4)
+        rule_h = max(0.012, motif.stroke.width_pt / 72.0)
+        if arrangement == MotifArrangement.MONUMENTAL_RULE:
+            rule_h = max(rule_h, 0.018)
         nodes.append(
             ShapeNode(
                 id="vl_motif_title_rule",
                 semantic_role="graphic_motif",
                 x=title.x,
                 y=title.y + title.height + 0.05,
-                width=min(2.6, title.width * 0.4),
-                height=max(0.012, motif.stroke.width_pt / 72.0),
+                width=max(0.4, rule_w),
+                height=rule_h,
                 z_index=max(0, title.z_index - 1),
                 opacity=motif.stroke.opacity,
                 shape_kind="rectangle",
@@ -251,13 +305,41 @@ def apply_graphic_motif_to_scene(
             )
         )
         marks += 1
+        # Monumental cover: small square tick at rule start (architectural index mark).
+        if arrangement == MotifArrangement.MONUMENTAL_RULE and marks < max_marks:
+            tick = max(0.06, motif.marker.size_pt / 96.0)
+            nodes.append(
+                ShapeNode(
+                    id="vl_motif_title_tick",
+                    semantic_role="graphic_motif",
+                    x=title.x,
+                    y=title.y + title.height + 0.05 - tick * 0.15,
+                    width=tick,
+                    height=tick,
+                    z_index=max(0, title.z_index),
+                    opacity=min(1.0, motif.stroke.opacity + 0.05),
+                    shape_kind="rectangle",
+                    fill_color=stroke_hex,
+                    stroke_color=stroke_hex,
+                    stroke_width=0,
+                )
+            )
+            marks += 1
 
-    if motif.motif_type == MotifType.AXIS_GRID and marks < max_marks:
+    if (
+        motif.motif_type in {MotifType.AXIS_GRID, MotifType.SECTION_CUT}
+        or arrangement == MotifArrangement.MARGIN_AXIS
+    ) and marks < max_marks:
+        axis_x = (
+            scene.page_width * 0.92
+            if prefer_right
+            else scene.page_width * 0.08
+        )
         nodes.append(
             ShapeNode(
                 id="vl_motif_axis",
                 semantic_role="graphic_motif",
-                x=scene.page_width * 0.08,
+                x=axis_x,
                 y=scene.page_height * 0.16,
                 width=max(0.01, motif.stroke.width_pt / 72.0),
                 height=scene.page_height * 0.58,
@@ -270,6 +352,26 @@ def apply_graphic_motif_to_scene(
             )
         )
         marks += 1
+        # Section cut: short horizontal hatch near axis top.
+        if motif.motif_type == MotifType.SECTION_CUT and marks < max_marks:
+            hatch_w = 0.35
+            nodes.append(
+                ShapeNode(
+                    id="vl_motif_section_hatch",
+                    semantic_role="graphic_motif",
+                    x=axis_x - (0.0 if prefer_right else hatch_w * 0.15),
+                    y=scene.page_height * 0.16,
+                    width=hatch_w,
+                    height=max(0.01, motif.stroke.width_pt / 72.0),
+                    z_index=0,
+                    opacity=motif.stroke.opacity,
+                    shape_kind="rectangle",
+                    fill_color=stroke_hex,
+                    stroke_color=stroke_hex,
+                    stroke_width=0,
+                )
+            )
+            marks += 1
 
     if motif.motif_type in {
         MotifType.FLOW_NODES,
@@ -279,14 +381,23 @@ def apply_graphic_motif_to_scene(
         count = min(max_marks - marks, 3 if motif.repetition_rule == "sparse" else 4)
         if motif.motif_type == MotifType.PATH_SEQUENCE:
             count = max(3, count)
+        if arrangement == MotifArrangement.CORNER_INDEX:
+            count = min(count, 3)
         size = motif.marker.size_pt / 72.0
         marker_ids: list[str] = []
         centers: list[tuple[float, float]] = []
         for index in range(max(0, count)):
             t = (index + 1) / (count + 1)
-            y_ratio = 0.62 if motif.motif_type != MotifType.MODULE_INDEX else 0.78
-            cx = scene.page_width * (0.18 + 0.55 * t)
-            cy = scene.page_height * y_ratio
+            if arrangement == MotifArrangement.CORNER_INDEX:
+                cx = scene.page_width * (0.62 + 0.28 * t)
+                cy = scene.page_height * (0.72 + 0.06 * (index % 2))
+            elif arrangement == MotifArrangement.HERO_PATH:
+                cx = scene.page_width * (0.15 + 0.6 * t)
+                cy = scene.page_height * (0.48 + 0.08 * ((index % 3) - 1) * 0.5)
+            else:
+                y_ratio = 0.62 if motif.motif_type != MotifType.MODULE_INDEX else 0.78
+                cx = scene.page_width * (0.18 + 0.55 * t)
+                cy = scene.page_height * y_ratio
             node_id = f"vl_motif_node_{index}"
             marker_ids.append(node_id)
             centers.append((cx, cy))
@@ -466,6 +577,9 @@ def apply_graphic_motif_to_scene(
     tag = f"graphic_motif:{motif.motif_type.value}"
     if tag not in warnings:
         warnings.append(tag)
+    arr_tag = f"motif_arrangement:{arrangement.value}"
+    if arr_tag not in warnings:
+        warnings.append(arr_tag)
     if any(isinstance(n, ConnectorNode) for n in nodes):
         warnings.append("vq4_connector_motif")
     if any(isinstance(n, FreeformNode) for n in nodes):
@@ -487,7 +601,25 @@ def _default_motif_for_page_kind(kind: TypographyPageKind) -> MotifType:
 def _style_for(
     motif_type: MotifType,
     kind: TypographyPageKind,
+    arrangement: MotifArrangement | None = None,
 ) -> tuple[StrokeStyle, MarkerStyle, str, str, int]:
+    arrangement = arrangement or MotifArrangement.TITLE_RULE
+    if arrangement == MotifArrangement.CLOSING_SILENCE:
+        return (
+            StrokeStyle(color_token="accent", width_pt=0.6, dash="solid", opacity=0.55),
+            MarkerStyle(shape="none", size_pt=6, fill_token=None),
+            "accent",
+            "sparse",
+            1,
+        )
+    if arrangement == MotifArrangement.MONUMENTAL_RULE:
+        return (
+            StrokeStyle(color_token="accent", width_pt=1.1, dash="solid", opacity=0.92),
+            MarkerStyle(shape="square", size_pt=7, fill_token="accent"),
+            "accent",
+            "sparse",
+            2,
+        )
     if motif_type == MotifType.FLOW_NODES:
         return (
             StrokeStyle(color_token="accent", width_pt=1.0, dash="solid", opacity=0.85),
