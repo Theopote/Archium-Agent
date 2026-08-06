@@ -326,6 +326,141 @@ class LayoutFamilyRegistry:
             return variant
         return definition.default_variant
 
+    def candidates_for_composition(
+        self,
+        *,
+        page_type: str | None,
+        composition_strategy: Any,
+        asset_count: int,
+        preferred: list[LayoutFamily] | None = None,
+    ) -> list[LayoutFamilyDefinition]:
+        """Select families matching PageType + CompositionStrategy (v0.3 architecture).
+
+        This is the new composition-driven path that separates content (PageType)
+        from visual expression (CompositionStrategy). Falls back to content-type
+        matching when structured composition is not available.
+
+        Args:
+            page_type: PageType enum value (e.g., "strategy", "evidence")
+            composition_strategy: CompositionStrategy object with design judgment
+            asset_count: Number of bound assets
+            preferred: Optional explicit family preferences
+
+        Returns:
+            Ranked list of compatible LayoutFamilyDefinitions
+        """
+        from archium.domain.visual.composition_strategy import (
+            CompositionStrategy,
+            ImageRole,
+        )
+        from archium.domain.visual.page_type import (
+            PAGE_TYPE_TO_LAYOUT_FAMILY_HINTS,
+            PageType,
+        )
+
+        # If we don't have structured composition, fall back to content-type matching
+        if not isinstance(composition_strategy, CompositionStrategy):
+            # Use page_type hints if available
+            if page_type:
+                try:
+                    page_enum = PageType(page_type)
+                    hints = PAGE_TYPE_TO_LAYOUT_FAMILY_HINTS.get(page_enum, [])
+                    if hints:
+                        family_hints = [LayoutFamily(h) for h in hints]
+                        return self.candidates_for(
+                            VisualContentType.MIXED,
+                            asset_count=asset_count,
+                            preferred=family_hints,
+                        )
+                except (ValueError, KeyError):
+                    pass
+            # Final fallback to generic matching
+            return self.candidates_for(
+                VisualContentType.MIXED,
+                asset_count=asset_count,
+                preferred=preferred,
+            )
+
+        # New path: composition-driven selection
+        strategy: CompositionStrategy = composition_strategy
+
+        # 1. Hero-dominated composition → HERO family
+        if strategy.is_hero_dominated():
+            hero_def = self.get(LayoutFamily.HERO)
+            if hero_def.min_assets <= asset_count <= hero_def.max_assets:
+                return [hero_def]
+
+        # 2. Technical diagram → DRAWING_FOCUS or ANALYTICAL_DIAGRAM
+        if strategy.is_technical_diagram():
+            if strategy.drawing_priority >= 0.7:
+                return [self.get(LayoutFamily.DRAWING_FOCUS)]
+            return [self.get(LayoutFamily.ANALYTICAL_DIAGRAM)]
+
+        # 3. Image role-based selection
+        if strategy.image_role == ImageRole.EVIDENCE:
+            if asset_count >= 2:
+                return [
+                    self.get(LayoutFamily.EVIDENCE_BOARD),
+                    self.get(LayoutFamily.COMPARATIVE_MATRIX),
+                ]
+            return [self.get(LayoutFamily.ANALYTICAL_DIAGRAM)]
+
+        if strategy.image_role == ImageRole.ABSENT:
+            return [
+                self.get(LayoutFamily.TEXTUAL_ARGUMENT),
+                self.get(LayoutFamily.STRATEGY_CARDS),
+            ]
+
+        # 4. Editorial style → balanced families
+        if strategy.is_editorial_style():
+            if asset_count >= 1:
+                return [
+                    self.get(LayoutFamily.HYBRID_CANVAS),
+                    self.get(LayoutFamily.EVIDENCE_BOARD),
+                ]
+            return [self.get(LayoutFamily.TEXTUAL_ARGUMENT)]
+
+        # 5. PageType hints as secondary filter
+        page_hints: list[LayoutFamily] = []
+        if page_type:
+            try:
+                page_enum = PageType(page_type)
+                hints = PAGE_TYPE_TO_LAYOUT_FAMILY_HINTS.get(page_enum, [])
+                page_hints = [LayoutFamily(h) for h in hints]
+            except (ValueError, KeyError):
+                pass
+
+        # 6. Fallback to content-type matching with page hints
+        content_type = self._infer_content_type_from_strategy(strategy)
+        return self.candidates_for(
+            content_type,
+            asset_count=asset_count,
+            preferred=page_hints or preferred,
+        )
+
+    def _infer_content_type_from_strategy(
+        self, strategy: Any
+    ) -> VisualContentType:
+        """Infer VisualContentType from CompositionStrategy for fallback matching."""
+        from archium.domain.visual.composition_strategy import (
+            CompositionStrategy,
+            ImageRole,
+        )
+
+        if not isinstance(strategy, CompositionStrategy):
+            return VisualContentType.MIXED
+
+        if strategy.image_role == ImageRole.DOMINANT:
+            return VisualContentType.HERO_IMAGE
+        if strategy.image_role == ImageRole.EVIDENCE:
+            return VisualContentType.PHOTO_EVIDENCE
+        if strategy.image_role == ImageRole.ABSENT:
+            return VisualContentType.TEXT_ARGUMENT
+        if strategy.drawing_priority >= 0.7:
+            return VisualContentType.SITE_PLAN
+
+        return VisualContentType.MIXED
+
 
 _DEFAULT_REGISTRY = LayoutFamilyRegistry()
 

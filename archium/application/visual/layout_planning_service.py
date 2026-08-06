@@ -930,14 +930,23 @@ class LayoutPlanningService:
         )
 
         if self._llm is not None:
-            allowed = [
-                item.family.value
-                for item in self._registry.candidates_for(
+            # v0.3 architecture: prefer PageType + CompositionStrategy path
+            if intent.page_type and intent.has_structured_composition():
+                candidates = self._registry.candidates_for_composition(
+                    page_type=intent.page_type.value if hasattr(intent.page_type, 'value') else intent.page_type,
+                    composition_strategy=intent.get_composition_strategy(),
+                    asset_count=max(asset_count, 0),
+                    preferred=preferred_for_registry,
+                )
+            else:
+                # Legacy path: content-type matching
+                candidates = self._registry.candidates_for(
                     intent.dominant_content_type,
                     asset_count=max(asset_count, 0),
                     preferred=preferred_for_registry,
                 )
-            ]
+
+            allowed = [item.family.value for item in candidates]
             allowed = self._filter_allowed_families(
                 allowed,
                 deck_directive,
@@ -1116,11 +1125,22 @@ class LayoutPlanningService:
             list(intent.preferred_layout_families),
             list(style_pref.preferred_families),
         )
-        definitions = self._registry.candidates_for(
-            intent.dominant_content_type,
-            asset_count=max(asset_count, 0),
-            preferred=preferred,
-        )
+
+        # v0.3 architecture: prefer PageType + CompositionStrategy path
+        if intent.page_type and intent.has_structured_composition():
+            definitions = self._registry.candidates_for_composition(
+                page_type=intent.page_type.value if hasattr(intent.page_type, 'value') else intent.page_type,
+                composition_strategy=intent.get_composition_strategy(),
+                asset_count=max(asset_count, 0),
+                preferred=preferred,
+            )
+        else:
+            # Legacy path: content-type matching
+            definitions = self._registry.candidates_for(
+                intent.dominant_content_type,
+                asset_count=max(asset_count, 0),
+                preferred=preferred,
+            )
         # Deck composition sees narrative context (titles, pacing, neighboring
         # slides) that a per-slide intent may miss. When it explicitly selects
         # a semantic specialist, let that family enter the candidate pool even

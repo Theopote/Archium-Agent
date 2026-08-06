@@ -28,6 +28,12 @@ from archium.domain.visual.composition_strategy import (
     get_preset_strategy,
     suggest_strategy_for_content,
 )
+from archium.domain.visual.page_type import (
+    PAGE_TYPE_TO_LAYOUT_FAMILY_HINTS,
+    PageType,
+    infer_page_type_from_layout_family,
+    suggest_page_type_from_content,
+)
 from archium.domain.visual.critic import (
     CRITIC_ALIGNMENT_DRIFT,
     CRITIC_BALANCE_OFF,
@@ -186,6 +192,10 @@ __all__ = [
     "WhiteSpaceStrategy",
     "get_preset_strategy",
     "suggest_strategy_for_content",
+    "PAGE_TYPE_TO_LAYOUT_FAMILY_HINTS",
+    "PageType",
+    "infer_page_type_from_layout_family",
+    "suggest_page_type_from_content",
     "CRITIC_ALIGNMENT_DRIFT",
     "CRITIC_BALANCE_OFF",
     "CRITIC_COLOR_CHAOS",

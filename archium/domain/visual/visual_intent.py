@@ -16,12 +16,21 @@ from archium.domain.visual.enums import (
     VisualContentType,
 )
 from archium.domain.visual.page_direction import PageDirection
+from archium.domain.visual.page_type import PageType
 from archium.domain.visual.vision_generation import ImageRequest
 from archium.domain.visual.visual_grammar import PageArchetype
 
 
 class VisualIntent(IdentifiedModel, VersionedModel, TimestampedModel):
-    """Per-slide visual communication intent (no coordinates)."""
+    """Per-slide visual communication intent (no coordinates).
+
+    Architecture evolution (v0.3):
+        Previously: preferred_layout_families (conflated content + style)
+        Now: page_type (content) + composition_strategy (design) + style_preset (look)
+
+        The new triplet allows the same content to be expressed in different
+        visual languages (BIG bold vs. SOM minimal vs. OMA collage).
+    """
 
     slide_id: UUID
     presentation_id: UUID | None = None
@@ -30,16 +39,34 @@ class VisualIntent(IdentifiedModel, VersionedModel, TimestampedModel):
     audience_takeaway: str = Field(min_length=1)
     visual_priority: str = Field(min_length=1)
     dominant_content_type: VisualContentType
+
+    # v0.3 Content-Visual separation (DOM-011 architecture)
+    page_type: PageType | None = Field(
+        default=None,
+        description="Pure content classification (WHAT) — decoupled from visual style (HOW)",
+    )
+
     hero_asset_id: UUID | None = None
     supporting_asset_ids: list[UUID] = Field(default_factory=list)
     hierarchy: list[str] = Field(default_factory=list)
     reading_order: list[str] = Field(default_factory=list)
-    preferred_layout_families: list[LayoutFamily] = Field(default_factory=list)
+
+    # Backward compatibility: LayoutFamily (will be derived from page_type + composition)
+    preferred_layout_families: list[LayoutFamily] = Field(
+        default_factory=list,
+        description="Legacy: conflated content + style. Prefer page_type + composition_strategy.",
+    )
 
     # Structured composition strategy (v0.3 upgrade from string)
     composition_strategy: CompositionStrategy | str | None = Field(
         default=None,
         description="Structured design judgment (CompositionStrategy) or legacy string",
+    )
+
+    # Style preset binding (v0.3 future: BIG_bold, SOM_minimal, OMA_collage)
+    style_preset_id: str | None = Field(
+        default=None,
+        description="Visual language preset (e.g., BIG_bold, SOM_minimal) — future use",
     )
 
     image_treatment: str = ""
