@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from archium.domain._base import IdentifiedModel, TimestampedModel, VersionedModel
 from archium.domain.enums import ApprovalStatus
+from archium.domain.visual.composition_strategy import CompositionStrategy
 from archium.domain.visual.enums import (
     ContinuityRole,
     DensityLevel,
@@ -34,7 +35,13 @@ class VisualIntent(IdentifiedModel, VersionedModel, TimestampedModel):
     hierarchy: list[str] = Field(default_factory=list)
     reading_order: list[str] = Field(default_factory=list)
     preferred_layout_families: list[LayoutFamily] = Field(default_factory=list)
-    composition_strategy: str = ""
+
+    # Structured composition strategy (v0.3 upgrade from string)
+    composition_strategy: CompositionStrategy | str | None = Field(
+        default=None,
+        description="Structured design judgment (CompositionStrategy) or legacy string",
+    )
+
     image_treatment: str = ""
     annotation_strategy: str = ""
     background_strategy: str = ""
@@ -50,6 +57,26 @@ class VisualIntent(IdentifiedModel, VersionedModel, TimestampedModel):
     image_request: ImageRequest | None = None
     approval_status: ApprovalStatus = ApprovalStatus.DRAFT
 
+    @field_validator("composition_strategy", mode="before")
+    @classmethod
+    def _coerce_composition_strategy(cls, v: str | dict | CompositionStrategy | None) -> CompositionStrategy | str | None:
+        """Backward compatibility: accept string, dict, or CompositionStrategy."""
+        if v is None or isinstance(v, (CompositionStrategy, str)):
+            return v
+        if isinstance(v, dict):
+            return CompositionStrategy.model_validate(v)
+        return v
+
     def approve(self) -> None:
         self.approval_status = ApprovalStatus.APPROVED
         self.touch()
+
+    def get_composition_strategy(self) -> CompositionStrategy | None:
+        """Get structured composition strategy, or None if legacy string/unset."""
+        if isinstance(self.composition_strategy, CompositionStrategy):
+            return self.composition_strategy
+        return None
+
+    def has_structured_composition(self) -> bool:
+        """True if composition_strategy is a structured CompositionStrategy object."""
+        return isinstance(self.composition_strategy, CompositionStrategy)

@@ -13,6 +13,21 @@ from archium.domain.visual.benchmark import (
     HumanVisualReview,
     HumanVisualReviewSource,
 )
+from archium.domain.visual.composition_strategy import (
+    ARCHETYPE_PRESETS,
+    CompositionAxis,
+    CompositionStrategy,
+    ImageRole,
+    LayeringStrategy,
+    MarginsStrategy,
+    ReadingPathType,
+    TypographyRole,
+    VisualBalance,
+    VisualTension,
+    WhiteSpaceStrategy,
+    get_preset_strategy,
+    suggest_strategy_for_content,
+)
 from archium.domain.visual.critic import (
     CRITIC_ALIGNMENT_DRIFT,
     CRITIC_BALANCE_OFF,
@@ -158,6 +173,19 @@ from archium.domain.visual.validation import (
 from archium.domain.visual.visual_intent import VisualIntent
 
 __all__ = [
+    "ARCHETYPE_PRESETS",
+    "CompositionAxis",
+    "CompositionStrategy",
+    "ImageRole",
+    "LayeringStrategy",
+    "MarginsStrategy",
+    "ReadingPathType",
+    "TypographyRole",
+    "VisualBalance",
+    "VisualTension",
+    "WhiteSpaceStrategy",
+    "get_preset_strategy",
+    "suggest_strategy_for_content",
     "CRITIC_ALIGNMENT_DRIFT",
     "CRITIC_BALANCE_OFF",
     "CRITIC_COLOR_CHAOS",
