@@ -3,7 +3,7 @@
 
 > **文档状态：现行诚实快照（持续修订）。**
 > 当前行为以代码、测试、`README.md`、`docs/README.md` 及现行专题文档为准。
-> Last updated: 2026-08-05
+> Last updated: 2026-08-06
 
 This document states what is **proven by automation** vs what still requires **human rehearsal** or **real project delivery**.
 
@@ -20,7 +20,7 @@ This document states what is **proven by automation** vs what still requires **h
 | VQ-002 | Project Color Composition | **Partial** — v1.1 arrangements (accent_edge / bottom_wash / top_masthead / metric_panel / closing_field / mono_rule); **palette_locked** respects ArtDirection/ReferenceStyle; WCAG contrast guard |
 | VQ-003 | Architectural Graphic Motif | **Partial** — v1.1 arrangements (monumental_rule / margin_axis / baseline_nodes / corner_index / hero_path / closing_silence…); avoids color accent-edge collision |
 | VQ-004 | Shape / Connector / Freeform formal rendering | **Partial** — v1.1 stroke_dash + cross/diamond markers + diagonal before/after cut; PPTX/HTML/PNG path export; true `p:cxnSp` / `a:custGeom` still deferred |
-| VQ-005 | Architectural Visual Grammar Library（12） | **Partial** — 12 executable profiles; 6 P0 showcase drive title/color/motif on compile |
+| VQ-005 | Architectural Visual Grammar Library（12） | **Partial** — v1.1: 12 profiles each with `color_arrangement`; **8 P0** (spatial + before/after promoted); title keywords; composition/color stamps; outline titles preserved |
 | VQ-006 | Deck Rhythm Planner | **Partial** — v1.1 inferred pacing from slide/continuity; motif_mark_bias caps marks; letter-spacing/lead scale; pause softens color geometry |
 | VQ-007 | Screenshot Visual Critic | **Partial** — screenshot_v1 + optional vision；VQ-007 有限精修闭环（allowlist ≤3 actions/page、≤2 rounds；主链 critique 后可写回 Scene） |
 | VQ-008 | Architect Blind Review Benchmark | **Scaffolded**（协议/计分/Beta 门禁 + CLI；**真人 ≥5 建筑师盲评未跑 → Beta 仍禁止**） |

@@ -23,6 +23,27 @@ if TYPE_CHECKING:
     from archium.domain.visual.visual_language import VisualLanguageSpec
 
 
+def _title_keyword_grammar(title: str) -> ArchitecturalVisualGrammar | None:
+    """Soft keyword → grammar for pages that are not exact title shortcuts."""
+    if any(k in title for k in ("路径", "序列", "动线", "游走", "空间体验")):
+        return get_architectural_grammar(ArchitecturalGrammarId.SPATIAL_SEQUENCE)
+    if any(k in title for k in ("对比", "前后", "原状", "介入", "更新前后")):
+        return get_architectural_grammar(ArchitecturalGrammarId.BEFORE_INTERVENTION_AFTER)
+    if any(k in title for k in ("阶段", "时序", "分期", "时间轴", "节奏")):
+        return get_architectural_grammar(ArchitecturalGrammarId.TIMELINE_RIBBON)
+    if any(k in title for k in ("策略", "体系", "星座", "网络")):
+        return get_architectural_grammar(ArchitecturalGrammarId.STRATEGY_CONSTELLATION)
+    if any(k in title for k in ("材料", "材质", "色板", "立面材料")):
+        return get_architectural_grammar(ArchitecturalGrammarId.MATERIAL_PALETTE)
+    if any(k in title for k in ("拼贴", "概念图", "碎片")):
+        return get_architectural_grammar(ArchitecturalGrammarId.CONCEPT_COLLAGE)
+    if any(k in title for k in ("分析", "叠层", "图层", "图解")):
+        return get_architectural_grammar(ArchitecturalGrammarId.ANALYTICAL_OVERLAY)
+    if any(k in title for k in ("图纸", "平面", "总图", "剖面", "轴测")):
+        return get_architectural_grammar(ArchitecturalGrammarId.DRAWING_ATLAS)
+    return None
+
+
 def select_architectural_grammar(
     *,
     slide: SlideSpec | None = None,
@@ -68,6 +89,11 @@ def select_architectural_grammar(
         expression = page_direction.expression_mode_id
         if page_direction.page_grammar is not None:
             return grammar_for_formula(page_direction.page_grammar.id)
+
+    # Soft keywords when no locked formula (distinctive page looks).
+    keyworded = _title_keyword_grammar(title)
+    if keyworded is not None:
+        return keyworded
     if concept is not None:
         metaphor = concept.visual_metaphor.value
 
@@ -131,15 +157,16 @@ def apply_grammar_to_language(
 
     color_comp = language.color_composition
     if color_comp is not None:
-        color_comp = color_comp.model_copy(
-            update={
-                "background_mode": grammar.background_mode,
-                "accent_ratio": max(color_comp.accent_ratio, grammar.accent_ratio),
-                "section_override": grammar.typography_page_kind.value
-                in {"cover", "section", "closing"},
-                "source": f"vq5:{grammar.grammar_id.value}",
-            }
-        )
+        color_updates: dict[str, object] = {
+            "background_mode": grammar.background_mode,
+            "accent_ratio": max(color_comp.accent_ratio, grammar.accent_ratio),
+            "section_override": grammar.typography_page_kind.value
+            in {"cover", "section", "closing"},
+            "source": f"vq5:{grammar.grammar_id.value}",
+        }
+        if grammar.color_arrangement is not None:
+            color_updates["arrangement"] = grammar.color_arrangement
+        color_comp = color_comp.model_copy(update=color_updates)
     return language.model_copy(
         update={
             "graphic_motif": motif,
@@ -163,6 +190,8 @@ def apply_grammar_to_direction(
     evidence = list(direction.evidence)
     evidence.append(f"arch_grammar:{grammar.grammar_id.value}")
     evidence.append(f"composition:{grammar.composition_strategy.value}")
+    if grammar.color_arrangement is not None:
+        evidence.append(f"color_arrangement:{grammar.color_arrangement.value}")
     updates: dict[str, object] = {
         "preferred_layout_families": families[:6],
         "must_hide": hide,
@@ -188,6 +217,7 @@ def apply_grammar_to_scene(
     from archium.application.visual.graphic_motif import (
         apply_graphic_motif_to_scene,
         compose_graphic_motif,
+        select_motif_arrangement,
     )
     from archium.domain.visual.render_scene import TextNode, TextRun, set_text_node_runs
 
@@ -199,6 +229,9 @@ def apply_grammar_to_scene(
     if tag in warnings:
         return scene
     warnings.append(tag)
+    warnings.append(f"composition:{grammar.composition_strategy.value}")
+    if grammar.color_arrangement is not None:
+        warnings.append(f"grammar_color:{grammar.color_arrangement.value}")
     if grammar.p0_showcase:
         warnings.append(f"vq5_p0:{grammar.grammar_id.value}")
 
@@ -208,10 +241,16 @@ def apply_grammar_to_scene(
             continue
         boost = grammar.title_size_boost
         new_size = min(72.0, round(node.font_size * boost, 1))
+        spacing = max(node.letter_spacing, grammar.letter_spacing_em)
+        # Preserve hollow / outline statement titles — do not force solid 700.
+        has_outline = any(
+            getattr(run, "outline", False) for run in (node.runs or [])
+        )
+        weight = node.font_weight if has_outline else max(node.font_weight, 700)
         updates: dict[str, object] = {
             "font_size": new_size,
-            "letter_spacing": max(node.letter_spacing, grammar.letter_spacing_em),
-            "font_weight": max(node.font_weight, 700),
+            "letter_spacing": spacing,
+            "font_weight": weight,
         }
         updated = node.model_copy(update=updates)
         if node.runs:
@@ -226,11 +265,19 @@ def apply_grammar_to_scene(
                         if run.font_size is not None
                         else new_size
                     ),
-                    font_weight=max(run.font_weight or 400, 700),
+                    font_weight=(
+                        run.font_weight
+                        if (has_outline or run.outline)
+                        else max(run.font_weight or 400, 700)
+                    ),
                     font_style=run.font_style,
                     color=run.color,
                     color_token=run.color_token,
-                    letter_spacing=run.letter_spacing,
+                    letter_spacing=(
+                        max(run.letter_spacing or 0.0, grammar.letter_spacing_em)
+                        if run.letter_spacing is not None
+                        else spacing
+                    ),
                     opacity=run.opacity,
                     outline=run.outline,
                     outline_width_pt=run.outline_width_pt,
@@ -285,20 +332,19 @@ def apply_grammar_to_scene(
             for w in scene.warnings
         ),
     )
-    color = color.model_copy(
-        update={
-            "accent_ratio": max(color.accent_ratio, grammar.accent_ratio),
-            "source": f"vq5:{grammar.grammar_id.value}",
-        }
-    )
+    color_updates: dict[str, object] = {
+        "accent_ratio": max(color.accent_ratio, grammar.accent_ratio),
+        "source": f"vq5:{grammar.grammar_id.value}",
+    }
+    if grammar.color_arrangement is not None:
+        color_updates["arrangement"] = grammar.color_arrangement
+    color = color.model_copy(update=color_updates)
     scene = apply_color_composition_to_scene(scene, color)
 
     motif = compose_graphic_motif(
         page_kind=grammar.typography_page_kind,
         visual_intent=visual_intent,
     )
-    from archium.application.visual.graphic_motif import select_motif_arrangement
-
     arrangement = select_motif_arrangement(
         motif_type=grammar.motif_type,
         page_kind=grammar.typography_page_kind,

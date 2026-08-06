@@ -20,7 +20,10 @@ from pydantic import Field
 from archium.domain._base import DomainModel
 from archium.domain.visual.enums import LayoutFamily
 from archium.domain.visual.page_visual_grammar import PageGrammarId
-from archium.domain.visual.visual_language.color_composition import BackgroundMode
+from archium.domain.visual.visual_language.color_composition import (
+    BackgroundMode,
+    ColorArrangement,
+)
 from archium.domain.visual.visual_language.graphic_motif import MotifType
 from archium.domain.visual.visual_language.typography_composition import TypographyPageKind
 
@@ -80,6 +83,10 @@ class ArchitecturalVisualGrammar(DomainModel):
     title_size_boost: float = Field(default=1.0, ge=0.8, le=2.0)
     letter_spacing_em: float = Field(default=0.03, ge=-0.05, le=0.2)
     background_mode: BackgroundMode = BackgroundMode.TINTED
+    color_arrangement: ColorArrangement | None = Field(
+        default=None,
+        description="VQ-005 v1.1: preferred ColorComposition arrangement.",
+    )
     accent_ratio: float = Field(default=0.06, ge=0.02, le=0.3)
     motif_type: MotifType = MotifType.QUIET_RULE
     hero_min_ratio: float | None = Field(default=None, ge=0.35, le=0.9)
@@ -105,6 +112,9 @@ class ArchitecturalVisualGrammar(DomainModel):
             "title_size_boost": self.title_size_boost,
             "letter_spacing_em": self.letter_spacing_em,
             "background_mode": self.background_mode.value,
+            "color_arrangement": (
+                self.color_arrangement.value if self.color_arrangement else None
+            ),
             "accent_ratio": self.accent_ratio,
             "motif_type": self.motif_type.value,
             "hero_min_ratio": self.hero_min_ratio,
@@ -136,11 +146,13 @@ GRAMMAR_MONUMENTAL = ArchitecturalVisualGrammar(
     title_size_boost=1.55,
     letter_spacing_em=0.08,
     background_mode=BackgroundMode.DARK,
+    color_arrangement=ColorArrangement.ACCENT_EDGE,
     accent_ratio=0.08,
     motif_type=MotifType.QUIET_RULE,
     hero_min_ratio=0.65,
     max_key_points=0,
     p0_showcase=True,
+    source="vq5_grammar_v1_1",
 )
 
 GRAMMAR_EDITORIAL = ArchitecturalVisualGrammar(
@@ -163,11 +175,13 @@ GRAMMAR_EDITORIAL = ArchitecturalVisualGrammar(
     title_size_boost=1.25,
     letter_spacing_em=0.1,
     background_mode=BackgroundMode.LIGHT,
+    color_arrangement=ColorArrangement.TOP_MASTHEAD,
     accent_ratio=0.04,
     motif_type=MotifType.SECTION_CUT,
     hero_min_ratio=0.4,
     max_key_points=3,
     p0_showcase=True,
+    source="vq5_grammar_v1_1",
 )
 
 GRAMMAR_ANALYTICAL = ArchitecturalVisualGrammar(
@@ -189,11 +203,13 @@ GRAMMAR_ANALYTICAL = ArchitecturalVisualGrammar(
     title_size_boost=1.1,
     letter_spacing_em=0.04,
     background_mode=BackgroundMode.LIGHT,
+    color_arrangement=ColorArrangement.BOTTOM_WASH,
     accent_ratio=0.12,
     motif_type=MotifType.FLOW_NODES,
     hero_min_ratio=0.55,
     max_key_points=2,
     p0_showcase=True,
+    source="vq5_grammar_v1_1",
 )
 
 GRAMMAR_DRAWING_ATLAS = ArchitecturalVisualGrammar(
@@ -212,11 +228,13 @@ GRAMMAR_DRAWING_ATLAS = ArchitecturalVisualGrammar(
     title_size_boost=1.05,
     letter_spacing_em=0.06,
     background_mode=BackgroundMode.LIGHT,
+    color_arrangement=ColorArrangement.MONO_RULE,
     accent_ratio=0.05,
     motif_type=MotifType.AXIS_GRID,
     hero_min_ratio=0.72,
     max_key_points=2,
     p0_showcase=True,
+    source="vq5_grammar_v1_1",
 )
 
 GRAMMAR_SPATIAL = ArchitecturalVisualGrammar(
@@ -238,11 +256,13 @@ GRAMMAR_SPATIAL = ArchitecturalVisualGrammar(
     title_size_boost=1.15,
     letter_spacing_em=0.04,
     background_mode=BackgroundMode.TINTED,
+    color_arrangement=ColorArrangement.PLAIN,
     accent_ratio=0.1,
     motif_type=MotifType.PATH_SEQUENCE,
     hero_min_ratio=0.5,
     max_key_points=3,
-    p0_showcase=False,
+    p0_showcase=True,
+    source="vq5_grammar_v1_1",
 )
 
 GRAMMAR_BEFORE_AFTER = ArchitecturalVisualGrammar(
@@ -261,11 +281,13 @@ GRAMMAR_BEFORE_AFTER = ArchitecturalVisualGrammar(
     title_size_boost=1.2,
     letter_spacing_em=0.03,
     background_mode=BackgroundMode.TINTED,
+    color_arrangement=ColorArrangement.ACCENT_EDGE,
     accent_ratio=0.14,
     motif_type=MotifType.BEFORE_AFTER_SLICE,
     hero_min_ratio=0.55,
     max_key_points=2,
-    p0_showcase=False,
+    p0_showcase=True,
+    source="vq5_grammar_v1_1",
 )
 
 GRAMMAR_METRIC = ArchitecturalVisualGrammar(
@@ -284,11 +306,13 @@ GRAMMAR_METRIC = ArchitecturalVisualGrammar(
     title_size_boost=1.15,
     letter_spacing_em=0.02,
     background_mode=BackgroundMode.LIGHT,
+    color_arrangement=ColorArrangement.METRIC_PANEL,
     accent_ratio=0.16,
     motif_type=MotifType.MODULE_INDEX,
     hero_min_ratio=None,
     max_key_points=1,
     p0_showcase=True,
+    source="vq5_grammar_v1_1",
 )
 
 GRAMMAR_COLLAGE = ArchitecturalVisualGrammar(
@@ -307,11 +331,13 @@ GRAMMAR_COLLAGE = ArchitecturalVisualGrammar(
     title_size_boost=1.35,
     letter_spacing_em=0.02,
     background_mode=BackgroundMode.ACCENT_WASH,
+    color_arrangement=ColorArrangement.BOTTOM_WASH,
     accent_ratio=0.18,
     motif_type=MotifType.MODULE_INDEX,
     hero_min_ratio=0.45,
     max_key_points=4,
     p0_showcase=False,
+    source="vq5_grammar_v1_1",
 )
 
 GRAMMAR_STRATEGY = ArchitecturalVisualGrammar(
@@ -330,11 +356,13 @@ GRAMMAR_STRATEGY = ArchitecturalVisualGrammar(
     title_size_boost=1.2,
     letter_spacing_em=0.04,
     background_mode=BackgroundMode.TINTED,
+    color_arrangement=ColorArrangement.TOP_MASTHEAD,
     accent_ratio=0.1,
     motif_type=MotifType.FLOW_NODES,
     hero_min_ratio=0.4,
     max_key_points=4,
     p0_showcase=False,
+    source="vq5_grammar_v1_1",
 )
 
 GRAMMAR_MATERIAL = ArchitecturalVisualGrammar(
@@ -353,11 +381,13 @@ GRAMMAR_MATERIAL = ArchitecturalVisualGrammar(
     title_size_boost=1.1,
     letter_spacing_em=0.08,
     background_mode=BackgroundMode.LIGHT,
+    color_arrangement=ColorArrangement.MONO_RULE,
     accent_ratio=0.08,
     motif_type=MotifType.MODULE_INDEX,
     hero_min_ratio=0.45,
     max_key_points=3,
     p0_showcase=False,
+    source="vq5_grammar_v1_1",
 )
 
 GRAMMAR_TIMELINE = ArchitecturalVisualGrammar(
@@ -376,11 +406,13 @@ GRAMMAR_TIMELINE = ArchitecturalVisualGrammar(
     title_size_boost=1.1,
     letter_spacing_em=0.05,
     background_mode=BackgroundMode.TINTED,
+    color_arrangement=ColorArrangement.BOTTOM_WASH,
     accent_ratio=0.12,
     motif_type=MotifType.PATH_SEQUENCE,
     hero_min_ratio=0.4,
     max_key_points=4,
     p0_showcase=False,
+    source="vq5_grammar_v1_1",
 )
 
 GRAMMAR_FINAL = ArchitecturalVisualGrammar(
@@ -399,11 +431,13 @@ GRAMMAR_FINAL = ArchitecturalVisualGrammar(
     title_size_boost=1.45,
     letter_spacing_em=0.12,
     background_mode=BackgroundMode.DARK,
+    color_arrangement=ColorArrangement.CLOSING_FIELD,
     accent_ratio=0.05,
     motif_type=MotifType.QUIET_RULE,
     hero_min_ratio=0.7,
     max_key_points=0,
     p0_showcase=True,
+    source="vq5_grammar_v1_1",
 )
 
 _GRAMMARS: dict[ArchitecturalGrammarId, ArchitecturalVisualGrammar] = {

@@ -47,14 +47,18 @@ def test_catalog_has_twelve_grammars_and_p0_showcase() -> None:
     all_g = list_architectural_grammars()
     p0 = list_architectural_grammars(p0_only=True)
     assert len(all_g) == 12
-    assert len(p0) >= 5
+    assert len(p0) >= 8
     ids = {g.grammar_id for g in p0}
     assert ArchitecturalGrammarId.MONUMENTAL_STATEMENT in ids
     assert ArchitecturalGrammarId.ARCHITECTURAL_EDITORIAL in ids
     assert ArchitecturalGrammarId.ANALYTICAL_OVERLAY in ids
     assert ArchitecturalGrammarId.DRAWING_ATLAS in ids
+    assert ArchitecturalGrammarId.SPATIAL_SEQUENCE in ids
+    assert ArchitecturalGrammarId.BEFORE_INTERVENTION_AFTER in ids
     assert ArchitecturalGrammarId.METRIC_MONUMENT in ids
     assert ArchitecturalGrammarId.FINAL_VISION in ids
+    # v1.1: every grammar declares a preferred color arrangement.
+    assert all(g.color_arrangement is not None for g in all_g)
 
 
 def test_select_cover_and_closing_grammars() -> None:
@@ -64,6 +68,17 @@ def test_select_cover_and_closing_grammars() -> None:
     assert closing.grammar_id == ArchitecturalGrammarId.FINAL_VISION
     metric = select_architectural_grammar(slide=_slide("关键指标", slide_type=SlideType.DATA))
     assert metric.grammar_id == ArchitecturalGrammarId.METRIC_MONUMENT
+
+
+def test_title_keywords_select_distinct_grammars() -> None:
+    spatial = select_architectural_grammar(slide=_slide("空间体验动线"))
+    assert spatial.grammar_id == ArchitecturalGrammarId.SPATIAL_SEQUENCE
+    before = select_architectural_grammar(slide=_slide("原状与介入"))
+    assert before.grammar_id == ArchitecturalGrammarId.BEFORE_INTERVENTION_AFTER
+    timeline = select_architectural_grammar(slide=_slide("分期时序"))
+    assert timeline.grammar_id == ArchitecturalGrammarId.TIMELINE_RIBBON
+    drawing = select_architectural_grammar(slide=_slide("总图与剖面"))
+    assert drawing.grammar_id == ArchitecturalGrammarId.DRAWING_ATLAS
 
 
 def test_formula_maps_to_product_grammar() -> None:
@@ -131,9 +146,16 @@ def test_compiler_applies_monumental_title_boost() -> None:
     )
     assert any(w.startswith("arch_grammar:monumental_statement") for w in scene.warnings)
     assert any(w.startswith("vq5_p0:") for w in scene.warnings)
+    assert any(w.startswith("composition:") for w in scene.warnings)
+    assert any(w.startswith("grammar_color:") for w in scene.warnings)
     title = next(n for n in scene.nodes if isinstance(n, TextNode) and n.id == "title")
     assert title.font_size >= 28
     assert title.runs  # typography composition still present
+    # Monumental → accent_edge color geometry when accent ratio allows.
+    assert any(
+        getattr(n, "id", "") == "color_accent_edge" or "accent_edge" in str(getattr(n, "id", ""))
+        for n in scene.nodes
+    ) or any("color_arrangement:accent_edge" in str(w) for w in scene.warnings)
 
 
 def test_apply_grammar_to_scene_is_idempotent() -> None:
@@ -169,3 +191,38 @@ def test_apply_grammar_to_scene_is_idempotent() -> None:
     grammar = select_architectural_grammar(slide=slide)
     again = apply_grammar_to_scene(scene, grammar)
     assert again.warnings.count(f"arch_grammar:{grammar.grammar_id.value}") == 1
+
+
+def test_metric_grammar_forces_metric_panel_arrangement() -> None:
+    from archium.domain.visual.architectural_visual_grammar import get_architectural_grammar
+    from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, ThemeTokens
+
+    grammar = get_architectural_grammar(ArchitecturalGrammarId.METRIC_MONUMENT)
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10.0,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        theme_tokens=ThemeTokens(colors={"background": "#FFFFFF", "accent": "#C45C26"}),
+        nodes=[
+            TextNode(
+                id="title",
+                x=0.5,
+                y=0.4,
+                width=9.0,
+                height=0.8,
+                text="关键指标",
+                font_family="Arial",
+                font_size=22.0,
+                font_weight=400,
+                color="#111111",
+                line_height=1.2,
+                semantic_role="title",
+            )
+        ],
+        warnings=[],
+    )
+    out = apply_grammar_to_scene(scene, grammar)
+    assert "grammar_color:metric_panel" in out.warnings
+    assert any(getattr(n, "id", "") == "color_metric_panel" for n in out.nodes)
