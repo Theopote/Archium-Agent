@@ -25,6 +25,7 @@ from archium.application.visual.layout_style_preference import (
 )
 from archium.application.visual.layout_validation_service import LayoutValidationService
 from archium.application.visual.slide_capacity_service import SlideCapacityService
+from archium.application.visual.visual_boldness_score import VisualBoldnessScorer
 from archium.application.visual.visual_grammar_intent import (
     derive_grammar_layout_preference,
     forbidden_families_for_intent,
@@ -131,6 +132,7 @@ class LayoutPlanningService:
         self._capacity = SlideCapacityService()
         self._last_capacity_budget: SlideCapacityBudget | None = None
         self._last_style_preference: LayoutStylePreference = LayoutStylePreference()
+        self._boldness_scorer = VisualBoldnessScorer()
 
     def drain_warnings(self) -> list[dict[str, Any]]:
         """Return and clear structured warnings collected during the last plan call."""
@@ -599,12 +601,38 @@ class LayoutPlanningService:
         previous_layout_plan: LayoutPlan | None,
         recent_layout_plans: Sequence[LayoutPlan] | None = None,
         style_preference: LayoutStylePreference | None = None,
-    ) -> tuple[float, float, float, str]:
+    ) -> tuple[float, float, float, float, str]:
         plan, report = item
         validity_rank = 0.0 if report.valid else 1.0
         score_rank = -report.score
         composition_penalty = 0.0
         composition_bonus = 0.0
+
+        # BOLDNESS SCORE INTEGRATION
+        # Score visual boldness and use it to adjust selection
+        from archium.application.visual.visual_boldness_score import VisualBoldnessScorer
+
+        boldness_scorer = VisualBoldnessScorer()
+        composition_strategy = None
+
+        # Extract composition strategy if available
+        if hasattr(plan, 'visual_intent_id') and plan.visual_intent_id:
+            # Try to get composition from context (would need to pass intent)
+            # For now, score without composition context
+            pass
+
+        boldness_breakdown = boldness_scorer.score_layout(plan, composition_strategy)
+        boldness_score = boldness_breakdown.overall_score
+
+        # Normalize boldness to bonus range: 70+ is bold (bonus), 30- is safe (penalty)
+        # Map 0-100 boldness to -0.15 to +0.15 range
+        boldness_adjustment = (boldness_score - 50.0) / 100.0 * 0.3
+
+        # Apply boldness bonus/penalty
+        if boldness_adjustment > 0:
+            composition_bonus += boldness_adjustment
+        else:
+            composition_penalty += abs(boldness_adjustment)
 
         if deck_directive is not None:
             monument_hero_fallback = (
@@ -905,9 +933,16 @@ class LayoutPlanningService:
             ):
                 composition_bonus += 0.1 / distance
 
+        # Return tuple for sorting:
+        # 1. validity_rank + composition_penalty (lower is better)
+        # 2. score_rank - composition_bonus (lower is better, since score_rank is negative)
+        # 3. -boldness_score (higher boldness wins in tiebreaks)
+        # 4. composition_penalty (for deterministic ordering)
+        # 5. plan.id (for stable sort)
         return (
             validity_rank + composition_penalty,
             score_rank - composition_bonus,
+            -boldness_score,  # Higher boldness = lower sort key
             composition_penalty,
             str(plan.id),
         )
