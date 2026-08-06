@@ -73,3 +73,30 @@ def test_collect_merges_deck_and_critic() -> None:
     assert ProductQaBucket.EXPRESSION in buckets
     assert ProductQaBucket.RENDER in buckets
     assert len(findings) == 3
+
+
+def test_group_collapses_repeated_rule_codes() -> None:
+    findings = collect_product_qa_from_sources(
+        critic_report={
+            "findings": [
+                {
+                    "rule_code": "CRITIC.FOCUS_UNCLEAR",
+                    "message": "主次不清",
+                    "severity": "warning",
+                }
+                for _ in range(120)
+            ]
+            + [
+                {
+                    "rule_code": "CRITIC.TENSION_FLAT",
+                    "message": "节奏偏平",
+                    "severity": "info",
+                }
+                for _ in range(80)
+            ]
+        }
+    )
+    summaries = group_product_qa_findings(findings)
+    expression = next(item for item in summaries if item.bucket == ProductQaBucket.EXPRESSION)
+    assert expression.count == 2
+    assert "120 处" in expression.findings[0].title

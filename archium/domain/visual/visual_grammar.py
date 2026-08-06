@@ -145,6 +145,7 @@ _VISUAL_GRAMMAR: dict[PageArchetype, VisualPageRecipe] = {
                 LayoutFamily.STRATEGY_CARDS,
                 LayoutFamily.METRIC_DASHBOARD,
                 LayoutFamily.TEXTUAL_ARGUMENT,
+                LayoutFamily.PROCESS_NARRATIVE,
             }
         ),
         dominant_content_type=VisualContentType.MIXED,

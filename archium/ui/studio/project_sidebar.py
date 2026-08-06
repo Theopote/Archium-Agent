@@ -9,6 +9,8 @@ import streamlit as st
 from archium.application.unit_of_work import unit_of_work
 from archium.ui.label_map import STATUS_LABELS, entity_label
 from archium.ui.session_context import (
+    reconcile_presentation_widgets,
+    reconcile_project_widgets,
     select_presentation_context,
     select_project_context,
 )
@@ -73,6 +75,7 @@ def render_studio_selection(
 
     project_labels = {str(project.id): project.name for project in projects}
     project_options = list(project_labels.keys())
+    reconcile_project_widgets(st.session_state, project_options)
     default_project_index = 0
     if st.session_state.selected_project_id in project_options:
         default_project_index = project_options.index(st.session_state.selected_project_id)
@@ -127,6 +130,11 @@ def render_studio_selection(
         if picked is not None and str(picked.id) in presentation_options:
             default_presentation_index = presentation_options.index(str(picked.id))
             select_presentation_context(st.session_state, picked.id)
+    reconcile_presentation_widgets(st.session_state, presentation_options)
+    if st.session_state.selected_presentation_id in presentation_options:
+        default_presentation_index = presentation_options.index(
+            st.session_state.selected_presentation_id
+        )
 
     if compact:
         selected_presentation = presentation_options[default_presentation_index]

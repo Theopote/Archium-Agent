@@ -205,7 +205,12 @@ def group_product_qa_findings(
     *,
     limit_per_bucket: int = 8,
 ) -> list[ProductQaBucketSummary]:
-    """Return summaries in fact → expression → render order."""
+    """Return summaries in fact → expression → render order.
+
+    Per-slide critic/deck findings often repeat the same rule across a long
+    deck. Collapse by ``rule_code`` so partners see actionable *types* (with
+    occurrence counts) instead of an inflated raw page×finding total.
+    """
     buckets = (
         ProductQaBucket.FACT,
         ProductQaBucket.EXPRESSION,
@@ -216,17 +221,61 @@ def group_product_qa_findings(
         grouped[item.bucket].append(item)
     summaries: list[ProductQaBucketSummary] = []
     for bucket in buckets:
-        items = grouped[bucket]
+        collapsed = _collapse_findings_by_rule(grouped[bucket])
         summaries.append(
             ProductQaBucketSummary(
                 bucket=bucket,
                 label=PRODUCT_QA_BUCKET_LABELS_ZH[bucket],
                 caption=PRODUCT_QA_BUCKET_CAPTIONS_ZH[bucket],
-                count=len(items),
-                findings=items[:limit_per_bucket],
+                count=len(collapsed),
+                findings=collapsed[:limit_per_bucket],
             )
         )
     return summaries
+
+
+def _collapse_findings_by_rule(
+    findings: list[ProductQaFinding],
+) -> list[ProductQaFinding]:
+    """One row per rule_code (or title), highest severity first, with 处 counts."""
+    if not findings:
+        return []
+    by_key: dict[str, list[ProductQaFinding]] = {}
+    for item in findings:
+        key = (item.rule_code or "").strip() or item.title or "问题"
+        by_key.setdefault(key, []).append(item)
+
+    severity_rank = {"error": 0, "warning": 1, "info": 2, "": 3}
+    collapsed: list[tuple[int, ProductQaFinding]] = []
+    for key, group in by_key.items():
+        group_sorted = sorted(
+            group,
+            key=lambda f: severity_rank.get((f.severity or "").lower(), 3),
+        )
+        base = group_sorted[0]
+        n = len(group)
+        title = base.title if n == 1 else f"{base.title}（{n} 处）"
+        collapsed.append(
+            (
+                n,
+                ProductQaFinding(
+                    bucket=base.bucket,
+                    rule_code=base.rule_code or key,
+                    title=title,
+                    detail=base.detail,
+                    severity=base.severity,
+                    source=base.source,
+                ),
+            )
+        )
+    collapsed.sort(
+        key=lambda pair: (
+            severity_rank.get((pair[1].severity or "").lower(), 3),
+            -pair[0],
+            pair[1].rule_code,
+        )
+    )
+    return [item for _, item in collapsed]
 
 
 def collect_product_qa_from_sources(

@@ -315,6 +315,45 @@ class TestLayoutPlanningDeckDirective:
         assert decisions[0].layout_variant == "monument"
         assert all(d.layout_variant != "section_opener" for d in decisions)
 
+    def test_hybrid_opening_without_assets_avoids_process_narrative(self) -> None:
+        from archium.domain.visual.enums import ContinuityRole
+        from archium.infrastructure.layout.layout_family_registry import (
+            get_layout_family_registry,
+        )
+
+        service = LayoutPlanningService.__new__(LayoutPlanningService)
+        service._registry = get_layout_family_registry()
+        intent = VisualIntent(
+            slide_id=uuid4(),
+            communication_goal="封面开篇",
+            audience_takeaway="项目愿景",
+            visual_priority="title > lead",
+            dominant_content_type=VisualContentType.MIXED,
+            preferred_layout_families=[
+                LayoutFamily.HYBRID_CANVAS,
+                LayoutFamily.HERO,
+            ],
+            continuity_role=ContinuityRole.OPENING,
+            density_level=DensityLevel.SPACIOUS,
+            reading_order=["title", "lead", "points"],
+        )
+        directive = _directive(
+            preferred=[LayoutFamily.HYBRID_CANVAS, LayoutFamily.HERO]
+        )
+        directive.pacing_role = PacingRole.OPENING
+        decisions = service._rule_decisions(
+            intent,
+            asset_count=0,
+            candidate_count=8,
+            deck_directive=directive,
+            is_title_slide=True,
+            is_section_opener=False,
+            key_point_count=4,
+        )
+        families = {d.layout_family for d in decisions}
+        assert LayoutFamily.PROCESS_NARRATIVE.value not in families
+        assert decisions[0].layout_variant == "monument"
+
     def test_select_best_hard_stops_third_consecutive_family(self) -> None:
         service = LayoutPlanningService.__new__(LayoutPlanningService)
         previous = _plan(LayoutFamily.STRATEGY_CARDS, variant="three_cards")

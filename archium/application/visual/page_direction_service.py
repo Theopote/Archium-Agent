@@ -205,6 +205,8 @@ _SITUATION_RULES: tuple[_SituationRule, ...] = (
             LayoutFamily.METRIC_DASHBOARD,
             LayoutFamily.EVIDENCE_BOARD,
             LayoutFamily.TEXTUAL_ARGUMENT,
+            LayoutFamily.PROCESS_NARRATIVE,
+            LayoutFamily.STRATEGY_CARDS,
         ),
         density=DensityLevel.SPACIOUS,
         copy_budget=CopyBudget(

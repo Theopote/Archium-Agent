@@ -65,12 +65,15 @@ def _resolve_deliver_context() -> StudioPresentationContext | None:
     if not projects:
         return None
 
+    from archium.ui.session_context import (
+        reconcile_project_widgets,
+        select_presentation_context,
+        select_project_context,
+    )
+
     project_labels = {str(project.id): project.name for project in projects}
     project_options = list(project_labels.keys())
-    selected_project = st.session_state.get("selected_project_id")
-    if selected_project not in project_options:
-        selected_project = project_options[0]
-        st.session_state.selected_project_id = selected_project
+    selected_project = reconcile_project_widgets(st.session_state, project_options)
     project_id = UUID(str(selected_project))
 
     with unit_of_work() as uow:
@@ -86,8 +89,7 @@ def _resolve_deliver_context() -> StudioPresentationContext | None:
                 key="deliver_switch_project",
             )
             if picked != str(project_id):
-                st.session_state.selected_project_id = picked
-                st.session_state.selected_presentation_id = None
+                select_project_context(st.session_state, picked)
                 st.rerun()
         return None
 
@@ -107,7 +109,7 @@ def _resolve_deliver_context() -> StudioPresentationContext | None:
             if auto_picked is not None
             else presentation_options[0]
         )
-        st.session_state.selected_presentation_id = selected_presentation
+        select_presentation_context(st.session_state, selected_presentation)
 
     context = _load_context(project_id, UUID(str(selected_presentation)))
     if context is None:
@@ -129,8 +131,7 @@ def _resolve_deliver_context() -> StudioPresentationContext | None:
             )
         with cols[1]:
             if picked_project != str(project_id):
-                st.session_state.selected_project_id = picked_project
-                st.session_state.selected_presentation_id = None
+                select_project_context(st.session_state, picked_project)
                 st.rerun()
             picked_presentation = st.selectbox(
                 "汇报版本",
@@ -140,7 +141,7 @@ def _resolve_deliver_context() -> StudioPresentationContext | None:
                 key="deliver_switch_presentation",
             )
         if picked_presentation != str(selected_presentation):
-            st.session_state.selected_presentation_id = picked_presentation
+            select_presentation_context(st.session_state, picked_presentation)
             st.rerun()
     return context
 

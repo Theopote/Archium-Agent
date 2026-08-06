@@ -77,6 +77,7 @@ _MODES: dict[ExpressionModeId, ExpressionMode] = {
                 LayoutFamily.EVIDENCE_BOARD,
                 LayoutFamily.TEXTUAL_ARGUMENT,
                 LayoutFamily.STRATEGY_CARDS,
+                LayoutFamily.PROCESS_NARRATIVE,
             }
         ),
         composition_bias=(CompositionBias.HERO_FULL,),

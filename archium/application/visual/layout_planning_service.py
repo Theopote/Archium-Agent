@@ -1143,7 +1143,7 @@ class LayoutPlanningService:
         decisions: list[LayoutDecisionDraft] = []
         # No presentation-ready hero asset → text monument cover, not a tiny image
         # floating in empty whitespace.
-        hero_families = {LayoutFamily.HERO, LayoutFamily.DRAWING_FOCUS}
+        hero_families = {LayoutFamily.HERO, LayoutFamily.DRAWING_FOCUS, LayoutFamily.HYBRID_CANVAS}
         prefers_hero = bool(
             set(intent.preferred_layout_families) & hero_families
             or intent.dominant_content_type
@@ -1155,11 +1155,12 @@ class LayoutPlanningService:
                 VisualContentType.ELEVATION,
             }
         )
+        is_cover_opening = is_title_slide or intent.continuity_role == ContinuityRole.OPENING
         if (
             prefers_hero
             and intent.hero_asset_id is None
             and asset_count == 0
-            and (is_title_slide or intent.continuity_role == ContinuityRole.OPENING)
+            and is_cover_opening
         ):
             decisions.append(
                 LayoutDecisionDraft(
@@ -1224,7 +1225,7 @@ class LayoutPlanningService:
         # Cap variants per family so preferred shells cannot fill the whole pool
         # and starve contrasting families on long text-heavy decks.
         _MAX_VARIANTS_PER_FAMILY = 2
-        _SECTION_OPENER_SKIP = frozenset(
+        _COVER_OR_OPENER_SKIP = frozenset(
             {
                 LayoutFamily.STRATEGY_CARDS,
                 LayoutFamily.PROCESS_NARRATIVE,
@@ -1233,10 +1234,10 @@ class LayoutPlanningService:
         )
         for definition in definitions:
             if (
-                is_section_opener
+                (is_section_opener or is_cover_opening)
                 and asset_count == 0
                 and intent.hero_asset_id is None
-                and definition.family in _SECTION_OPENER_SKIP
+                and definition.family in _COVER_OR_OPENER_SKIP
             ):
                 continue
             if (
@@ -1439,9 +1440,10 @@ class LayoutPlanningService:
         preferred_variant_keys = [
             (family.value, variant) for family, variant in style_pref.preferred_variants
         ]
-        hero_without_asset_cover = (
-            bool(preferred_families) and preferred_families[0] == LayoutFamily.HERO
-        )
+        hero_without_asset_cover = bool(preferred_families) and preferred_families[0] in {
+            LayoutFamily.HERO,
+            LayoutFamily.HYBRID_CANVAS,
+        }
         has_real_hero_candidate = any(
             item.layout_family == LayoutFamily.HERO.value for item in pool
         )
