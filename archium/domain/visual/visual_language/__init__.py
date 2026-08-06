@@ -8,6 +8,7 @@ from archium.domain.visual.visual_language.atmosphere import (
 )
 from archium.domain.visual.visual_language.color_composition import (
     BackgroundMode,
+    ColorArrangement,
     ColorComposition,
 )
 from archium.domain.visual.visual_language.color_story import (
@@ -69,6 +70,7 @@ __all__ = [
     "AtmosphereSpec",
     "BackgroundMode",
     "CardStyle",
+    "ColorArrangement",
     "ColorComposition",
     "ColorRole",
     "ColorStory",

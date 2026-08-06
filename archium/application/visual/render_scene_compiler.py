@@ -245,6 +245,7 @@ class RenderSceneCompiler:
         # Prefer deck rhythm stamp when PageDirection carries a directive hint.
         if not bg_override and visual_intent is not None and visual_intent.page_direction is not None:
             bg_override = visual_intent.page_direction.background_mode
+        palette_locked = any(str(w).startswith("style_overlay:colors=") for w in warnings)
         if color_comp is None:
             color_comp = compose_color_composition(
                 design_system=effective,
@@ -257,11 +258,12 @@ class RenderSceneCompiler:
                 color_story=language.color_story if language is not None else None,
                 page_kind=page_kind,
                 background_mode_override=bg_override,
+                palette_locked=palette_locked,
             )
         else:
             from archium.application.visual.color_composition import resolve_color_composition
 
-            if bg_override:
+            if bg_override or palette_locked:
                 color_comp = compose_color_composition(
                     design_system=effective,
                     slide=slide,
@@ -273,6 +275,7 @@ class RenderSceneCompiler:
                     color_story=language.color_story if language is not None else None,
                     page_kind=page_kind,
                     background_mode_override=bg_override,
+                    palette_locked=palette_locked,
                 )
             else:
                 color_comp = resolve_color_composition(

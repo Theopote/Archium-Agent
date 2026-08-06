@@ -251,13 +251,14 @@ def test_reference_style_and_art_direction_affect_compiled_scene() -> None:
     )
 
     assert baseline.background.color
-    # Art-direction palette may be restamped by page color composition (VQ-002);
-    # typography / overlay warnings remain the contract for this test.
+    # Style overlay palette must survive ColorComposition (palette_locked).
+    assert styled.background.color.upper() == "#FF00AA"
     assert isinstance(styled_title := styled.node_by_id("title"), TextNode)
     assert "Comic" in (styled_title.font_family or "")
     assert styled_title.font_size == 72.0
     assert any("style_overlay:colors=" in warning for warning in styled.warnings)
     assert any("style_overlay:typography=" in warning for warning in styled.warnings)
+    assert any("color_composition:palette_locked" in warning for warning in styled.warnings)
     base_title = baseline.node_by_id("title")
     assert isinstance(base_title, TextNode)
     assert base_title.font_family != styled_title.font_family

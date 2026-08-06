@@ -10,6 +10,7 @@ from archium.domain.visual.enums import ContinuityRole, LayoutFamily
 from archium.domain.visual.page_direction import NarrativeEmotion
 from archium.domain.visual.visual_language.color_composition import (
     BackgroundMode,
+    ColorArrangement,
     ColorComposition,
 )
 from archium.domain.visual.visual_language.color_story import NAMED_SWATCHES, ColorStory
@@ -41,6 +42,17 @@ _EMOTION_BG: dict[NarrativeEmotion, BackgroundMode] = {
     NarrativeEmotion.DECISION: BackgroundMode.TINTED,
 }
 
+_COLOR_NODE_IDS = frozenset(
+    {
+        "color_accent_wash",
+        "color_accent_edge",
+        "color_top_masthead",
+        "color_metric_panel",
+        "color_closing_field",
+        "color_mono_rule",
+    }
+)
+
 
 def compose_color_composition(
     *,
@@ -52,6 +64,7 @@ def compose_color_composition(
     color_story: ColorStory | None = None,
     page_kind: TypographyPageKind | None = None,
     background_mode_override: BackgroundMode | str | None = None,
+    palette_locked: bool = False,
 ) -> ColorComposition:
     """Build page color mix from page kind + emotion + ColorStory accents."""
     kind = page_kind or infer_typography_page_kind(
@@ -80,6 +93,11 @@ def compose_color_composition(
                 mode = BackgroundMode(str(background_mode_override))
             except ValueError:
                 pass
+
+    # Style-overlay / art-direction palette owns the ground — don't force dark→primary.
+    if palette_locked and mode == BackgroundMode.DARK:
+        mode = BackgroundMode.TINTED
+
     accent_token = "accent"
     accent_hex = None
     background_hex = None
@@ -87,7 +105,10 @@ def compose_color_composition(
     if design_system is not None:
         accent_token, accent_hex = _resolve_accent(design_system, color_story)
         background_hex, primary_text_hex = _resolve_background_pair(
-            design_system, mode=mode, accent_hex=accent_hex
+            design_system,
+            mode=mode,
+            accent_hex=accent_hex,
+            palette_locked=palette_locked,
         )
     elif color_story is not None:
         for role in ("conflict", "intervention", "accent", "problem"):
@@ -108,6 +129,8 @@ def compose_color_composition(
         dominant_ratio = 0.22
         accent_ratio = max(accent_ratio, 0.18)
 
+    arrangement = select_color_arrangement(kind=kind, mode=mode, emotion=emotion)
+
     image_tint = None
     drawing_recolor = "primary"
     if mode == BackgroundMode.DARK:
@@ -125,8 +148,13 @@ def compose_color_composition(
     if mode == BackgroundMode.DARK:
         support = ["overlay", "muted_text"]
 
+    source = f"color_composition:{kind.value}:{mode.value}:{arrangement.value}"
+    if palette_locked:
+        source = f"{source}|palette_locked"
+
     return ColorComposition(
         background_mode=mode,
+        arrangement=arrangement,
         dominant_token="primary" if mode != BackgroundMode.LIGHT else "background",
         support_tokens=support,
         accent_token=accent_token,
@@ -137,11 +165,44 @@ def compose_color_composition(
         drawing_recolor=drawing_recolor,
         section_override=kind
         in {TypographyPageKind.COVER, TypographyPageKind.SECTION, TypographyPageKind.CLOSING},
+        palette_locked=palette_locked,
         background_hex=background_hex,
         accent_hex=accent_hex,
         primary_text_hex=primary_text_hex,
-        source=f"color_composition:{kind.value}:{mode.value}",
+        source=source,
     )
+
+
+def select_color_arrangement(
+    *,
+    kind: TypographyPageKind,
+    mode: BackgroundMode,
+    emotion: NarrativeEmotion | None = None,
+) -> ColorArrangement:
+    """Pick v1.1 spatial color recipe from page kind + mode."""
+    if mode == BackgroundMode.MONOCHROME:
+        return ColorArrangement.MONO_RULE
+    if mode == BackgroundMode.ACCENT_WASH or emotion == NarrativeEmotion.CLIMAX:
+        return ColorArrangement.BOTTOM_WASH
+    if kind == TypographyPageKind.METRIC:
+        return ColorArrangement.METRIC_PANEL
+    if kind == TypographyPageKind.CLOSING and mode == BackgroundMode.DARK:
+        return ColorArrangement.CLOSING_FIELD
+    if kind == TypographyPageKind.SECTION:
+        return (
+            ColorArrangement.ACCENT_EDGE
+            if mode == BackgroundMode.DARK
+            else ColorArrangement.TOP_MASTHEAD
+        )
+    if kind == TypographyPageKind.COVER and mode == BackgroundMode.DARK:
+        return ColorArrangement.ACCENT_EDGE
+    if kind == TypographyPageKind.THESIS:
+        return ColorArrangement.TOP_MASTHEAD
+    if mode == BackgroundMode.DARK:
+        return ColorArrangement.ACCENT_EDGE
+    if mode == BackgroundMode.TINTED:
+        return ColorArrangement.TOP_MASTHEAD
+    return ColorArrangement.PLAIN
 
 
 def resolve_color_composition(
@@ -158,6 +219,7 @@ def resolve_color_composition(
         design_system,
         mode=composition.background_mode,
         accent_hex=accent_hex or design_system.colors.resolve("accent"),
+        palette_locked=composition.palette_locked,
     )
     return composition.model_copy(
         update={
@@ -173,14 +235,15 @@ def apply_color_composition_to_scene(
     scene: object,
     composition: ColorComposition | None,
 ) -> object:
-    """Mutate RenderScene background + title/ghost colors for dark/wash modes."""
+    """Mutate RenderScene background + title/ghost colors for page color recipes."""
     from archium.domain.visual.render_scene import (
         BackgroundStyle,
         RenderScene,
+        ShapeNode,
         TextNode,
-        set_text_node_runs,
         TextRun,
         effective_run_style,
+        set_text_node_runs,
     )
 
     if composition is None or not isinstance(scene, RenderScene):
@@ -192,64 +255,18 @@ def apply_color_composition_to_scene(
     nodes = [
         node
         for node in scene.nodes
-        if getattr(node, "id", "")
-        not in {"color_accent_wash", "color_accent_edge"}
+        if getattr(node, "id", "") not in _COLOR_NODE_IDS
     ]
     bg = composition.background_hex
     text_color = composition.primary_text_hex
     accent = composition.accent_hex
 
-    # Inject accent wash band when ratio is high (climax / thesis punch).
-    wash_nodes = []
-    if (
-        composition.background_mode == BackgroundMode.ACCENT_WASH
-        and accent
-        and composition.accent_ratio >= 0.12
-    ):
-        from archium.domain.visual.render_scene import ShapeNode
-
-        wash_h = scene.page_height * min(0.42, 0.15 + composition.accent_ratio)
-        wash_nodes.append(
-            ShapeNode(
-                id="color_accent_wash",
-                semantic_role="color_composition_wash",
-                x=0,
-                y=scene.page_height - wash_h,
-                width=scene.page_width,
-                height=wash_h,
-                z_index=0,
-                opacity=min(0.35, 0.12 + composition.accent_ratio),
-                shape_kind="rectangle",
-                fill_color=accent,
-                stroke_color=accent,
-                stroke_width=0,
-            )
-        )
-    elif (
-        composition.section_override
-        and composition.background_mode == BackgroundMode.DARK
-        and accent
-        and composition.accent_ratio >= 0.04
-    ):
-        from archium.domain.visual.render_scene import ShapeNode
-
-        # Narrow accent edge — not a decorative party.
-        wash_nodes.append(
-            ShapeNode(
-                id="color_accent_edge",
-                semantic_role="color_composition_edge",
-                x=0,
-                y=0,
-                width=max(0.08, scene.page_width * composition.accent_ratio * 0.35),
-                height=scene.page_height,
-                z_index=0,
-                opacity=0.95,
-                shape_kind="rectangle",
-                fill_color=accent,
-                stroke_color=accent,
-                stroke_width=0,
-            )
-        )
+    wash_nodes = _arrangement_nodes(
+        scene,
+        composition,
+        accent=accent,
+        shape_cls=ShapeNode,
+    )
 
     if text_color:
         for index, node in enumerate(nodes):
@@ -291,6 +308,12 @@ def apply_color_composition_to_scene(
                             font_style=run.font_style,
                             color=run_color,
                             color_token=run.color_token if keep_accent else "",
+                            letter_spacing=run.letter_spacing,
+                            opacity=run.opacity,
+                            outline=run.outline,
+                            outline_width_pt=run.outline_width_pt,
+                            outline_color=run.outline_color,
+                            fill_enabled=run.fill_enabled,
                         )
                     )
                 set_text_node_runs(updated, scaled)
@@ -305,6 +328,11 @@ def apply_color_composition_to_scene(
     tag = f"color_composition:{composition.background_mode.value}"
     if tag not in warnings:
         warnings.append(tag)
+    arr_tag = f"color_arrangement:{composition.arrangement.value}"
+    if arr_tag not in warnings:
+        warnings.append(arr_tag)
+    if composition.palette_locked and "color_composition:palette_locked" not in warnings:
+        warnings.append("color_composition:palette_locked")
 
     scene = scene.model_copy(
         update={
@@ -318,6 +346,157 @@ def apply_color_composition_to_scene(
     )
 
     return apply_text_background_contrast_to_scene(scene)
+
+
+def _arrangement_nodes(
+    scene: object,
+    composition: ColorComposition,
+    *,
+    accent: str | None,
+    shape_cls: type,
+) -> list[object]:
+    """Materialize spatial color geometry for the selected arrangement."""
+    if not accent:
+        return []
+    page_w = float(getattr(scene, "page_width", 10.0) or 10.0)
+    page_h = float(getattr(scene, "page_height", 5.625) or 5.625)
+    arrangement = composition.arrangement
+    ratio = composition.accent_ratio
+
+    if arrangement == ColorArrangement.BOTTOM_WASH and ratio >= 0.12:
+        wash_h = page_h * min(0.42, 0.15 + ratio)
+        return [
+            shape_cls(
+                id="color_accent_wash",
+                semantic_role="color_composition_wash",
+                x=0,
+                y=page_h - wash_h,
+                width=page_w,
+                height=wash_h,
+                z_index=0,
+                opacity=min(0.35, 0.12 + ratio),
+                shape_kind="rectangle",
+                fill_color=accent,
+                stroke_color=accent,
+                stroke_width=0,
+            )
+        ]
+
+    if arrangement == ColorArrangement.ACCENT_EDGE and ratio >= 0.04:
+        return [
+            shape_cls(
+                id="color_accent_edge",
+                semantic_role="color_composition_edge",
+                x=0,
+                y=0,
+                width=max(0.08, page_w * ratio * 0.35),
+                height=page_h,
+                z_index=0,
+                opacity=0.95,
+                shape_kind="rectangle",
+                fill_color=accent,
+                stroke_color=accent,
+                stroke_width=0,
+            )
+        ]
+
+    if arrangement == ColorArrangement.TOP_MASTHEAD:
+        mast_h = page_h * min(0.18, 0.08 + ratio)
+        return [
+            shape_cls(
+                id="color_top_masthead",
+                semantic_role="color_composition_masthead",
+                x=0,
+                y=0,
+                width=page_w,
+                height=mast_h,
+                z_index=0,
+                opacity=min(0.22, 0.08 + ratio),
+                shape_kind="rectangle",
+                fill_color=accent,
+                stroke_color=accent,
+                stroke_width=0,
+            )
+        ]
+
+    if arrangement == ColorArrangement.METRIC_PANEL:
+        panel_w = page_w * min(0.42, 0.28 + ratio)
+        return [
+            shape_cls(
+                id="color_metric_panel",
+                semantic_role="color_composition_metric_panel",
+                x=page_w - panel_w - 0.35,
+                y=page_h * 0.22,
+                width=panel_w,
+                height=page_h * 0.55,
+                z_index=0,
+                opacity=min(0.18, 0.08 + ratio * 0.5),
+                shape_kind="rectangle",
+                fill_color=accent,
+                stroke_color=accent,
+                stroke_width=0,
+            )
+        ]
+
+    if arrangement == ColorArrangement.CLOSING_FIELD:
+        return [
+            shape_cls(
+                id="color_closing_field",
+                semantic_role="color_composition_closing_field",
+                x=page_w * 0.08,
+                y=page_h * 0.18,
+                width=page_w * 0.84,
+                height=page_h * 0.64,
+                z_index=0,
+                opacity=0.1,
+                shape_kind="rectangle",
+                fill_color=accent,
+                stroke_color=accent,
+                stroke_width=0,
+            )
+        ]
+
+    if arrangement == ColorArrangement.MONO_RULE:
+        return [
+            shape_cls(
+                id="color_mono_rule",
+                semantic_role="color_composition_mono_rule",
+                x=0.5,
+                y=0.35,
+                width=page_w - 1.0,
+                height=0.02,
+                z_index=0,
+                opacity=0.55,
+                shape_kind="rectangle",
+                fill_color=accent,
+                stroke_color=accent,
+                stroke_width=0,
+            )
+        ]
+
+    # Legacy fallback for dark section_override without explicit arrangement.
+    if (
+        composition.section_override
+        and composition.background_mode == BackgroundMode.DARK
+        and ratio >= 0.04
+    ):
+        return [
+            shape_cls(
+                id="color_accent_edge",
+                semantic_role="color_composition_edge",
+                x=0,
+                y=0,
+                width=max(0.08, page_w * ratio * 0.35),
+                height=page_h,
+                z_index=0,
+                opacity=0.95,
+                shape_kind="rectangle",
+                fill_color=accent,
+                stroke_color=accent,
+                stroke_width=0,
+            )
+        ]
+    return []
 
 
 def plan_deck_color_modes(
@@ -363,10 +542,18 @@ def apply_deck_color_rhythm(
         accent_ratio = composition.accent_ratio
         if mode == BackgroundMode.TINTED:
             accent_ratio = min(accent_ratio, 0.08)
+        arrangement = select_color_arrangement(
+            kind=TypographyPageKind.DEFAULT,
+            mode=mode,
+        )
+        # Prefer masthead when softening a dark streak into tinted.
+        if mode == BackgroundMode.TINTED:
+            arrangement = ColorArrangement.TOP_MASTHEAD
         out.append(
             composition.model_copy(
                 update={
                     "background_mode": mode,
+                    "arrangement": arrangement,
                     "accent_ratio": accent_ratio,
                     "section_override": mode == BackgroundMode.DARK,
                     # Force re-resolve of hex on next apply.
@@ -521,10 +708,15 @@ def _resolve_background_pair(
     *,
     mode: BackgroundMode,
     accent_hex: str,
+    palette_locked: bool = False,
 ) -> tuple[str, str]:
     from archium.application.visual.color_contrast import ensure_readable_pair
 
     colors = design_system.colors
+    if palette_locked:
+        # Art Direction / ReferenceStyle owns the ground color.
+        bg, text = colors.resolve("background"), colors.resolve("primary_text")
+        return ensure_readable_pair(bg, text)
     if mode == BackgroundMode.DARK:
         bg, text = colors.resolve("primary"), colors.resolve("surface")
     elif mode == BackgroundMode.LIGHT:

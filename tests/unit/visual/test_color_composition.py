@@ -72,6 +72,7 @@ def test_cover_uses_dark_background_mode() -> None:
         slide=_slide(title="封面", slide_type=SlideType.TITLE),
     )
     assert composition.background_mode == BackgroundMode.DARK
+    assert composition.arrangement.value == "accent_edge"
     assert composition.background_hex == design.colors.resolve("primary")
     assert composition.primary_text_hex == design.colors.resolve("surface")
     assert composition.accent_ratio <= 0.12
@@ -114,7 +115,33 @@ def test_climax_raises_accent_ratio_and_wash() -> None:
         BackgroundMode.ACCENT_WASH,
         BackgroundMode.TINTED,
     }
+    assert composition.arrangement.value in {"bottom_wash", "top_masthead"}
     assert composition.accent_ratio >= 0.08
+
+
+def test_metric_uses_metric_panel_arrangement() -> None:
+    design = default_presentation_design_system()
+    composition = compose_color_composition(
+        design_system=design,
+        slide=_slide(title="关键指标"),
+        layout_plan=_plan(family=LayoutFamily.METRIC_DASHBOARD, title="关键指标"),
+    )
+    assert composition.background_mode == BackgroundMode.LIGHT
+    assert composition.arrangement.value == "metric_panel"
+
+
+def test_palette_locked_keeps_design_system_background() -> None:
+    design = default_presentation_design_system().model_copy(deep=True)
+    design.colors.background = "#FF00AA"
+    design.colors.primary_text = "#FFFFFF"
+    composition = compose_color_composition(
+        design_system=design,
+        slide=_slide(title="封面", slide_type=SlideType.TITLE),
+        palette_locked=True,
+    )
+    assert composition.palette_locked is True
+    assert composition.background_mode == BackgroundMode.TINTED
+    assert composition.background_hex.upper() == "#FF00AA"
 
 
 def test_visual_language_spec_includes_color_composition() -> None:
@@ -163,6 +190,7 @@ def test_compiler_darkens_cover_and_adds_accent_edge() -> None:
     )
     assert edge is not None
     assert any(w.startswith("color_composition:dark") for w in scene.warnings)
+    assert any(w.startswith("color_arrangement:accent_edge") for w in scene.warnings)
 
 
 def test_apply_color_composition_idempotent_via_strip() -> None:
@@ -186,7 +214,7 @@ def test_apply_color_composition_idempotent_via_strip() -> None:
     )
     once = apply_color_composition_to_scene(scene, composition)
     twice = apply_color_composition_to_scene(once, composition)
-    edges_once = [n for n in once.nodes if getattr(n, "id", "").startswith("color_accent")]
-    edges_twice = [n for n in twice.nodes if getattr(n, "id", "").startswith("color_accent")]
+    edges_once = [n for n in once.nodes if getattr(n, "id", "").startswith("color_")]
+    edges_twice = [n for n in twice.nodes if getattr(n, "id", "").startswith("color_")]
     assert len(edges_once) == 1
     assert len(edges_twice) == 1

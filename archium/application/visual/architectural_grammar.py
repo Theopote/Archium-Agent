@@ -271,6 +271,11 @@ def apply_grammar_to_scene(
         page_kind=grammar.typography_page_kind,
         background_mode_override=grammar.background_mode,
         visual_intent=visual_intent,
+        palette_locked=any(
+            str(w).startswith("style_overlay:colors=")
+            or str(w) == "color_composition:palette_locked"
+            for w in scene.warnings
+        ),
     )
     color = color.model_copy(
         update={
