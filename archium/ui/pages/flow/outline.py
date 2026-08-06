@@ -951,7 +951,7 @@ def render() -> None:
     snapshot = project_mission.load_planning_snapshot(project_id)
 
     # 使用标签页组织内容
-    tab1, tab2, tab3 = st.tabs(["📋 大纲编辑", "🔍 页面预览", "⚙️ 高级规划"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📋 大纲编辑", "🔍 页面预览", "📦 批量操作", "⚙️ 高级规划"])
 
     with tab1:
         st.caption("编辑章节结构和页面意图。完成后点击底部「确认并前往生成」。")
@@ -962,6 +962,11 @@ def render() -> None:
         _render_outline_preview(project_id, outline, snapshot, slides)
 
     with tab3:
+        st.caption("批量修改多个章节或页面的属性，提升编辑效率。")
+        from archium.ui.components.outline_batch_editor import render_outline_batch_editor
+        render_outline_batch_editor(project_id, outline)
+
+    with tab4:
         st.caption("完整六步规划器，适合复杂项目。")
         project_mission.render(embedded=True)
 

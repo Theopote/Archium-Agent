@@ -25,6 +25,92 @@ from archium.ui.project_progress_card import load_project_progress_snapshot
 from archium.ui.workspace_service import list_project_presentations
 
 
+def _handle_batch_retry_failed(presentation_id: UUID) -> None:
+    """处理批量重试失败页面。"""
+    from archium.application.batch_operations import PresentationBatchOperations
+    from archium.ui.components.enhanced_ui import render_status_indicator
+
+    with st.spinner("正在批量重试失败页面..."):
+        try:
+            with unit_of_work() as uow:
+                batch_ops = PresentationBatchOperations(uow)
+                result = batch_ops.batch_retry_failed_slides(
+                    presentation_id,
+                    continue_on_error=True,
+                )
+
+            # 显示结果
+            if result.all_succeeded:
+                st.success(f"✅ 全部重试成功！共处理 {result.success_count} 页")
+            elif result.any_succeeded:
+                st.warning(
+                    f"⚠️ 部分成功：{result.success_count} 成功，{result.failure_count} 失败"
+                )
+                if result.failed_items:
+                    with st.expander("查看失败详情", expanded=False):
+                        for item, error in result.failed_items:
+                            st.text(f"页面 {item}: {str(error)[:100]}")
+            else:
+                st.error(f"❌ 批量重试失败：{result.failure_count} 页全部失败")
+
+            # 显示警告
+            for warning in result.warnings:
+                st.warning(warning)
+
+            # 刷新页面
+            if result.any_succeeded:
+                st.rerun()
+
+        except Exception as e:
+            from archium.ui.components.enhanced_ui import render_error_message
+
+            render_error_message(
+                e,
+                title="批量重试失败",
+                action_label="重试",
+                on_action=lambda: _handle_batch_retry_failed(presentation_id),
+            )
+
+
+def _handle_skip_failed_slides(presentation_id: UUID) -> None:
+    """处理跳过失败页面。"""
+    from archium.application.batch_operations import PresentationBatchOperations
+
+    # 确认对话框
+    with st.container():
+        st.warning("⚠️ 确定要跳过所有失败页面吗？")
+        st.caption("这将标记失败页面为已跳过，继续处理其他页面。此操作可以撤销。")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("确认跳过", key="confirm_skip_failed", type="primary", use_container_width=True):
+                with st.spinner("正在跳过失败页面..."):
+                    try:
+                        with unit_of_work() as uow:
+                            batch_ops = PresentationBatchOperations(uow)
+                            # 获取失败页面ID并标记为跳过
+                            failed_slides = batch_ops._get_failed_slides(presentation_id)
+                            slide_ids = [slide.id for slide in failed_slides]
+
+                            if slide_ids:
+                                result = batch_ops.batch_update_slide_property(
+                                    slide_ids,
+                                    "generation_status",
+                                    "skipped",
+                                )
+                                st.success(f"✅ 已跳过 {result.success_count} 个失败页面")
+                                st.rerun()
+                            else:
+                                st.info("没有失败页面需要跳过")
+
+                    except Exception as e:
+                        st.error(f"跳过失败：{str(e)}")
+
+        with col2:
+            if st.button("取消", key="cancel_skip_failed", use_container_width=True):
+                st.rerun()
+
+
 def _selected_presentation_id(project_id: UUID) -> UUID | None:
     selected = st.session_state.get("selected_presentation_id")
     with unit_of_work() as uow:
@@ -147,10 +233,10 @@ def _render_page_queue(project_id: UUID, presentation_id: UUID) -> bool:
         col1, col2, col3 = st.columns([1, 1, 2])
         with col1:
             if st.button("🔄 重试全部失败页", key="retry_all_failed", use_container_width=True):
-                st.info("批量重试功能即将实现")
+                _handle_batch_retry_failed(presentation_id)
         with col2:
             if st.button("⏭️ 跳过失败继续", key="skip_failed", use_container_width=True):
-                st.info("跳过功能即将实现")
+                _handle_skip_failed_slides(presentation_id)
 
     st.markdown("#### 逐页队列")
 
