@@ -13,6 +13,11 @@ from archium.application.visual.asset_reference import (
     content_refs_from_plan,
 )
 from archium.application.visual.layout_locked import preserve_locked_elements
+from archium.application.visual.layout_planning_metrics import (
+    LayoutPlanningMetrics,
+    LayoutPlanningPath,
+    record_layout_planning_path,
+)
 from archium.application.visual.layout_style_preference import (
     LayoutStylePreference,
     derive_layout_style_preference,
@@ -931,7 +936,9 @@ class LayoutPlanningService:
 
         if self._llm is not None:
             # v0.3 architecture: prefer PageType + CompositionStrategy path
+            path_used = LayoutPlanningPath.CONTENT_TYPE_LEGACY  # default
             if intent.page_type and intent.has_structured_composition():
+                path_used = LayoutPlanningPath.COMPOSITION_DRIVEN
                 candidates = self._registry.candidates_for_composition(
                     page_type=intent.page_type.value if hasattr(intent.page_type, 'value') else intent.page_type,
                     composition_strategy=intent.get_composition_strategy(),
@@ -947,6 +954,20 @@ class LayoutPlanningService:
                 )
 
             allowed = [item.family.value for item in candidates]
+
+            # Record metrics for monitoring
+            if candidates:
+                record_layout_planning_path(
+                    LayoutPlanningMetrics(
+                        path_used=path_used,
+                        has_page_type=intent.page_type is not None,
+                        has_structured_composition=intent.has_structured_composition(),
+                        selected_family=candidates[0].family.value,
+                        candidate_count=len(candidates),
+                        slide_id=str(slide.id) if hasattr(slide, 'id') else None,
+                        presentation_id=str(slide.presentation_id) if hasattr(slide, 'presentation_id') else None,
+                    )
+                )
             allowed = self._filter_allowed_families(
                 allowed,
                 deck_directive,
