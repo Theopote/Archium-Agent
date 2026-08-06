@@ -19,7 +19,7 @@ This document states what is **proven by automation** vs what still requires **h
 | VQ-001 | Semantic Typography Composition | **Partial** — v1.1 six recipes (split_keyword / giant_background / index_title / metric_monument / outline_statement / vertical_edge); composition owns title when TextRuns exist; PPTX outline approx |
 | VQ-002 | Project Color Composition | **Partial** — v1.1 arrangements (accent_edge / bottom_wash / top_masthead / metric_panel / closing_field / mono_rule); **palette_locked** respects ArtDirection/ReferenceStyle; WCAG contrast guard |
 | VQ-003 | Architectural Graphic Motif | **Partial** — v1.1 arrangements (monumental_rule / margin_axis / baseline_nodes / corner_index / hero_path / closing_silence…); avoids color accent-edge collision |
-| VQ-004 | Shape / Connector / Freeform formal rendering | **Partial** — motif emits Connector/Freeform (≥3 path centers); PNG/HTML/PPTX draw path; true `p:cxnSp` / `a:custGeom` still deferred |
+| VQ-004 | Shape / Connector / Freeform formal rendering | **Partial** — v1.1 stroke_dash + cross/diamond markers + diagonal before/after cut; PPTX/HTML/PNG path export; true `p:cxnSp` / `a:custGeom` still deferred |
 | VQ-005 | Architectural Visual Grammar Library（12） | **Partial** — 12 executable profiles; 6 P0 showcase drive title/color/motif on compile |
 | VQ-006 | Deck Rhythm Planner | **Partial** — pacing/intensity stamped onto PageDirection; compile varies title scale / motif quieting / ghost opacity; climax budget + color streak already in DeckComposition |
 | VQ-007 | Screenshot Visual Critic | **Partial** — screenshot_v1 + optional vision；VQ-007 有限精修闭环（allowlist ≤3 actions/page、≤2 rounds；主链 critique 后可写回 Scene） |
@@ -83,9 +83,9 @@ Resolver: `archium/application/visual/asset_path_resolver.py` (`AssetPathResolve
 | 深度原生 PowerPoint / ppt-master 级对象模型 | **Not done** — capability *map* exists; most depth inventory rows are empty |
 | Connector / Preset Shape / Freeform / Gradient / Pattern / Glow / Transition | **Partial** for Connector / Freeform / Gradient; Preset / Pattern / Glow / Transition **Not implemented** |
 | GroupNode（组合 / 整体拖动 / 均匀缩放） | **Partial** — domain + Studio group/ungroup; PPTX still flat siblings (`group_id`) until `p:grpSp` |
-| ConnectorNode（分析连接线） | **Partial** — domain + Studio connect + move refresh; PPTX line/elbow approx until `p:cxnSp` |
+| ConnectorNode（分析连接线） | **Partial** — domain + Studio + motif; stroke_dash + elbow/arrow in PPTX/HTML/PNG；真 `p:cxnSp` deferred |
 | GradientFill（形状/图片渐变） | **Partial** — domain + Studio 两色/底部渐隐；PPTX 分段半透明条近似（非真 `a:gradFill`） |
-| FreeformNode（分析区多边形） | **Partial** — domain + Studio presets + silhouette 图片叠加框；PPTX 描边折线环近似（非真 `a:custGeom` / 图片剪裁） |
+| FreeformNode（分析区多边形） | **Partial** — path/contour/cross/diagonal cut；PPTX 折线近似；`a:custGeom` deferred |
 | P0 Closure Cardinality (`one_to_one` / `one_to_many` / `many_to_one`) | **Done** — bake charts/tables plan multi-emissions; not treated as duplicate errors |
 | P0 Workflow Route dispatch + preservation | **Partial** — `execute_fill_native_template` + router wired; FILL fingerprints are template-derived (not in-place OOXML yet) |
 | P0 Capability Contract → export / manifest | **Done** — pre-export gate + closure + object-type → `DeckExportManifest` |

@@ -453,6 +453,7 @@ class ConnectorNode(BaseRenderNode):
     routing: ConnectorRouting = "straight"
     stroke_color: str = "#333333"
     stroke_width: float = Field(default=1.5, ge=0)
+    stroke_dash: Literal["solid", "dash", "dot"] = "solid"
     arrow_start: bool = False
     arrow_end: bool = True
     label: str = ""
@@ -472,6 +473,7 @@ class FreeformNode(BaseRenderNode):
     fill_color: str | None = None
     stroke_color: str | None = "#333333"
     stroke_width: float = Field(default=1.0, ge=0)
+    stroke_dash: Literal["solid", "dash", "dot"] = "solid"
 
 
 MAX_GROUP_DEPTH = 4
@@ -901,7 +903,7 @@ def is_polygon_convex(points: list[Point]) -> bool:
     return True
 
 
-FreeformPreset = Literal["triangle", "diamond", "rect_zone"]
+FreeformPreset = Literal["triangle", "diamond", "rect_zone", "cross"]
 
 
 def freeform_preset_points(
@@ -927,6 +929,15 @@ def freeform_preset_points(
             Point(x=x + w, y=y + h / 2),
             Point(x=x + w / 2, y=y + h),
             Point(x=x, y=y + h / 2),
+        ]
+    if preset == "cross":
+        # Open X polyline (architectural survey mark) — not a filled glyph.
+        return [
+            Point(x=x, y=y),
+            Point(x=x + w, y=y + h),
+            Point(x=x + w / 2, y=y + h / 2),
+            Point(x=x + w, y=y),
+            Point(x=x, y=y + h),
         ]
     # rect_zone
     return [

@@ -240,15 +240,26 @@ class HtmlRenderer:
             f"{'M' if i == 0 else 'L'}{self._px(x)},{self._px(y)}"
             for i, (x, y) in enumerate(points)
         )
-        marker = (
-            f'<marker id="arrow-{html.escape(node.id)}" markerWidth="8" markerHeight="8" '
-            f'refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="{color}"/></marker>'
-            if node.arrow_end
-            else ""
-        )
-        end_attr = (
-            f' marker-end="url(#arrow-{html.escape(node.id)})"' if node.arrow_end else ""
-        )
+        dash = ""
+        if node.stroke_dash == "dash":
+            dash = ' stroke-dasharray="8 5"'
+        elif node.stroke_dash == "dot":
+            dash = ' stroke-dasharray="2 4"'
+        defs = ""
+        end_attr = ""
+        start_attr = ""
+        if node.arrow_end:
+            defs += (
+                f'<marker id="arrow-{html.escape(node.id)}" markerWidth="8" markerHeight="8" '
+                f'refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="{color}"/></marker>'
+            )
+            end_attr = f' marker-end="url(#arrow-{html.escape(node.id)})"'
+        if node.arrow_start:
+            defs += (
+                f'<marker id="arrow-start-{html.escape(node.id)}" markerWidth="8" markerHeight="8" '
+                f'refX="2" refY="3" orient="auto"><path d="M6,0 L0,3 L6,6 Z" fill="{color}"/></marker>'
+            )
+            start_attr = f' marker-start="url(#arrow-start-{html.escape(node.id)})"'
         label_html = ""
         if node.label.strip():
             mid = points[len(points) // 2]
@@ -262,8 +273,9 @@ class HtmlRenderer:
             f'style="left:0;top:0;width:100%;height:100%;z-index:{node.z_index};'
             f'opacity:{node.opacity};pointer-events:none;">'
             f'<svg width="100%" height="100%" style="position:absolute;inset:0;overflow:visible;">'
-            f"<defs>{marker}</defs>"
-            f'<path d="{path_d}" fill="none" stroke="{color}" stroke-width="{width}"{end_attr}/>'
+            f"<defs>{defs}</defs>"
+            f'<path d="{path_d}" fill="none" stroke="{color}" stroke-width="{width}"'
+            f"{dash}{start_attr}{end_attr}/>"
             f"</svg>{label_html}</div>"
         )
 
@@ -275,13 +287,18 @@ class HtmlRenderer:
         width = max(1.0, node.stroke_width)
         coords = " ".join(f"{self._px(p.x)},{self._px(p.y)}" for p in node.points)
         tag = "polygon" if node.closed and len(node.points) >= 3 else "polyline"
+        dash = ""
+        if node.stroke_dash == "dash":
+            dash = ' stroke-dasharray="8 5"'
+        elif node.stroke_dash == "dot":
+            dash = ' stroke-dasharray="2 4"'
         return (
             f'<div class="node" id="{html.escape(node.id)}" '
             f'style="left:0;top:0;width:100%;height:100%;z-index:{node.z_index};'
             f'opacity:{node.opacity};pointer-events:none;">'
             f'<svg width="100%" height="100%" style="position:absolute;inset:0;overflow:visible;">'
             f'<{tag} points="{coords}" fill="{fill}" stroke="{color}" '
-            f'stroke-width="{width}"/></svg></div>'
+            f'stroke-width="{width}"{dash}/></svg></div>'
         )
 
     @staticmethod

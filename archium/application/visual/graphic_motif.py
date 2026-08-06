@@ -401,8 +401,22 @@ def apply_graphic_motif_to_scene(
             node_id = f"vl_motif_node_{index}"
             marker_ids.append(node_id)
             centers.append((cx, cy))
-            nodes.append(
-                ShapeNode(
+            marker_shape = motif.marker.shape
+            if marker_shape in {"cross", "square"}:
+                from archium.domain.visual.render_scene import (
+                    freeform_preset_points,
+                    refresh_freeform_geometry,
+                )
+
+                preset = "cross" if marker_shape == "cross" else "diamond"
+                ff_points = freeform_preset_points(
+                    preset,  # type: ignore[arg-type]
+                    x=cx - size / 2,
+                    y=cy - size / 2,
+                    width=size,
+                    height=size,
+                )
+                marker_ff = FreeformNode(
                     id=node_id,
                     semantic_role="graphic_motif",
                     x=cx - size / 2,
@@ -411,12 +425,32 @@ def apply_graphic_motif_to_scene(
                     height=size,
                     z_index=4,
                     opacity=min(1.0, motif.stroke.opacity + 0.1),
-                    shape_kind="ellipse" if motif.marker.shape == "circle" else "rectangle",
-                    fill_color=stroke_hex if motif.marker.fill_token else None,
+                    points=ff_points,
+                    closed=marker_shape == "square",
+                    fill_color=stroke_hex if motif.marker.fill_token and marker_shape == "square" else None,
                     stroke_color=stroke_hex,
-                    stroke_width=1.0,
+                    stroke_width=max(0.75, motif.stroke.width_pt),
+                    stroke_dash=motif.stroke.dash if motif.stroke.dash in {"solid", "dash", "dot"} else "solid",
                 )
-            )
+                refresh_freeform_geometry(marker_ff)
+                nodes.append(marker_ff)
+            else:
+                nodes.append(
+                    ShapeNode(
+                        id=node_id,
+                        semantic_role="graphic_motif",
+                        x=cx - size / 2,
+                        y=cy - size / 2,
+                        width=size,
+                        height=size,
+                        z_index=4,
+                        opacity=min(1.0, motif.stroke.opacity + 0.1),
+                        shape_kind="ellipse" if marker_shape == "circle" else "rectangle",
+                        fill_color=stroke_hex if motif.marker.fill_token else None,
+                        stroke_color=stroke_hex,
+                        stroke_width=1.0,
+                    )
+                )
             # Architectural index label beside each node (01 / 02 / …).
             from archium.domain.visual.render_scene import TextNode, TextParagraph
 
@@ -467,6 +501,7 @@ def apply_graphic_motif_to_scene(
                     routing="elbow" if motif.motif_type == MotifType.FLOW_NODES else "straight",
                     stroke_color=stroke_hex,
                     stroke_width=max(0.75, motif.stroke.width_pt),
+                    stroke_dash=motif.stroke.dash if motif.stroke.dash in {"solid", "dash", "dot"} else "solid",
                     arrow_start=False,
                     arrow_end=True,
                     label="" if motif.motif_type != MotifType.PATH_SEQUENCE else f"{index + 1:02d}",
@@ -491,6 +526,7 @@ def apply_graphic_motif_to_scene(
                     fill_color=None,
                     stroke_color=stroke_hex,
                     stroke_width=max(0.5, motif.stroke.width_pt * 0.75),
+                    stroke_dash=motif.stroke.dash if motif.stroke.dash in {"solid", "dash", "dot"} else "solid",
                 )
                 refresh_freeform_geometry(freeform)
                 nodes.append(freeform)
@@ -526,6 +562,7 @@ def apply_graphic_motif_to_scene(
                 fill_color=None,
                 stroke_color=stroke_hex,
                 stroke_width=motif.stroke.width_pt,
+                stroke_dash=motif.stroke.dash if motif.stroke.dash in {"solid", "dash", "dot"} else "solid",
             )
             refresh_freeform_geometry(freeform)
             nodes.append(freeform)
@@ -547,6 +584,7 @@ def apply_graphic_motif_to_scene(
             )
 
     if motif.motif_type == MotifType.BEFORE_AFTER_SLICE and marks < max_marks:
+        # Soft vertical slice + diagonal freeform cut (VQ-004 architectural mark).
         nodes.append(
             ShapeNode(
                 id="vl_motif_slice",
@@ -556,13 +594,36 @@ def apply_graphic_motif_to_scene(
                 width=max(0.015, motif.stroke.width_pt / 48.0),
                 height=scene.page_height * 0.55,
                 z_index=5,
-                opacity=motif.stroke.opacity,
+                opacity=motif.stroke.opacity * 0.55,
                 shape_kind="rectangle",
                 fill_color=stroke_hex,
                 stroke_color=stroke_hex,
                 stroke_width=0,
             )
         )
+        cut = FreeformNode(
+            id="vl_motif_slice_cut",
+            semantic_role="graphic_motif_freeform",
+            x=scene.page_width * 0.42,
+            y=scene.page_height * 0.18,
+            width=scene.page_width * 0.16,
+            height=scene.page_height * 0.6,
+            z_index=6,
+            opacity=motif.stroke.opacity,
+            points=[
+                Point(x=scene.page_width * 0.42, y=scene.page_height * 0.18),
+                Point(x=scene.page_width * 0.50, y=scene.page_height * 0.48),
+                Point(x=scene.page_width * 0.58, y=scene.page_height * 0.78),
+            ],
+            closed=False,
+            fill_color=None,
+            stroke_color=stroke_hex,
+            stroke_width=max(1.0, motif.stroke.width_pt),
+            stroke_dash="dash",
+        )
+        refresh_freeform_geometry(cut)
+        nodes.append(cut)
+        marks += 1
 
     if not nodes:
         return scene

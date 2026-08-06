@@ -705,6 +705,13 @@ function renderImageElement(pres, page, element, slideInstruction, deckTheme, pl
   page.addText(label, textOpts);
 }
 
+function _lineDashType(dash) {
+  const value = String(dash || "solid").toLowerCase();
+  if (value === "dash") return "dash";
+  if (value === "dot") return "lgDash";
+  return "solid";
+}
+
 /**
  * @param {import('pptxgenjs').default} pres
  * @param {object} page
@@ -724,6 +731,7 @@ function renderFreeformElement(pres, page, element) {
   const color = _stripHash(element.stroke_color || element.fill_color || "333333");
   const width = Math.max(Number(element.stroke_width) || 1.0, 0.5);
   const closed = element.closed !== false;
+  const dashType = _lineDashType(element.stroke_dash);
   const segments = closed ? points.length : points.length - 1;
   for (let index = 0; index < segments; index += 1) {
     const start = points[index];
@@ -734,7 +742,7 @@ function renderFreeformElement(pres, page, element) {
       y: start.y,
       w: end.x - start.x,
       h: end.y - start.y,
-      line: { color, width },
+      line: { color, width, dashType },
     };
     if (element.opacity != null && Number(element.opacity) < 1) {
       lineOpts.transparency = Math.round((1 - Number(element.opacity)) * 100);
@@ -763,6 +771,7 @@ function renderConnectorElement(pres, page, element) {
   const width = Math.max(Number(element.stroke_width) || 1.5, 0.5);
   const beginArrow = element.arrow_start ? "triangle" : "none";
   const endArrow = element.arrow_end ? "triangle" : "none";
+  const dashType = _lineDashType(element.stroke_dash);
   if (!pres.shapes?.LINE) {
     return;
   }
@@ -779,6 +788,7 @@ function renderConnectorElement(pres, page, element) {
       line: {
         color,
         width,
+        dashType,
         beginArrowType: index === 0 ? beginArrow : "none",
         endArrowType: isLast ? endArrow : "none",
       },

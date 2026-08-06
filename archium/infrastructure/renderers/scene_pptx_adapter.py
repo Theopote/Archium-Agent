@@ -406,6 +406,7 @@ class RenderScenePptxAdapter:
             "routing": node.routing,
             "stroke_color": node.stroke_color.lstrip("#"),
             "stroke_width": node.stroke_width,
+            "stroke_dash": node.stroke_dash,
             "arrow_start": node.arrow_start,
             "arrow_end": node.arrow_end,
             "label": node.label,
@@ -430,6 +431,7 @@ class RenderScenePptxAdapter:
             "closed": node.closed,
             "points": [{"x": point.x, "y": point.y} for point in node.points],
             "stroke_width": node.stroke_width,
+            "stroke_dash": node.stroke_dash,
         }
         if node.fill_color:
             instruction["fill_color"] = node.fill_color.lstrip("#")

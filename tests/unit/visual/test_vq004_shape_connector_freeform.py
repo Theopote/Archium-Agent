@@ -199,14 +199,77 @@ def test_pptx_adapter_exports_connector_and_freeform_instructions() -> None:
     connector = next(el for el in elements if el.get("content_type") == "connector")
     assert len(connector.get("points") or []) >= 2
     assert connector.get("arrow_end") is True
-    assert "opacity" in connector or connector.get("opacity") is None or True
-    # Opacity may be omitted when ~1.0; still require points + arrow.
+    assert connector.get("stroke_dash") in {"solid", "dash", "dot"}
     indexes = [
         n
         for n in scene.nodes
         if isinstance(n, TextNode) and n.semantic_role == "graphic_motif_index"
     ]
     assert indexes
+
+
+def test_module_index_emits_cross_freeform_markers() -> None:
+    from archium.domain.visual.visual_concept import CORE_TO_EXPANSION_CONCEPT
+
+    motif = compose_graphic_motif(
+        slide=_slide(title="指标"),
+        concept=CORE_TO_EXPANSION_CONCEPT,
+    )
+    assert motif.motif_type == MotifType.MODULE_INDEX
+    design = default_presentation_design_system()
+    slide = _slide(title="指标")
+    plan = _plan_with_title("关键指标")
+    plan = plan.model_copy(update={"slide_id": slide.id})
+    scene = RenderSceneCompiler().compile(
+        slide=slide,
+        layout_plan=plan,
+        design_system=design,
+    )
+    scene = apply_graphic_motif_to_scene(scene, motif, accent_hex="#C45C26")
+    crosses = [
+        n
+        for n in scene.nodes
+        if isinstance(n, FreeformNode) and n.id.startswith("vl_motif_node_")
+    ]
+    assert crosses
+    assert crosses[0].closed is False
+    assert len(crosses[0].points) >= 3
+
+
+def test_before_after_emits_diagonal_cut_freeform() -> None:
+    from archium.domain.visual.visual_concept import EXISTING_TO_TRANSFORMATION_CONCEPT
+
+    motif = compose_graphic_motif(
+        slide=_slide(title="更新对比"),
+        concept=EXISTING_TO_TRANSFORMATION_CONCEPT,
+    )
+    assert motif.motif_type == MotifType.BEFORE_AFTER_SLICE
+    design = default_presentation_design_system()
+    slide = _slide(title="更新对比")
+    plan = _plan_with_title("更新对比")
+    plan = plan.model_copy(update={"slide_id": slide.id})
+    scene = RenderSceneCompiler().compile(
+        slide=slide,
+        layout_plan=plan,
+        design_system=design,
+    )
+    scene = apply_graphic_motif_to_scene(scene, motif, accent_hex="#C45C26")
+    cut = next(
+        (
+            n
+            for n in scene.nodes
+            if isinstance(n, FreeformNode) and n.id == "vl_motif_slice_cut"
+        ),
+        None,
+    )
+    assert cut is not None
+    assert cut.closed is False
+    assert cut.stroke_dash == "dash"
+    instruction = RenderScenePptxAdapter().render_slide(scene)
+    payload = instruction.to_dict()
+    free = next(el for el in payload["elements"] if el.get("id") == "vl_motif_slice_cut")
+    assert free["stroke_dash"] == "dash"
+    assert free["content_type"] == "freeform"
 
 
 def test_png_and_html_render_connectors(tmp_path) -> None:
