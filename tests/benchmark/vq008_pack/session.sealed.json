@@ -1,66 +1,240 @@
 {
-  "session_id": "78445d26-a38b-400b-b6c3-d265166845e0",
+  "session_id": "230254de-65bf-42b8-9fae-3f71d610265e",
   "protocol_version": "vq8.1",
   "title": "VQ-008 Architect Blind Review",
   "min_reviewers": 5,
   "trials": [
     {
-      "trial_id": "trial:demo_cover",
-      "case_id": "demo_cover",
-      "title": "封面（示例）",
+      "trial_id": "trial:p0_cover",
+      "case_id": "p0_cover",
+      "title": "封面 / 开篇",
       "stimuli": [
         {
           "label": "A",
           "true_source": "archium_current",
-          "case_id": "demo_cover",
-          "asset_path": "assets/current/cover.png",
+          "case_id": "p0_cover",
+          "asset_path": "assets\\current\\p0_cover.png",
           "notes": ""
         },
         {
           "label": "B",
           "true_source": "archium_legacy",
-          "case_id": "demo_cover",
-          "asset_path": "assets/legacy/cover.png",
+          "case_id": "p0_cover",
+          "asset_path": "assets\\legacy\\p0_cover.png",
           "notes": ""
         },
         {
           "label": "C",
           "true_source": "human_reference",
-          "case_id": "demo_cover",
-          "asset_path": "assets/reference/cover.png",
+          "case_id": "p0_cover",
+          "asset_path": "assets\\reference\\p0_cover.png",
           "notes": ""
         }
       ],
       "page_kind": "cover"
     },
     {
-      "trial_id": "trial:demo_analysis",
-      "case_id": "demo_analysis",
-      "title": "现状分析（示例）",
+      "trial_id": "trial:p0_section",
+      "case_id": "p0_section",
+      "title": "章节页",
       "stimuli": [
         {
           "label": "A",
           "true_source": "human_reference",
-          "case_id": "demo_analysis",
-          "asset_path": "assets/reference/analysis.png",
+          "case_id": "p0_section",
+          "asset_path": "assets\\reference\\p0_section.png",
           "notes": ""
         },
         {
           "label": "B",
           "true_source": "archium_current",
-          "case_id": "demo_analysis",
-          "asset_path": "assets/current/analysis.png",
+          "case_id": "p0_section",
+          "asset_path": "assets\\current\\p0_section.png",
           "notes": ""
         },
         {
           "label": "C",
           "true_source": "archium_legacy",
-          "case_id": "demo_analysis",
-          "asset_path": "assets/legacy/analysis.png",
+          "case_id": "p0_section",
+          "asset_path": "assets\\legacy\\p0_section.png",
+          "notes": ""
+        }
+      ],
+      "page_kind": "section"
+    },
+    {
+      "trial_id": "trial:p0_thesis",
+      "case_id": "p0_thesis",
+      "title": "核心理念 / 主张",
+      "stimuli": [
+        {
+          "label": "A",
+          "true_source": "human_reference",
+          "case_id": "p0_thesis",
+          "asset_path": "assets\\reference\\p0_thesis.png",
+          "notes": ""
+        },
+        {
+          "label": "B",
+          "true_source": "archium_legacy",
+          "case_id": "p0_thesis",
+          "asset_path": "assets\\legacy\\p0_thesis.png",
+          "notes": ""
+        },
+        {
+          "label": "C",
+          "true_source": "archium_current",
+          "case_id": "p0_thesis",
+          "asset_path": "assets\\current\\p0_thesis.png",
+          "notes": ""
+        }
+      ],
+      "page_kind": "thesis"
+    },
+    {
+      "trial_id": "trial:p0_analysis",
+      "case_id": "p0_analysis",
+      "title": "分析叠层 / 图解",
+      "stimuli": [
+        {
+          "label": "A",
+          "true_source": "archium_legacy",
+          "case_id": "p0_analysis",
+          "asset_path": "assets\\legacy\\p0_analysis.png",
+          "notes": ""
+        },
+        {
+          "label": "B",
+          "true_source": "human_reference",
+          "case_id": "p0_analysis",
+          "asset_path": "assets\\reference\\p0_analysis.png",
+          "notes": ""
+        },
+        {
+          "label": "C",
+          "true_source": "archium_current",
+          "case_id": "p0_analysis",
+          "asset_path": "assets\\current\\p0_analysis.png",
           "notes": ""
         }
       ],
       "page_kind": "analysis"
+    },
+    {
+      "trial_id": "trial:p0_drawing",
+      "case_id": "p0_drawing",
+      "title": "图纸 / 总图",
+      "stimuli": [
+        {
+          "label": "A",
+          "true_source": "human_reference",
+          "case_id": "p0_drawing",
+          "asset_path": "assets\\reference\\p0_drawing.png",
+          "notes": ""
+        },
+        {
+          "label": "B",
+          "true_source": "archium_current",
+          "case_id": "p0_drawing",
+          "asset_path": "assets\\current\\p0_drawing.png",
+          "notes": ""
+        },
+        {
+          "label": "C",
+          "true_source": "archium_legacy",
+          "case_id": "p0_drawing",
+          "asset_path": "assets\\legacy\\p0_drawing.png",
+          "notes": ""
+        }
+      ],
+      "page_kind": "drawing"
+    },
+    {
+      "trial_id": "trial:p0_metric",
+      "case_id": "p0_metric",
+      "title": "关键指标",
+      "stimuli": [
+        {
+          "label": "A",
+          "true_source": "human_reference",
+          "case_id": "p0_metric",
+          "asset_path": "assets\\reference\\p0_metric.png",
+          "notes": ""
+        },
+        {
+          "label": "B",
+          "true_source": "archium_legacy",
+          "case_id": "p0_metric",
+          "asset_path": "assets\\legacy\\p0_metric.png",
+          "notes": ""
+        },
+        {
+          "label": "C",
+          "true_source": "archium_current",
+          "case_id": "p0_metric",
+          "asset_path": "assets\\current\\p0_metric.png",
+          "notes": ""
+        }
+      ],
+      "page_kind": "metric"
+    },
+    {
+      "trial_id": "trial:p0_spatial",
+      "case_id": "p0_spatial",
+      "title": "空间序列 / 动线",
+      "stimuli": [
+        {
+          "label": "A",
+          "true_source": "archium_legacy",
+          "case_id": "p0_spatial",
+          "asset_path": "assets\\legacy\\p0_spatial.png",
+          "notes": ""
+        },
+        {
+          "label": "B",
+          "true_source": "archium_current",
+          "case_id": "p0_spatial",
+          "asset_path": "assets\\current\\p0_spatial.png",
+          "notes": ""
+        },
+        {
+          "label": "C",
+          "true_source": "human_reference",
+          "case_id": "p0_spatial",
+          "asset_path": "assets\\reference\\p0_spatial.png",
+          "notes": ""
+        }
+      ],
+      "page_kind": "spatial"
+    },
+    {
+      "trial_id": "trial:p0_closing",
+      "case_id": "p0_closing",
+      "title": "结尾 / 愿景",
+      "stimuli": [
+        {
+          "label": "A",
+          "true_source": "human_reference",
+          "case_id": "p0_closing",
+          "asset_path": "assets\\reference\\p0_closing.png",
+          "notes": ""
+        },
+        {
+          "label": "B",
+          "true_source": "archium_current",
+          "case_id": "p0_closing",
+          "asset_path": "assets\\current\\p0_closing.png",
+          "notes": ""
+        },
+        {
+          "label": "C",
+          "true_source": "archium_legacy",
+          "case_id": "p0_closing",
+          "asset_path": "assets\\legacy\\p0_closing.png",
+          "notes": ""
+        }
+      ],
+      "page_kind": "closing"
     }
   ],
   "ballots": [],

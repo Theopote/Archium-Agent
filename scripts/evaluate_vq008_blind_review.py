@@ -4,6 +4,9 @@
 Usage:
   py -3 scripts/evaluate_vq008_blind_review.py path/to/session.json
   py -3 scripts/evaluate_vq008_blind_review.py --scaffold out_dir
+  py -3 scripts/evaluate_vq008_blind_review.py session.json --import-ballots r01.json
+  py -3 scripts/evaluate_vq008_blind_review.py session.json --validate
+  py -3 scripts/evaluate_vq008_blind_review.py session.json --ballot-template architect_01
 
 Exit code 0 only when the Beta visual gate passes (all thresholds met).
 """
@@ -20,54 +23,27 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from archium.application.visual.architect_blind_review_service import (  # noqa: E402
-    build_blind_session,
+    ballot_template_for_reviewer,
     evaluate_vq008_beta_gate,
+    load_ballots,
     load_session,
-    reviewer_facing_pack,
+    materialize_vq008_pack,
+    merge_ballots,
     save_session,
-    sealed_key,
+    validate_session_ballots,
 )
 
 
-def _scaffold(out_dir: Path) -> int:
-    cases = [
-        {
-            "case_id": "demo_cover",
-            "title": "封面（示例）",
-            "legacy_asset": "assets/legacy/cover.png",
-            "current_asset": "assets/current/cover.png",
-            "reference_asset": "assets/reference/cover.png",
-            "page_kind": "cover",
-        },
-        {
-            "case_id": "demo_analysis",
-            "title": "现状分析（示例）",
-            "legacy_asset": "assets/legacy/analysis.png",
-            "current_asset": "assets/current/analysis.png",
-            "reference_asset": "assets/reference/analysis.png",
-            "page_kind": "analysis",
-        },
-    ]
-    session = build_blind_session(cases=cases, seed=42)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    save_session(session, out_dir / "session.sealed.json")
-    (out_dir / "reviewer_pack.json").write_text(
-        json.dumps(reviewer_facing_pack(session), ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    (out_dir / "sealed_key.json").write_text(
-        json.dumps(sealed_key(session), ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    (out_dir / "README.txt").write_text(
-        "1. 把 reviewer_pack.json + 截图发给 ≥5 名建筑师（勿发 sealed_key）。\n"
-        "2. 收集 ballots 写回 session.sealed.json 的 ballots 数组。\n"
-        "3. 运行: py -3 scripts/evaluate_vq008_blind_review.py session.sealed.json\n"
-        "4. 仅当 exit 0 且 beta_allowed=true 时，VQ-008 视觉硬门才可清。\n",
-        encoding="utf-8",
-    )
-    print(f"Scaffolded VQ-008 pack under {out_dir}")
-    return 0
+def _write_gate_report(gate, path: Path) -> None:
+    payload = {
+        "summary": gate.summary(),
+        "passed": gate.passed,
+        "beta_allowed": gate.beta_allowed,
+        "blocking_reasons": gate.blocking_reasons,
+        "metrics": gate.metrics.model_dump(mode="json"),
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -76,23 +52,116 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--scaffold",
         type=Path,
-        help="Create an empty sealed session + reviewer pack in this directory",
+        help="Create sealed session + reviewer pack (default: 8-trial P0 pack)",
+    )
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="With --scaffold: use 2-trial demo pack instead of P0",
+    )
+    parser.add_argument(
+        "--import-ballots",
+        type=Path,
+        action="append",
+        default=[],
+        metavar="PATH",
+        help="Merge ballots from reviewer JSON into session (repeatable)",
+    )
+    parser.add_argument(
+        "--replace-reviewer",
+        action="store_true",
+        help="With --import-ballots: overwrite existing ballots for same reviewer",
+    )
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        help="Validate ballots only; do not evaluate Beta gate",
+    )
+    parser.add_argument(
+        "--ballot-template",
+        metavar="REVIEWER_ID",
+        help="Print empty ballot template JSON for one architect",
+    )
+    parser.add_argument(
+        "--write-report",
+        type=Path,
+        help="Write gate evaluation JSON report to this path",
     )
     args = parser.parse_args(argv)
+
     if args.scaffold is not None:
-        return _scaffold(args.scaffold)
+        if args.demo:
+            from archium.application.visual.architect_blind_review_service import (
+                _demo_cases,
+                build_blind_session,
+                reviewer_facing_pack,
+                save_session,
+                sealed_key,
+            )
+
+            out_dir = args.scaffold
+            session = build_blind_session(cases=_demo_cases(), seed=42)
+            out_dir.mkdir(parents=True, exist_ok=True)
+            save_session(session, out_dir / "session.sealed.json")
+            (out_dir / "reviewer_pack.json").write_text(
+                json.dumps(reviewer_facing_pack(session), ensure_ascii=False, indent=2)
+                + "\n",
+                encoding="utf-8",
+            )
+            (out_dir / "sealed_key.json").write_text(
+                json.dumps(sealed_key(session), ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        else:
+            materialize_vq008_pack(args.scaffold, p0=True)
+        print(f"Scaffolded VQ-008 pack under {args.scaffold}")
+        return 0
+
     if not args.session:
         parser.error("session path required (or use --scaffold)")
+
     session = load_session(args.session)
+    session_path = Path(args.session)
+
+    if args.ballot_template:
+        template = ballot_template_for_reviewer(session, args.ballot_template)
+        print(json.dumps(template, ensure_ascii=False, indent=2))
+        return 0
+
+    for ballot_path in args.import_ballots:
+        incoming = load_ballots(ballot_path)
+        session = merge_ballots(
+            session,
+            incoming,
+            replace_reviewer=args.replace_reviewer,
+        )
+        save_session(session, session_path)
+        print(f"Imported {len(incoming)} ballot(s) from {ballot_path}")
+
+    if args.validate:
+        errors = validate_session_ballots(session)
+        if errors:
+            print(json.dumps({"valid": False, "errors": errors}, ensure_ascii=False, indent=2))
+            return 2
+        print(json.dumps({"valid": True, "ballot_count": len(session.ballots)}, indent=2))
+        return 0
+
+    ballot_errors = validate_session_ballots(session)
     gate = evaluate_vq008_beta_gate(session)
     payload = {
         "summary": gate.summary(),
         "passed": gate.passed,
         "beta_allowed": gate.beta_allowed,
         "blocking_reasons": gate.blocking_reasons,
+        "ballot_validation_errors": ballot_errors,
         "metrics": gate.metrics.model_dump(mode="json"),
     }
     print(json.dumps(payload, ensure_ascii=False, indent=2))
+    if args.write_report:
+        _write_gate_report(gate, args.write_report)
+        print(f"Wrote report to {args.write_report}")
+    if ballot_errors and not gate.beta_allowed:
+        return 1
     return 0 if gate.beta_allowed else 1
 
 

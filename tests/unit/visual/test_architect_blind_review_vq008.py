@@ -183,3 +183,79 @@ def test_low_score_blocks_even_if_wins() -> None:
     gate = evaluate_vq008_beta_gate(session)
     assert gate.beta_allowed is False
     assert any("mean_visual_score" in r for r in gate.blocking_reasons)
+
+
+def test_p0_pack_has_eight_trials() -> None:
+    from archium.application.visual.architect_blind_review_service import build_p0_blind_session
+
+    session = build_p0_blind_session()
+    assert len(session.trials) == 8
+    kinds = {t.page_kind for t in session.trials}
+    assert "cover" in kinds
+    assert "metric" in kinds
+    assert "closing" in kinds
+
+
+def test_validate_ballot_catches_unknown_label() -> None:
+    from archium.application.visual.architect_blind_review_service import validate_ballot
+
+    session = build_blind_session(cases=_cases(), seed=2)
+    trial = session.trials[0]
+    ballot = BlindBallot(
+        reviewer_id="architect_x",
+        trial_id=trial.trial_id,
+        ranking_labels=["A", "B", "Z"],
+        visual_score_by_label={"A": 8.0},
+        readiness_by_label={"A": BlindReadiness.READY},
+    )
+    errors = validate_ballot(ballot, trial)
+    assert any("Z" in e for e in errors)
+
+
+def test_merge_ballots_skips_duplicate_reviewer() -> None:
+    from archium.application.visual.architect_blind_review_service import merge_ballots
+
+    session = build_blind_session(cases=_cases(), seed=4)
+    first = _ballot_for(session, reviewer="architect_0")[0]
+    session = session.model_copy(update={"ballots": [first]})
+    duplicate = first.model_copy(update={"notes": "should not replace"})
+    merged = merge_ballots(session, [duplicate])
+    assert len(merged.ballots) == 1
+    assert merged.ballots[0].notes != "should not replace"
+
+
+def test_load_ballots_from_reviewer_template_shape() -> None:
+    from archium.application.visual.architect_blind_review_service import (
+        ballot_template_for_reviewer,
+        load_ballots,
+    )
+
+    session = build_blind_session(cases=_cases(), seed=5)
+    template = ballot_template_for_reviewer(session, "architect_01")
+    # Fill required fields for archium_current on first trial
+    trial = session.trials[0]
+    label_cur = trial.label_for_source(BlindSourceKind.ARCHIUM_CURRENT)
+    label_leg = trial.label_for_source(BlindSourceKind.ARCHIUM_LEGACY)
+    assert label_cur and label_leg
+    for item in template["ballots"]:
+        item["visual_score_by_label"][label_cur] = 8.0
+        item["readiness_by_label"][label_cur] = BlindReadiness.READY.value
+        item["edit_minutes_by_label"] = {
+            label_cur: 15.0,
+            label_leg: 40.0,
+        }
+        item["ranking_labels"] = [label_cur, label_leg] + [
+            label for label in item["visual_score_by_label"] if label not in {label_cur, label_leg}
+        ]
+        item["preferred_label"] = label_cur
+
+    import json
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "ballots.json"
+        path.write_text(json.dumps(template, ensure_ascii=False), encoding="utf-8")
+        loaded = load_ballots(path)
+    assert len(loaded) == len(session.trials)
+    assert all(b.reviewer_id == "architect_01" for b in loaded)

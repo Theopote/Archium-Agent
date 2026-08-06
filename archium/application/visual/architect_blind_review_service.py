@@ -16,6 +16,7 @@ from archium.domain.visual.architect_blind_review import (
     VQ008_MEAN_VISUAL_SCORE,
     VQ008_MIN_REVIEWERS,
     VQ008_NEW_VS_OLD_WIN_RATE,
+    VQ008_P0_CASES,
     VQ008_PROTOCOL_VERSION,
     VQ008_READY_OR_LIGHT_EDIT_RATE,
     BlindBallot,
@@ -115,6 +116,208 @@ def build_blind_session(
         min_reviewers=min_reviewers,
         trials=trials,
     )
+
+
+def build_p0_blind_session(
+    *,
+    asset_root: str | Path = "assets",
+    session_id: UUID | None = None,
+    min_reviewers: int = VQ008_MIN_REVIEWERS,
+    seed: int = 42,
+    include_reference: bool = True,
+) -> BlindReviewSession:
+    """Build an 8-trial P0 pack with conventional asset paths."""
+    root = Path(asset_root)
+    cases: list[dict[str, object]] = []
+    for template in VQ008_P0_CASES:
+        case_id = template["case_id"]
+        cases.append(
+            {
+                "case_id": case_id,
+                "title": template["title"],
+                "page_kind": template["page_kind"],
+                "legacy_asset": str(root / "legacy" / f"{case_id}.png"),
+                "current_asset": str(root / "current" / f"{case_id}.png"),
+                "reference_asset": str(root / "reference" / f"{case_id}.png"),
+                "include_reference": include_reference,
+            }
+        )
+    return build_blind_session(
+        cases=cases,
+        session_id=session_id,
+        min_reviewers=min_reviewers,
+        seed=seed,
+    )
+
+
+def validate_ballot(ballot: BlindBallot, trial: BlindTrial) -> list[str]:
+    """Return validation errors for one ballot against its trial."""
+    errors: list[str] = []
+    labels = {s.label for s in trial.stimuli}
+
+    for label in ballot.ranking_labels:
+        if label not in labels:
+            errors.append(f"unknown ranking label {label!r} for trial {trial.trial_id}")
+
+    if ballot.preferred_label and ballot.preferred_label not in labels:
+        errors.append(f"preferred_label {ballot.preferred_label!r} not in trial labels")
+
+    for label in ballot.readiness_by_label:
+        if label not in labels:
+            errors.append(f"readiness for unknown label {label!r}")
+
+    for label in ballot.visual_score_by_label:
+        if label not in labels:
+            errors.append(f"visual_score for unknown label {label!r}")
+
+    for label in ballot.edit_minutes_by_label:
+        if label not in labels:
+            errors.append(f"edit_minutes for unknown label {label!r}")
+
+    for label, dims in ballot.dimension_scores_by_label.items():
+        if label not in labels:
+            errors.append(f"dimension_scores for unknown label {label!r}")
+            continue
+        for key in dims:
+            if key not in VQ008_DIMENSIONS:
+                errors.append(f"unknown dimension {key!r} for label {label}")
+
+    label_current = trial.label_for_source(BlindSourceKind.ARCHIUM_CURRENT)
+    if label_current and label_current not in ballot.visual_score_by_label:
+        errors.append(f"missing visual_score for archium_current label {label_current}")
+
+    if label_current and label_current not in ballot.readiness_by_label:
+        errors.append(f"missing readiness for archium_current label {label_current}")
+
+    return errors
+
+
+def validate_session_ballots(session: BlindReviewSession) -> list[str]:
+    """Validate all ballots; return flat error list."""
+    errors: list[str] = []
+    seen: set[tuple[str, str]] = set()
+    for ballot in session.ballots:
+        trial = session.trial_by_id(ballot.trial_id)
+        if trial is None:
+            errors.append(f"ballot {ballot.ballot_id}: unknown trial {ballot.trial_id}")
+            continue
+        key = (ballot.reviewer_id, ballot.trial_id)
+        if key in seen:
+            errors.append(
+                f"duplicate ballot for reviewer={ballot.reviewer_id} trial={ballot.trial_id}"
+            )
+        seen.add(key)
+        for msg in validate_ballot(ballot, trial):
+            errors.append(f"ballot {ballot.ballot_id} ({ballot.reviewer_id}): {msg}")
+    return errors
+
+
+def merge_ballots(
+    session: BlindReviewSession,
+    incoming: list[BlindBallot],
+    *,
+    replace_reviewer: bool = False,
+) -> BlindReviewSession:
+    """Merge ballots into session; skip duplicates unless replace_reviewer."""
+    existing = list(session.ballots)
+    index = {
+        (b.reviewer_id, b.trial_id): i for i, b in enumerate(existing)
+    }
+    for ballot in incoming:
+        key = (ballot.reviewer_id, ballot.trial_id)
+        if key in index:
+            if replace_reviewer:
+                existing[index[key]] = ballot
+            continue
+        existing.append(ballot)
+    return session.model_copy(update={"ballots": existing})
+
+
+def ballot_template_for_reviewer(
+    session: BlindReviewSession,
+    reviewer_id: str,
+) -> dict[str, object]:
+    """Empty ballot skeleton for one architect to fill in."""
+    trials = []
+    for trial in session.trials:
+        labels = [s.label for s in trial.stimuli]
+        trials.append(
+            {
+                "trial_id": trial.trial_id,
+                "case_id": trial.case_id,
+                "title": trial.title,
+                "page_kind": trial.page_kind,
+                "ranking_labels": labels,
+                "readiness_by_label": {label: "ready" for label in labels},
+                "visual_score_by_label": {label: 7 for label in labels},
+                "edit_minutes_by_label": {label: 20 for label in labels},
+                "dimension_scores_by_label": {
+                    label: {dim: 7 for dim in VQ008_DIMENSIONS} for label in labels
+                },
+                "preferred_label": labels[0] if labels else None,
+                "notes": "",
+            }
+        )
+    return {
+        "protocol_version": session.protocol_version,
+        "session_id": str(session.session_id),
+        "reviewer_id": reviewer_id,
+        "dimensions": list(VQ008_DIMENSIONS),
+        "readiness_values": [item.value for item in BlindReadiness],
+        "ballots": trials,
+    }
+
+
+def materialize_vq008_pack(
+    out_dir: str | Path,
+    *,
+    p0: bool = True,
+    cases: list[dict[str, object]] | None = None,
+    seed: int = 42,
+) -> BlindReviewSession:
+    """Write session + reviewer pack + sealed key + README to out_dir."""
+    out = Path(out_dir)
+    if p0 and cases is None:
+        session = build_p0_blind_session(seed=seed)
+    elif cases is not None:
+        session = build_blind_session(cases=cases, seed=seed)
+    else:
+        session = build_blind_session(cases=_demo_cases(), seed=seed)
+
+    out.mkdir(parents=True, exist_ok=True)
+    save_session(session, out / "session.sealed.json")
+    (out / "reviewer_pack.json").write_text(
+        json.dumps(reviewer_facing_pack(session), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (out / "sealed_key.json").write_text(
+        json.dumps(sealed_key(session), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (out / "README.txt").write_text(_pack_readme(), encoding="utf-8")
+    return session
+
+
+def load_ballots(path: str | Path) -> list[BlindBallot]:
+    """Load ballots from a reviewer submission JSON."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    allowed = set(BlindBallot.model_fields.keys())
+
+    def _normalize(item: dict[str, object]) -> dict[str, object]:
+        return {key: value for key, value in item.items() if key in allowed}
+
+    if isinstance(data, list):
+        return [BlindBallot.model_validate(_normalize(item)) for item in data]
+    if isinstance(data, dict) and "ballots" in data:
+        reviewer_id = str(data.get("reviewer_id") or "").strip()
+        ballots: list[BlindBallot] = []
+        for item in data["ballots"]:
+            payload = _normalize(dict(item))
+            if reviewer_id and not payload.get("reviewer_id"):
+                payload["reviewer_id"] = reviewer_id
+            ballots.append(BlindBallot.model_validate(payload))
+        return ballots
+    raise ValueError("ballot JSON must be a list or {reviewer_id, ballots}")
 
 
 def reviewer_facing_pack(session: BlindReviewSession) -> dict[str, object]:
@@ -372,13 +575,58 @@ def _opt_str(value: object) -> str | None:
     return text or None
 
 
+def _demo_cases() -> list[dict[str, object]]:
+    return [
+        {
+            "case_id": "demo_cover",
+            "title": "封面（示例）",
+            "legacy_asset": "assets/legacy/cover.png",
+            "current_asset": "assets/current/cover.png",
+            "reference_asset": "assets/reference/cover.png",
+            "page_kind": "cover",
+        },
+        {
+            "case_id": "demo_analysis",
+            "title": "现状分析（示例）",
+            "legacy_asset": "assets/legacy/analysis.png",
+            "current_asset": "assets/current/analysis.png",
+            "reference_asset": "assets/reference/analysis.png",
+            "page_kind": "analysis",
+        },
+    ]
+
+
+def _pack_readme() -> str:
+    return (
+        "VQ-008 Architect Blind Review Pack\n"
+        "================================\n\n"
+        "1. 把 reviewer_pack.json + assets/ 截图发给 ≥5 名建筑师（勿发 sealed_key.json）。\n"
+        "2. 每位评审填写 ballot 模板（见 CLI --ballot-template reviewer_id）。\n"
+        "3. 导入选票:\n"
+        "   py -3 scripts/evaluate_vq008_blind_review.py session.sealed.json "
+        "--import-ballots ballots/architect_01.json\n"
+        "4. 校验:\n"
+        "   py -3 scripts/evaluate_vq008_blind_review.py session.sealed.json --validate\n"
+        "5. 评估 Beta 门:\n"
+        "   py -3 scripts/evaluate_vq008_blind_review.py session.sealed.json\n"
+        "6. 仅当 exit 0 且 beta_allowed=true 时，VQ-008 视觉硬门才可清。\n"
+    )
+
+
 __all__ = [
+    "ballot_template_for_reviewer",
     "build_blind_session",
     "build_blind_trial",
+    "build_p0_blind_session",
     "compute_blind_metrics",
     "evaluate_vq008_beta_gate",
+    "load_ballots",
     "load_session",
+    "materialize_vq008_pack",
+    "merge_ballots",
     "reviewer_facing_pack",
     "save_session",
     "sealed_key",
+    "validate_ballot",
+    "validate_session_ballots",
 ]

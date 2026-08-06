@@ -1,6 +1,6 @@
 {
   "protocol_version": "vq8.1",
-  "session_id": "78445d26-a38b-400b-b6c3-d265166845e0",
+  "session_id": "230254de-65bf-42b8-9fae-3f71d610265e",
   "title": "VQ-008 Architect Blind Review",
   "instructions": "对各 trial 的 A/B/C 盲评：排序（最好→最差）、就绪度、视觉分（1–10）、估计改稿分钟。勿猜测来源。",
   "dimensions": [
@@ -23,47 +23,185 @@
   ],
   "trials": [
     {
-      "trial_id": "trial:demo_cover",
-      "case_id": "demo_cover",
-      "title": "封面（示例）",
+      "trial_id": "trial:p0_cover",
+      "case_id": "p0_cover",
+      "title": "封面 / 开篇",
       "page_kind": "cover",
       "stimuli": [
         {
           "label": "A",
-          "asset_path": "assets/current/cover.png",
+          "asset_path": "assets\\current\\p0_cover.png",
           "notes": ""
         },
         {
           "label": "B",
-          "asset_path": "assets/legacy/cover.png",
+          "asset_path": "assets\\legacy\\p0_cover.png",
           "notes": ""
         },
         {
           "label": "C",
-          "asset_path": "assets/reference/cover.png",
+          "asset_path": "assets\\reference\\p0_cover.png",
           "notes": ""
         }
       ]
     },
     {
-      "trial_id": "trial:demo_analysis",
-      "case_id": "demo_analysis",
-      "title": "现状分析（示例）",
-      "page_kind": "analysis",
+      "trial_id": "trial:p0_section",
+      "case_id": "p0_section",
+      "title": "章节页",
+      "page_kind": "section",
       "stimuli": [
         {
           "label": "A",
-          "asset_path": "assets/reference/analysis.png",
+          "asset_path": "assets\\reference\\p0_section.png",
           "notes": ""
         },
         {
           "label": "B",
-          "asset_path": "assets/current/analysis.png",
+          "asset_path": "assets\\current\\p0_section.png",
           "notes": ""
         },
         {
           "label": "C",
-          "asset_path": "assets/legacy/analysis.png",
+          "asset_path": "assets\\legacy\\p0_section.png",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "trial_id": "trial:p0_thesis",
+      "case_id": "p0_thesis",
+      "title": "核心理念 / 主张",
+      "page_kind": "thesis",
+      "stimuli": [
+        {
+          "label": "A",
+          "asset_path": "assets\\reference\\p0_thesis.png",
+          "notes": ""
+        },
+        {
+          "label": "B",
+          "asset_path": "assets\\legacy\\p0_thesis.png",
+          "notes": ""
+        },
+        {
+          "label": "C",
+          "asset_path": "assets\\current\\p0_thesis.png",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "trial_id": "trial:p0_analysis",
+      "case_id": "p0_analysis",
+      "title": "分析叠层 / 图解",
+      "page_kind": "analysis",
+      "stimuli": [
+        {
+          "label": "A",
+          "asset_path": "assets\\legacy\\p0_analysis.png",
+          "notes": ""
+        },
+        {
+          "label": "B",
+          "asset_path": "assets\\reference\\p0_analysis.png",
+          "notes": ""
+        },
+        {
+          "label": "C",
+          "asset_path": "assets\\current\\p0_analysis.png",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "trial_id": "trial:p0_drawing",
+      "case_id": "p0_drawing",
+      "title": "图纸 / 总图",
+      "page_kind": "drawing",
+      "stimuli": [
+        {
+          "label": "A",
+          "asset_path": "assets\\reference\\p0_drawing.png",
+          "notes": ""
+        },
+        {
+          "label": "B",
+          "asset_path": "assets\\current\\p0_drawing.png",
+          "notes": ""
+        },
+        {
+          "label": "C",
+          "asset_path": "assets\\legacy\\p0_drawing.png",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "trial_id": "trial:p0_metric",
+      "case_id": "p0_metric",
+      "title": "关键指标",
+      "page_kind": "metric",
+      "stimuli": [
+        {
+          "label": "A",
+          "asset_path": "assets\\reference\\p0_metric.png",
+          "notes": ""
+        },
+        {
+          "label": "B",
+          "asset_path": "assets\\legacy\\p0_metric.png",
+          "notes": ""
+        },
+        {
+          "label": "C",
+          "asset_path": "assets\\current\\p0_metric.png",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "trial_id": "trial:p0_spatial",
+      "case_id": "p0_spatial",
+      "title": "空间序列 / 动线",
+      "page_kind": "spatial",
+      "stimuli": [
+        {
+          "label": "A",
+          "asset_path": "assets\\legacy\\p0_spatial.png",
+          "notes": ""
+        },
+        {
+          "label": "B",
+          "asset_path": "assets\\current\\p0_spatial.png",
+          "notes": ""
+        },
+        {
+          "label": "C",
+          "asset_path": "assets\\reference\\p0_spatial.png",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "trial_id": "trial:p0_closing",
+      "case_id": "p0_closing",
+      "title": "结尾 / 愿景",
+      "page_kind": "closing",
+      "stimuli": [
+        {
+          "label": "A",
+          "asset_path": "assets\\reference\\p0_closing.png",
+          "notes": ""
+        },
+        {
+          "label": "B",
+          "asset_path": "assets\\current\\p0_closing.png",
+          "notes": ""
+        },
+        {
+          "label": "C",
+          "asset_path": "assets\\legacy\\p0_closing.png",
           "notes": ""
         }
       ]

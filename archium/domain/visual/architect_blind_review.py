@@ -26,6 +26,50 @@ VQ008_MEAN_VISUAL_SCORE = 7.0  # on 1–10 scale
 VQ008_EDIT_TIME_REDUCTION_RATE = 0.50
 VQ008_PROTOCOL_VERSION = "vq8.1"
 
+# P0 showcase page kinds for blind-review packs (align with VQ-005 P0 grammars).
+VQ008_P0_CASES: tuple[dict[str, str], ...] = (
+    {
+        "case_id": "p0_cover",
+        "title": "封面 / 开篇",
+        "page_kind": "cover",
+    },
+    {
+        "case_id": "p0_section",
+        "title": "章节页",
+        "page_kind": "section",
+    },
+    {
+        "case_id": "p0_thesis",
+        "title": "核心理念 / 主张",
+        "page_kind": "thesis",
+    },
+    {
+        "case_id": "p0_analysis",
+        "title": "分析叠层 / 图解",
+        "page_kind": "analysis",
+    },
+    {
+        "case_id": "p0_drawing",
+        "title": "图纸 / 总图",
+        "page_kind": "drawing",
+    },
+    {
+        "case_id": "p0_metric",
+        "title": "关键指标",
+        "page_kind": "metric",
+    },
+    {
+        "case_id": "p0_spatial",
+        "title": "空间序列 / 动线",
+        "page_kind": "spatial",
+    },
+    {
+        "case_id": "p0_closing",
+        "title": "结尾 / 愿景",
+        "page_kind": "closing",
+    },
+)
+
 # Aesthetic dimensions required by P0 (score each 1–10 when collected).
 VQ008_DIMENSIONS: tuple[str, ...] = (
     "hierarchy",
@@ -216,6 +260,7 @@ __all__ = [
     "VQ008_MEAN_VISUAL_SCORE",
     "VQ008_MIN_REVIEWERS",
     "VQ008_NEW_VS_OLD_WIN_RATE",
+    "VQ008_P0_CASES",
     "VQ008_PROTOCOL_VERSION",
     "VQ008_READY_OR_LIGHT_EDIT_RATE",
     "BlindBallot",

@@ -1,13 +1,43 @@
 {
   "protocol_version": "vq8.1",
-  "session_id": "78445d26-a38b-400b-b6c3-d265166845e0",
+  "session_id": "230254de-65bf-42b8-9fae-3f71d610265e",
   "trials": {
-    "trial:demo_cover": {
+    "trial:p0_cover": {
       "A": "archium_current",
       "B": "archium_legacy",
       "C": "human_reference"
     },
-    "trial:demo_analysis": {
+    "trial:p0_section": {
+      "A": "human_reference",
+      "B": "archium_current",
+      "C": "archium_legacy"
+    },
+    "trial:p0_thesis": {
+      "A": "human_reference",
+      "B": "archium_legacy",
+      "C": "archium_current"
+    },
+    "trial:p0_analysis": {
+      "A": "archium_legacy",
+      "B": "human_reference",
+      "C": "archium_current"
+    },
+    "trial:p0_drawing": {
+      "A": "human_reference",
+      "B": "archium_current",
+      "C": "archium_legacy"
+    },
+    "trial:p0_metric": {
+      "A": "human_reference",
+      "B": "archium_legacy",
+      "C": "archium_current"
+    },
+    "trial:p0_spatial": {
+      "A": "archium_legacy",
+      "B": "archium_current",
+      "C": "human_reference"
+    },
+    "trial:p0_closing": {
       "A": "human_reference",
       "B": "archium_current",
       "C": "archium_legacy"
