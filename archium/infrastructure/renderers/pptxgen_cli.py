@@ -83,7 +83,30 @@ class PptxGenCliRunner:
         )
         if result.returncode != 0:
             detail = (result.stderr or result.stdout or "").strip()
-            raise RenderingError(f"PptxGenJS 导出失败：{detail or '未知错误'}")
+            raise RenderingError(_format_pptxgen_failure(detail, resolved_output))
         if not output_path.exists():
             raise RenderingError("PptxGenJS 未生成 PPTX 文件")
         return resolved_output
+
+
+def _format_pptxgen_failure(detail: str, output_path: Path) -> str:
+    """Map Node/OS write failures to actionable Chinese guidance."""
+    raw = (detail or "").strip() or "未知错误"
+    lowered = raw.lower()
+    locked = (
+        "ebusy" in lowered
+        or "resource busy or locked" in lowered
+        or "eperm" in lowered and "locked" in lowered
+        or "cannot access the file" in lowered
+        or "being used by another process" in lowered
+        or "另一个程序正在使用此文件" in raw
+        or "文件正由另一进程使用" in raw
+    )
+    if locked:
+        return (
+            "无法写入 PPTX：目标文件正被占用（常见原因：已在 PowerPoint / WPS / "
+            "预览窗中打开）。\n"
+            f"请先关闭：{output_path}\n"
+            "关闭后重新点击「导出 PPTX」。"
+        )
+    return f"PptxGenJS 导出失败：{raw}"

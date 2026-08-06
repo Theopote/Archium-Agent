@@ -31,7 +31,21 @@ def format_user_error(exc: BaseException) -> str:
     if isinstance(exc, LLMProviderError):
         return "模型调用失败，请检查网络或 API 配置后重试。"
     if isinstance(exc, RenderingError):
-        return f"渲染失败：{exc}"
+        text = str(exc).strip()
+        # Already actionable (e.g. file-lock guidance from PptxGenCliRunner).
+        if "请先关闭" in text or "正被占用" in text:
+            return text if text.startswith("渲染失败") else f"渲染失败：{text}"
+        lowered = text.lower()
+        if (
+            "ebusy" in lowered
+            or "resource busy or locked" in lowered
+            or "being used by another process" in lowered
+        ):
+            return (
+                "渲染失败：无法写入 PPTX，目标文件正被占用。"
+                "请先关闭 PowerPoint / WPS / 预览中已打开的同一文件，再重新导出。"
+            )
+        return f"渲染失败：{text}"
     if isinstance(exc, ExternalServiceError):
         service = f"（{exc.service_name}）" if exc.service_name else ""
         return f"外部工具不可用{service}：{exc}"

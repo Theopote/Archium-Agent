@@ -47,6 +47,27 @@ def test_format_rendering_error() -> None:
     assert format_user_error(RenderingError("pptx failed")) == "渲染失败：pptx failed"
 
 
+def test_format_rendering_error_file_locked() -> None:
+    message = format_user_error(
+        RenderingError(
+            "PptxGenJS 导出失败：EBUSY: resource busy or locked, open 'C:/tmp/a.pptx'"
+        )
+    )
+    assert "正被占用" in message
+    assert "关闭" in message
+    assert "PowerPoint" in message or "WPS" in message
+
+
+def test_format_rendering_error_already_actionable_lock_message() -> None:
+    raw = (
+        "无法写入 PPTX：目标文件正被占用（常见原因：已在 PowerPoint / WPS / "
+        "预览窗中打开）。\n请先关闭：C:/tmp/a.pptx\n关闭后重新点击「导出 PPTX」。"
+    )
+    message = format_user_error(RenderingError(raw))
+    assert "请先关闭" in message
+    assert message.startswith("渲染失败")
+
+
 def test_format_external_service_error() -> None:
     message = format_user_error(
         ExternalServiceError("missing binary", service_name="LibreOffice")

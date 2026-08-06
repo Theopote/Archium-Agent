@@ -162,18 +162,21 @@ def compose_title_typography(
     ghost = None
     ghost_scale = 5.0
     ghost_opacity = 0.07
-    if page_kind in {
-        TypographyPageKind.COVER,
-        TypographyPageKind.THESIS,
-        TypographyPageKind.CLOSING,
-    }:
+    if page_kind == TypographyPageKind.CLOSING:
         ghost = _ghost_fragment(cleaned)
-        if page_kind == TypographyPageKind.CLOSING:
-            ghost_scale = 6.0
-            ghost_opacity = 0.06
-        elif page_kind == TypographyPageKind.COVER:
-            ghost_scale = 5.5
-            ghost_opacity = 0.08
+        ghost_scale = 6.0
+        ghost_opacity = 0.06
+    elif page_kind == TypographyPageKind.THESIS:
+        ghost = _ghost_fragment(cleaned)
+        ghost_scale = 5.0
+        ghost_opacity = 0.07
+    elif page_kind == TypographyPageKind.COVER:
+        # Long competition titles already fill the masthead — skip ghost so it
+        # never reads as a second overlapping title (VQ cover regression).
+        if len(cleaned) < 16:
+            ghost = _ghost_fragment(cleaned)
+            ghost_scale = 3.2
+            ghost_opacity = 0.045
 
     # Cover / closing prefer slightly larger base.
     size_boost = {

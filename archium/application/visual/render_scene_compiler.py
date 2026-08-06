@@ -729,15 +729,18 @@ class RenderSceneCompiler:
         if not ghost:
             return None
         base = composition.base_size_pt or design_system.typography.display.font_size
-        size = min(120.0, round(base * composition.ghost_size_scale, 1))
+        size = min(96.0, round(base * composition.ghost_size_scale, 1))
         color = design_system.colors.resolve("primary")
+        # Park ghost in the lower third so it cannot collide with title/lead.
+        y = page_height * 0.62
+        height = page_height * 0.28
         return TextNode(
             id="typo_ghost_title",
             semantic_role="typography_ghost",
             x=page_width * 0.04,
-            y=page_height * 0.22,
+            y=y,
             width=page_width * 0.92,
-            height=page_height * 0.55,
+            height=height,
             z_index=0,
             text=ghost,
             paragraphs=[TextParagraph(text=ghost, alignment="left")],
@@ -750,10 +753,10 @@ class RenderSceneCompiler:
             color_token="primary",
             typography_token="display",
             alignment="left",
-            vertical_alignment="middle",
+            vertical_alignment="bottom",
             line_height=size * 1.05,
             letter_spacing=0.12,
-            opacity=composition.ghost_opacity,
+            opacity=min(0.06, composition.ghost_opacity),
             overflow_policy=OverflowPolicy.CLIP,
         )
 
