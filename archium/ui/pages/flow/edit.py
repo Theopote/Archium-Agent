@@ -12,6 +12,17 @@ from archium.ui.product_flow import PRODUCT_STUDIO_PAGE_KEY
 
 
 def render() -> None:
+    from archium.ui.components.navigation import (
+        render_workflow_progress_indicator,
+        set_current_stage,
+    )
+
+    # 设置当前阶段
+    set_current_stage("edit")
+
+    # 显示五阶段进度（在 Studio 头部上方）
+    render_workflow_progress_indicator("edit")
+
     render_stage_header(PRODUCT_STUDIO_PAGE_KEY)
     studio.render(
         embedded=True,

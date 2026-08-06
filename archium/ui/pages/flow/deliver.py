@@ -380,6 +380,18 @@ def _open_containing_folder(file_uri: str) -> None:
 
 
 def render() -> None:
+    from archium.ui.components.navigation import (
+        render_workflow_progress_indicator,
+        render_stage_navigation_hint,
+        set_current_stage,
+    )
+
+    # 设置当前阶段
+    set_current_stage("deliver")
+
+    # 显示五阶段进度
+    render_workflow_progress_indicator("deliver")
+
     render_stage_header("deliver")
     st.caption("交付检查、导出与版本记录。")
 
@@ -399,6 +411,7 @@ def render() -> None:
 
     selected_index = int(st.session_state.get("studio_selected_slide_index", 0))
     slide_snapshot = get_selected_slide_snapshot(context, selected_index)
+
     st.markdown("#### 导出")
     st.caption("检查通过后选择格式并导出。路径写入下方版本记录。")
     render_export_panel(context=context, slide_snapshot=slide_snapshot)
@@ -407,4 +420,8 @@ def render() -> None:
 
     render_fidelity_report_panel(key_prefix="deliver_post_export")
     _render_delivery_records(context.presentation.id)
+
+    # 显示下一步提示（导出完成后可以继续优化）
+    render_stage_navigation_hint("deliver")
+
     render_stage_nav("deliver")
