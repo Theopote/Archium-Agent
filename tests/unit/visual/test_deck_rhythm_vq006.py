@@ -74,6 +74,84 @@ def test_climax_title_scales_above_pause() -> None:
     assert climax.quiet is False
     assert pause.quiet is True
     assert climax.motif_mark_bias > pause.motif_mark_bias
+    assert climax.letter_spacing_bias > pause.letter_spacing_bias
+    assert climax.color_geometry_opacity_scale > pause.color_geometry_opacity_scale
+
+
+def test_infer_pacing_from_cover_page_kind() -> None:
+    stamp = resolve_page_rhythm(page_kind=None, slide_type=SlideType.TITLE)
+    # Use typography page kind inference path via slide_type.
+    assert stamp.pacing_role == PacingRole.OPENING
+    assert "|inferred" in stamp.source
+
+
+def test_negative_motif_bias_caps_marks() -> None:
+    from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, ShapeNode
+
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[
+            ShapeNode(
+                id=f"vl_motif_node_{i}",
+                semantic_role="graphic_motif",
+                x=1 + i,
+                y=1,
+                width=0.2,
+                height=0.2,
+                z_index=4,
+                opacity=0.9,
+                shape_kind="ellipse",
+                fill_color="#C45C26",
+                stroke_color="#C45C26",
+                stroke_width=1,
+            )
+            for i in range(4)
+        ],
+        warnings=[],
+    )
+    stamp = resolve_page_rhythm(pacing_role=PacingRole.CLOSING)
+    assert stamp.motif_mark_bias < 0
+    quieted = apply_deck_rhythm_to_scene(scene, stamp)
+    marks = [n for n in quieted.nodes if str(getattr(n, "id", "")).startswith("vl_motif_node_")]
+    assert len(marks) < 4
+    assert any(w.startswith("deck_rhythm:motif_bias:") for w in quieted.warnings)
+
+
+def test_pause_softens_color_geometry() -> None:
+    from archium.domain.visual.render_scene import BackgroundStyle, RenderScene, ShapeNode
+
+    scene = RenderScene(
+        slide_id=uuid4(),
+        layout_plan_id=uuid4(),
+        page_width=10,
+        page_height=5.625,
+        background=BackgroundStyle(color="#FFFFFF"),
+        nodes=[
+            ShapeNode(
+                id="color_accent_wash",
+                semantic_role="color_composition_wash",
+                x=0,
+                y=4,
+                width=10,
+                height=1.5,
+                z_index=0,
+                opacity=0.3,
+                shape_kind="rectangle",
+                fill_color="#C45C26",
+                stroke_color="#C45C26",
+                stroke_width=0,
+            )
+        ],
+        warnings=[],
+    )
+    stamp = resolve_page_rhythm(pacing_role=PacingRole.PAUSE)
+    quieted = apply_deck_rhythm_to_scene(scene, stamp)
+    wash = next(n for n in quieted.nodes if n.id == "color_accent_wash")
+    assert wash.opacity < 0.3 * 0.5
 
 
 def test_apply_rhythm_quiets_motif_on_pause_pages() -> None:

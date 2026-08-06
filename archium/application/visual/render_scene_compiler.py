@@ -347,11 +347,17 @@ class RenderSceneCompiler:
         direction = (
             visual_intent.page_direction if visual_intent is not None else None
         )
-        if direction is not None and (
-            direction.pacing_role or direction.visual_intensity or direction.background_mode
-        ):
-            stamp = resolve_page_rhythm(page_direction=direction)
-            scene = apply_deck_rhythm_to_scene(scene, stamp)
+        continuity = (
+            visual_intent.continuity_role if visual_intent is not None else None
+        )
+        # Always apply a rhythm stamp (infer when PageDirection lacks pacing).
+        stamp = resolve_page_rhythm(
+            page_direction=direction,
+            continuity_role=continuity,
+            page_kind=page_kind,
+            slide_type=slide.slide_type,
+        )
+        scene = apply_deck_rhythm_to_scene(scene, stamp)
 
         # Final readability pass: text must contrast with page background.
         from archium.application.visual.text_contrast_guard import (
