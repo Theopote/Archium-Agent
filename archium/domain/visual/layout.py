@@ -83,6 +83,37 @@ class LayoutElement(DomainModel):
     max_height: float | None = Field(default=None, gt=0)
     locked: bool = False
     lock_scopes: list[ElementLockScope] = Field(default_factory=list)
+    # Connector fields (VQ-005: connector main path support)
+    connector_start_node_id: str | None = Field(
+        default=None,
+        description="Source node ID for connector line.",
+    )
+    connector_end_node_id: str | None = Field(
+        default=None,
+        description="Target node ID for connector line.",
+    )
+    connector_start_anchor: str | None = Field(
+        default=None,
+        description="Anchor point on start node: center/top/bottom/left/right.",
+    )
+    connector_end_anchor: str | None = Field(
+        default=None,
+        description="Anchor point on end node: center/top/bottom/left/right.",
+    )
+    connector_routing: str | None = Field(
+        default=None,
+        description="Connector path routing: straight/elbow/curve.",
+    )
+    connector_label: str | None = Field(
+        default=None,
+        description="Optional label text on connector.",
+    )
+    # Freeform fields (VQ-006: freeform main path support)
+    freeform_points: list[tuple[float, float]] | None = Field(
+        default=None,
+        description="Polygon vertices as list of (x, y) tuples (relative to element bounds).",
+    )
+    freeform_closed: bool = True
 
     @property
     def right(self) -> float:

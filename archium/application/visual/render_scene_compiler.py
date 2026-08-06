@@ -48,6 +48,8 @@ from archium.domain.visual.render_scene import (
     BoxSpacing,
     ChartNode,
     ChartSeriesData,
+    ConnectorEndpoint,
+    ConnectorNode,
     DrawingFitMode,
     DrawingNode,
     DrawingType,
@@ -428,6 +430,7 @@ class RenderSceneCompiler:
         | ChartNode
         | TableNode
         | FreeformNode
+        | ConnectorNode
     ]:
         from archium.domain.visual.visual_language.typography_composition import (
             TypographyPageKind,
@@ -442,6 +445,7 @@ class RenderSceneCompiler:
             | ChartNode
             | TableNode
             | FreeformNode
+            | ConnectorNode
         ] = []
         if element.content_type == LayoutContentType.DRAWING:
             nodes = list(self._compile_drawing(element, bundle, drawing_type, asset_manifest, warnings))
@@ -488,6 +492,10 @@ class RenderSceneCompiler:
             )
         elif element.content_type == LayoutContentType.SHAPE:
             nodes = list(self._compile_shape(element, design_system))
+        elif element.content_type == LayoutContentType.CONNECTOR:
+            nodes = list(self._compile_connector(element, design_system))
+        elif element.content_type == LayoutContentType.FREEFORM:
+            nodes = list(self._compile_freeform(element, design_system))
         return nodes
 
     def _compile_chart(
@@ -968,6 +976,125 @@ class RenderSceneCompiler:
                 corner_radius=element.corner_radius or 0.0,
             )
         ]
+
+    def _compile_connector(
+        self,
+        element: LayoutElement,
+        design_system: DesignSystem,
+    ) -> list[ConnectorNode]:
+        """
+        Compile a connector element into ConnectorNode.
+
+        Requires connector_start_node_id and connector_end_node_id to be set.
+        Falls back to element bounds if endpoints are not specified.
+        """
+        if not element.connector_start_node_id or not element.connector_end_node_id:
+            # Cannot create connector without endpoints
+            return []
+
+        # Resolve anchor points
+        start_anchor = element.connector_start_anchor or "center"
+        end_anchor = element.connector_end_anchor or "center"
+
+        # Validate anchors
+        valid_anchors = {"center", "top", "bottom", "left", "right"}
+        if start_anchor not in valid_anchors:
+            start_anchor = "center"
+        if end_anchor not in valid_anchors:
+            end_anchor = "center"
+
+        # Resolve routing
+        routing = element.connector_routing or "straight"
+        valid_routing = {"straight", "elbow", "curve"}
+        if routing not in valid_routing:
+            routing = "straight"
+
+        # Resolve stroke
+        stroke_color = element.stroke_color or design_system.colors.resolve("border")
+        stroke_width = element.stroke_width if element.stroke_width is not None else 1.5
+
+        return [
+            ConnectorNode(
+                id=element.id,
+                semantic_role=element.role.value,
+                source_layout_element_id=element.id,
+                x=element.x,
+                y=element.y,
+                width=element.width,
+                height=element.height,
+                z_index=element.z_index,
+                start=ConnectorEndpoint(
+                    node_id=element.connector_start_node_id,
+                    anchor=start_anchor,  # type: ignore[arg-type]
+                ),
+                end=ConnectorEndpoint(
+                    node_id=element.connector_end_node_id,
+                    anchor=end_anchor,  # type: ignore[arg-type]
+                ),
+                routing=routing,  # type: ignore[arg-type]
+                stroke_color=stroke_color,
+                stroke_width=stroke_width,
+                arrow_start=False,
+                arrow_end=True,
+                label=element.connector_label or "",
+            )
+        ]
+
+    def _compile_freeform(
+        self,
+        element: LayoutElement,
+        design_system: DesignSystem,
+    ) -> list[FreeformNode]:
+        """
+        Compile a freeform polygon element into FreeformNode.
+
+        Requires freeform_points to be set. Points are relative to element bounds
+        and will be converted to absolute page coordinates.
+        """
+        if not element.freeform_points or len(element.freeform_points) < 3:
+            # Need at least 3 points for a polygon
+            return []
+
+        # Import Point here to avoid circular import at module level
+        from archium.domain.visual.render_scene import Point
+
+        # Convert relative points to absolute coordinates
+        absolute_points = [
+            Point(
+                x=element.x + px,
+                y=element.y + py,
+            )
+            for px, py in element.freeform_points
+        ]
+
+        # Resolve fill and stroke
+        fill_color = element.fill_color  # Can be None for stroke-only
+        stroke_color = element.stroke_color or design_system.colors.resolve("border")
+        stroke_width = element.stroke_width if element.stroke_width is not None else 1.0
+
+        # Determine if closed (default: True)
+        closed = element.freeform_closed
+
+        node = FreeformNode(
+            id=element.id,
+            semantic_role=element.role.value,
+            source_layout_element_id=element.id,
+            x=element.x,
+            y=element.y,
+            width=element.width,
+            height=element.height,
+            z_index=element.z_index,
+            points=absolute_points,
+            closed=closed,
+            fill_color=fill_color,
+            stroke_color=stroke_color,
+            stroke_width=stroke_width,
+        )
+
+        # Refresh geometry to compute actual bounds from points
+        refresh_freeform_geometry(node)
+
+        return [node]
 
     def _resolve_asset_path(
         self,
