@@ -657,10 +657,15 @@ class RenderSceneCompiler:
             elif element.role == LayoutElementRole.LEAD_STATEMENT and len(text) > 28:
                 composition = None
             else:
+                section_n = None
+                if kind.value == "section":
+                    # Prefer deck page number; fall back to slide order + 1.
+                    section_n = bundle.page_number or max(1, int(getattr(element, "order", 0) or 0) + 1)
                 composition = compose_title_typography(
                     text,
                     page_kind=kind,
                     base_size_pt=typography.font_size,
+                    section_index=section_n,
                 )
             if composition is not None and composition.runs:
                 runs = composition_to_text_runs(
@@ -674,9 +679,23 @@ class RenderSceneCompiler:
                     if composition.base_size_pt is not None:
                         node.font_size = composition.base_size_pt
                     node.letter_spacing = composition.letter_spacing_em
-                    if composition.arrangement.value == "metric_stack":
+                    arrangement = composition.arrangement.value
+                    if arrangement in {"metric_stack", "metric_monument"}:
                         node.alignment = "center"
                         node.vertical_alignment = "middle"
+                    elif arrangement == "index_title":
+                        node.alignment = "left"
+                        node.vertical_alignment = "top"
+                    elif arrangement == "vertical_edge":
+                        node.rotation = composition.rotation_deg or -90.0
+                        node.alignment = "center"
+                        node.vertical_alignment = "middle"
+                    elif arrangement in {
+                        "split_keyword",
+                        "giant_background",
+                        "outline_statement",
+                    }:
+                        node.alignment = "left"
                     composition_applied = True
 
         if not composition_applied and element.role in {

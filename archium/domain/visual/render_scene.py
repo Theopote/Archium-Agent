@@ -94,6 +94,13 @@ class TextRun(DomainModel):
     font_style: str = "normal"
     color: str = ""
     color_token: str = ""
+    # v1.1 — per-run tracking / opacity / hollow outline (inherit when None / 0).
+    letter_spacing: float | None = Field(default=None, ge=-0.1, le=0.5)
+    opacity: float | None = Field(default=None, ge=0.05, le=1.0)
+    outline: bool = False
+    outline_width_pt: float = Field(default=0.0, ge=0.0, le=4.0)
+    outline_color: str = ""
+    fill_enabled: bool = True
 
 
 class BackgroundStyle(DomainModel):
@@ -235,6 +242,12 @@ def replace_text_node_content(node: TextNode, new_text: str) -> None:
                 font_style=first.font_style,
                 color=first.color,
                 color_token=first.color_token,
+                letter_spacing=first.letter_spacing,
+                opacity=first.opacity,
+                outline=first.outline,
+                outline_width_pt=first.outline_width_pt,
+                outline_color=first.outline_color,
+                fill_enabled=first.fill_enabled,
             )
         ]
     else:
@@ -261,6 +274,12 @@ class EffectiveRunStyle(TypedDict):
     font_style: str
     color: str
     color_token: str
+    letter_spacing: float
+    opacity: float
+    outline: bool
+    outline_width_pt: float
+    outline_color: str
+    fill_enabled: bool
 
 
 def effective_run_style(node: TextNode, run: TextRun) -> EffectiveRunStyle:
@@ -274,6 +293,14 @@ def effective_run_style(node: TextNode, run: TextRun) -> EffectiveRunStyle:
         "font_style": run.font_style or node.font_style,
         "color": run.color or node.color,
         "color_token": run.color_token or node.color_token,
+        "letter_spacing": (
+            run.letter_spacing if run.letter_spacing is not None else node.letter_spacing
+        ),
+        "opacity": run.opacity if run.opacity is not None else node.opacity,
+        "outline": bool(run.outline),
+        "outline_width_pt": float(run.outline_width_pt or 0.0),
+        "outline_color": run.outline_color or run.color or node.color,
+        "fill_enabled": bool(run.fill_enabled),
     }
 
 

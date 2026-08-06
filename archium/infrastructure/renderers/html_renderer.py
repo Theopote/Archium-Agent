@@ -101,6 +101,8 @@ class HtmlRenderer:
         return max(0, int(round(inches * self._dpi)))
 
     def _box_style(self, node: TextNode | ImageNode | DrawingNode | ShapeNode) -> str:
+        rotation = getattr(node, "rotation", 0) or 0
+        transform = f"transform:rotate({rotation}deg);" if abs(float(rotation)) > 1e-6 else ""
         return (
             f"left:{self._px(node.x)}px;"
             f"top:{self._px(node.y)}px;"
@@ -108,6 +110,7 @@ class HtmlRenderer:
             f"height:{self._px(node.height)}px;"
             f"z-index:{node.z_index};"
             f"opacity:{node.opacity};"
+            f"{transform}"
         )
 
     def _render_text(self, node: TextNode) -> str:
@@ -143,9 +146,21 @@ class HtmlRenderer:
                 )
                 run_family = html.escape(run_stack)
                 italic = "font-style:italic;" if style["font_style"] == "italic" else ""
+                tracking = float(style["letter_spacing"] or 0.0)
+                track_css = f"letter-spacing:{tracking:.3f}em;" if abs(tracking) > 1e-6 else ""
+                run_opacity = float(style["opacity"] if style["opacity"] is not None else 1.0)
+                opacity_css = f"opacity:{run_opacity:.3f};" if run_opacity < 0.999 else ""
+                stroke_css = ""
+                if style["outline"]:
+                    stroke_w = max(0.5, float(style["outline_width_pt"] or 1.0))
+                    stroke_c = html.escape(str(style["outline_color"] or style["color"]))
+                    stroke_css = f"-webkit-text-stroke:{stroke_w}px {stroke_c};"
+                    if not style["fill_enabled"]:
+                        stroke_css += "color:transparent;-webkit-text-fill-color:transparent;"
                 spans.append(
                     f'<span style="font-family:{run_family};font-size:{run_size}px;'
-                    f'font-weight:{run_weight};color:{run_color};{italic}">'
+                    f"font-weight:{run_weight};color:{run_color};{italic}{track_css}"
+                    f'{opacity_css}{stroke_css}">'
                     f"{html.escape(run.text)}</span>"
                 )
             inner = "".join(spans)

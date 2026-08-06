@@ -222,6 +222,12 @@ def apply_grammar_to_scene(
                     font_style=run.font_style,
                     color=run.color,
                     color_token=run.color_token,
+                    letter_spacing=run.letter_spacing,
+                    opacity=run.opacity,
+                    outline=run.outline,
+                    outline_width_pt=run.outline_width_pt,
+                    outline_color=run.outline_color,
+                    fill_enabled=run.fill_enabled,
                 )
                 for run in node.runs
             ]

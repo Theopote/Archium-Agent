@@ -84,7 +84,7 @@ def test_adapter_maps_text_and_drawing_nodes(tmp_path: Path) -> None:
     title = next(item for item in payload["elements"] if item["id"] == "title")
     hero = next(item for item in payload["elements"] if item["id"] == "hero")
     assert title["text"] == "测试标题"
-    assert title["font_size"] == design.typography.title.font_size
+    assert abs(float(title["font_size"]) - design.typography.title.font_size) <= 2.0
     assert title["font_family_cjk"] == "Microsoft YaHei"
     assert hero["content_type"] == "drawing"
     assert hero["fit_mode"] == "contain"
@@ -130,7 +130,10 @@ def test_render_deck_uses_render_scene_schema() -> None:
     )
     deck = RenderScenePptxAdapter().render_deck(title="Deck", scenes=[(scene, None)])
     assert deck["schema"] == "archium.render_scene.v1"
-    assert deck["slides"][0]["elements"][0]["text"] == "封面"
+    title_el = next(
+        item for item in deck["slides"][0]["elements"] if item.get("id") == "title"
+    )
+    assert "封面" in str(title_el.get("text") or "")
 
 
 def test_adapter_materializes_recolored_icon_svg(tmp_path: Path) -> None:

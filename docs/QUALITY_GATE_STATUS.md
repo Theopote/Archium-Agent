@@ -16,7 +16,7 @@ This document states what is **proven by automation** vs what still requires **h
 
 | Epic | 主题 | 状态 |
 |------|------|------|
-| VQ-001 | Semantic Typography Composition | **Partial** — multi-scale title/metric runs + ghost text on cover/section/thesis/metric/closing; outline/vertical deferred |
+| VQ-001 | Semantic Typography Composition | **Partial** — v1.1 six recipes (split_keyword / giant_background / index_title / metric_monument / outline_statement / vertical_edge); composition owns title when TextRuns exist; PPTX outline approx |
 | VQ-002 | Project Color Composition | **Partial** — page ColorComposition + deck dark-streak soften；**文字/背景 WCAG 对比度守卫**（编译终局强制可读） |
 | VQ-003 | Architectural Graphic Motif | **Partial** — motif from VisualMetaphor; plan inject + scene materialize |
 | VQ-004 | Shape / Connector / Freeform formal rendering | **Partial** — motif emits Connector/Freeform (≥3 path centers); PNG/HTML/PPTX draw path; true `p:cxnSp` / `a:custGeom` still deferred |

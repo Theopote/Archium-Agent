@@ -73,6 +73,12 @@ def apply_text_background_contrast_to_scene(scene: object) -> object:
                         font_style=run.font_style,
                         color=run_safe,
                         color_token="",
+                        letter_spacing=run.letter_spacing,
+                        opacity=run.opacity,
+                        outline=run.outline,
+                        outline_width_pt=run.outline_width_pt,
+                        outline_color=run.outline_color,
+                        fill_enabled=run.fill_enabled,
                     )
                 )
             set_text_node_runs(updated, runs)

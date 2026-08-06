@@ -257,6 +257,8 @@ class RenderScenePptxAdapter:
             instruction["letter_spacing"] = node.letter_spacing
         if node.opacity < 0.999:
             instruction["opacity"] = node.opacity
+        if abs(node.rotation) > 1e-6:
+            instruction["rotation"] = node.rotation
         if node.runs:
             runs_payload: list[dict[str, Any]] = []
             for index, run in enumerate(node.runs):
@@ -268,19 +270,29 @@ class RenderScenePptxAdapter:
                     run_cjk if text_has_cjk(run_text) else (run_latin or str(style["font_family"]))
                 )
                 weight = int(style["font_weight"] or node.font_weight)
-                runs_payload.append(
-                    {
-                        "text": run_text,
-                        "font_family": run_primary,
-                        "font_family_cjk": run_cjk,
-                        "font_size": float(style["font_size"] or node.font_size),
-                        "font_weight": weight,
-                        "font_style": str(style["font_style"] or "normal"),
-                        "color": str(style["color"] or node.color).lstrip("#"),
-                        "break_line": run_text.endswith("\n")
-                        or (index < len(node.runs) - 1 and "\n" in run_text),
-                    }
-                )
+                run_payload: dict[str, Any] = {
+                    "text": run_text,
+                    "font_family": run_primary,
+                    "font_family_cjk": run_cjk,
+                    "font_size": float(style["font_size"] or node.font_size),
+                    "font_weight": weight,
+                    "font_style": str(style["font_style"] or "normal"),
+                    "color": str(style["color"] or node.color).lstrip("#"),
+                    "break_line": run_text.endswith("\n")
+                    or (index < len(node.runs) - 1 and "\n" in run_text),
+                }
+                letter = float(style["letter_spacing"] or 0.0)
+                if abs(letter) > 1e-6:
+                    run_payload["letter_spacing"] = letter
+                opacity = float(style["opacity"] if style["opacity"] is not None else 1.0)
+                if opacity < 0.999:
+                    run_payload["opacity"] = opacity
+                if style["outline"]:
+                    run_payload["outline"] = True
+                    run_payload["outline_width_pt"] = float(style["outline_width_pt"] or 1.0)
+                    run_payload["outline_color"] = str(style["outline_color"] or "").lstrip("#")
+                    run_payload["fill_enabled"] = bool(style["fill_enabled"])
+                runs_payload.append(run_payload)
             instruction["runs"] = runs_payload
         return instruction
 

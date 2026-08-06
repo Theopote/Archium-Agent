@@ -64,6 +64,49 @@ def test_adapter_emits_runs_for_mixed_weight_title() -> None:
     assert element["runs"][1]["color"] == "666666"
 
 
+def test_adapter_emits_run_tracking_opacity_outline() -> None:
+    scene = _scene(
+        TextNode(
+            id="title",
+            x=0.7,
+            y=0.5,
+            width=8,
+            height=1.2,
+            text="航运",
+            font_family="Arial",
+            font_family_cjk="Microsoft YaHei",
+            font_size=28,
+            font_weight=300,
+            color="#1A1A1A",
+            line_height=1.2,
+            semantic_role="title",
+            rotation=-90.0,
+            runs=[
+                TextRun(
+                    text="航运",
+                    font_size=48.0,
+                    font_weight=300,
+                    letter_spacing=0.14,
+                    opacity=0.92,
+                    outline=True,
+                    outline_width_pt=1.2,
+                    outline_color="#1A1A1A",
+                    fill_enabled=False,
+                )
+            ],
+        )
+    )
+    instruction = RenderScenePptxAdapter().render_slide(scene)
+    element = next(item for item in instruction.elements if item["id"] == "title")
+    assert element["rotation"] == -90.0
+    run = element["runs"][0]
+    assert run["letter_spacing"] == 0.14
+    assert run["opacity"] == 0.92
+    assert run["outline"] is True
+    assert run["fill_enabled"] is False
+
+
+
 def test_set_text_runs_command_round_trips() -> None:
     scene = _scene(
         TextNode(

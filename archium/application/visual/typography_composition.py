@@ -130,8 +130,9 @@ def compose_title_typography(
     *,
     page_kind: TypographyPageKind,
     base_size_pt: float,
+    section_index: int | None = None,
 ) -> TypographyComposition:
-    """Split a title into multi-scale runs for expressive page kinds."""
+    """Split a title into multi-scale runs for expressive page kinds (v1.1)."""
     cleaned = (text or "").strip()
     if not cleaned:
         return TypographyComposition(page_kind=page_kind, runs=[])
@@ -150,6 +151,7 @@ def compose_title_typography(
             base_size_pt=base_size_pt,
         )
 
+    arrangement = select_title_arrangement(cleaned, page_kind=page_kind)
     letter_spacing = {
         TypographyPageKind.COVER: 0.06,
         TypographyPageKind.SECTION: 0.08,
@@ -158,6 +160,53 @@ def compose_title_typography(
         TypographyPageKind.METRIC: 0.02,
     }.get(page_kind, 0.0)
 
+    size_boost = {
+        TypographyPageKind.COVER: 1.35,
+        TypographyPageKind.THESIS: 1.25,
+        TypographyPageKind.SECTION: 1.15,
+        TypographyPageKind.CLOSING: 1.3,
+        TypographyPageKind.METRIC: 1.0,
+    }.get(page_kind, 1.0)
+    boosted = round(base_size_pt * size_boost, 1)
+
+    if arrangement == TypographyArrangement.INDEX_TITLE:
+        return _compose_index_title(
+            cleaned,
+            page_kind=page_kind,
+            base_size_pt=boosted,
+            letter_spacing=letter_spacing,
+            section_index=section_index,
+        )
+    if arrangement == TypographyArrangement.OUTLINE_STATEMENT:
+        return _compose_outline_statement(
+            cleaned,
+            page_kind=page_kind,
+            base_size_pt=boosted,
+            letter_spacing=letter_spacing,
+        )
+    if arrangement == TypographyArrangement.VERTICAL_EDGE:
+        return _compose_vertical_edge(
+            cleaned,
+            page_kind=page_kind,
+            base_size_pt=boosted,
+            letter_spacing=letter_spacing,
+        )
+    if arrangement == TypographyArrangement.SPLIT_KEYWORD:
+        return _compose_split_keyword(
+            cleaned,
+            page_kind=page_kind,
+            base_size_pt=boosted,
+            letter_spacing=letter_spacing,
+        )
+    if arrangement == TypographyArrangement.GIANT_BACKGROUND:
+        return _compose_giant_background(
+            cleaned,
+            page_kind=page_kind,
+            base_size_pt=boosted,
+            letter_spacing=letter_spacing,
+        )
+
+    # Legacy stacked / inline path (connector-aware).
     runs = _split_title_runs(cleaned, page_kind=page_kind)
     ghost = None
     ghost_scale = 5.0
@@ -170,22 +219,10 @@ def compose_title_typography(
         ghost = _ghost_fragment(cleaned)
         ghost_scale = 5.0
         ghost_opacity = 0.07
-    elif page_kind == TypographyPageKind.COVER:
-        # Long competition titles already fill the masthead — skip ghost so it
-        # never reads as a second overlapping title (VQ cover regression).
-        if len(cleaned) < 16:
-            ghost = _ghost_fragment(cleaned)
-            ghost_scale = 3.2
-            ghost_opacity = 0.045
-
-    # Cover / closing prefer slightly larger base.
-    size_boost = {
-        TypographyPageKind.COVER: 1.35,
-        TypographyPageKind.THESIS: 1.25,
-        TypographyPageKind.SECTION: 1.15,
-        TypographyPageKind.CLOSING: 1.3,
-        TypographyPageKind.METRIC: 1.0,
-    }.get(page_kind, 1.0)
+    elif page_kind == TypographyPageKind.COVER and len(cleaned) < 16:
+        ghost = _ghost_fragment(cleaned)
+        ghost_scale = 3.2
+        ghost_opacity = 0.045
 
     return TypographyComposition(
         page_kind=page_kind,
@@ -196,11 +233,41 @@ def compose_title_typography(
         ),
         runs=runs,
         letter_spacing_em=letter_spacing,
-        base_size_pt=round(base_size_pt * size_boost, 1),
+        base_size_pt=boosted,
         ghost_text=ghost,
         ghost_size_scale=ghost_scale,
         ghost_opacity=ghost_opacity,
+        title_band_height_ratio=_band_ratio(page_kind),
     )
+
+
+def select_title_arrangement(
+    text: str,
+    *,
+    page_kind: TypographyPageKind,
+) -> TypographyArrangement:
+    """Pick one of the six v1.1 recipes from page kind + title shape."""
+    cleaned = (text or "").strip()
+    if page_kind == TypographyPageKind.SECTION:
+        return TypographyArrangement.INDEX_TITLE
+    if page_kind == TypographyPageKind.METRIC:
+        return TypographyArrangement.METRIC_MONUMENT
+    if page_kind == TypographyPageKind.COVER:
+        if len(cleaned) <= 4:
+            return TypographyArrangement.OUTLINE_STATEMENT
+        if len(cleaned) <= 10:
+            return TypographyArrangement.GIANT_BACKGROUND
+        return TypographyArrangement.SPLIT_KEYWORD
+    if page_kind == TypographyPageKind.THESIS:
+        # Connector titles keep split_keyword so hero/support/connector roles survive.
+        if not _CONNECTOR.search(cleaned) and len(cleaned) <= 6:
+            return TypographyArrangement.OUTLINE_STATEMENT
+        return TypographyArrangement.SPLIT_KEYWORD
+    if page_kind == TypographyPageKind.CLOSING:
+        if len(cleaned) <= 6:
+            return TypographyArrangement.VERTICAL_EDGE
+        return TypographyArrangement.GIANT_BACKGROUND
+    return TypographyArrangement.STACKED
 
 
 def compose_metric_typography(
@@ -208,30 +275,33 @@ def compose_metric_typography(
     *,
     base_size_pt: float,
 ) -> TypographyComposition:
-    """Make the number the visual protagonist; label stays small."""
+    """Make the number the visual protagonist; label stays small (metric_monument)."""
     cleaned = (text or "").strip()
     if not cleaned:
         return TypographyComposition(
             page_kind=TypographyPageKind.METRIC,
-            arrangement=TypographyArrangement.METRIC_STACK,
+            arrangement=TypographyArrangement.METRIC_MONUMENT,
             runs=[],
             base_size_pt=base_size_pt,
+            title_band_height_ratio=0.42,
         )
     match = _METRIC_HEAD.match(cleaned)
     if match is None:
         return TypographyComposition(
             page_kind=TypographyPageKind.METRIC,
-            arrangement=TypographyArrangement.METRIC_STACK,
+            arrangement=TypographyArrangement.METRIC_MONUMENT,
             runs=[
                 TypographyRunSpec(
                     text=cleaned,
                     semantic_role=TypographyRunRole.METRIC_VALUE,
-                    size_scale=1.8,
+                    size_scale=2.2,
                     font_weight=700,
                     color_token="accent",
+                    tracking_em=0.02,
                 )
             ],
             base_size_pt=base_size_pt,
+            title_band_height_ratio=0.42,
         )
     value = match.group("value") or ""
     unit = match.group("unit") or ""
@@ -240,9 +310,10 @@ def compose_metric_typography(
         TypographyRunSpec(
             text=value,
             semantic_role=TypographyRunRole.METRIC_VALUE,
-            size_scale=2.4,
+            size_scale=2.8,
             font_weight=700,
             color_token="accent",
+            tracking_em=-0.02,
             break_after=bool(unit or label),
         )
     ]
@@ -251,7 +322,7 @@ def compose_metric_typography(
             TypographyRunSpec(
                 text=unit,
                 semantic_role=TypographyRunRole.METRIC_UNIT,
-                size_scale=0.85,
+                size_scale=0.9,
                 font_weight=600,
                 color_token="primary_text",
                 break_after=bool(label),
@@ -262,18 +333,20 @@ def compose_metric_typography(
             TypographyRunSpec(
                 text=label,
                 semantic_role=TypographyRunRole.LABEL,
-                size_scale=0.55,
+                size_scale=0.5,
                 font_weight=400,
                 color_token="muted_text",
-                tracking_em=0.06,
+                tracking_em=0.08,
+                uppercase=False,
             )
         )
     return TypographyComposition(
         page_kind=TypographyPageKind.METRIC,
-        arrangement=TypographyArrangement.METRIC_STACK,
+        arrangement=TypographyArrangement.METRIC_MONUMENT,
         runs=runs,
         letter_spacing_em=0.02,
         base_size_pt=base_size_pt,
+        title_band_height_ratio=0.42,
     )
 
 
@@ -284,7 +357,7 @@ def composition_to_text_runs(
     fallback_color: str,
     fallback_weight: int,
 ) -> list[TextRun]:
-    """Materialize composition spans as RenderScene TextRuns."""
+    """Materialize composition spans as RenderScene TextRuns (v1.1 fields)."""
     if not composition.runs:
         return []
     base = composition.base_size_pt or 20.0
@@ -306,13 +379,23 @@ def composition_to_text_runs(
             TypographyRunRole.METRIC_VALUE,
         }:
             weight = max(weight, 700)
+        tracking = run.tracking_em
+        if tracking is None and composition.letter_spacing_em:
+            tracking = composition.letter_spacing_em
         out.append(
             TextRun(
                 text=text,
                 font_size=round(base * run.size_scale, 1),
                 font_weight=weight,
+                font_style="italic" if run.italic else "normal",
                 color=color,
                 color_token=run.color_token or "",
+                letter_spacing=tracking,
+                opacity=run.opacity,
+                outline=run.outline,
+                outline_width_pt=run.outline_width_pt,
+                outline_color=color if run.outline else "",
+                fill_enabled=run.fill_enabled,
             )
         )
     return out
@@ -331,7 +414,6 @@ def should_compose_element(
         TypographyPageKind.CLOSING,
         TypographyPageKind.DEFAULT,
     }:
-        # Always compose metrics — numbers should dominate when present.
         return True
     if role == LayoutElementRole.LEAD_STATEMENT and page_kind in {
         TypographyPageKind.COVER,
@@ -340,6 +422,252 @@ def should_compose_element(
     }:
         return True
     return False
+
+
+def _compose_split_keyword(
+    text: str,
+    *,
+    page_kind: TypographyPageKind,
+    base_size_pt: float,
+    letter_spacing: float,
+) -> TypographyComposition:
+    """Amplify the last keyword / punch phrase 2–3× with accent color."""
+    runs = _split_title_runs(text, page_kind=page_kind)
+    # Force last hero punch larger + accent.
+    for index in range(len(runs) - 1, -1, -1):
+        if runs[index].semantic_role == TypographyRunRole.HERO_WORD:
+            runs[index] = runs[index].model_copy(
+                update={
+                    "size_scale": max(runs[index].size_scale, 2.2),
+                    "color_token": "accent",
+                    "font_weight": 700,
+                    "tracking_em": 0.02,
+                }
+            )
+            break
+    if len(runs) >= 2:
+        for index, run in enumerate(runs[:-1]):
+            if run.semantic_role != TypographyRunRole.CONNECTOR:
+                runs[index] = run.model_copy(
+                    update={
+                        "size_scale": min(run.size_scale, 0.85),
+                        "break_after": True,
+                        "opacity": 0.9,
+                    }
+                )
+    ghost = None
+    ghost_scale = 5.0
+    ghost_opacity = 0.07
+    if page_kind in {TypographyPageKind.THESIS, TypographyPageKind.CLOSING}:
+        ghost = _ghost_fragment(text)
+        ghost_scale = 5.5 if page_kind == TypographyPageKind.THESIS else 6.0
+        ghost_opacity = 0.06
+    elif page_kind == TypographyPageKind.COVER and len(text) < 16:
+        ghost = _ghost_fragment(text)
+        ghost_scale = 3.2
+        ghost_opacity = 0.045
+    return TypographyComposition(
+        page_kind=page_kind,
+        arrangement=TypographyArrangement.SPLIT_KEYWORD,
+        runs=runs,
+        letter_spacing_em=letter_spacing,
+        base_size_pt=base_size_pt,
+        ghost_text=ghost,
+        ghost_size_scale=ghost_scale,
+        ghost_opacity=ghost_opacity,
+        title_band_height_ratio=_band_ratio(page_kind, tall=True),
+    )
+
+
+def _compose_giant_background(
+    text: str,
+    *,
+    page_kind: TypographyPageKind,
+    base_size_pt: float,
+    letter_spacing: float,
+) -> TypographyComposition:
+    ghost = _ghost_fragment(text) or (text[:4] if text else None)
+    runs = _split_title_runs(text, page_kind=page_kind)
+    return TypographyComposition(
+        page_kind=page_kind,
+        arrangement=TypographyArrangement.GIANT_BACKGROUND,
+        runs=runs,
+        letter_spacing_em=letter_spacing,
+        base_size_pt=base_size_pt,
+        ghost_text=ghost,
+        ghost_size_scale=6.5 if page_kind == TypographyPageKind.CLOSING else 5.5,
+        ghost_opacity=0.055,
+        title_band_height_ratio=_band_ratio(page_kind, tall=True),
+    )
+
+
+def _compose_index_title(
+    text: str,
+    *,
+    page_kind: TypographyPageKind,
+    base_size_pt: float,
+    letter_spacing: float,
+    section_index: int | None,
+) -> TypographyComposition:
+    index_n = section_index if section_index and section_index > 0 else 1
+    index_label = f"{index_n:02d}"
+    # Prefer first line as Chinese title; optional english after separator.
+    zh, en = _split_bilingual(text)
+    runs: list[TypographyRunSpec] = [
+        TypographyRunSpec(
+            text=index_label,
+            semantic_role=TypographyRunRole.INDEX,
+            size_scale=0.55,
+            font_weight=500,
+            color_token="accent",
+            tracking_em=0.18,
+            break_after=True,
+        ),
+        TypographyRunSpec(
+            text=zh,
+            semantic_role=TypographyRunRole.HERO_WORD,
+            size_scale=1.45,
+            font_weight=700,
+            color_token="primary",
+            tracking_em=0.06,
+            break_after=bool(en),
+        ),
+    ]
+    if en:
+        runs.append(
+            TypographyRunSpec(
+                text=en,
+                semantic_role=TypographyRunRole.LABEL,
+                size_scale=0.45,
+                font_weight=400,
+                color_token="muted_text",
+                tracking_em=0.16,
+                uppercase=True,
+            )
+        )
+    return TypographyComposition(
+        page_kind=page_kind,
+        arrangement=TypographyArrangement.INDEX_TITLE,
+        runs=runs,
+        letter_spacing_em=letter_spacing,
+        base_size_pt=base_size_pt,
+        title_band_height_ratio=0.28,
+    )
+
+
+def _compose_outline_statement(
+    text: str,
+    *,
+    page_kind: TypographyPageKind,
+    base_size_pt: float,
+    letter_spacing: float,
+) -> TypographyComposition:
+    """Hollow / outline hero keyword + quiet support line."""
+    # Prefer the shortest punch word after connectors.
+    parts = [p for p in _CONNECTOR.split(text) if p and not _CONNECTOR.fullmatch(p)]
+    hero = parts[-1].strip() if parts else text
+    support = text.replace(hero, "").strip(" —-:：/／")
+    if len(hero) > 8:
+        hero = hero[-min(4, len(hero)) :]
+        support = text[: -len(hero)].strip() or support
+    runs: list[TypographyRunSpec] = [
+        TypographyRunSpec(
+            text=hero,
+            semantic_role=TypographyRunRole.HERO_WORD,
+            size_scale=2.6,
+            font_weight=300,
+            color_token="primary",
+            tracking_em=0.14,
+            outline=True,
+            outline_width_pt=1.2,
+            fill_enabled=False,
+            opacity=0.92,
+            break_after=bool(support),
+        )
+    ]
+    if support:
+        runs.append(
+            TypographyRunSpec(
+                text=support,
+                semantic_role=TypographyRunRole.SUPPORT_WORD,
+                size_scale=0.55,
+                font_weight=400,
+                color_token="muted_text",
+                tracking_em=0.04,
+                opacity=0.85,
+            )
+        )
+    return TypographyComposition(
+        page_kind=page_kind,
+        arrangement=TypographyArrangement.OUTLINE_STATEMENT,
+        runs=runs,
+        letter_spacing_em=letter_spacing,
+        base_size_pt=base_size_pt,
+        ghost_text=_ghost_fragment(hero),
+        ghost_size_scale=4.0,
+        ghost_opacity=0.04,
+        title_band_height_ratio=0.36,
+    )
+
+
+def _compose_vertical_edge(
+    text: str,
+    *,
+    page_kind: TypographyPageKind,
+    base_size_pt: float,
+    letter_spacing: float,
+) -> TypographyComposition:
+    compact = re.sub(r"\s+", "", text)
+    # One character per line for magazine edge title.
+    runs: list[TypographyRunSpec] = []
+    chars = list(compact[:8]) if compact else list(text[:8])
+    for index, ch in enumerate(chars):
+        runs.append(
+            TypographyRunSpec(
+                text=ch,
+                semantic_role=TypographyRunRole.HERO_WORD,
+                size_scale=1.35,
+                font_weight=600,
+                color_token="primary",
+                tracking_em=0.2,
+                break_after=index < len(chars) - 1,
+            )
+        )
+    return TypographyComposition(
+        page_kind=page_kind,
+        arrangement=TypographyArrangement.VERTICAL_EDGE,
+        runs=runs,
+        letter_spacing_em=max(letter_spacing, 0.12),
+        base_size_pt=base_size_pt,
+        rotation_deg=-90.0,
+        title_band_height_ratio=0.55,
+    )
+
+
+def _band_ratio(page_kind: TypographyPageKind, *, tall: bool = False) -> float:
+    base = {
+        TypographyPageKind.COVER: 0.32,
+        TypographyPageKind.SECTION: 0.26,
+        TypographyPageKind.THESIS: 0.34,
+        TypographyPageKind.CLOSING: 0.36,
+        TypographyPageKind.METRIC: 0.4,
+    }.get(page_kind, 0.22)
+    return min(0.5, base + (0.06 if tall else 0.0))
+
+
+def _split_bilingual(text: str) -> tuple[str, str]:
+    for sep in ("\n", "——", "—", " / ", "/", "：", ":"):
+        if sep in text:
+            left, right = text.split(sep, 1)
+            left, right = left.strip(), right.strip()
+            if left and right:
+                # Prefer latin on the right as english label.
+                if re.search(r"[A-Za-z]", right) and not re.search(r"[A-Za-z]", left):
+                    return left, right
+                if re.search(r"[A-Za-z]", left) and not re.search(r"[A-Za-z]", right):
+                    return right, left
+                return left, right
+    return text, ""
 
 
 def _split_title_runs(

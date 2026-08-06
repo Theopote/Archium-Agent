@@ -493,6 +493,9 @@ function renderTextElement(page, element, placeholderName = null) {
   if (element.opacity != null && Number(element.opacity) < 1) {
     opts.transparency = Math.round((1 - Number(element.opacity)) * 100);
   }
+  if (element.rotation != null && Number(element.rotation) !== 0) {
+    opts.rotate = Number(element.rotation);
+  }
   if (placeholderName) {
     opts.placeholder = placeholderName;
   } else {
@@ -523,6 +526,16 @@ function renderTextElement(page, element, placeholderName = null) {
       };
       if (run?.font_style === "italic") {
         runOpts.italic = true;
+      }
+      if (run?.letter_spacing != null && Number(run.letter_spacing) !== 0) {
+        runOpts.charSpacing = Math.round(Number(run.letter_spacing) * 100);
+      }
+      if (run?.opacity != null && Number(run.opacity) < 1) {
+        runOpts.transparency = Math.round((1 - Number(run.opacity)) * 100);
+      }
+      // PPTX has no true text-stroke; approximate hollow type with high transparency.
+      if (run?.outline && run?.fill_enabled === false) {
+        runOpts.transparency = Math.max(Number(runOpts.transparency) || 0, 35);
       }
       // Break after run when explicit, or when text ends with newline (strip trailing \n).
       let displayText = runText;

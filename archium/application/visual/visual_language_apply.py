@@ -69,6 +69,36 @@ def apply_visual_language_to_scene(
             # Lead / body copy must keep their layout style_token sizes.
             if node.semantic_role != "title":
                 continue
+            # TypographyComposition owns title scale/weight/tracking when runs exist —
+            # do not whole-box stamp (VQ-001 sole path).
+            if node.runs:
+                if primary.case == TitleCase.UPPERCASE:
+                    from archium.domain.visual.render_scene import TextRun, set_text_node_runs
+
+                    cased = [
+                        TextRun(
+                            text=run.text.upper(),
+                            font_family=run.font_family,
+                            font_family_cjk=run.font_family_cjk,
+                            font_family_latin=run.font_family_latin,
+                            font_size=run.font_size,
+                            font_weight=run.font_weight,
+                            font_style=run.font_style,
+                            color=run.color,
+                            color_token=run.color_token,
+                            letter_spacing=run.letter_spacing,
+                            opacity=run.opacity,
+                            outline=run.outline,
+                            outline_width_pt=run.outline_width_pt,
+                            outline_color=run.outline_color,
+                            fill_enabled=run.fill_enabled,
+                        )
+                        for run in node.runs
+                    ]
+                    updated = node.model_copy()
+                    set_text_node_runs(updated, cased)
+                    nodes[index] = updated
+                continue
             updates: dict[str, object] = {
                 "letter_spacing": primary.resolved_letter_spacing(),
                 "opacity": primary.opacity,
@@ -86,34 +116,7 @@ def apply_visual_language_to_scene(
                 text = text.upper()
                 updates["text"] = text
                 updates["paragraphs"] = list(node.paragraphs)
-            updated = node.model_copy(update=updates)
-            # Keep multi-scale composition runs; rescale relative to previous base.
-            if node.runs and node.font_size > 0:
-                scale = float(target_size) / float(node.font_size)
-                from archium.domain.visual.render_scene import TextRun, set_text_node_runs
-
-                scaled = [
-                    TextRun(
-                        text=run.text.upper() if primary.case == TitleCase.UPPERCASE else run.text,
-                        font_family=run.font_family,
-                        font_family_cjk=run.font_family_cjk,
-                        font_family_latin=run.font_family_latin,
-                        font_size=(
-                            round(float(run.font_size) * scale, 1)
-                            if run.font_size is not None
-                            else round(float(target_size) * scale, 1)
-                        ),
-                        font_weight=max(run.font_weight or 0, primary.font_weight)
-                        if run.font_weight is not None
-                        else primary.font_weight,
-                        font_style=run.font_style,
-                        color=run.color,
-                        color_token=run.color_token,
-                    )
-                    for run in node.runs
-                ]
-                set_text_node_runs(updated, scaled)
-            nodes[index] = updated
+            nodes[index] = node.model_copy(update=updates)
 
     # Color story accent on stroke decorations.
     accent = _swatch_hex(language.color_story, prefer=("conflict", "intervention", "accent"))

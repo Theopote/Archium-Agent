@@ -80,6 +80,48 @@ def test_effective_run_style_inherits_node_defaults() -> None:
     assert style["font_weight"] == 700
     assert style["font_size"] == 24.0
     assert style["color"] == "#222222"
+    assert style["letter_spacing"] == 0
+    assert style["opacity"] == 1.0
+    assert style["outline"] is False
+
+
+def test_effective_run_style_preserves_outline_and_tracking() -> None:
+    node = _text_node()
+    run = TextRun(
+        text="航运",
+        font_size=48.0,
+        letter_spacing=0.12,
+        opacity=0.9,
+        outline=True,
+        outline_width_pt=1.2,
+        fill_enabled=False,
+    )
+    style = effective_run_style(node, run)
+    assert style["letter_spacing"] == 0.12
+    assert style["opacity"] == 0.9
+    assert style["outline"] is True
+    assert style["fill_enabled"] is False
+    assert style["outline_width_pt"] == 1.2
+
+
+def test_replace_text_preserves_run_v11_fields() -> None:
+    node = _text_node(
+        runs=[
+            TextRun(
+                text="旧",
+                font_weight=700,
+                letter_spacing=0.08,
+                opacity=0.85,
+                outline=True,
+                fill_enabled=False,
+            )
+        ]
+    )
+    replace_text_node_content(node, "新标题")
+    assert node.runs[0].letter_spacing == 0.08
+    assert node.runs[0].opacity == 0.85
+    assert node.runs[0].outline is True
+    assert node.runs[0].fill_enabled is False
 
 
 def test_set_text_node_runs_rejects_empty() -> None:

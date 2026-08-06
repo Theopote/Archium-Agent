@@ -10,6 +10,7 @@ from archium.application.visual.typography_composition import (
     compose_title_typography,
     composition_to_text_runs,
     infer_typography_page_kind,
+    select_title_arrangement,
 )
 from archium.domain.enums import SlideType
 from archium.domain.slide import SlideSpec
@@ -25,6 +26,7 @@ from archium.domain.visual.layout import LayoutElement, LayoutPlan
 from archium.domain.visual.render_scene import TextNode
 from archium.domain.visual.visual_intent import VisualIntent
 from archium.domain.visual.visual_language.typography_composition import (
+    TypographyArrangement,
     TypographyPageKind,
     TypographyRunRole,
 )
@@ -93,12 +95,43 @@ def test_infer_cover_section_thesis_metric_closing() -> None:
     ) == TypographyPageKind.CLOSING
 
 
+def test_select_title_arrangement_six_recipes() -> None:
+    assert (
+        select_title_arrangement("航运", page_kind=TypographyPageKind.COVER)
+        == TypographyArrangement.OUTLINE_STATEMENT
+    )
+    assert (
+        select_title_arrangement("南沙航运城", page_kind=TypographyPageKind.COVER)
+        == TypographyArrangement.GIANT_BACKGROUND
+    )
+    assert (
+        select_title_arrangement(
+            "南沙国际航运科技融合示范区总体城市设计",
+            page_kind=TypographyPageKind.COVER,
+        )
+        == TypographyArrangement.SPLIT_KEYWORD
+    )
+    assert (
+        select_title_arrangement("现状问题", page_kind=TypographyPageKind.SECTION)
+        == TypographyArrangement.INDEX_TITLE
+    )
+    assert (
+        select_title_arrangement("更新不是修补", page_kind=TypographyPageKind.THESIS)
+        == TypographyArrangement.SPLIT_KEYWORD
+    )
+    assert (
+        select_title_arrangement("致谢", page_kind=TypographyPageKind.CLOSING)
+        == TypographyArrangement.VERTICAL_EDGE
+    )
+
+
 def test_title_composition_splits_connector_and_sets_ghost() -> None:
     composition = compose_title_typography(
         "更新不是修补",
         page_kind=TypographyPageKind.THESIS,
         base_size_pt=20,
     )
+    assert composition.arrangement == TypographyArrangement.SPLIT_KEYWORD
     assert len(composition.runs) >= 3
     roles = {run.semantic_role for run in composition.runs}
     assert TypographyRunRole.HERO_WORD in roles
@@ -106,10 +139,46 @@ def test_title_composition_splits_connector_and_sets_ghost() -> None:
     assert composition.ghost_text
     assert composition.base_size_pt is not None
     assert composition.base_size_pt > 20
+    assert composition.title_band_height_ratio is not None
+
+
+def test_index_title_composition_emits_index_run() -> None:
+    composition = compose_title_typography(
+        "现状问题",
+        page_kind=TypographyPageKind.SECTION,
+        base_size_pt=22,
+        section_index=3,
+    )
+    assert composition.arrangement == TypographyArrangement.INDEX_TITLE
+    assert composition.runs[0].semantic_role == TypographyRunRole.INDEX
+    assert composition.runs[0].text == "03"
+
+
+def test_outline_statement_marks_hollow_hero() -> None:
+    composition = compose_title_typography(
+        "航运",
+        page_kind=TypographyPageKind.COVER,
+        base_size_pt=24,
+    )
+    assert composition.arrangement == TypographyArrangement.OUTLINE_STATEMENT
+    hero = composition.runs[0]
+    assert hero.outline is True
+    assert hero.fill_enabled is False
+    design = default_presentation_design_system()
+    runs = composition_to_text_runs(
+        composition,
+        design_system=design,
+        fallback_color="#132533",
+        fallback_weight=400,
+    )
+    assert runs[0].outline is True
+    assert runs[0].fill_enabled is False
+    assert runs[0].letter_spacing is not None
 
 
 def test_metric_composition_enlarges_value() -> None:
     composition = compose_metric_typography("2.5 容积率上限", base_size_pt=18)
+    assert composition.arrangement == TypographyArrangement.METRIC_MONUMENT
     assert composition.runs
     value = composition.runs[0]
     assert value.semantic_role == TypographyRunRole.METRIC_VALUE
